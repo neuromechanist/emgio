@@ -55,29 +55,81 @@ class EMG:
         # Create importer instance and load data
         return importer_class().load(filepath)
 
-    def select_channels(self, channels: Union[str, List[str]]) -> 'EMG':
+    def select_channels(self, channels: Union[str, List[str], None] = None,
+                       channel_type: Optional[str] = None) -> 'EMG':
         """
         Select specific channels from the data.
 
         Args:
-            channels: Channel name or list of channel names to select
+            channels: Channel name or list of channel names to select. If None and
+                     channel_type is specified, selects all channels of that type.
+            channel_type: Type of channels to select ('EMG', 'ACC', 'GYRO', etc.).
+                         If specified with channels, filters the selection to only
+                         channels of this type.
 
         Returns:
             EMG: Self for method chaining
+
+        Examples:
+            # Select specific channels
+            emg.select_channels(['EMG1', 'EMG2'])
+
+            # Select all EMG channels
+            emg.select_channels(channel_type='EMG')
+
+            # Select specific EMG channels only
+            emg.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
         """
         if self.signals is None:
             raise ValueError("No signals loaded")
 
-        if isinstance(channels, str):
+        # If channel_type specified but no channels, select all of that type
+        if channels is None and channel_type is not None:
+            channels = [ch for ch, info in self.channels.items()
+                       if info['type'] == channel_type]
+            if not channels:
+                raise ValueError(f"No channels found of type: {channel_type}")
+        elif isinstance(channels, str):
             channels = [channels]
 
+        # Validate channels exist
         if not all(ch in self.signals.columns for ch in channels):
             missing = [ch for ch in channels if ch not in self.signals.columns]
             raise ValueError(f"Channels not found: {missing}")
 
+        # Filter by type if specified
+        if channel_type is not None:
+            channels = [ch for ch in channels
+                       if self.channels[ch]['type'] == channel_type]
+            if not channels:
+                raise ValueError(
+                    f"None of the selected channels are of type: {channel_type}")
+
         self.signals = self.signals[channels]
         self.channels = {ch: self.channels[ch] for ch in channels}
         return self
+
+    def get_channel_types(self) -> List[str]:
+        """
+        Get list of unique channel types in the data.
+
+        Returns:
+            List of channel types (e.g., ['EMG', 'ACC', 'GYRO'])
+        """
+        return list(set(info['type'] for info in self.channels.values()))
+
+    def get_channels_by_type(self, channel_type: str) -> List[str]:
+        """
+        Get list of channels of a specific type.
+
+        Args:
+            channel_type: Type of channels to get ('EMG', 'ACC', 'GYRO', etc.)
+
+        Returns:
+            List of channel names of the specified type
+        """
+        return [ch for ch, info in self.channels.items()
+                if info['type'] == channel_type]
 
     def plot_signals(self, channels: Optional[List[str]] = None,
                     time_range: Optional[tuple] = None,
