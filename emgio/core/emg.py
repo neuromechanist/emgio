@@ -80,13 +80,19 @@ class EMG:
         return self
 
     def plot_signals(self, channels: Optional[List[str]] = None,
-                    time_range: Optional[tuple] = None) -> None:
+                    time_range: Optional[tuple] = None,
+                    style: str = 'line',
+                    grid: bool = True,
+                    title: Optional[str] = None) -> None:
         """
-        Plot EMG signals.
+        Plot EMG signals with enhanced visualization options.
 
         Args:
             channels: List of channels to plot. If None, plot all channels
             time_range: Tuple of (start_time, end_time) to plot. If None, plot all data
+            style: Plot style ('line' or 'dots')
+            grid: Whether to show grid lines
+            title: Optional title for the entire figure
         """
         if self.signals is None:
             raise ValueError("No signals loaded")
@@ -97,9 +103,15 @@ class EMG:
             missing = [ch for ch in channels if ch not in self.signals.columns]
             raise ValueError(f"Channels not found: {missing}")
 
-        fig, axes = plt.subplots(len(channels), 1, figsize=(10, 2*len(channels)))
+        # Create figure with shared x-axis
+        fig, axes = plt.subplots(len(channels), 1, figsize=(12, 3*len(channels)),
+                               sharex=True)
         if len(channels) == 1:
             axes = [axes]
+
+        # Set figure title if provided
+        if title:
+            fig.suptitle(title, fontsize=14, y=1.02)
 
         for ax, channel in zip(axes, channels):
             data = self.signals[channel]
@@ -107,11 +119,24 @@ class EMG:
                 start, end = time_range
                 data = data.loc[start:end]
 
-            ax.plot(data.index, data.values)
-            ax.set_title(channel)
-            ax.set_ylabel(f"{self.channels[channel]['unit']}")
+            # Plot based on style
+            if style == 'dots':
+                ax.scatter(data.index, data.values, s=1, alpha=0.6)
+            else:  # default to line
+                ax.plot(data.index, data.values, linewidth=1)
 
+            # Channel info in title
+            ch_info = self.channels[channel]
+            ax.set_title(f"{channel} ({ch_info['type']} - {ch_info['sampling_freq']} Hz)")
+            ax.set_ylabel(f"{ch_info['unit']}")
+
+            if grid:
+                ax.grid(True, linestyle='--', alpha=0.7)
+
+        # Common x-axis label
         axes[-1].set_xlabel("Time (s)")
+
+        # Adjust layout to prevent label overlap
         plt.tight_layout()
         plt.show()
 
