@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emgio"
+version = "0.1.0"
+authors = [
+    { name = "Seyed Yahya Shirazi", email = "shirazi@ieee.org" }
+]
+description = "A Python package for EMG data import/export and manipulation"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "pyedflib"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/neuromechanist/emgio"
+"Bug Tracker" = "https://github.com/neuromechanist/emgio/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["emgio*"]
