@@ -100,8 +100,8 @@ def test_truncate_value():
     """Test value truncation functionality."""
     # Test value that needs truncation
     with warnings.catch_warnings(record=True) as w:
-        result = _truncate_value(0.123456789, "test_channel", True)
-        assert result == 0.123457
+        result = _truncate_value(0.2234567899, "test_channel", True)
+        assert result == 0.223457
         assert len(w) == 1
         assert "truncated" in str(w[0].message)
 

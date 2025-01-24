@@ -57,6 +57,14 @@ def _truncate_value(value: float, channel_name: str, is_min: bool = True) -> flo
     if is_negative:
         value_str = '-' + value_str
 
+    # Issue warning if value was truncated with exact amount of lost precision after converting to float
+    if value_str != str(value):
+        loss = abs((float(value_str) - value) / value) * 100
+        loss_str = f"{loss:.4f}%"
+        # issue warning if the two numbers are not equal beyond epsilon
+        if not abs(float(value_str) - value) < 1e-9:
+            warnings.warn(f"The {channel_name} value was truncated from {value} to {value_str} (loss: {loss_str})")
+
     return float(value_str)
 
 
