@@ -46,15 +46,15 @@ def test_add_channel(empty_emg):
 
 def test_select_channels(sample_emg):
     """Test channel selection."""
-    # Select single channel
-    emg_single = sample_emg.select_channels('EMG1')
-    assert list(emg_single.signals.columns) == ['EMG1']
-    assert list(emg_single.channels.keys()) == ['EMG1']
-
     # Select multiple channels
     emg_multi = sample_emg.select_channels(['EMG1', 'ACC1'])
     assert list(emg_multi.signals.columns) == ['EMG1', 'ACC1']
     assert list(emg_multi.channels.keys()) == ['EMG1', 'ACC1']
+
+    # Select single channel
+    emg_single = sample_emg.select_channels('EMG1')
+    assert list(emg_single.signals.columns) == ['EMG1']
+    assert list(emg_single.channels.keys()) == ['EMG1']
 
 
 def test_metadata(empty_emg):
