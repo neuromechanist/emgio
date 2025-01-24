@@ -1,0 +1,29 @@
+Label: Mini sensor 10: EMG 10 Sampling frequency: 1.259259e+003 Number of points: 81141 start: 0.000000e+000 Unit: V Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 10: ACC.X 10 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: g Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 10: ACC.Y 10 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: g Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 10: ACC.Z 10 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: g Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 10: GYRO.X 10 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: °/s Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 10: GYRO.Y 10 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: °/s Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 10: GYRO.Z 10 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: °/s Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 11: EMG 11 Sampling frequency: 1.259259e+003 Number of points: 81141 start: 0.000000e+000 Unit: V Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 11: ACC.X 11 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: g Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 11: ACC.Y 11 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: g Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 11: ACC.Z 11 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: g Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 11: GYRO.X 11 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: °/s Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 11: GYRO.Y 11 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: °/s Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Label: Mini sensor 11: GYRO.Z 11 Sampling frequency: 1.481481e+002 Number of points: 9546 start: 0.000000e+000 Unit: °/s Domain Unit: s,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Start Trigger Method: None,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Stop Trigger Method: None,,,,,,,,,,,,,,,,,,,,,,,,,,,
+ ,,,,,,,,,,,,,,,,,,,,,,,,,,,
+X[s],Mini sensor 10: EMG 10,X[s],Mini sensor 10: ACC.X 10,X[s],Mini sensor 10: ACC.Y 10,X[s],Mini sensor 10: ACC.Z 10,X[s],Mini sensor 10: GYRO.X 10,X[s],Mini sensor 10: GYRO.Y 10,X[s],Mini sensor 10: GYRO.Z 10,X[s],Mini sensor 11: EMG 11,X[s],Mini sensor 11: ACC.X 11,X[s],Mini sensor 11: ACC.Y 11,X[s],Mini sensor 11: ACC.Z 11,X[s],Mini sensor 11: GYRO.X 11,X[s],Mini sensor 11: GYRO.Y 11,X[s],Mini sensor 11: GYRO.Z 11
+0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0,0.000000,0
+0.0007941176,0,0.00675,0,0.00675,0,0.00675,0,0.00675,0,0.00675,0,0.00675,0,0.0007941176,0,0.00675,0,0.00675,0,0.00675,0,0.00675,0,0.00675,0,0.00675,0
+0.001588235,0,0.0135,0,0.0135,0,0.0135,0,0.0135,0,0.0135,0,0.0135,0,0.001588235,0,0.0135,0,0.0135,0,0.0135,0,0.0135,0,0.0135,0,0.0135,0
+0.002382353,0,0.02025,0,0.02025,0,0.02025,0,0.02025,0,0.02025,0,0.02025,0,0.002382353,0,0.02025,0,0.02025,0,0.02025,0,0.02025,0,0.02025,0,0.02025,0
+0.003176471,0,0.027,0,0.027,0,0.027,0,0.027,0,0.027,0,0.027,0,0.003176471,0,0.027,0,0.027,0,0.027,0,0.027,0,0.027,0,0.027,0
+0.003970588,0,0.03375,0,0.03375,0,0.03375,0,0.03375,0,0.03375,0,0.03375,0,0.003970588,0,0.03375,0,0.03375,0,0.03375,0,0.03375,0,0.03375,0,0.03375,0
+0.004764706,0,0.0405,0,0.0405,0,0.0405,0,0.0405,0,0.0405,0,0.0405,0,0.004764706,0,0.0405,0,0.0405,0,0.0405,0,0.0405,0,0.0405,0,0.0405,0
+0.005558823,0,0.04725,0,0.04725,0,0.04725,0,0.04725,0,0.04725,0,0.04725,0,0.005558823,0,0.04725,0,0.04725,0,0.04725,0,0.04725,0,0.04725,0,0.04725,0
+0.006352941,0,0.054,0,0.054,0,0.054,0,0.054,0,0.054,0,0.054,0,0.006352941,0,0.054,0,0.054,0,0.054,0,0.054,0,0.054,0,0.054,0
+0.007147059,0,0.06075,0,0.06075,0,0.06075,0,0.06075,0,0.06075,0,0.06075,0,0.007147059,0,0.06075,0,0.06075,0,0.06075,0,0.06075,0,0.06075,0,0.06075,0
+0.007941176,0,0.0675,0,0.0675,0,0.0675,0,0.0675,0,0.0675,0,0.0675,0,0.007941176,0,0.0675,0,0.0675,0,0.0675,0,0.0675,0,0.0675,0,0.0675,0
