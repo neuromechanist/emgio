@@ -36,11 +36,11 @@ def main():
 
     # Select EMG channels only
     emg_channels = [ch for ch, info in emg.channels.items() if info['type'] == 'EMG']
-    emg.select_channels(emg_channels)
+    # emg.select_channels(emg_channels)  # TODO: #3 This removes all other channels in place, behavior should change.
 
     # Plot the first 5 seconds of data
     print("\nPlotting EMG signals...")
-    emg.plot_signals(time_range=(0, 5))
+    emg.plot_signals(time_range=(0, 5), channels=emg_channels)
     plt.suptitle("First 5 seconds of EMG data")
 
     # Export to EDF/BDF (format will be automatically selected)

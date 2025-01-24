@@ -1,3 +1,15 @@
 name	type	units	sampling_frequency	reference	status
 Mini sensor 10: EMG 10	EMG	mV	1259.259	n/a	good
+Mini sensor 10: ACC.X 10	ACC	g	148.1481	n/a	good
+Mini sensor 10: ACC.Y 10	ACC	g	148.1481	n/a	good
+Mini sensor 10: ACC.Z 10	ACC	g	148.1481	n/a	good
+Mini sensor 10: GYRO.X 10	GYRO	°/s	148.1481	n/a	good
+Mini sensor 10: GYRO.Y 10	GYRO	°/s	148.1481	n/a	good
+Mini sensor 10: GYRO.Z 10	GYRO	°/s	148.1481	n/a	good
 Mini sensor 11: EMG 11	EMG	mV	1259.259	n/a	good
+Mini sensor 11: ACC.X 11	ACC	g	148.1481	n/a	good
+Mini sensor 11: ACC.Y 11	ACC	g	148.1481	n/a	good
+Mini sensor 11: ACC.Z 11	ACC	g	148.1481	n/a	good
+Mini sensor 11: GYRO.X 11	GYRO	°/s	148.1481	n/a	good
+Mini sensor 11: GYRO.Y 11	GYRO	°/s	148.1481	n/a	good
+Mini sensor 11: GYRO.Z 11	GYRO	°/s	148.1481	n/a	good
