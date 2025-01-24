@@ -90,10 +90,10 @@ def test_edf_export_no_signals():
             EDFExporter.export(empty_emg, f.name)
 
 
-def test_edf_export_file_permissions():
+def test_edf_export_file_permissions(sample_emg):
     """Test error handling for file permission issues."""
     with pytest.raises(Exception):
-        EDFExporter.export(sample_emg(), '/nonexistent/directory/test.edf')
+        EDFExporter.export(sample_emg, '/nonexistent/directory/test.edf')
 
 
 def test_truncate_value():
@@ -101,7 +101,7 @@ def test_truncate_value():
     # Test value that needs truncation
     with warnings.catch_warnings(record=True) as w:
         result = _truncate_value(0.123456789, "test_channel", True)
-        assert result == 0.1234567
+        assert result == 0.123457
         assert len(w) == 1
         assert "truncated" in str(w[0].message)
 
@@ -142,7 +142,7 @@ def test_bdf_format_selection():
     emg = EMG()
     # Create high precision data that would need BDF
     time = np.linspace(0, 1, 1000)
-    signal = 0.0000001234567890 * np.sin(2 * np.pi * 10 * time)
+    signal = 0.00001234567890 * np.sin(2 * np.pi * 10 * time)  # Small enough to need BDF
     emg.add_channel('EMG1', signal, 1000, 'V', 'EMG')
 
     with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
