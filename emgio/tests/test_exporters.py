@@ -99,7 +99,7 @@ def test_edf_export(sample_emg):
             # Check first channel (EMG1)
             assert signal_headers[0]['label'] == 'EMG1'
             assert signal_headers[0]['dimension'] == 'mV'
-            assert signal_headers[0]['sample_rate'] == 1000
+            assert signal_headers[0]['sample_frequency'] == 1000
 
             # Verify scaling is correct
             assert signal_headers[0]['digital_min'] == -32768
@@ -109,7 +109,7 @@ def test_edf_export(sample_emg):
             # Check second channel (ACC1)
             assert signal_headers[1]['label'] == 'ACC1'
             assert signal_headers[1]['dimension'] == 'g'
-            assert signal_headers[1]['sample_rate'] == 1000
+            assert signal_headers[1]['sample_frequency'] == 1000
 
             # Verify scaling is correct
             assert signal_headers[1]['digital_min'] == -32768
