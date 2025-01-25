@@ -7,5 +7,17 @@
 			"path": "../emg2mu"
 		}
 	],
-	"settings": {}
+	"settings": {},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug Unit Test",
+				"type": "python",
+				"request": "launch",
+				"purpose": ["debug-test"],
+				"justMyCode": false,
+			},
+		]
+	}
 }

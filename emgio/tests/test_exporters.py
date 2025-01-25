@@ -6,7 +6,7 @@ import numpy as np
 import pyedflib
 import pandas as pd
 from ..core.emg import EMG
-from ..exporters.edf import EDFExporter, _truncate_value
+from ..exporters.edf import EDFExporter, _determine_scaling_factors, _calculate_precision_loss
 
 
 @pytest.fixture
@@ -26,6 +26,52 @@ def sample_emg():
     return emg
 
 
+def test_determine_scaling_factors():
+    """Test scaling factor calculation."""
+    # Test normal case
+    phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(-1.0, 1.0)
+    assert dig_min == -32768
+    assert dig_max == 32767
+    assert scaling == 32767.0  # Full range mapping
+
+    # Test BDF mode
+    phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(-1.0, 1.0, use_bdf=True)
+    assert dig_min == -8388608
+    assert dig_max == 8388607
+    assert scaling == 8388607.0  # Full range mapping
+
+    # Test constant signal
+    phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(1.0, 1.0)
+    assert phys_min < phys_max  # Should create a small range
+    assert abs(abs(phys_max - phys_min) - 0.002) < 1e-4  # 0.1% margin on each side
+
+    # Test zero signal
+    phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(0.0, 0.0)
+    assert phys_min == -1.0
+    assert phys_max == 1.0
+
+
+def test_calculate_precision_loss():
+    """Test precision loss calculation."""
+    # Create test signal
+    signal = np.array([-1.0, -0.5, 0.0, 0.5, 1.0])
+
+    # Test with perfect scaling (no loss)
+    scaling = 32767.0  # Maps [-1, 1] to full 16-bit range
+    loss = _calculate_precision_loss(signal, scaling, -32768, 32767)
+    assert loss < 0.01  # Should be minimal loss
+
+    # Test with reduced scaling (some loss)
+    scaling = 16383.5  # Maps [-1, 1] to half the range
+    loss = _calculate_precision_loss(signal, scaling, -32768, 32767)
+    assert loss > 0.0  # Should have some loss
+
+    # Test with zero signal
+    signal = np.zeros(5)
+    loss = _calculate_precision_loss(signal, scaling, -32768, 32767)
+    assert loss == 0.0
+
+
 def test_edf_export(sample_emg):
     """Test EDF export functionality."""
     with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
@@ -33,7 +79,7 @@ def test_edf_export(sample_emg):
 
     try:
         # Export to EDF
-        EDFExporter.export(sample_emg, edf_path)
+        EDFExporter.export(sample_emg, edf_path, precision_threshold=1)
 
         # Check if EDF file was created
         assert os.path.exists(edf_path)
@@ -53,18 +99,32 @@ def test_edf_export(sample_emg):
             # Check first channel (EMG1)
             assert signal_headers[0]['label'] == 'EMG1'
             assert signal_headers[0]['dimension'] == 'mV'
-            assert signal_headers[0]['sample_rate'] == 1000
+            assert signal_headers[0]['sample_frequency'] == 1000
+
+            # Verify scaling is correct
+            assert signal_headers[0]['digital_min'] == -32768
+            assert signal_headers[0]['digital_max'] == 32767
+            assert signal_headers[0]['physical_min'] < signal_headers[0]['physical_max']
 
             # Check second channel (ACC1)
             assert signal_headers[1]['label'] == 'ACC1'
             assert signal_headers[1]['dimension'] == 'g'
-            assert signal_headers[1]['sample_rate'] == 1000
+            assert signal_headers[1]['sample_frequency'] == 1000
 
-            # Check signal data
+            # Verify scaling is correct
+            assert signal_headers[1]['digital_min'] == -32768
+            assert signal_headers[1]['digital_max'] == 32767
+            assert signal_headers[1]['physical_min'] < signal_headers[1]['physical_max']
+
+            # Check signal data and verify values are within digital range
             emg_data = f.readSignal(0)
             acc_data = f.readSignal(1)
             assert len(emg_data) == 1000
             assert len(acc_data) == 1000
+            assert np.all(emg_data >= signal_headers[0]['physical_min'])
+            assert np.all(emg_data <= signal_headers[0]['physical_max'])
+            assert np.all(acc_data >= signal_headers[1]['physical_min'])
+            assert np.all(acc_data <= signal_headers[1]['physical_max'])
 
         # Verify channels.tsv content
         channels_df = pd.read_csv(channels_tsv_path, sep='\t')
@@ -96,54 +156,83 @@ def test_edf_export_file_permissions(sample_emg):
         EDFExporter.export(sample_emg, '/nonexistent/directory/test.edf')
 
 
-def test_truncate_value():
-    """Test value truncation functionality."""
-    # Test value that needs truncation
-    with warnings.catch_warnings(record=True) as w:
-        result = _truncate_value(0.123456789, "test_channel", True)
-        assert result == 0.123457
-        assert len(w) == 1
-        assert "truncated" in str(w[0].message)
-
-    # Test value that doesn't need truncation
-    with warnings.catch_warnings(record=True) as w:
-        result = _truncate_value(0.1234, "test_channel", True)
-        assert result == 0.1234
-        assert len(w) == 0
-
-
-def test_voltage_conversion():
-    """Test automatic voltage conversion from V to mV."""
+def test_precision_threshold():
+    """Test precision threshold parameter."""
     emg = EMG()
-    # Create sample data in Volts
     time = np.linspace(0, 1, 1000)
-    signal = 0.001 * np.sin(2 * np.pi * 10 * time)  # 1mV amplitude in Volts
-    emg.add_channel('EMG1', signal, 1000, 'V', 'EMG')
+    # Create signal that would have ~0.1% precision loss in EDF
+    signal = np.sin(2 * np.pi * 10 * time) * 32800  # Just above 16-bit range
+    emg.add_channel('EMG1', signal, 1000, 'uV', 'EMG')
 
     with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
         edf_path = f.name
+        bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
 
     try:
-        EDFExporter.export(emg, edf_path)
-        with pyedflib.EdfReader(edf_path) as f:
-            signal_headers = f.getSignalHeaders()
-            # Check if unit was converted to mV
-            assert signal_headers[0]['dimension'] == 'mV'
-            # Check if values were scaled properly
-            exported_signal = f.readSignal(0)
-            assert np.max(np.abs(exported_signal)) >= 0.9  # Should be ~1mV
+        # Should use EDF with higher threshold
+        EDFExporter.export(emg, edf_path, precision_threshold=0.2)
+        assert os.path.exists(edf_path)
+        assert not os.path.exists(bdf_path)
+
+        # Should use BDF with lower threshold
+        EDFExporter.export(emg, edf_path, precision_threshold=0.01)
+        assert os.path.exists(bdf_path)
+
     finally:
         if os.path.exists(edf_path):
             os.unlink(edf_path)
+        if os.path.exists(bdf_path):
+            os.unlink(bdf_path)
+
+
+def test_format_reproducibility():
+    """Test signal reproducibility for both EDF and BDF formats."""
+    time = np.linspace(0, 1, 1000)
+
+    # Test BDF format with large amplitude signal
+    emg = EMG()
+    bdf_signal = np.sin(2 * np.pi * 10 * time) * 1e6  # Large amplitude
+    emg.add_channel('EMG1', bdf_signal, 1000, 'uV', 'EMG')
+
+    with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
+        edf_path = f.name
+        bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
+
+    try:
+        # Test BDF reproducibility
+        EDFExporter.export(emg, edf_path)
+        assert os.path.exists(bdf_path)  # Should use BDF for large signal
+        with pyedflib.EdfReader(bdf_path) as f:
+            bdf_data = f.readSignal(0)
+            bdf_correlation = np.corrcoef(bdf_signal, bdf_data)[0, 1]
+            assert bdf_correlation > 0.99, f"BDF correlation ({bdf_correlation}) below threshold"
+
+        # Test EDF reproducibility with smaller signal
+        emg = EMG()
+        edf_signal = np.sin(2 * np.pi * 10 * time) * 1000  # Smaller amplitude
+        emg.add_channel('EMG1', edf_signal, 1000, 'uV', 'EMG')
+
+        EDFExporter.export(emg, edf_path, precision_threshold=0.1)
+        assert os.path.exists(edf_path)  # Should use EDF for smaller signal
+        with pyedflib.EdfReader(edf_path) as f:
+            edf_data = f.readSignal(0)
+            edf_correlation = np.corrcoef(edf_signal, edf_data)[0, 1]
+            assert edf_correlation > 0.99, f"EDF correlation ({edf_correlation}) below threshold"
+
+    finally:
+        if os.path.exists(edf_path):
+            os.unlink(edf_path)
+        if os.path.exists(bdf_path):
+            os.unlink(bdf_path)
 
 
 def test_bdf_format_selection():
     """Test automatic BDF format selection for high precision data."""
     emg = EMG()
-    # Create high precision data that would need BDF
     time = np.linspace(0, 1, 1000)
-    signal = 0.00001234567890 * np.sin(2 * np.pi * 10 * time)  # Small enough to need BDF
-    emg.add_channel('EMG1', signal, 1000, 'V', 'EMG')
+    # Create signal that requires 24-bit resolution
+    signal = np.sin(2 * np.pi * 10 * time) * 1e6  # Large amplitude
+    emg.add_channel('EMG1', signal, 1000, 'uV', 'EMG')
 
     with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
         edf_path = f.name
@@ -156,11 +245,20 @@ def test_bdf_format_selection():
             assert os.path.exists(bdf_path)
             assert any("Using BDF format" in str(warn.message) for warn in w)
 
-            # Verify BDF content
+            # Verify BDF content and scaling
             with pyedflib.EdfReader(bdf_path) as f:
                 signal_headers = f.getSignalHeaders()
-                # Check if using 24-bit resolution
                 assert signal_headers[0]['digital_max'] == 8388607
+                assert signal_headers[0]['digital_min'] == -8388608
+
+                # Read signal and verify values are within physical range
+                data = f.readSignal(0)
+                assert np.all(data >= signal_headers[0]['physical_min'] - 0.001)  # Allow margin for rounding errors
+                assert np.all(data <= signal_headers[0]['physical_max'] + 0.001)
+
+                # Verify signal shape is preserved
+                correlation = np.corrcoef(signal, data)[0, 1]
+                assert correlation > 0.99  # High correlation with original
     finally:
         if os.path.exists(edf_path):
             os.unlink(edf_path)
