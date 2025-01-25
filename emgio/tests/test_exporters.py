@@ -79,7 +79,7 @@ def test_edf_export(sample_emg):
 
     try:
         # Export to EDF
-        EDFExporter.export(sample_emg, edf_path)
+        EDFExporter.export(sample_emg, edf_path, precision_threshold=1)
 
         # Check if EDF file was created
         assert os.path.exists(edf_path)

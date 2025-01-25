@@ -138,7 +138,7 @@ class EDFExporter:
             if abs(signal_max) > 32767 or abs(signal_min) < -32768:
                 use_bdf = True
                 bdf_reason = (f"Signal range for {ch_name} "
-                            f"({signal_min:.2f} to {signal_max:.2f}) exceeds EDF limits")
+                              f"({signal_min:.2f} to {signal_max:.2f}) exceeds EDF limits")
                 # Recalculate with BDF format
                 phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
                     signal_min, signal_max, use_bdf=True
@@ -152,7 +152,7 @@ class EDFExporter:
             if not use_bdf and loss > precision_threshold:
                 use_bdf = True
                 bdf_reason = (f"Precision loss for {ch_name} ({loss:.4f}%) "
-                            f"exceeds threshold ({precision_threshold}%)")
+                              f"exceeds threshold ({precision_threshold}%)")
                 # Recalculate with BDF format
                 phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
                     signal_min, signal_max, use_bdf=True
