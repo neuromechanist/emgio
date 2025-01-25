@@ -175,7 +175,7 @@ def test_precision_threshold():
         assert not os.path.exists(bdf_path)
 
         # Should use BDF with lower threshold
-        EDFExporter.export(emg, edf_path, precision_threshold=0.05)
+        EDFExporter.export(emg, edf_path, precision_threshold=0.01)
         assert os.path.exists(bdf_path)
 
     finally:

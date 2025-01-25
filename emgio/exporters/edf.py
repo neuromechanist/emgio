@@ -75,6 +75,9 @@ def _calculate_precision_loss(signal: np.ndarray, scaling_factor: float, digital
     nonzero_mask = abs_signal > eps * 1e3
     if not np.any(nonzero_mask):
         return 0.0
+    # Make the first and last five sample zero, to compensate for diff (technically, only first and last one is enough)
+    nonzero_mask[0:5] = False
+    nonzero_mask[-5:] = False
 
     relative_errors = np.zeros_like(signal)
     relative_errors[nonzero_mask] = (
@@ -135,14 +138,18 @@ class EDFExporter:
             )
 
             # Check if BDF is needed based on signal range first
-            if abs(signal_max) > 32767 or abs(signal_min) < -32768:
-                use_bdf = True
-                bdf_reason = (f"Signal range for {ch_name} "
-                              f"({signal_min:.2f} to {signal_max:.2f}) exceeds EDF limits")
+            if abs(signal_max) > 32767 or signal_min < -32768:
+                loss = _calculate_precision_loss(signal, scaling, dig_min, dig_max)
+                max_precision_loss = max(max_precision_loss, loss)
+                if max_precision_loss > precision_threshold:
+                    use_bdf = True
+                    bdf_reason = (f"Signal range for {ch_name} "
+                                  f"({signal_min:.2f} to {signal_max:.2f}) exceeds EDF limits, "
+                                  f"and causes precision loss of maximum {max_precision_loss}%.")
                 # Recalculate with BDF format
-                phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
-                    signal_min, signal_max, use_bdf=True
-                )
+                    phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
+                        signal_min, signal_max, use_bdf=True
+                    )
 
             # Calculate precision loss
             loss = _calculate_precision_loss(signal, scaling, dig_min, dig_max)
