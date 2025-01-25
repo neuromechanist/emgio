@@ -97,14 +97,14 @@ class EDFExporter:
     """Exporter for EDF format with channels.tsv generation."""
 
     @staticmethod
-    def export(emg: EMG, filepath: str, precision_threshold: float = 0.01) -> None:
+    def export(emg: EMG, filepath: str, precision_threshold: float = 0.1) -> None:
         """
         Export EMG data to EDF format with corresponding channels.tsv file.
 
         Args:
             emg: EMG object containing the data
             filepath: Path to save the EDF file
-            precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
+            precision_threshold: Maximum acceptable precision loss percentage (default: 0.1%)
         """
         if emg.signals is None:
             raise ValueError("No signals to export")
@@ -145,7 +145,7 @@ class EDFExporter:
                     use_bdf = True
                     bdf_reason = (f"Signal range for {ch_name} "
                                   f"({signal_min:.2f} to {signal_max:.2f}) exceeds EDF limits, "
-                                  f"and causes precision loss of maximum {max_precision_loss}%.")
+                                  f"and causes precision loss of maximum {max_precision_loss:.4f}%.")
                 # Recalculate with BDF format
                     phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
                         signal_min, signal_max, use_bdf=True
@@ -186,21 +186,18 @@ class EDFExporter:
             writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=pyedflib.FILETYPE_EDFPLUS)
 
         try:
-            # Second pass: prepare channel information and scale signals
-            scaled_signals = []
+            # Second pass: prepare channel information
+            signals = []
             for ch_name in emg.channels:
                 signal = emg.signals[ch_name].values
                 ch_info = emg.channels[ch_name]
 
-                # Calculate scaling factors
-                phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
+                # Calculate scaling factors for header
+                phys_min, phys_max, dig_min, dig_max, _ = _determine_scaling_factors(
                     float(np.min(signal)), float(np.max(signal)), use_bdf
                 )
 
-                # Scale signal (simulate digitization)
-                scaled = np.round(signal * scaling)
-                scaled_signal = np.clip(scaled, dig_min, dig_max)
-                scaled_signals.append(scaled_signal)
+                signals.append(signal)  # Use original physical signal
 
                 # Prepare channel info
                 ch_dict = {
@@ -226,7 +223,7 @@ class EDFExporter:
 
             # Set headers and write data
             writer.setSignalHeaders(channel_info_list)
-            writer.writeSamples(scaled_signals)
+            writer.writeSamples(signals)  # Pass physical signals directly
 
             print("".join(signal_info))
             print(f"\nMaximum precision loss: {max_precision_loss:.4f}%")
