@@ -1,5 +1,8 @@
 # EMGIO
 
+[![Tests](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/neuromechanist/emgio/branch/main/graph/badge.svg)](https://codecov.io/gh/neuromechanist/emgio)
+
 A Python package for EMG data import/export and manipulation. This package provides a unified interface for working with EMG data from various systems (Trigno, Noraxon, OTB) and exporting to standardized formats like EDF.
 
 ## Features
