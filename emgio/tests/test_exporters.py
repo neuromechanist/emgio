@@ -185,6 +185,47 @@ def test_precision_threshold():
             os.unlink(bdf_path)
 
 
+def test_format_reproducibility():
+    """Test signal reproducibility for both EDF and BDF formats."""
+    time = np.linspace(0, 1, 1000)
+
+    # Test BDF format with large amplitude signal
+    emg = EMG()
+    bdf_signal = np.sin(2 * np.pi * 10 * time) * 1e6  # Large amplitude
+    emg.add_channel('EMG1', bdf_signal, 1000, 'uV', 'EMG')
+
+    with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
+        edf_path = f.name
+        bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
+
+    try:
+        # Test BDF reproducibility
+        EDFExporter.export(emg, edf_path)
+        assert os.path.exists(bdf_path)  # Should use BDF for large signal
+        with pyedflib.EdfReader(bdf_path) as f:
+            bdf_data = f.readSignal(0)
+            bdf_correlation = np.corrcoef(bdf_signal, bdf_data)[0, 1]
+            assert bdf_correlation > 0.99, f"BDF correlation ({bdf_correlation}) below threshold"
+
+        # Test EDF reproducibility with smaller signal
+        emg = EMG()
+        edf_signal = np.sin(2 * np.pi * 10 * time) * 1000  # Smaller amplitude
+        emg.add_channel('EMG1', edf_signal, 1000, 'uV', 'EMG')
+
+        EDFExporter.export(emg, edf_path, precision_threshold=0.1)
+        assert os.path.exists(edf_path)  # Should use EDF for smaller signal
+        with pyedflib.EdfReader(edf_path) as f:
+            edf_data = f.readSignal(0)
+            edf_correlation = np.corrcoef(edf_signal, edf_data)[0, 1]
+            assert edf_correlation > 0.99, f"EDF correlation ({edf_correlation}) below threshold"
+
+    finally:
+        if os.path.exists(edf_path):
+            os.unlink(edf_path)
+        if os.path.exists(bdf_path):
+            os.unlink(bdf_path)
+
+
 def test_bdf_format_selection():
     """Test automatic BDF format selection for high precision data."""
     emg = EMG()
