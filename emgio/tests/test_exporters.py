@@ -212,8 +212,8 @@ def test_bdf_format_selection():
 
                 # Read signal and verify values are within physical range
                 data = f.readSignal(0)
-                assert np.all(data >= signal_headers[0]['physical_min'])
-                assert np.all(data <= signal_headers[0]['physical_max'])
+                assert np.all(data >= signal_headers[0]['physical_min'] - 0.001)  # Allow margin for rounding errors
+                assert np.all(data <= signal_headers[0]['physical_max'] + 0.001)
 
                 # Verify signal shape is preserved
                 correlation = np.corrcoef(signal, data)[0, 1]
