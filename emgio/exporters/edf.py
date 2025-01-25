@@ -97,7 +97,7 @@ class EDFExporter:
     """Exporter for EDF format with channels.tsv generation."""
 
     @staticmethod
-    def export(emg: EMG, filepath: str, precision_threshold: float = 0.1) -> None:
+    def export(emg: EMG, filepath: str, precision_threshold: float = 0.01) -> None:
         """
         Export EMG data to EDF format with corresponding channels.tsv file.
 
