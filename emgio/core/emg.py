@@ -33,15 +33,17 @@ class EMG:
             EMG: New EMG object with loaded data
         """
         importers = {
-            'trigno': 'TrignoImporter'
-            # Add more importers here as they are implemented
-            # 'noraxon': 'NoraxonImporter',
-            # 'otb': 'OTBImporter'
+            'trigno': 'TrignoImporter',
+            'otb': 'OTBImporter'  # OTB/OTB+ EMG system data
         }
 
         if importer not in importers:
-            raise ValueError(f"Unsupported importer: {importer}. "
-                           f"Available importers: {list(importers.keys())}")
+            raise ValueError(
+                f"Unsupported importer: {importer}. "
+                f"Available importers: {list(importers.keys())}\n"
+                "- trigno: Delsys Trigno EMG system\n"
+                "- otb: OTB/OTB+ EMG system"
+            )
 
         # Import the appropriate importer class
         importer_module = __import__(
