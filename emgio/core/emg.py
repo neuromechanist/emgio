@@ -194,15 +194,16 @@ class EMG:
         plt.tight_layout()
         plt.show()
 
-    def to_edf(self, filepath: str) -> None:
+    def to_edf(self, filepath: str, **kwargs) -> None:
         """
         Export data to EDF format with corresponding channels.tsv file.
 
         Args:
             filepath: Path to save the EDF file
+            **kwargs: Additional arguments for the EDF exporter
         """
         from ..exporters.edf import EDFExporter
-        EDFExporter.export(self, filepath)
+        EDFExporter.export(self, filepath, **kwargs)
 
     def set_metadata(self, key: str, value: any) -> None:
         """
