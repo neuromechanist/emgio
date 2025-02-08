@@ -6,7 +6,7 @@ from emgio.core.emg import EMG
 def main():
     # Load OTB data
     print("Loading OTB data...")
-    emg = EMG.from_file('examples/t002_60_2s_sessL.otb+', importer='otb')
+    emg = EMG.from_file('examples/two_mouvi_truncated.otb+', importer='otb')
 
     # Print metadata
     print("\nDevice Information:")
@@ -44,15 +44,7 @@ def main():
     output_path = 'examples/otb_emg'
     emg.to_edf(output_path)
     
-    # Get file info
-    if os.path.exists(output_path):
-        size_mb = os.path.getsize(output_path) / (1024 * 1024)
-        ext = os.path.splitext(output_path)[1]
-        print(f"Format: {ext[1:].upper()}")
-        print(f"File size: {size_mb:.2f} MB")
-    else:
-        print(f"File not created: {output_path}")
-
+    print("\nExport complete!")
 
 if __name__ == '__main__':
     main()
