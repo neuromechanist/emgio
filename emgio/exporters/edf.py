@@ -71,7 +71,7 @@ def _calculate_precision_loss(signal: np.ndarray, scaling_factor: float, digital
     abs_signal = np.abs(signal)
 
     # Avoid division by zero and very small values
-    eps = np.finfo(float).eps
+    eps = np.finfo(np.float32).eps
     nonzero_mask = abs_signal > eps * 1e3
     if not np.any(nonzero_mask):
         return 0.0
@@ -86,7 +86,7 @@ def _calculate_precision_loss(signal: np.ndarray, scaling_factor: float, digital
 
     # Convert to percentage and ensure we detect small losses
     max_loss = float(np.max(relative_errors) * 100)
-    if max_loss < np.finfo(float).eps and np.any(abs_diff > 0):
+    if max_loss < np.finfo(np.float32).eps and np.any(abs_diff > 0):
         # If we have any difference but relative error is too small to measure,
         # return a small but non-zero value
         return 1e-6
