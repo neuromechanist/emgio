@@ -40,25 +40,18 @@ def main():
         plt.show()
     else:
         print("\nNo EMG channels found in the data")
-
-    # Try different precision thresholds
-    thresholds = [0.1, 0.01, 0.001, 0.0001]
-    print("\nTesting different precision thresholds:")
-    print("-" * 50)
     
-    for threshold in thresholds:
-        print(f"\nTesting threshold: {threshold}%")
-        output_path = f'examples/otb_emg_{threshold:.4f}.edf'
-        emg.to_edf(output_path, precision_threshold=threshold)
-        
-        # Get file info
-        if os.path.exists(output_path):
-            size_mb = os.path.getsize(output_path) / (1024 * 1024)
-            ext = os.path.splitext(output_path)[1]
-            print(f"Format: {ext[1:].upper()}")
-            print(f"File size: {size_mb:.2f} MB")
-        else:
-            print(f"File not created: {output_path}")
+    output_path = 'examples/otb_emg'
+    emg.to_edf(output_path)
+    
+    # Get file info
+    if os.path.exists(output_path):
+        size_mb = os.path.getsize(output_path) / (1024 * 1024)
+        ext = os.path.splitext(output_path)[1]
+        print(f"Format: {ext[1:].upper()}")
+        print(f"File size: {size_mb:.2f} MB")
+    else:
+        print(f"File not created: {output_path}")
 
 
 if __name__ == '__main__':
