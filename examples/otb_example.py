@@ -2,6 +2,7 @@ import os
 import matplotlib.pyplot as plt
 from emgio.core.emg import EMG
 
+
 def main():
     # Load OTB data
     print("Loading OTB data...")
@@ -58,6 +59,7 @@ def main():
             print(f"File size: {size_mb:.2f} MB")
         else:
             print(f"File not created: {output_path}")
+
 
 if __name__ == '__main__':
     main()
