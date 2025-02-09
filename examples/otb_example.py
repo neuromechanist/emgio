@@ -28,18 +28,18 @@ def main():
     for ch_type, count in channel_types.items():
         print(f"{ch_type}: {count} channels")
 
-    # Plot EMG channels
-    emg_data = emg.select_channels(channel_type='EMG')
-    if emg_data.signals is not None and not emg_data.signals.empty:
-        print("\nPlotting EMG channels...")
-        emg_data.plot_signals(
-            title='EMG Channels',
-            style='line',
-            grid=True
-        )
-        plt.show()
-    else:
-        print("\nNo EMG channels found in the data")
+    # # Plot EMG channels
+    # emg_data = emg.select_channels(channel_type='EMG')
+    # if emg_data.signals is not None and not emg_data.signals.empty:
+    #     print("\nPlotting EMG channels...")
+    #     emg_data.plot_signals(
+    #         title='EMG Channels',
+    #         style='line',
+    #         grid=True
+    #     )
+    #     plt.show()
+    # else:
+    #     print("\nNo EMG channels found in the data")
 
     output_path = 'examples/otb_emg'
     emg.to_edf(output_path)

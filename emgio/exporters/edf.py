@@ -6,6 +6,122 @@ import pyedflib
 from ..core.emg import EMG
 
 
+def analyze_signal(signal: np.ndarray) -> dict:
+    """
+    Analyze signal characteristics including noise floor and dynamic range.
+
+    Args:
+        signal: Input signal array
+
+    Returns:
+        dict: Analysis results including range, noise floor, and dynamic range in dB
+    """
+    # Remove DC offset for better analysis
+    detrended = signal - np.mean(signal)
+    
+    # Dynamic range
+    signal_range = np.max(signal) - np.min(signal)
+    
+    # Noise floor estimation methods
+    # Method 1: Using signal differences
+    noise_estimate_diff = np.std(np.diff(detrended))
+    
+    # Method 2: Using detrended fluctuation analysis
+    noise_floor = np.std(detrended - np.convolve(
+        detrended, np.ones(10) / 10, mode='same'))
+    
+    # Use the more conservative (larger) noise estimate
+    noise_floor = max(noise_estimate_diff, noise_floor)
+    
+    # Prevent division by zero
+    if noise_floor < np.finfo(float).eps:
+        noise_floor = np.finfo(float).eps
+    
+    # Dynamic Range in dB
+    dynamic_range_db = 20 * np.log10(signal_range / noise_floor)
+    
+    return {
+        'range': signal_range,
+        'noise_floor': noise_floor,
+        'dynamic_range_db': dynamic_range_db
+    }
+
+
+def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
+    """
+    Determine whether EDF or BDF format is suitable for the signal.
+
+    Args:
+        signal: Input signal array
+        analysis: Signal analysis results from analyze_signal()
+
+    Returns:
+        tuple: (use_bdf, reason, snr_db)
+    """
+    # Calculate theoretical format capabilities
+    edf_levels = 2**16  # 65,536 levels
+    bdf_levels = 2**24  # 16,777,216 levels
+    
+    # Calculate SNR for both formats
+    signal_std = np.std(signal)
+    if signal_std < np.finfo(float).eps:
+        signal_std = np.finfo(float).eps
+    
+    # Calculate quantization step size
+    edf_step = analysis['range'] / edf_levels
+    bdf_step = analysis['range'] / bdf_levels
+    
+    # Calculate SNR in dB for both formats
+    edf_snr = 20 * np.log10(signal_std / (edf_step / np.sqrt(12)))
+    bdf_snr = 20 * np.log10(signal_std / (bdf_step / np.sqrt(12)))
+    
+    # Decision criteria
+    snr_threshold = 70  # dB, common threshold for good quality
+    
+    if edf_snr > snr_threshold:
+        return False, "EDF provides sufficient SNR", edf_snr
+    elif bdf_snr > snr_threshold:
+        return True, f"EDF SNR ({edf_snr:.1f} dB) below threshold, BDF recommended", bdf_snr
+    else:
+        return True, f"Signal may require higher resolution than EDF (SNR: {edf_snr:.1f} dB)", bdf_snr
+
+
+def quantization_analysis(signal: np.ndarray, bits: int) -> dict:
+    """
+    Perform detailed quantization error analysis.
+
+    Args:
+        signal: Input signal array
+        bits: Number of bits (16 for EDF, 24 for BDF)
+
+    Returns:
+        dict: Analysis results including step size, errors, and SNR
+    """
+    signal_range = np.max(signal) - np.min(signal)
+    step_size = signal_range / (2**bits)
+    
+    # Simulate quantization
+    quantized = np.round(signal / step_size) * step_size
+    
+    # Calculate errors
+    abs_error = np.abs(signal - quantized)
+    rmse = np.sqrt(np.mean((signal - quantized)**2))
+    
+    # Calculate SNR
+    signal_power = np.mean(signal**2)
+    noise_power = np.mean((signal - quantized)**2)
+    if noise_power < np.finfo(float).eps:
+        noise_power = np.finfo(float).eps
+    snr = 10 * np.log10(signal_power / noise_power)
+    
+    return {
+        'step_size': step_size,
+        'max_error': np.max(abs_error),
+        'rmse': rmse,
+        'snr': snr
+    }
+
+
 def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bool = False) -> tuple:
     """
     Calculate optimal scaling factors for EDF/BDF signal conversion.
@@ -110,12 +226,11 @@ class EDFExporter:
             raise ValueError("No signals to export")
 
         # Analyze signals and determine format
-        print("\nPrecision Analysis:")
-        print("------------------")
+        print("\nSignal Analysis:")
+        print("--------------")
 
         use_bdf = False
         bdf_reason = ""
-        max_precision_loss = 0.0
         signal_info = []
         channel_info_list = []
         channels_tsv_data = {
@@ -123,54 +238,33 @@ class EDFExporter:
             'sampling_frequency': [], 'reference': [], 'status': []
         }
 
-        # First pass: determine if BDF is needed
+        # First pass: analyze signals and determine format
         for ch_name in emg.channels:
             signal = emg.signals[ch_name].values
             ch_info = emg.channels[ch_name]
 
-            # Get signal range
-            signal_min = float(np.min(signal))
-            signal_max = float(np.max(signal))
-
-            # Test scaling with EDF format
-            phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
-                signal_min, signal_max, use_bdf=False
-            )
-
-            # Check if BDF is needed based on signal range first
-            if abs(signal_max) > 32767 or signal_min < -32768:
-                loss = _calculate_precision_loss(signal, scaling, dig_min, dig_max)
-                max_precision_loss = max(max_precision_loss, loss)
-                if max_precision_loss > precision_threshold:
-                    use_bdf = True
-                    bdf_reason = (f"Signal range for {ch_name} "
-                                  f"({signal_min:.2f} to {signal_max:.2f}) exceeds EDF limits, "
-                                  f"and causes precision loss of maximum {max_precision_loss:.4f}%.")
-                # Recalculate with BDF format
-                    phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
-                        signal_min, signal_max, use_bdf=True
-                    )
-
-            # Calculate precision loss
-            loss = _calculate_precision_loss(signal, scaling, dig_min, dig_max)
-            max_precision_loss = max(max_precision_loss, loss)
-
-            # Check if BDF is needed based on precision
-            if not use_bdf and loss > precision_threshold:
+            # Analyze signal characteristics
+            analysis = analyze_signal(signal)
+            use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
+            
+            # Perform quantization analysis for chosen format
+            if use_bdf_for_channel:
                 use_bdf = True
-                bdf_reason = (f"Precision loss for {ch_name} ({loss:.4f}%) "
-                              f"exceeds threshold ({precision_threshold}%)")
-                # Recalculate with BDF format
-                phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
-                    signal_min, signal_max, use_bdf=True
-                )
-                # Update loss calculation for info display
-                loss = _calculate_precision_loss(signal, scaling, dig_min, dig_max)
+                if not bdf_reason:  # Only set reason for first channel requiring BDF
+                    bdf_reason = f"Channel {ch_name}: {reason}"
+
+            # Calculate scaling factors
+            phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
+                float(np.min(signal)), float(np.max(signal)), use_bdf=use_bdf_for_channel
+            )
 
             signal_info.append(
                 f"\n  {ch_name}:"
-                f"\n    Range: {signal_min:.8g} to {signal_max:.8g} {ch_info['unit']}"
-                f"\n    Precision loss with {'BDF' if use_bdf else 'EDF'}: {loss:.4f}%"
+                f"\n    Range: {analysis['range']:.8g} {ch_info['unit']}"
+                f"\n    Dynamic Range: {analysis['dynamic_range_db']:.1f} dB"
+                f"\n    Noise Floor: {analysis['noise_floor']:.2e} {ch_info['unit']}"
+                f"\n    SNR: {snr:.1f} dB"
+                f"\n    Format: {'BDF' if use_bdf_for_channel else 'EDF'}"
             )
 
         # Set file format and create writer
@@ -226,7 +320,6 @@ class EDFExporter:
             writer.writeSamples(signals)  # Pass physical signals directly
 
             print("".join(signal_info))
-            print(f"\nMaximum precision loss: {max_precision_loss:.4f}%")
 
         finally:
             writer.close()
