@@ -12,7 +12,7 @@ def main():
     print("\nDevice Information:")
     print("-" * 50)
     print(f"Device: {emg.get_metadata('device')}")
-    print(f"AD Bits: {emg.get_metadata('ad_bits')}")
+    print(f"Resolution: {emg.get_metadata('signal_resolution')} bits")
 
     # Print channel type summary
     print("\nChannel Type Summary:")
