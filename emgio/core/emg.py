@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Any
 
 
 class EMG:
@@ -138,7 +138,9 @@ class EMG:
                      time_range: Optional[tuple] = None,
                      style: str = 'line',
                      grid: bool = True,
-                     title: Optional[str] = None) -> None:
+                     title: Optional[str] = None,
+                     show: bool = True,
+                     plt_module: Any = plt) -> None:
         """
         Plot EMG signals with enhanced visualization options.
 
@@ -159,8 +161,11 @@ class EMG:
             raise ValueError(f"Channels not found: {missing}")
 
         # Create figure with shared x-axis
-        fig, axes = plt.subplots(len(channels), 1, figsize=(12, 3 * len(channels)),
-                                 sharex=True)
+        fig, axes = plt_module.subplots(
+            len(channels), 1,
+            figsize=(12, 3 * len(channels)),
+            sharex=True
+        )
         if len(channels) == 1:
             axes = [axes]
 
@@ -192,8 +197,9 @@ class EMG:
         axes[-1].set_xlabel("Time (s)")
 
         # Adjust layout to prevent label overlap
-        plt.tight_layout()
-        plt.show()
+        plt_module.tight_layout()
+        if show:
+            plt_module.show()
 
     def to_edf(self, filepath: str, **kwargs) -> None:
         """
