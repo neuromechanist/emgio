@@ -36,7 +36,7 @@ class OTBImporter(BaseImporter):
             # Use system tar command
             print(f"Extracting {filepath} to {temp_dir}")
             result = subprocess.run(['tar', 'xf', filepath, '-C', temp_dir], 
-                                  capture_output=True, text=True)
+                                    capture_output=True, text=True)
             
             if result.returncode != 0:
                 raise ValueError(f"tar command failed: {result.stderr}")
@@ -86,13 +86,13 @@ class OTBImporter(BaseImporter):
         name = (attrs.get('Name') or attrs.get('name') or 
                 attrs.get('DeviceName') or attrs.get('deviceName') or '')
         sampling_freq = float(attrs.get('SampleFrequency') or 
-                            attrs.get('sampleFrequency') or 
-                            attrs.get('SamplingFrequency') or 
-                            attrs.get('samplingFrequency') or 0)
+                              attrs.get('sampleFrequency') or 
+                              attrs.get('SamplingFrequency') or 
+                              attrs.get('samplingFrequency') or 0)
         ad_bits = int(attrs.get('ad_bits') or 
-                     attrs.get('AD_bits') or 
-                     attrs.get('AdBits') or 
-                     attrs.get('adBits') or 16)
+                      attrs.get('AD_bits') or 
+                      attrs.get('AdBits') or 
+                      attrs.get('adBits') or 16)
         
         metadata['device'] = {
             'name': name,
