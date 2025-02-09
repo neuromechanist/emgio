@@ -116,9 +116,9 @@ class OTBImporter(BaseImporter):
                     channel_num = start_index + idx + 1
                     
                     # Determine channel type based on adapter and channel info
-                    if ('EMG' in adapter_id or 
-                        'Direct connection' in adapter_id or 
-                        'Sessantaquattro' in adapter_id):
+                    EMG_adapter_models = ['Due', 'Muovi', 'Sessantaquattro', 'Novecento', 'Quattro', 'Quattrocento']
+                    # check if one of the EMG adapter models is in the adapter ID
+                    if any(model in adapter_id for model in EMG_adapter_models):
                         ch_type = 'EMG'
                     elif ('ACC' in adapter_id or 
                           'Acceleration' in channel.attrib.get('Description', '')):
