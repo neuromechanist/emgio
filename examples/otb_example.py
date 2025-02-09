@@ -40,10 +40,10 @@ def main():
         plt.show()
     else:
         print("\nNo EMG channels found in the data")
-    
+
     output_path = 'examples/otb_emg'
     emg.to_edf(output_path)
-    
+
     print("\nExport complete!")
 
 if __name__ == '__main__':

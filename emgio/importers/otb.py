@@ -22,7 +22,7 @@ class OTBImporter(BaseImporter):
             Path to the temporary directory containing extracted files
         """
         temp_dir = tempfile.mkdtemp(prefix='otb_')
-        
+
         # Check if file exists
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"OTB file not found: {filepath}")
@@ -35,18 +35,18 @@ class OTBImporter(BaseImporter):
         try:
             # Use system tar command
             print(f"Extracting {filepath} to {temp_dir}")
-            result = subprocess.run(['tar', 'xf', filepath, '-C', temp_dir], 
+            result = subprocess.run(['tar', 'xf', filepath, '-C', temp_dir],
                                     capture_output=True, text=True)
-            
+
             if result.returncode != 0:
                 raise ValueError(f"tar command failed: {result.stderr}")
-            
+
             print(f"Contents of {temp_dir}:")
             for item in os.listdir(temp_dir):
                 print(f"- {item}")
-            
+
             return temp_dir
-            
+
         except Exception as e:
             print(f"Error during extraction: {str(e)}")
             raise ValueError(f"Could not extract OTB file: {str(e)}")
@@ -80,20 +80,20 @@ class OTBImporter(BaseImporter):
 
         print("\nDevice element:", device)
         print("Device attributes:", device.attrib)
-        
+
         # Parse device attributes with various possible names
         attrs = device.attrib
-        name = (attrs.get('Name') or attrs.get('name') or 
+        name = (attrs.get('Name') or attrs.get('name') or
                 attrs.get('DeviceName') or attrs.get('deviceName') or '')
-        sampling_freq = float(attrs.get('SampleFrequency') or 
-                              attrs.get('sampleFrequency') or 
-                              attrs.get('SamplingFrequency') or 
+        sampling_freq = float(attrs.get('SampleFrequency') or
+                              attrs.get('sampleFrequency') or
+                              attrs.get('SamplingFrequency') or
                               attrs.get('samplingFrequency') or 0)
-        ad_bits = int(attrs.get('ad_bits') or 
-                      attrs.get('AD_bits') or 
-                      attrs.get('AdBits') or 
+        ad_bits = int(attrs.get('ad_bits') or
+                      attrs.get('AD_bits') or
+                      attrs.get('AdBits') or
                       attrs.get('adBits') or 16)
-        
+
         metadata['device'] = {
             'name': name,
             'sampling_frequency': sampling_freq,
@@ -114,16 +114,16 @@ class OTBImporter(BaseImporter):
                     print("Channel:", channel.attrib)
                     idx = int(channel.attrib.get('Index', 0))
                     channel_num = start_index + idx + 1
-                    
+
                     # Determine channel type based on adapter and channel info
                     EMG_adapter_models = ['Due', 'Muovi', 'Sessantaquattro', 'Novecento', 'Quattro', 'Quattrocento']
                     # check if one of the EMG adapter models is in the adapter ID
                     if any(model in adapter_id for model in EMG_adapter_models):
                         ch_type = 'EMG'
-                    elif ('ACC' in adapter_id or 
+                    elif ('ACC' in adapter_id or
                           'Acceleration' in channel.attrib.get('Description', '')):
                         ch_type = 'ACC'
-                    elif ('GYRO' in adapter_id or 
+                    elif ('GYRO' in adapter_id or
                           'Gyroscope' in channel.attrib.get('Description', '')):
                         ch_type = 'GYRO'
                     elif 'Quaternion' in channel.attrib.get('ID', ''):
@@ -208,7 +208,7 @@ class OTBImporter(BaseImporter):
         for ch_num, ch_info in metadata['channels'].items():
             ch_idx = int(ch_num[2:]) - 1  # Extract channel number from 'CHx'
             gain = ch_info['gain']
-            
+
             # Apply scaling formula: data * PowerSupply / (2^ad_bits) * 1000 / gain
             # 1000 factor converts to mV
             if ch_info['type'] == 'EMG':
@@ -216,7 +216,7 @@ class OTBImporter(BaseImporter):
             else:
                 # For non-EMG channels (like control signals), use no scaling
                 scale = 1.0
-            
+
             scaled_data[ch_idx] = data[ch_idx] * scale
 
         return scaled_data, sampling_freq
@@ -242,20 +242,20 @@ class OTBImporter(BaseImporter):
             sig_files = [f for f in os.listdir(temp_dir) if f.endswith('.sig')]
             if not sig_files:
                 raise ValueError("No signal file found in OTB archive")
-            
+
             # Find corresponding XML file (same name but .xml extension)
             sig_base = os.path.splitext(sig_files[0])[0]
             xml_file = sig_base + '.xml'
             xml_path = os.path.join(temp_dir, xml_file)
-            
+
             if not os.path.exists(xml_path):
                 raise ValueError(f"Metadata file not found: {xml_file}")
-            
+
             print(f"Using signal file: {sig_files[0]}")
             print(f"Parsing XML file: {xml_path}")
             metadata = self._parse_xml_metadata(xml_path)
             print("Device metadata:", metadata['device'])
-            
+
             data, sampling_freq = self._read_signal_data(
                 os.path.join(temp_dir, sig_files[0]),
                 metadata
