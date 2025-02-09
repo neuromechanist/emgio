@@ -2,6 +2,7 @@ import pytest
 import os
 import tempfile
 from ..importers.trigno import TrignoImporter
+from ..importers.otb import OTBImporter
 
 
 @pytest.fixture
@@ -82,3 +83,84 @@ def test_trigno_csv_structure_analysis(sample_trigno_csv):
     assert len(metadata_lines) == 3  # Three channel definitions
     assert data_start == 5  # Data starts at line 5
     assert 'X[s]' in header_line  # Header contains time column
+
+
+def test_otb_importer():
+    """Test OTB importer with sample data."""
+    importer = OTBImporter()
+    emg = importer.load('examples/one_sessantaquattro_truncated.otb+')
+
+    # Check if channels were loaded
+    assert len(emg.channels) > 0
+    
+    # Check channel properties for first channel
+    first_channel = next(iter(emg.channels.values()))
+    assert first_channel['sampling_freq'] > 0
+    assert first_channel['unit'] in ['mV', 'g', 'rad', 'a.u.']
+    assert first_channel['type'] in ['EMG', 'ACC', 'GYRO', 'QUAT', 'CTRL', 'OTHER']
+
+    # Check metadata
+    assert emg.get_metadata('device') is not None
+    assert emg.get_metadata('signal_resolution') is not None
+    assert emg.get_metadata('source_file') == 'examples/one_sessantaquattro_truncated.otb+'
+
+    # Check data structure
+    assert emg.signals is not None
+    assert len(emg.signals) > 0  # Has samples
+    assert len(emg.signals.columns) == len(emg.channels)  # Columns match channels
+
+
+def test_otb_file_not_found():
+    """Test error handling for non-existent file."""
+    importer = OTBImporter()
+    with pytest.raises(FileNotFoundError):
+        importer.load('nonexistent.otb+')
+
+
+def test_otb_metadata_parsing():
+    """Test metadata parsing from OTB file."""
+    importer = OTBImporter()
+    emg = importer.load('examples/one_sessantaquattro_truncated.otb+')
+    
+    # Test device metadata
+    assert emg.get_metadata('device') is not None
+    assert emg.get_metadata('signal_resolution') is not None
+    
+    # Test channel metadata
+    for channel_name, channel_info in emg.channels.items():
+        assert 'sampling_freq' in channel_info
+        assert 'unit' in channel_info
+        assert 'type' in channel_info
+        assert channel_info['type'] in ['EMG', 'ACC', 'GYRO', 'QUAT', 'CTRL', 'OTHER']
+
+
+def test_otb_temp_cleanup():
+    """Test temporary directory cleanup after loading."""
+    importer = OTBImporter()
+    
+    # Get a list of all temp directories before loading
+    temp_base = tempfile.gettempdir()
+    before_dirs = {d for d in os.listdir(temp_base) if d.startswith('otb_')}
+    print("\nBefore loading - temp dirs:", before_dirs)
+    
+    # Load the file
+    importer.load('examples/one_sessantaquattro_truncated.otb+')
+    
+    # Get a list of temp directories after loading
+    after_dirs = {d for d in os.listdir(temp_base) if d.startswith('otb_')}
+    print("After loading - temp dirs:", after_dirs)
+    
+    # Find any new directories that weren't cleaned up
+    remaining_dirs = after_dirs - before_dirs
+    print("Remaining dirs:", remaining_dirs)
+    
+    # Clean up any remaining directories for test stability
+    for d in remaining_dirs:
+        full_path = os.path.join(temp_base, d)
+        if os.path.exists(full_path):
+            import shutil
+            shutil.rmtree(full_path)
+            print(f"Cleaned up remaining dir: {d}")
+    
+    # Verify no new temp directories remain
+    assert not remaining_dirs, f"Temporary directories were not cleaned up: {remaining_dirs}"

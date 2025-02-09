@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Any
 
 
 class EMG:
@@ -9,7 +9,8 @@ class EMG:
     Core EMG class for handling EMG data and metadata.
 
     Attributes:
-        signals (pd.DataFrame): Raw signal data with time as index
+        signals (pd.DataFrame): Raw signal data with time as index, for now, all channels are stored
+        in the same DataFrame, so they require the same sampling frequency
         metadata (dict): Metadata dictionary containing recording information
         channels (dict): Channel information including type, unit, sampling frequency
     """
@@ -33,15 +34,17 @@ class EMG:
             EMG: New EMG object with loaded data
         """
         importers = {
-            'trigno': 'TrignoImporter'
-            # Add more importers here as they are implemented
-            # 'noraxon': 'NoraxonImporter',
-            # 'otb': 'OTBImporter'
+            'trigno': 'TrignoImporter',
+            'otb': 'OTBImporter'  # OTB/OTB+ EMG system data
         }
 
         if importer not in importers:
-            raise ValueError(f"Unsupported importer: {importer}. "
-                           f"Available importers: {list(importers.keys())}")
+            raise ValueError(
+                f"Unsupported importer: {importer}. "
+                f"Available importers: {list(importers.keys())}\n"
+                "- trigno: Delsys Trigno EMG system\n"
+                "- otb: OTB/OTB+ EMG system"
+            )
 
         # Import the appropriate importer class
         importer_module = __import__(
@@ -56,7 +59,7 @@ class EMG:
         return importer_class().load(filepath)
 
     def select_channels(self, channels: Union[str, List[str], None] = None,
-                       channel_type: Optional[str] = None) -> 'EMG':
+                        channel_type: Optional[str] = None) -> 'EMG':
         """
         Select specific channels from the data.
 
@@ -86,7 +89,7 @@ class EMG:
         # If channel_type specified but no channels, select all of that type
         if channels is None and channel_type is not None:
             channels = [ch for ch, info in self.channels.items()
-                       if info['type'] == channel_type]
+                        if info['type'] == channel_type]
             if not channels:
                 raise ValueError(f"No channels found of type: {channel_type}")
         elif isinstance(channels, str):
@@ -100,7 +103,7 @@ class EMG:
         # Filter by type if specified
         if channel_type is not None:
             channels = [ch for ch in channels
-                       if self.channels[ch]['type'] == channel_type]
+                        if self.channels[ch]['type'] == channel_type]
             if not channels:
                 raise ValueError(
                     f"None of the selected channels are of type: {channel_type}")
@@ -132,10 +135,12 @@ class EMG:
                 if info['type'] == channel_type]
 
     def plot_signals(self, channels: Optional[List[str]] = None,
-                    time_range: Optional[tuple] = None,
-                    style: str = 'line',
-                    grid: bool = True,
-                    title: Optional[str] = None) -> None:
+                     time_range: Optional[tuple] = None,
+                     style: str = 'line',
+                     grid: bool = True,
+                     title: Optional[str] = None,
+                     show: bool = True,
+                     plt_module: Any = plt) -> None:
         """
         Plot EMG signals with enhanced visualization options.
 
@@ -156,8 +161,11 @@ class EMG:
             raise ValueError(f"Channels not found: {missing}")
 
         # Create figure with shared x-axis
-        fig, axes = plt.subplots(len(channels), 1, figsize=(12, 3*len(channels)),
-                               sharex=True)
+        fig, axes = plt_module.subplots(
+            len(channels), 1,
+            figsize=(12, 3 * len(channels)),
+            sharex=True
+        )
         if len(channels) == 1:
             axes = [axes]
 
@@ -189,18 +197,26 @@ class EMG:
         axes[-1].set_xlabel("Time (s)")
 
         # Adjust layout to prevent label overlap
-        plt.tight_layout()
-        plt.show()
+        plt_module.tight_layout()
+        if show:
+            plt_module.show()
 
-    def to_edf(self, filepath: str) -> None:
+    def to_edf(self, filepath: str, **kwargs) -> None:
         """
         Export data to EDF format with corresponding channels.tsv file.
 
         Args:
             filepath: Path to save the EDF file
+            **kwargs: Additional arguments for the EDF exporter
+
+        Raises:
+            ValueError: If no signals are loaded
         """
+        if self.signals is None:
+            raise ValueError("No signals loaded")
+            
         from ..exporters.edf import EDFExporter
-        EDFExporter.export(self, filepath)
+        EDFExporter.export(self, filepath, **kwargs)
 
     def set_metadata(self, key: str, value: any) -> None:
         """
@@ -225,7 +241,7 @@ class EMG:
         return self.metadata.get(key)
 
     def add_channel(self, name: str, data: np.ndarray, sampling_freq: float,
-                   unit: str, ch_type: str = 'EMG') -> None:
+                    unit: str, prefilter: str = 'n/a', ch_type: str = 'EMG') -> None:
         """
         Add a new channel to the EMG data.
 
@@ -234,16 +250,18 @@ class EMG:
             data: Channel data
             sampling_freq: Sampling frequency in Hz
             unit: Unit of measurement
+            prefilter: Pre-filtering applied to the channel
             ch_type: Channel type ('EMG', 'ACC', 'GYRO', etc.)
         """
         if self.signals is None:
             # Create DataFrame with time index
-            time = np.arange(len(data))/sampling_freq
+            time = np.arange(len(data)) / sampling_freq
             self.signals = pd.DataFrame(index=time)
 
         self.signals[name] = data
         self.channels[name] = {
             'sampling_freq': sampling_freq,
             'unit': unit,
+            'prefilter': prefilter,
             'type': ch_type
         }
