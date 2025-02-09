@@ -16,14 +16,8 @@ def analyze_signal(signal: np.ndarray) -> dict:
     Returns:
         dict: Analysis results including range, noise floor, and dynamic range in dB
     """
-    # Remove DC offset for better analysis
-    detrended = signal - np.mean(signal)
-    
-    # Dynamic range
-    signal_range = np.max(signal) - np.min(signal)
-    
     # Handle zero signal case
-    if np.allclose(signal_range, 0):
+    if np.allclose(signal, 0):
         return {
             'range': 0.0,
             'noise_floor': np.finfo(float).eps,
@@ -31,16 +25,15 @@ def analyze_signal(signal: np.ndarray) -> dict:
             'is_zero': True
         }
     
-    # Noise floor estimation methods
-    # Method 1: Using signal differences
-    noise_estimate_diff = np.std(np.diff(detrended))
+    # Remove DC offset for better analysis
+    detrended = signal - np.mean(signal)
     
-    # Method 2: Using detrended fluctuation analysis
-    noise_floor = np.std(detrended - np.convolve(
-        detrended, np.ones(10) / 10, mode='same'))
+    # Dynamic range - use peak-to-peak of detrended signal
+    signal_range = np.max(detrended) - np.min(detrended)
     
-    # Use the more conservative (larger) noise estimate
-    noise_floor = max(noise_estimate_diff, noise_floor)
+    # Noise floor estimation using standard deviation of detrended signal
+    # Use a more conservative estimate for noise floor
+    noise_floor = np.std(detrended) / np.sqrt(2)  # RMS to peak conversion
     
     # Ensure minimum noise floor
     noise_floor = max(noise_floor, np.finfo(float).eps)
@@ -48,10 +41,15 @@ def analyze_signal(signal: np.ndarray) -> dict:
     # Dynamic Range in dB
     dynamic_range_db = 20 * np.log10(signal_range / noise_floor)
     
+    # Calculate signal SNR
+    signal_std = np.std(signal)
+    snr_db = 20 * np.log10(signal_std / noise_floor)
+    
     return {
         'range': signal_range,
         'noise_floor': noise_floor,
         'dynamic_range_db': dynamic_range_db,
+        'snr_db': snr_db,
         'is_zero': False
     }
 
@@ -71,35 +69,27 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
     if analysis.get('is_zero', False):
         return False, "Zero signal, using EDF format", 0.0
     
-    # Calculate theoretical format capabilities
-    edf_levels = 2**16  # 65,536 levels
-    bdf_levels = 2**24  # 16,777,216 levels
+    # Theoretical format capabilities
+    edf_dynamic_range = 96  # dB (16-bit)
+    bdf_dynamic_range = 144  # dB (24-bit)
+    safety_margin = 6  # dB
     
-    # Calculate SNR for both formats
-    signal_std = np.std(signal)
-    if np.isclose(signal_std, 0):
-        return False, "Constant signal, using EDF format", 0.0
+    # Get signal characteristics
+    signal_dr = analysis['dynamic_range_db']
+    signal_snr = analysis.get('snr_db', 0)
+    signal_range = analysis['range']
     
-    # Calculate quantization step size
-    if analysis['range'] < np.finfo(float).eps:
-        return False, "Minimal signal range, using EDF format", 0.0
-        
-    edf_step = analysis['range'] / edf_levels
-    bdf_step = analysis['range'] / bdf_levels
+    # Check amplitude first - if signal range is large, use BDF
+    if signal_range > 1e5:  # 100,000 units threshold
+        return True, f"Large amplitude signal ({signal_range:.1f}), using BDF", signal_snr
     
-    # Calculate SNR in dB for both formats
-    edf_snr = 20 * np.log10(signal_std / (edf_step / np.sqrt(12)))
-    bdf_snr = 20 * np.log10(signal_std / (bdf_step / np.sqrt(12)))
-    
-    # Decision criteria
-    snr_threshold = 70  # dB, common threshold for good quality
-    
-    if edf_snr > snr_threshold:
-        return False, "EDF provides sufficient SNR", edf_snr
-    elif bdf_snr > snr_threshold:
-        return True, f"EDF SNR ({edf_snr:.1f} dB) below threshold, BDF recommended", bdf_snr
+    # Then check dynamic range with safety margin
+    if signal_dr <= (edf_dynamic_range - safety_margin):
+        return False, f"EDF dynamic range ({edf_dynamic_range} dB) is sufficient", signal_snr
+    elif signal_dr <= (bdf_dynamic_range - safety_margin):
+        return True, f"Signal requires BDF format (DR: {signal_dr:.1f} dB)", signal_snr
     else:
-        return True, f"Signal may require higher resolution than EDF (SNR: {edf_snr:.1f} dB)", bdf_snr
+        return True, f"Signal may require higher resolution than BDF (DR: {signal_dr:.1f} dB)", signal_snr
 
 
 def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
@@ -133,7 +123,7 @@ def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
         if not analysis.get('is_zero', False):
             type_groups[ch_type]['ranges'].append(analysis.get('range', 0))
             type_groups[ch_type]['dynamic_ranges'].append(analysis.get('dynamic_range_db', 0))
-            type_groups[ch_type]['snrs'].append(analysis.get('snr', 0))
+            type_groups[ch_type]['snrs'].append(analysis.get('snr_db', 0))
             type_groups[ch_type]['formats'].append('BDF' if analysis.get('use_bdf', False) else 'EDF')
     
     # Generate summary
@@ -394,7 +384,7 @@ class EDFExporter:
 
                 # Calculate scaling factors for header
                 phys_min, phys_max, dig_min, dig_max, _ = _determine_scaling_factors(
-                    float(np.min(signal)), float(np.max(signal)), use_bdf
+                    float(np.min(signal)), float(np.max(signal)), use_bdf=use_bdf
                 )
 
                 signals.append(signal)  # Use original physical signal
