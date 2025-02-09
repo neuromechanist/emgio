@@ -208,7 +208,7 @@ class EDFExporter:
                     'physical_min': phys_min,
                     'digital_max': dig_max,
                     'digital_min': dig_min,
-                    'prefilter': 'None',
+                    'prefilter': ch_info['prefilter'],
                     'transducer': f"{ch_info['type']} sensor"
                 }
                 channel_info_list.append(ch_dict)

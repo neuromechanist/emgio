@@ -143,6 +143,18 @@ class OTBImporter(BaseImporter):
                     else:
                         unit = 'a.u.'  # arbitrary units
 
+                    # Construct prefiltering string if filter info is available
+                    hp_filter = adapter.attrib.get('HighPassFilter')
+                    lp_filter = adapter.attrib.get('LowPassFilter')
+                    prefilter = 'n/a'
+                    if hp_filter or lp_filter:
+                        filters = []
+                        if hp_filter:
+                            filters.append(f"HP:{hp_filter}Hz")
+                        if lp_filter:
+                            filters.append(f"LP:{lp_filter}Hz")
+                        prefilter = ' '.join(filters)
+
                     metadata['channels'][f'CH{channel_num}'] = {
                         'type': ch_type,
                         'adapter': adapter_id,
@@ -150,7 +162,8 @@ class OTBImporter(BaseImporter):
                         'unit': unit,
                         'gain': adapter_gain,
                         'description': channel.attrib.get('Description', ''),
-                        'muscle': channel.attrib.get('Muscle', '')
+                        'muscle': channel.attrib.get('Muscle', ''),
+                        'prefilter': prefilter
                     }
                     print(f"Added channel CH{channel_num}:", metadata['channels'][f'CH{channel_num}'])
         else:
@@ -256,6 +269,7 @@ class OTBImporter(BaseImporter):
                     data=data[ch_idx],
                     sampling_freq=ch_info['sampling_freq'],
                     unit=ch_info['unit'],
+                    prefilter=ch_info['prefilter'],
                     ch_type=ch_info['type']
                 )
 

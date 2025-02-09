@@ -228,7 +228,7 @@ class EMG:
         return self.metadata.get(key)
 
     def add_channel(self, name: str, data: np.ndarray, sampling_freq: float,
-                    unit: str, prefiitering: str = None, ch_type: str = 'EMG') -> None:
+                    unit: str, prefilter: str = 'n/a', ch_type: str = 'EMG') -> None:
         """
         Add a new channel to the EMG data.
 
@@ -237,7 +237,7 @@ class EMG:
             data: Channel data
             sampling_freq: Sampling frequency in Hz
             unit: Unit of measurement
-            prefiitering: Pre-filtering applied to the channel
+            prefilter: Pre-filtering applied to the channel
             ch_type: Channel type ('EMG', 'ACC', 'GYRO', etc.)
         """
         if self.signals is None:
@@ -249,6 +249,6 @@ class EMG:
         self.channels[name] = {
             'sampling_freq': sampling_freq,
             'unit': unit,
-            'prefiltering': prefiitering,
+            'prefilter': prefilter,
             'type': ch_type
         }
