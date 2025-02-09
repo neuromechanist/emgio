@@ -58,7 +58,7 @@ class EMG:
         return importer_class().load(filepath)
 
     def select_channels(self, channels: Union[str, List[str], None] = None,
-                       channel_type: Optional[str] = None) -> 'EMG':
+                        channel_type: Optional[str] = None) -> 'EMG':
         """
         Select specific channels from the data.
 
@@ -88,7 +88,7 @@ class EMG:
         # If channel_type specified but no channels, select all of that type
         if channels is None and channel_type is not None:
             channels = [ch for ch, info in self.channels.items()
-                       if info['type'] == channel_type]
+                        if info['type'] == channel_type]
             if not channels:
                 raise ValueError(f"No channels found of type: {channel_type}")
         elif isinstance(channels, str):
@@ -102,7 +102,7 @@ class EMG:
         # Filter by type if specified
         if channel_type is not None:
             channels = [ch for ch in channels
-                       if self.channels[ch]['type'] == channel_type]
+                        if self.channels[ch]['type'] == channel_type]
             if not channels:
                 raise ValueError(
                     f"None of the selected channels are of type: {channel_type}")
@@ -134,10 +134,10 @@ class EMG:
                 if info['type'] == channel_type]
 
     def plot_signals(self, channels: Optional[List[str]] = None,
-                    time_range: Optional[tuple] = None,
-                    style: str = 'line',
-                    grid: bool = True,
-                    title: Optional[str] = None) -> None:
+                     time_range: Optional[tuple] = None,
+                     style: str = 'line',
+                     grid: bool = True,
+                     title: Optional[str] = None) -> None:
         """
         Plot EMG signals with enhanced visualization options.
 
@@ -158,8 +158,8 @@ class EMG:
             raise ValueError(f"Channels not found: {missing}")
 
         # Create figure with shared x-axis
-        fig, axes = plt.subplots(len(channels), 1, figsize=(12, 3*len(channels)),
-                               sharex=True)
+        fig, axes = plt.subplots(len(channels), 1, figsize=(12, 3 * len(channels)),
+                                 sharex=True)
         if len(channels) == 1:
             axes = [axes]
 
@@ -228,7 +228,7 @@ class EMG:
         return self.metadata.get(key)
 
     def add_channel(self, name: str, data: np.ndarray, sampling_freq: float,
-                   unit: str, ch_type: str = 'EMG') -> None:
+                    unit: str, prefiitering: str = None, ch_type: str = 'EMG') -> None:
         """
         Add a new channel to the EMG data.
 
@@ -237,16 +237,18 @@ class EMG:
             data: Channel data
             sampling_freq: Sampling frequency in Hz
             unit: Unit of measurement
+            prefiitering: Pre-filtering applied to the channel
             ch_type: Channel type ('EMG', 'ACC', 'GYRO', etc.)
         """
         if self.signals is None:
             # Create DataFrame with time index
-            time = np.arange(len(data))/sampling_freq
+            time = np.arange(len(data)) / sampling_freq
             self.signals = pd.DataFrame(index=time)
 
         self.signals[name] = data
         self.channels[name] = {
             'sampling_freq': sampling_freq,
             'unit': unit,
+            'prefiltering': prefiitering,
             'type': ch_type
         }
