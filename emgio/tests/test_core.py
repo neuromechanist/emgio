@@ -1,6 +1,8 @@
+import os
+import builtins
 import pytest
 import numpy as np
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from ..core.emg import EMG
 
 
@@ -147,43 +149,66 @@ def test_add_channel_validation(empty_emg):
 @pytest.fixture
 def mock_importers(monkeypatch):
     """Mock importers for testing from_file method."""
-    class MockTrignoImporter:
+    class MockBaseImporter:
+        """Base class for mock importers to ensure consistent interface."""
         def load(self, filepath):
+            if not os.path.exists(filepath):
+                raise FileNotFoundError(f"File not found: {filepath}")
+            return self._load(filepath)
+
+    class MockTrignoImporter(MockBaseImporter):
+        def _load(self, filepath):
             emg = EMG()
-            emg.add_channel('TEST', np.array([1, 2, 3]), 1000, 'mV')
+            emg.add_channel('TEST', np.array([1, 2, 3]), 1000, 'mV', ch_type='EMG')
+            emg.set_metadata('device', 'Delsys Trigno')
+            emg.set_metadata('source_file', filepath)
             return emg
 
-    class MockOTBImporter:
-        def load(self, filepath):
+    class MockOTBImporter(MockBaseImporter):
+        def _load(self, filepath):
             emg = EMG()
-            emg.add_channel('OTB', np.array([4, 5, 6]), 2000, 'mV')
+            emg.add_channel('OTB', np.array([4, 5, 6]), 2000, 'mV', ch_type='EMG')
+            emg.set_metadata('device', 'OT Bioelettronica')
+            emg.set_metadata('source_file', filepath)
             return emg
 
     def mock_import(name, *args):
-        if 'trigno' in name:
-            return type('Module', (), {'TrignoImporter': MockTrignoImporter})
-        elif 'otb' in name:
-            return type('Module', (), {'OTBImporter': MockOTBImporter})
-        raise ImportError(f"No module named '{name}'")
+        # Only intercept our specific importer paths
+        if any(x in name for x in ['emgio.importers.trigno', 'emgio.importers.otb']):
+            if 'trigno' in name:
+                return type('Module', (), {'TrignoImporter': MockTrignoImporter})
+            elif 'otb' in name:
+                return type('Module', (), {'OTBImporter': MockOTBImporter})
+        # Let all other imports pass through to the original __import__
+        return original_import(name, *args)
+    
+    original_import = builtins.__import__
 
     monkeypatch.setattr('builtins.__import__', mock_import)
 
 
-def test_from_file(mock_importers):
+def test_from_file(mock_importers, tmp_path):
     """Test factory method with different importers."""
+    # Create temporary test files
+    trigno_file = tmp_path / "test.csv"
+    trigno_file.write_text("")  # Empty file is sufficient for testing
+    
+    otb_file = tmp_path / "test.otb"
+    otb_file.write_text("")
+    
     # Test Trigno importer
-    emg_trigno = EMG.from_file('dummy.csv', importer='trigno')
+    emg_trigno = EMG.from_file(str(trigno_file), importer='trigno')
     assert 'TEST' in emg_trigno.signals.columns
     assert emg_trigno.channels['TEST']['sampling_freq'] == 1000
 
     # Test OTB importer
-    emg_otb = EMG.from_file('dummy.otb', importer='otb')
+    emg_otb = EMG.from_file(str(otb_file), importer='otb')
     assert 'OTB' in emg_otb.signals.columns
     assert emg_otb.channels['OTB']['sampling_freq'] == 2000
 
     # Test invalid importer
     with pytest.raises(ValueError) as exc_info:
-        EMG.from_file('dummy.txt', importer='invalid')
+        EMG.from_file(str(trigno_file), importer='invalid')
     assert "Unsupported importer" in str(exc_info.value)
 
 
@@ -191,6 +216,13 @@ def test_from_file(mock_importers):
 def mock_plt(monkeypatch):
     """Mock matplotlib.pyplot for testing plot functions."""
     with patch('matplotlib.pyplot') as mock:
+        # Create mock figure and axes
+        mock_fig = MagicMock()
+        mock_axes = [MagicMock(), MagicMock()]  # Create two mock axes by default
+        
+        # Configure subplots to return fig, axes
+        mock.subplots.return_value = (mock_fig, mock_axes)
+        
         yield mock
 
 
