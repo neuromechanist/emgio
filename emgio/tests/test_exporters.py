@@ -20,8 +20,8 @@ def sample_emg():
     acc_data = np.cos(2 * np.pi * 5 * time)   # 5Hz cosine wave
 
     # Add channels
-    emg.add_channel('EMG1', emg_data, 1000, 'mV', 'EMG')
-    emg.add_channel('ACC1', acc_data, 1000, 'g', 'ACC')
+    emg.add_channel('EMG1', emg_data, 1000, 'mV', 'n/a', 'EMG')
+    emg.add_channel('ACC1', acc_data, 1000, 'g', 'n/a', 'ACC')
 
     return emg
 
