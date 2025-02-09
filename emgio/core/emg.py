@@ -9,7 +9,8 @@ class EMG:
     Core EMG class for handling EMG data and metadata.
 
     Attributes:
-        signals (pd.DataFrame): Raw signal data with time as index
+        signals (pd.DataFrame): Raw signal data with time as index, for now, all channels are stored
+        in the same DataFrame, so they require the same sampling frequency
         metadata (dict): Metadata dictionary containing recording information
         channels (dict): Channel information including type, unit, sampling frequency
     """
@@ -201,7 +202,13 @@ class EMG:
         Args:
             filepath: Path to save the EDF file
             **kwargs: Additional arguments for the EDF exporter
+
+        Raises:
+            ValueError: If no signals are loaded
         """
+        if self.signals is None:
+            raise ValueError("No signals loaded")
+            
         from ..exporters.edf import EDFExporter
         EDFExporter.export(self, filepath, **kwargs)
 
