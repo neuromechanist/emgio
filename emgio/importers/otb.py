@@ -171,35 +171,38 @@ class OTBImporter(BaseImporter):
                 - numpy array of scaled signal data
                 - sampling frequency
         """
-        device_name = metadata['device']['name']
         ad_bits = metadata['device']['ad_bits']
         sampling_freq = metadata['device']['sampling_frequency']
         num_channels = len(metadata['channels'])
 
-        # Read binary data
-        dtype = np.int16 if ad_bits == 16 else np.int32
-        data = np.fromfile(sig_path, dtype=dtype)
+        # Always read as 16-bit initially (like MATLAB's 'short')
+        data = np.fromfile(sig_path, dtype=np.int16)
         data = data.reshape(-1, num_channels).T
 
-        # Apply device-specific scaling
+        # For 24-bit data, reconstruct from two 16-bit values
+        if ad_bits == 24:
+            # Each 24-bit value is stored as two 16-bit values
+            # Reshape to get pairs of 16-bit values
+            data = data.reshape(num_channels, -1, 2)
+            # Combine the pairs into 24-bit values (stored in 32-bit int)
+            data = (data[:, :, 0].astype(np.int32) << 8) | (data[:, :, 1] & 0xFF)
+            # Sign extend from 24 to 32 bits
+            data = np.where(data & 0x800000, data | ~0xFFFFFF, data)
+
+        # Apply scaling according to MATLAB reference
+        power_supply = 3.3  # Voltage reference is 3.3V
         scaled_data = np.zeros_like(data, dtype=np.float64)
         for ch_num, ch_info in metadata['channels'].items():
             ch_idx = int(ch_num[2:]) - 1  # Extract channel number from 'CHx'
+            gain = ch_info['gain']
             
-            # Get scaling factor based on device and adapter type
-            if ch_info['adapter'] == 'Direct connection to Syncstation Input':
-                scale = 0.1526  # PowerSupply=5V, AD_bits=16, Gain=0.5
-            elif ch_info['adapter'] == 'AdapterLoadCell':
-                scale = 0.00037217  # PowerSupply=5V, AD_bits=16, Gain=205
-            elif ch_info['adapter'] in ['AdapterControl', 'AdapterQuaternions']:
-                scale = 1.0  # No scaling for control signals
-            elif ch_info['adapter'] == 'Sessantaquattro':
-                if ad_bits == 16:
-                    scale = 0.00050863  # PowerSupply=5V, AD_bits=16, Gain=150
-                else:  # 24-bit
-                    scale = 0.00028610  # PowerSupply=4.8V, AD_bits=24, Gain=1
+            # Apply scaling formula: data * PowerSupply / (2^ad_bits) * 1000 / gain
+            # 1000 factor converts to mV
+            if ch_info['type'] == 'EMG':
+                scale = power_supply / (2**ad_bits) * 1000 / gain
             else:
-                scale = 1.0  # Default no scaling
+                # For non-EMG channels (like control signals), use no scaling
+                scale = 1.0
             
             scaled_data[ch_idx] = data[ch_idx] * scale
 
@@ -259,7 +262,7 @@ class OTBImporter(BaseImporter):
             # Add metadata
             emg.set_metadata('source_file', filepath)
             emg.set_metadata('device', metadata['device']['name'])
-            emg.set_metadata('ad_bits', metadata['device']['ad_bits'])
+            emg.set_metadata('signal_resolution', metadata['device']['ad_bits'])
 
         finally:
             # Clean up temporary directory
