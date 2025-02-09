@@ -233,6 +233,7 @@ class OTBImporter(BaseImporter):
         """
         # Create EMG object
         emg = EMG()
+        temp_dir = None
 
         try:
             # Extract OTB file
@@ -280,8 +281,11 @@ class OTBImporter(BaseImporter):
 
         finally:
             # Clean up temporary directory
-            if os.path.exists(temp_dir):
+            if temp_dir and os.path.exists(temp_dir):
                 import shutil
-                shutil.rmtree(temp_dir)
+                try:
+                    shutil.rmtree(temp_dir)
+                except Exception as e:
+                    print(f"Warning: Failed to clean up temp directory {temp_dir}: {str(e)}")
 
         return emg
