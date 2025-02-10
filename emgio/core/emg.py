@@ -216,7 +216,7 @@ class EMG:
         """
         if self.signals is None:
             raise ValueError("No signals loaded")
-            
+
         from ..exporters.edf import EDFExporter
         EDFExporter.export(self, filepath, **kwargs)
 

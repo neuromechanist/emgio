@@ -82,10 +82,10 @@ class EDFImporter(BaseImporter):
         """
         # Get signal header
         signal_header = edf_reader.getSignalHeaders()[signal_idx]
-        
+
         # Read the signal data
         signal_data = edf_reader.readSignal(signal_idx)
-        
+
         # Extract signal information
         signal_info = {
             'label': signal_header['label'].strip(),
@@ -98,7 +98,7 @@ class EDFImporter(BaseImporter):
             'prefilter': signal_header.get('prefilter', '').strip() or 'n/a',
             'sample_rate': signal_header['sample_rate']
         }
-        
+
         return signal_data, signal_info
 
     def load(self, filepath: str) -> EMG:
@@ -113,10 +113,10 @@ class EDFImporter(BaseImporter):
         """
         try:
             edf_reader = pyedflib.EdfReader(filepath)
-            
+
             # Create EMG object
             emg = EMG()
-            
+
             # Extract and store metadata
             metadata = self._extract_metadata(edf_reader)
             for key, value in metadata['recording_info'].items():
@@ -124,20 +124,20 @@ class EDFImporter(BaseImporter):
                     emg.set_metadata(key, value)
             for key, value in metadata['file_info'].items():
                 emg.set_metadata(key, value)
-            
+
             # Store source file information
             emg.set_metadata('source_file', filepath)
-            
+
             # Read signals
             for i in range(edf_reader.signals_in_file):
                 signal_data, signal_info = self._read_signal_data(edf_reader, i)
-                
+
                 # Determine channel type
                 ch_type = self._determine_channel_type(
                     signal_info['label'],
                     signal_info['transducer']
                 )
-                
+
                 # Add channel to EMG object
                 emg.add_channel(
                     name=signal_info['label'],
@@ -147,7 +147,7 @@ class EDFImporter(BaseImporter):
                     prefilter=signal_info['prefilter'],
                     ch_type=ch_type
                 )
-                
+
                 # Store additional channel-specific metadata
                 ch_metadata = {
                     'physical_min': signal_info['physical_min'],
@@ -157,12 +157,12 @@ class EDFImporter(BaseImporter):
                     'transducer': signal_info['transducer']
                 }
                 emg.channels[signal_info['label']].update(ch_metadata)
-            
+
             return emg
-            
+
         except Exception as e:
             raise ValueError(f"Error reading EDF file: {str(e)}")
-        
+
         finally:
             if 'edf_reader' in locals():
                 edf_reader.close()

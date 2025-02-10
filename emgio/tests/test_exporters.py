@@ -194,11 +194,11 @@ def test_format_selection():
     """Test format selection based on signal characteristics."""
     emg = EMG()
     time = np.linspace(0, 1, 1000)
-    
+
     # Test case 1: High quality signal (should use EDF)
     clean_signal = np.sin(2 * np.pi * 10 * time) * 1000  # Clean 10 Hz sine
     emg.add_channel('Clean', clean_signal, 1000, 'uV', 'EMG')
-    
+
     # Test case 2: Noisy signal with high dynamic range (should use BDF)
     base_signal = np.sin(2 * np.pi * 10 * time) * 1e5
     noise = np.random.normal(0, 100, 1000)
@@ -212,7 +212,7 @@ def test_format_selection():
     try:
         EDFExporter.export(emg, edf_path)
         assert os.path.exists(bdf_path)  # Should use BDF due to noisy channel
-        
+
         # Verify format selection through file analysis
         with pyedflib.EdfReader(bdf_path) as f:
             headers = f.getSignalHeaders()
