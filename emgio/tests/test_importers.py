@@ -1,8 +1,11 @@
 import pytest
 import os
 import tempfile
+import numpy as np
+import pyedflib
 from ..importers.trigno import TrignoImporter
 from ..importers.otb import OTBImporter
+from ..importers.edf import EDFImporter
 
 
 @pytest.fixture
@@ -164,3 +167,124 @@ def test_otb_temp_cleanup():
     
     # Verify no new temp directories remain
     assert not remaining_dirs, f"Temporary directories were not cleaned up: {remaining_dirs}"
+
+
+@pytest.fixture
+def sample_edf_file():
+    """Create a sample EDF file with EMG and other signals."""
+    # Create temporary EDF file
+    with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
+        temp_path = f.name
+
+    # Generate sample data
+    n_samples = 1000
+    sampling_freq = 1000  # Hz
+    t = np.arange(n_samples) / sampling_freq
+    
+    # Create synthetic signals
+    emg_signal = 0.1 * np.sin(2 * np.pi * 50 * t)  # 50 Hz EMG-like signal
+    acc_signal = 0.5 * np.sin(2 * np.pi * 2 * t)   # 2 Hz acceleration-like signal
+    
+    # Create EDF file with signals
+    n_channels = 2
+    channel_info = []
+    data_list = []
+    
+    # EMG channel
+    ch_dict = {'label': 'EMG1', 
+               'dimension': 'mV',
+               'sample_rate': sampling_freq,
+               'physical_max': np.max(emg_signal),
+               'physical_min': np.min(emg_signal),
+               'digital_max': 32767,
+               'digital_min': -32768,
+               'prefilter': 'HP:20Hz LP:500Hz',
+               'transducer': 'EMG sensor'}
+    channel_info.append(ch_dict)
+    data_list.append(emg_signal)
+    
+    # ACC channel
+    ch_dict = {'label': 'ACC1',
+               'dimension': 'g',
+               'sample_rate': sampling_freq,
+               'physical_max': np.max(acc_signal),
+               'physical_min': np.min(acc_signal),
+               'digital_max': 32767,
+               'digital_min': -32768,
+               'prefilter': 'n/a',
+               'transducer': 'Accelerometer'}
+    channel_info.append(ch_dict)
+    data_list.append(acc_signal)
+    
+    # Write to EDF file
+    writer = pyedflib.EdfWriter(temp_path, n_channels)
+    writer.setSignalHeaders(channel_info)
+    writer.writeSamples(data_list)
+    writer.close()
+    
+    yield temp_path
+    
+    # Cleanup
+    os.unlink(temp_path)
+
+
+def test_edf_importer(sample_edf_file):
+    """Test EDF importer with sample data."""
+    importer = EDFImporter()
+    emg = importer.load(sample_edf_file)
+    
+    # Check if channels were loaded
+    assert 'EMG1' in emg.channels
+    assert 'ACC1' in emg.channels
+    
+    # Check channel properties
+    assert emg.channels['EMG1']['sampling_freq'] == 1000
+    assert emg.channels['EMG1']['unit'] == 'mV'
+    assert emg.channels['EMG1']['type'] == 'EMG'
+    assert 'HP:20Hz LP:500Hz' in emg.channels['EMG1']['prefilter']
+    
+    assert emg.channels['ACC1']['unit'] == 'g'
+    assert emg.channels['ACC1']['type'] == 'ACC'
+    
+    # Check data shape
+    assert len(emg.signals) == 1000  # 1000 samples
+    assert len(emg.signals.columns) == 2  # 2 channels
+    
+    # Check metadata
+    assert emg.get_metadata('source_file') == sample_edf_file
+    assert emg.get_metadata('filetype') in [0, 1, 2]  # EDF, EDF+, or BDF+
+
+
+def test_edf_file_not_found():
+    """Test error handling for non-existent file."""
+    importer = EDFImporter()
+    with pytest.raises(ValueError):
+        importer.load('nonexistent.edf')
+
+
+def test_edf_channel_type_detection(sample_edf_file):
+    """Test channel type detection from labels and transducers."""
+    importer = EDFImporter()
+    emg = importer.load(sample_edf_file)
+    
+    # Test EMG channel detection
+    assert emg.channels['EMG1']['type'] == 'EMG'
+    
+    # Test ACC channel detection
+    assert emg.channels['ACC1']['type'] == 'ACC'
+
+
+def test_edf_metadata_extraction(sample_edf_file):
+    """Test metadata extraction from EDF file."""
+    importer = EDFImporter()
+    emg = importer.load(sample_edf_file)
+    
+    # Check file metadata
+    assert 'filetype' in emg.metadata
+    assert 'number_of_signals' in emg.metadata
+    assert emg.metadata['number_of_signals'] == 2
+    
+    # Check recording info
+    assert any(key in emg.metadata for key in [
+        'startdate', 'equipment', 'technician', 'recording_additional'
+    ])
