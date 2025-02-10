@@ -96,7 +96,7 @@ class EDFImporter(BaseImporter):
             'digital_min': signal_header['digital_min'],
             'digital_max': signal_header['digital_max'],
             'prefilter': signal_header.get('prefilter', '').strip() or 'n/a',
-            'sample_rate': signal_header['sample_rate']
+            'sample_frequency': signal_header['sample_frequency']
         }
 
         return signal_data, signal_info
@@ -142,7 +142,7 @@ class EDFImporter(BaseImporter):
                 emg.add_channel(
                     name=signal_info['label'],
                     data=signal_data,
-                    sampling_freq=signal_info['sample_rate'],
+                    sampling_freq=signal_info['sample_frequency'],
                     unit=signal_info['physical_dimension'],
                     prefilter=signal_info['prefilter'],
                     ch_type=ch_type
