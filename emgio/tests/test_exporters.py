@@ -6,7 +6,10 @@ import numpy as np
 import pyedflib
 import pandas as pd
 from ..core.emg import EMG
-from ..exporters.edf import EDFExporter, _determine_scaling_factors, _calculate_precision_loss
+from ..exporters.edf import (
+    EDFExporter, _determine_scaling_factors, _calculate_precision_loss,
+    analyze_signal, determine_format_suitability, quantization_analysis
+)
 
 
 @pytest.fixture
@@ -156,27 +159,66 @@ def test_edf_export_file_permissions(sample_emg):
         EDFExporter.export(sample_emg, '/nonexistent/directory/test.edf')
 
 
-def test_precision_threshold():
-    """Test precision threshold parameter."""
+def test_signal_analysis():
+    """Test signal analysis functions."""
+    # Create test signal with known characteristics
+    time = np.linspace(0, 1, 1000)
+    signal = np.sin(2 * np.pi * 10 * time)  # 10 Hz sine wave
+    noise = np.random.normal(0, 0.01, 1000)  # Known noise level
+    test_signal = signal + noise
+
+    # Test analyze_signal
+    analysis = analyze_signal(test_signal)
+    assert 'range' in analysis
+    assert 'noise_floor' in analysis
+    assert 'dynamic_range_db' in analysis
+    assert analysis['range'] <= abs(test_signal.min()) + abs(test_signal.max())  # Max range for sine + small noise
+    assert analysis['noise_floor'] > 0
+    assert analysis['dynamic_range_db'] > 0
+
+    # Test format suitability determination
+    use_bdf, reason, snr = determine_format_suitability(test_signal, analysis)
+    assert isinstance(use_bdf, bool)
+    assert isinstance(reason, str)
+    assert isinstance(snr, float)
+    assert snr > 0
+
+    # Test quantization analysis
+    quant_16 = quantization_analysis(test_signal, 16)
+    quant_24 = quantization_analysis(test_signal, 24)
+    assert quant_24['snr'] > quant_16['snr']  # 24-bit should give better SNR
+    assert quant_24['rmse'] < quant_16['rmse']  # 24-bit should have less error
+
+
+def test_format_selection():
+    """Test format selection based on signal characteristics."""
     emg = EMG()
     time = np.linspace(0, 1, 1000)
-    # Create signal that would have ~0.1% precision loss in EDF
-    signal = np.sin(2 * np.pi * 10 * time) * 32800  # Just above 16-bit range
-    emg.add_channel('EMG1', signal, 1000, 'uV', 'EMG')
+    
+    # Test case 1: High quality signal (should use EDF)
+    clean_signal = np.sin(2 * np.pi * 10 * time) * 1000  # Clean 10 Hz sine
+    emg.add_channel('Clean', clean_signal, 1000, 'uV', 'EMG')
+    
+    # Test case 2: Noisy signal with high dynamic range (should use BDF)
+    base_signal = np.sin(2 * np.pi * 10 * time) * 1e5
+    noise = np.random.normal(0, 100, 1000)
+    noisy_signal = base_signal + noise  # Noisy with high amplitude
+    emg.add_channel('Noisy', noisy_signal, 1000, 'uV', 'EMG')
 
     with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
         edf_path = f.name
         bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
 
     try:
-        # Should use EDF with higher threshold
-        EDFExporter.export(emg, edf_path, precision_threshold=0.2)
-        assert os.path.exists(edf_path)
-        assert not os.path.exists(bdf_path)
-
-        # Should use BDF with lower threshold
-        EDFExporter.export(emg, edf_path, precision_threshold=0.01)
-        assert os.path.exists(bdf_path)
+        EDFExporter.export(emg, edf_path)
+        assert os.path.exists(bdf_path)  # Should use BDF due to noisy channel
+        
+        # Verify format selection through file analysis
+        with pyedflib.EdfReader(bdf_path) as f:
+            headers = f.getSignalHeaders()
+            # BDF format digital range check
+            assert headers[0]['digital_min'] == -8388608
+            assert headers[0]['digital_max'] == 8388607
 
     finally:
         if os.path.exists(edf_path):
