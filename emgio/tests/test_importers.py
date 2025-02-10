@@ -193,7 +193,7 @@ def sample_edf_file():
     # EMG channel
     ch_dict = {'label': 'EMG1',
                'dimension': 'mV',
-               'sample_rate': sampling_freq,
+               'sample_frequency': sampling_freq,
                'physical_max': np.max(emg_signal),
                'physical_min': np.min(emg_signal),
                'digital_max': 32767,
@@ -206,7 +206,7 @@ def sample_edf_file():
     # ACC channel
     ch_dict = {'label': 'ACC1',
                'dimension': 'g',
-               'sample_rate': sampling_freq,
+               'sample_frequency': sampling_freq,
                'physical_max': np.max(acc_signal),
                'physical_min': np.min(acc_signal),
                'digital_max': 32767,
