@@ -91,7 +91,7 @@ def test_get_channels_by_type(sample_emg):
     """Test getting channels of specific type."""
     emg_channels = sample_emg.get_channels_by_type('EMG')
     acc_channels = sample_emg.get_channels_by_type('ACC')
-    
+
     assert emg_channels == ['EMG1']
     assert acc_channels == ['ACC1']
     assert sample_emg.get_channels_by_type('NONEXISTENT') == []
@@ -181,7 +181,7 @@ def mock_importers(monkeypatch):
                 return type('Module', (), {'OTBImporter': MockOTBImporter})
         # Let all other imports pass through to the original __import__
         return original_import(name, *args)
-    
+
     original_import = builtins.__import__
 
     monkeypatch.setattr('builtins.__import__', mock_import)
@@ -192,10 +192,10 @@ def test_from_file(mock_importers, tmp_path):
     # Create temporary test files
     trigno_file = tmp_path / "test.csv"
     trigno_file.write_text("")  # Empty file is sufficient for testing
-    
+
     otb_file = tmp_path / "test.otb"
     otb_file.write_text("")
-    
+
     # Test Trigno importer
     emg_trigno = EMG.from_file(str(trigno_file), importer='trigno')
     assert 'TEST' in emg_trigno.signals.columns
@@ -217,13 +217,13 @@ class MockPlt:
     def __init__(self):
         self.fig = MagicMock()
         self.reset()
-        
+
     def reset(self):
         """Reset the mock state."""
         self.show_called = False
         self.subplots_called = False
         self.axes = []
-        
+
     def subplots(self, nrows=1, ncols=1, **kwargs):
         """Mock subplots creation."""
         self.subplots_called = True
@@ -237,11 +237,11 @@ class MockPlt:
             # For multiple subplots, return a list of MagicMocks
             self.axes = [MagicMock() for _ in range(nrows)]
         return self.fig, self.axes
-        
+
     def show(self):
         """Mock show function."""
         self.show_called = True
-        
+
     def tight_layout(self):
         """Mock tight_layout function."""
         pass
@@ -259,17 +259,17 @@ def mock_plt(monkeypatch):
 def test_plot_signals_basic(sample_emg, mock_plt):
     """Test basic plotting functionality."""
     sample_emg.plot_signals(show=False, plt_module=mock_plt)
-    
+
     # Verify figure creation
     assert mock_plt.subplots_called
-    
+
     # Verify plot calls on each axis
     if isinstance(mock_plt.axes, list):
         for ax in mock_plt.axes:
             ax.plot.assert_called_once()
     else:
         mock_plt.axes.plot.assert_called_once()
-    
+
     # Verify show was called
     assert mock_plt.show_called
 
@@ -313,13 +313,13 @@ def test_plot_signals_customization(sample_emg, mock_plt):
         show=False,
         plt_module=mock_plt
     )
-    
+
     # Verify title
     mock_plt.fig.suptitle.assert_called_with(title, fontsize=14, y=1.02)
-    
+
     # Verify grid
     mock_plt.axes.grid.assert_called_with(True, linestyle='--', alpha=0.7)
-    
+
     # Verify show was called
     assert mock_plt.show_called
 
@@ -342,7 +342,7 @@ def test_plot_signals_time_range(sample_emg, mock_plt):
     """Test plotting with time range selection."""
     time_range = (0.2, 0.8)
     sample_emg.plot_signals(time_range=time_range, show=False, plt_module=mock_plt)
-    
+
     # Verify data selection
     if isinstance(mock_plt.axes, list):
         for ax in mock_plt.axes:
@@ -371,10 +371,10 @@ def mock_edf_exporter(monkeypatch):
                 'channels': list(emg_obj.channels.keys()),
                 'kwargs': kwargs
             }
-    
+
     def mock_import(*args):
         return type('Module', (), {'EDFExporter': MockEDFExporter})
-    
+
     monkeypatch.setattr('builtins.__import__', mock_import)
     return MockEDFExporter
 
@@ -384,15 +384,15 @@ def test_to_edf_export(sample_emg, mock_edf_exporter):
     # Test basic export
     filepath = 'test.edf'
     sample_emg.to_edf(filepath)
-    
+
     assert mock_edf_exporter.last_export['filepath'] == filepath
     assert set(mock_edf_exporter.last_export['channels']) == {'EMG1', 'ACC1'}
-    
+
     # Test with additional kwargs
     custom_kwargs = {'patient_id': 'TEST001'}
     sample_emg.to_edf(filepath, **custom_kwargs)
     assert mock_edf_exporter.last_export['kwargs'] == custom_kwargs
-    
+
     # Test invalid file extension
     with pytest.raises(ValueError):
         sample_emg.to_edf('test.txt')
@@ -409,7 +409,7 @@ def test_add_channel_with_prefilter(empty_emg):
     data = np.array([1, 2, 3])
     prefilter = "HP 20Hz"
     empty_emg.add_channel('EMG1', data, 1000, 'mV', prefilter=prefilter)
-    
+
     assert empty_emg.channels['EMG1']['prefilter'] == prefilter
 
 
@@ -418,7 +418,7 @@ def test_select_channels_none_with_type(sample_emg):
     # Add another EMG channel for testing
     data = np.linspace(0, 1, 1000)
     sample_emg.add_channel('EMG2', data, 1000, 'mV', ch_type='EMG')
-    
+
     # Select all EMG channels
     result = sample_emg.select_channels(channels=None, channel_type='EMG')
     assert set(result.signals.columns) == {'EMG1', 'EMG2'}
@@ -441,10 +441,10 @@ def test_plot_signals_invalid_style(sample_emg, mock_plt):
 def test_plot_signals_single_channel_array(sample_emg, mock_plt):
     """Test plotting single channel returns correct axes array."""
     sample_emg.plot_signals(channels=['EMG1'], show=False, plt_module=mock_plt)
-    
+
     # Verify axes is properly handled when single channel
     assert not isinstance(mock_plt.axes, list)
-    
+
     # Verify channel info in title
     ch_info = sample_emg.channels['EMG1']
     expected_title = f"EMG1 ({ch_info['type']} - {ch_info['sampling_freq']} Hz)"
@@ -463,11 +463,11 @@ def test_add_multiple_channels(empty_emg):
     # Add first channel
     data1 = np.array([1, 2, 3])
     empty_emg.add_channel('CH1', data1, 1000, 'mV', ch_type='EMG')
-    
+
     # Add second channel with different properties
     data2 = np.array([4, 5, 6])
     empty_emg.add_channel('CH2', data2, 2000, 'g', ch_type='ACC')
-    
+
     # Verify both channels exist with correct properties
     assert set(empty_emg.signals.columns) == {'CH1', 'CH2'}
     assert empty_emg.channels['CH1']['sampling_freq'] == 1000

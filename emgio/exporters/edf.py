@@ -24,27 +24,27 @@ def analyze_signal(signal: np.ndarray) -> dict:
             'dynamic_range_db': 0.0,
             'is_zero': True
         }
-    
+
     # Remove DC offset for better analysis
     detrended = signal - np.mean(signal)
-    
+
     # Dynamic range - use peak-to-peak of detrended signal
     signal_range = np.max(detrended) - np.min(detrended)
-    
+
     # Noise floor estimation using standard deviation of detrended signal
     # Use a more conservative estimate for noise floor
     noise_floor = np.std(detrended) / np.sqrt(2)  # RMS to peak conversion
-    
+
     # Ensure minimum noise floor
     noise_floor = max(noise_floor, np.finfo(float).eps)
-    
+
     # Dynamic Range in dB
     dynamic_range_db = 20 * np.log10(signal_range / noise_floor)
-    
+
     # Calculate signal SNR
     signal_std = np.std(signal)
     snr_db = 20 * np.log10(signal_std / noise_floor)
-    
+
     return {
         'range': signal_range,
         'noise_floor': noise_floor,
@@ -68,21 +68,21 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
     # Handle zero signal case
     if analysis.get('is_zero', False):
         return False, "Zero signal, using EDF format", 0.0
-    
+
     # Theoretical format capabilities
     edf_dynamic_range = 96  # dB (16-bit)
     bdf_dynamic_range = 144  # dB (24-bit)
     safety_margin = 6  # dB
-    
+
     # Get signal characteristics
     signal_dr = analysis['dynamic_range_db']
     signal_snr = analysis.get('snr_db', 0)
     signal_range = analysis['range']
-    
+
     # Check amplitude first - if signal range is large, use BDF
     if signal_range > 1e5:  # 100,000 units threshold
         return True, f"Large amplitude signal ({signal_range:.1f}), using BDF", signal_snr
-    
+
     # Then check dynamic range with safety margin
     if signal_dr <= (edf_dynamic_range - safety_margin):
         return False, f"EDF dynamic range ({edf_dynamic_range} dB) is sufficient", signal_snr
@@ -118,14 +118,14 @@ def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
                 'unit': ch_info.get('unit', 'Unknown')
             }
         type_groups[ch_type]['channels'].append(ch_name)
-        
+
         analysis = analyses.get(ch_name, {})
         if not analysis.get('is_zero', False):
             type_groups[ch_type]['ranges'].append(analysis.get('range', 0))
             type_groups[ch_type]['dynamic_ranges'].append(analysis.get('dynamic_range_db', 0))
             type_groups[ch_type]['snrs'].append(analysis.get('snr_db', 0))
             type_groups[ch_type]['formats'].append('BDF' if analysis.get('use_bdf', False) else 'EDF')
-    
+
     # Generate summary
     summary = []
     for ch_type, data in type_groups.items():
@@ -133,7 +133,7 @@ def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
         dynamic_ranges = np.array(data['dynamic_ranges'])
         snrs = np.array(data['snrs'])
         formats = data['formats']
-        
+
         if len(ranges) > 0:
             summary.append(f"\nChannel Type: {ch_type} ({len(data['channels'])} channels)")
             summary.append(
@@ -145,14 +145,14 @@ def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
             summary.append(
                 f"SNR: {np.min(snrs):.1f} to {np.max(snrs):.1f} "
                 f"(mean: {np.mean(snrs):.1f}) dB")
-            
+
             edf_count = formats.count('EDF')
             bdf_count = formats.count('BDF')
             summary.append(f"Format: {edf_count} channels using EDF, {bdf_count} channels using BDF")
         else:
             summary.append(f"\nChannel Type: {ch_type} ({len(data['channels'])} channels)")
             summary.append("All channels contain zero signal")
-    
+
     return "\n".join(summary)
 
 
@@ -169,21 +169,21 @@ def quantization_analysis(signal: np.ndarray, bits: int) -> dict:
     """
     signal_range = np.max(signal) - np.min(signal)
     step_size = signal_range / (2**bits)
-    
+
     # Simulate quantization
     quantized = np.round(signal / step_size) * step_size
-    
+
     # Calculate errors
     abs_error = np.abs(signal - quantized)
     rmse = np.sqrt(np.mean((signal - quantized)**2))
-    
+
     # Calculate SNR
     signal_power = np.mean(signal**2)
     noise_power = np.mean((signal - quantized)**2)
     if noise_power < np.finfo(float).eps:
         noise_power = np.finfo(float).eps
     snr = 10 * np.log10(signal_power / noise_power)
-    
+
     return {
         'step_size': step_size,
         'max_error': np.max(abs_error),
@@ -195,10 +195,10 @@ def quantization_analysis(signal: np.ndarray, bits: int) -> dict:
 def _round_physical_value(value: float) -> float:
     """
     Round physical value to fit within EDF+ 8-character limit.
-    
+
     Args:
         value: Physical value to round
-        
+
     Returns:
         float: Rounded value that fits in 8 characters when formatted
     """
@@ -256,7 +256,7 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
     # Round physical values to fit EDF+ format
     signal_min = _round_physical_value(signal_min)
     signal_max = _round_physical_value(signal_max)
-    
+
     return signal_min, signal_max, digital_min, digital_max, scaling_factor
 
 
@@ -342,7 +342,7 @@ class EDFExporter:
             # Analyze signal characteristics
             analysis = analyze_signal(signal)
             use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
-            
+
             # Perform quantization analysis for chosen format
             if use_bdf_for_channel:
                 use_bdf = True
@@ -424,7 +424,7 @@ class EDFExporter:
                 analysis['snr'] = snr
                 analysis['use_bdf'] = use_bdf_for_channel
                 analyses[ch_name] = analysis
-                
+
                 if use_bdf_for_channel:
                     use_bdf = True
                     if not bdf_reason:  # Only set reason for first channel requiring BDF

@@ -35,7 +35,8 @@ class EMG:
         """
         importers = {
             'trigno': 'TrignoImporter',
-            'otb': 'OTBImporter'  # OTB/OTB+ EMG system data
+            'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
+            'edf': 'EDFImporter'  # EDF/EDF+/BDF format
         }
 
         if importer not in importers:
@@ -43,7 +44,8 @@ class EMG:
                 f"Unsupported importer: {importer}. "
                 f"Available importers: {list(importers.keys())}\n"
                 "- trigno: Delsys Trigno EMG system\n"
-                "- otb: OTB/OTB+ EMG system"
+                "- otb: OTB/OTB+ EMG system\n"
+                "- edf: EDF/EDF+/BDF format"
             )
 
         # Import the appropriate importer class
@@ -214,7 +216,7 @@ class EMG:
         """
         if self.signals is None:
             raise ValueError("No signals loaded")
-            
+
         from ..exporters.edf import EDFExporter
         EDFExporter.export(self, filepath, **kwargs)
 
