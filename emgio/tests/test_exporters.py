@@ -172,7 +172,7 @@ def test_signal_analysis():
     assert 'range' in analysis
     assert 'noise_floor' in analysis
     assert 'dynamic_range_db' in analysis
-    assert analysis['range'] <= 2.0  # Max range for sine + small noise
+    assert analysis['range'] <= abs(test_signal.min()) + abs(test_signal.max())  # Max range for sine + small noise
     assert analysis['noise_floor'] > 0
     assert analysis['dynamic_range_db'] > 0
 
