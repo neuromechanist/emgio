@@ -61,7 +61,7 @@ class EMG:
         return importer_class().load(filepath)
 
     def select_channels(self, channels: Union[str, List[str], None] = None,
-                        channel_type: Optional[str] = None) -> 'EMG':
+                        channel_type: Optional[str] = None, inplace: bool = False) -> 'EMG':
         """
         Select specific channels from the data and return a new EMG object.
 
@@ -120,7 +120,14 @@ class EMG:
         # Copy metadata
         new_emg.metadata = self.metadata.copy()
         
-        return new_emg
+        if not inplace:
+            return new_emg
+        else:
+            self.signals = new_emg.signals
+            self.channels = new_emg.channels
+            self.metadata = new_emg.metadata
+            return self
+
 
     def get_channel_types(self) -> List[str]:
         """
