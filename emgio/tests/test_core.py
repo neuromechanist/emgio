@@ -278,7 +278,7 @@ def test_plot_signals_basic(sample_emg, mock_plt):
 def test_plot_signals_style_options(sample_emg, mock_plt):
     """Test different plot styles."""
     # Test dots style
-    sample_emg.plot_signals(style='dots', show=False, plt_module=mock_plt)
+    sample_emg.plot_signals(show=False, plt_module=mock_plt)
     if isinstance(mock_plt.axes, list):
         for ax in mock_plt.axes:
             ax.scatter.assert_called_once()
@@ -291,7 +291,7 @@ def test_plot_signals_style_options(sample_emg, mock_plt):
     mock_plt.reset()
 
     # Test line style
-    sample_emg.plot_signals(style='line', show=False, plt_module=mock_plt)
+    sample_emg.plot_signals(show=False, plt_module=mock_plt)
     if isinstance(mock_plt.axes, list):
         for ax in mock_plt.axes:
             ax.plot.assert_called_once()
@@ -425,30 +425,14 @@ def test_select_channels_none_with_type(sample_emg):
     assert all(info['type'] == 'EMG' for info in result.channels.values())
 
 
-def test_plot_signals_invalid_style(sample_emg, mock_plt):
-    """Test plot_signals with invalid style."""
-    # Test with dots style
-    sample_emg.plot_signals(style='invalid_style', show=False, plt_module=mock_plt)  # Should default to line
-    if isinstance(mock_plt.axes, list):
-        for ax in mock_plt.axes:
-            ax.plot.assert_called_once()
-            ax.scatter.assert_not_called()
-    else:
-        mock_plt.axes.plot.assert_called_once()
-        mock_plt.axes.scatter.assert_not_called()
+def test_plot_single_axis(sample_emg, mock_plt):
+    """Test plotting only makes a single axis."""
+    # add the same channel data to test multiple channels
+    sample_emg.add_channel('EMG2', sample_emg.signals['EMG1'], 1000, 'mV', ch_type='EMG')
+    sample_emg.plot_signals(channels=['EMG1', 'EMG2'], show=False, plt_module=mock_plt)
 
-
-def test_plot_signals_single_channel_array(sample_emg, mock_plt):
-    """Test plotting single channel returns correct axes array."""
-    sample_emg.plot_signals(channels=['EMG1'], show=False, plt_module=mock_plt)
-
-    # Verify axes is properly handled when single channel
-    assert not isinstance(mock_plt.axes, list)
-
-    # Verify channel info in title
-    ch_info = sample_emg.channels['EMG1']
-    expected_title = f"EMG1 ({ch_info['type']} - {ch_info['sampling_freq']} Hz)"
-    mock_plt.axes.set_title.assert_called_with(expected_title)
+    # Verify axis is one
+    assert len(mock_plt.axes) == 1
 
 
 def test_select_channels_empty_result(sample_emg):
