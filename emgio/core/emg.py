@@ -63,7 +63,7 @@ class EMG:
     def select_channels(self, channels: Union[str, List[str], None] = None,
                         channel_type: Optional[str] = None) -> 'EMG':
         """
-        Select specific channels from the data.
+        Select specific channels from the data and return a new EMG object.
 
         Args:
             channels: Channel name or list of channel names to select. If None and
@@ -73,17 +73,17 @@ class EMG:
                          channels of this type.
 
         Returns:
-            EMG: Self for method chaining
+            EMG: A new EMG object containing only the selected channels
 
         Examples:
             # Select specific channels
-            emg.select_channels(['EMG1', 'EMG2'])
+            new_emg = emg.select_channels(['EMG1', 'ACC1'])
 
             # Select all EMG channels
-            emg.select_channels(channel_type='EMG')
+            emg_only = emg.select_channels(channel_type='EMG')
 
-            # Select specific EMG channels only
-            emg.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
+            # Select specific EMG channels only, this example does not select ACC channels
+            emg_subset = emg.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
         """
         if self.signals is None:
             raise ValueError("No signals loaded")
@@ -110,9 +110,17 @@ class EMG:
                 raise ValueError(
                     f"None of the selected channels are of type: {channel_type}")
 
-        self.signals = self.signals[channels]
-        self.channels = {ch: self.channels[ch] for ch in channels}
-        return self
+        # Create new EMG object
+        new_emg = EMG()
+        
+        # Copy selected signals and channels
+        new_emg.signals = self.signals[channels].copy()
+        new_emg.channels = {ch: self.channels[ch].copy() for ch in channels}
+        
+        # Copy metadata
+        new_emg.metadata = self.metadata.copy()
+        
+        return new_emg
 
     def get_channel_types(self) -> List[str]:
         """
