@@ -107,7 +107,7 @@ def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
     # Group channels by type
     type_groups = {}
     for ch_name, ch_info in channels.items():
-        ch_type = ch_info.get('type', 'Unknown')
+        ch_type = ch_info.get('channel_type', 'Unknown')
         if ch_type not in type_groups:
             type_groups[ch_type] = {
                 'channels': [],
@@ -115,7 +115,7 @@ def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
                 'dynamic_ranges': [],
                 'snrs': [],
                 'formats': [],
-                'unit': ch_info.get('unit', 'Unknown')
+                'unit': ch_info.get('physical_dimension', 'Unknown')
             }
         type_groups[ch_type]['channels'].append(ch_name)
 
@@ -330,8 +330,8 @@ class EDFExporter:
         signal_info = []
         channel_info_list = []
         channels_tsv_data = {
-            'name': [], 'type': [], 'units': [],
-            'sampling_frequency': [], 'reference': [], 'status': []
+            'name': [], 'channel_type': [], 'physical_dimension': [],
+            'sample_frequency': [], 'reference': [], 'status': []
         }
 
         # First pass: analyze signals and determine format
@@ -356,9 +356,9 @@ class EDFExporter:
 
             signal_info.append(
                 f"\n  {ch_name}:"
-                f"\n    Range: {analysis['range']:.8g} {ch_info['unit']}"
+                f"\n    Range: {analysis['range']:.8g} {ch_info['physical_dimension']}"
                 f"\n    Dynamic Range: {analysis['dynamic_range_db']:.1f} dB"
-                f"\n    Noise Floor: {analysis['noise_floor']:.2e} {ch_info['unit']}"
+                f"\n    Noise Floor: {analysis['noise_floor']:.2e} {ch_info['physical_dimension']}"
                 f"\n    SNR: {snr:.1f} dB"
                 f"\n    Format: {'BDF' if use_bdf_for_channel else 'EDF'}"
             )
@@ -392,22 +392,22 @@ class EDFExporter:
                 # Prepare channel info
                 ch_dict = {
                     'label': ch_name[:16],  # EDF+ limits label to 16 chars
-                    'dimension': ch_info['unit'],
-                    'sample_frequency': int(ch_info['sampling_freq']),
+                    'dimension': ch_info['physical_dimension'],
+                    'sample_frequency': int(ch_info['sample_frequency']),
                     'physical_max': phys_max,
                     'physical_min': phys_min,
                     'digital_max': dig_max,
                     'digital_min': dig_min,
                     'prefilter': ch_info['prefilter'],
-                    'transducer': f"{ch_info['type']} sensor"
+                    'transducer': f"{ch_info['channel_type']} sensor"
                 }
                 channel_info_list.append(ch_dict)
 
                 # Add to channels.tsv data
                 channels_tsv_data['name'].append(ch_name)
-                channels_tsv_data['type'].append(ch_info['type'])
-                channels_tsv_data['units'].append(ch_info['unit'])
-                channels_tsv_data['sampling_frequency'].append(ch_info['sampling_freq'])
+                channels_tsv_data['channel_type'].append(ch_info['channel_type'])
+                channels_tsv_data['physical_dimension'].append(ch_info['physical_dimension'])
+                channels_tsv_data['sample_frequency'].append(ch_info['sample_frequency'])
                 channels_tsv_data['reference'].append('n/a')
                 channels_tsv_data['status'].append('good')
 

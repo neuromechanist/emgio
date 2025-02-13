@@ -95,7 +95,7 @@ class EMG:
         if channels is None and channel_type is not None:
             channels = [
                 ch for ch, info in self.channels.items()
-                if info['type'] == channel_type
+                if info['channel_type'] == channel_type
             ]
             if not channels:
                 raise ValueError(f"No channels found of type: {channel_type}")
@@ -111,7 +111,7 @@ class EMG:
         if channel_type is not None:
             channels = [
                 ch for ch in channels
-                if self.channels[ch]['type'] == channel_type
+                if self.channels[ch]['channel_type'] == channel_type
             ]
             if not channels:
                 raise ValueError(
@@ -142,7 +142,7 @@ class EMG:
         Returns:
             List of channel types (e.g., ['EMG', 'ACC', 'GYRO'])
         """
-        return list(set(info['type'] for info in self.channels.values()))
+        return list(set(info['channel_type'] for info in self.channels.values()))
 
     def get_channels_by_type(self, channel_type: str) -> List[str]:
         """
@@ -155,7 +155,7 @@ class EMG:
             List of channel names of the specified type
         """
         return [ch for ch, info in self.channels.items()
-                if info['type'] == channel_type]
+                if info['channel_type'] == channel_type]
 
     def plot_signals(
             self, channels: Optional[List[str]] = None,
@@ -318,5 +318,5 @@ class EMG:
             'sample_frequency': sample_frequency,
             'physical_dimension': physical_dimension,
             'prefilter': prefilter,
-            'type': channel_type
+            'channel_type': channel_type
         }
