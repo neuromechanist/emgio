@@ -133,30 +133,30 @@ class EDFImporter(BaseImporter):
                 signal_data, signal_info = self._read_signal_data(edf_reader, i)
 
                 # Determine channel type
-                ch_type = self._determine_channel_type(
+                channel_type = self._determine_channel_type(
                     signal_info['label'],
                     signal_info['transducer']
                 )
 
                 # Add channel to EMG object
                 emg.add_channel(
-                    name=signal_info['label'],
+                    label=signal_info['label'],
                     data=signal_data,
-                    sampling_freq=signal_info['sample_frequency'],
-                    unit=signal_info['physical_dimension'],
+                    sample_frequency=signal_info['sample_frequency'],
+                    physical_dimension=signal_info['physical_dimension'],
                     prefilter=signal_info['prefilter'],
-                    ch_type=ch_type
+                    channel_type=channel_type
                 )
 
                 # Store additional channel-specific metadata
-                ch_metadata = {
+                channel_metadata = {
                     'physical_min': signal_info['physical_min'],
                     'physical_max': signal_info['physical_max'],
                     'digital_min': signal_info['digital_min'],
                     'digital_max': signal_info['digital_max'],
                     'transducer': signal_info['transducer']
                 }
-                emg.channels[signal_info['label']].update(ch_metadata)
+                emg.channels[signal_info['label']].update(channel_metadata)
 
             return emg
 
