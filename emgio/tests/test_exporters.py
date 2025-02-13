@@ -133,9 +133,9 @@ def test_edf_export(sample_emg):
         channels_df = pd.read_csv(channels_tsv_path, sep='\t')
         assert len(channels_df) == 2
         assert list(channels_df['name']) == ['EMG1', 'ACC1']
-        assert list(channels_df['type']) == ['EMG', 'ACC']
-        assert list(channels_df['units']) == ['mV', 'g']
-        assert list(channels_df['sampling_frequency']) == [1000, 1000]
+        assert list(channels_df['channel_type']) == ['EMG', 'ACC']
+        assert list(channels_df['physical_dimension']) == ['mV', 'g']
+        assert list(channels_df['sample_frequency']) == [1000, 1000]
 
     finally:
         # Cleanup

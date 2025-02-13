@@ -44,12 +44,12 @@ def test_trigno_importer(sample_trigno_csv):
     assert 'ACC1' in emg.channels
 
     # Check channel properties
-    assert emg.channels['EMG1']['sampling_freq'] == 1000
-    assert emg.channels['EMG1']['unit'] == 'mV'
-    assert emg.channels['EMG1']['type'] == 'EMG'
+    assert emg.channels['EMG1']['sample_frequency'] == 1000
+    assert emg.channels['EMG1']['physical_dimension'] == 'mV'
+    assert emg.channels['EMG1']['channel_type'] == 'EMG'
 
-    assert emg.channels['ACC1']['unit'] == 'g'
-    assert emg.channels['ACC1']['type'] == 'ACC'
+    assert emg.channels['ACC1']['physical_dimension'] == 'g'
+    assert emg.channels['ACC1']['channel_type'] == 'ACC'
 
     # Check data shape
     assert len(emg.signals) == 5  # 5 samples
@@ -74,8 +74,8 @@ def test_trigno_metadata_parsing(sample_trigno_csv):
     channel_info = importer._parse_metadata(metadata_lines)
 
     assert 'EMG1' in channel_info
-    assert channel_info['EMG1']['sampling_freq'] == 1000
-    assert channel_info['EMG1']['unit'] == 'mV'
+    assert channel_info['EMG1']['sample_frequency'] == 1000
+    assert channel_info['EMG1']['physical_dimension'] == 'mV'
 
 
 def test_trigno_csv_structure_analysis(sample_trigno_csv):
@@ -98,9 +98,9 @@ def test_otb_importer():
 
     # Check channel properties for first channel
     first_channel = next(iter(emg.channels.values()))
-    assert first_channel['sampling_freq'] > 0
-    assert first_channel['unit'] in ['mV', 'g', 'rad', 'a.u.']
-    assert first_channel['type'] in ['EMG', 'ACC', 'GYRO', 'QUAT', 'CTRL', 'OTHER']
+    assert first_channel['sample_frequency'] > 0
+    assert first_channel['physical_dimension'] in ['mV', 'g', 'rad', 'a.u.']
+    assert first_channel['channel_type'] in ['EMG', 'ACC', 'GYRO', 'QUAT', 'CTRL', 'OTHER']
 
     # Check metadata
     assert emg.get_metadata('device') is not None
@@ -131,10 +131,10 @@ def test_otb_metadata_parsing():
 
     # Test channel metadata
     for channel_name, channel_info in emg.channels.items():
-        assert 'sampling_freq' in channel_info
-        assert 'unit' in channel_info
-        assert 'type' in channel_info
-        assert channel_info['type'] in ['EMG', 'ACC', 'GYRO', 'QUAT', 'CTRL', 'OTHER']
+        assert 'sample_frequency' in channel_info
+        assert 'physical_dimension' in channel_info
+        assert 'channel_type' in channel_info
+        assert channel_info['channel_type'] in ['EMG', 'ACC', 'GYRO', 'QUAT', 'CTRL', 'OTHER']
 
 
 def test_otb_temp_cleanup():
@@ -238,13 +238,13 @@ def test_edf_importer(sample_edf_file):
     assert 'ACC1' in emg.channels
 
     # Check channel properties
-    assert emg.channels['EMG1']['sampling_freq'] == 1000
-    assert emg.channels['EMG1']['unit'] == 'mV'
-    assert emg.channels['EMG1']['type'] == 'EMG'
+    assert emg.channels['EMG1']['sample_frequency'] == 1000
+    assert emg.channels['EMG1']['physical_dimension'] == 'mV'
+    assert emg.channels['EMG1']['channel_type'] == 'EMG'
     assert 'HP:20Hz LP:500Hz' in emg.channels['EMG1']['prefilter']
 
-    assert emg.channels['ACC1']['unit'] == 'g'
-    assert emg.channels['ACC1']['type'] == 'ACC'
+    assert emg.channels['ACC1']['physical_dimension'] == 'g'
+    assert emg.channels['ACC1']['channel_type'] == 'ACC'
 
     # Check data shape
     assert len(emg.signals) == 1000  # 1000 samples
@@ -268,10 +268,10 @@ def test_edf_channel_type_detection(sample_edf_file):
     emg = importer.load(sample_edf_file)
 
     # Test EMG channel detection
-    assert emg.channels['EMG1']['type'] == 'EMG'
+    assert emg.channels['EMG1']['channel_type'] == 'EMG'
 
     # Test ACC channel detection
-    assert emg.channels['ACC1']['type'] == 'ACC'
+    assert emg.channels['ACC1']['channel_type'] == 'ACC'
 
 
 def test_edf_metadata_extraction(sample_edf_file):

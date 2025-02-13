@@ -22,8 +22,8 @@ def sample_emg():
     emg_data = np.sin(2 * np.pi * 10 * time)  # 10Hz sine wave
     acc_data = np.cos(2 * np.pi * 5 * time)   # 5Hz cosine wave
 
-    emg.add_channel('EMG1', emg_data, 1000, 'mV', ch_type='EMG')
-    emg.add_channel('ACC1', acc_data, 1000, 'g', ch_type='ACC')
+    emg.add_channel('EMG1', emg_data, 1000, 'mV', channel_type='EMG')
+    emg.add_channel('ACC1', acc_data, 1000, 'g', channel_type='ACC')
 
     return emg
 
@@ -145,7 +145,7 @@ def test_add_channel_validation(empty_emg):
     """Test add_channel with various data types and validation."""
     # Test with different numpy data types
     data_int = np.array([1, 2, 3], dtype=np.int32)
-    empty_emg.add_channel('INT', data_int, 1000, 'count', ch_type='OTHER')
+    empty_emg.add_channel('INT', data_int, 1000, 'count', channel_type='OTHER')
     assert np.array_equal(empty_emg.signals['INT'].values, data_int)
 
     # Test with float data
@@ -173,7 +173,7 @@ def mock_importers(monkeypatch):
     class MockTrignoImporter(MockBaseImporter):
         def _load(self, filepath):
             emg = EMG()
-            emg.add_channel('TEST', np.array([1, 2, 3]), 1000, 'mV', ch_type='EMG')
+            emg.add_channel('TEST', np.array([1, 2, 3]), 1000, 'mV', channel_type='EMG')
             emg.set_metadata('device', 'Delsys Trigno')
             emg.set_metadata('source_file', filepath)
             return emg
@@ -181,7 +181,7 @@ def mock_importers(monkeypatch):
     class MockOTBImporter(MockBaseImporter):
         def _load(self, filepath):
             emg = EMG()
-            emg.add_channel('OTB', np.array([4, 5, 6]), 2000, 'mV', ch_type='EMG')
+            emg.add_channel('OTB', np.array([4, 5, 6]), 2000, 'mV', channel_type='EMG')
             emg.set_metadata('device', 'OT Bioelettronica')
             emg.set_metadata('source_file', filepath)
             return emg
@@ -431,7 +431,7 @@ def test_select_channels_none_with_type(sample_emg):
     """Test selecting all channels of a type when channels=None."""
     # Add another EMG channel for testing
     data = np.linspace(0, 1, 1000)
-    sample_emg.add_channel('EMG2', data, 1000, 'mV', ch_type='EMG')
+    sample_emg.add_channel('EMG2', data, 1000, 'mV', channel_type='EMG')
     original_channels = list(sample_emg.signals.columns)
 
     # Select all EMG channels
@@ -445,7 +445,7 @@ def test_select_channels_none_with_type(sample_emg):
 def test_plot_single_axis(sample_emg, mock_plt):
     """Test plotting only makes a single axis."""
     # add the same channel data to test multiple channels
-    sample_emg.add_channel('EMG2', sample_emg.signals['EMG1'], 1000, 'mV', ch_type='EMG')
+    sample_emg.add_channel('EMG2', sample_emg.signals['EMG1'], 1000, 'mV', channel_type='EMG')
     sample_emg.plot_signals(channels=['EMG1', 'EMG2'], show=False, plt_module=mock_plt)
 
     # Verify axis is one
@@ -463,11 +463,11 @@ def test_add_multiple_channels(empty_emg):
     """Test adding multiple channels with different properties."""
     # Add first channel
     data1 = np.array([1, 2, 3])
-    empty_emg.add_channel('CH1', data1, 1000, 'mV', ch_type='EMG')
+    empty_emg.add_channel('CH1', data1, 1000, 'mV', channel_type='EMG')
 
     # Add second channel with different properties
     data2 = np.array([4, 5, 6])
-    empty_emg.add_channel('CH2', data2, 2000, 'g', ch_type='ACC')
+    empty_emg.add_channel('CH2', data2, 2000, 'g', channel_type='ACC')
 
     # Verify both channels exist with correct properties
     assert set(empty_emg.signals.columns) == {'CH1', 'CH2'}
