@@ -1,4 +1,3 @@
-import os
 import matplotlib.pyplot as plt
 from emgio.core.emg import EMG
 
@@ -6,7 +5,8 @@ from emgio.core.emg import EMG
 def main():
     # Load OTB data
     print("Loading OTB data...")
-    emg = EMG.from_file('examples/two_mouvi_truncated.otb+', importer='otb')
+    # example two: one_sessantaquattro_truncated.otb+, example two: two_mouvi_truncated.otb+
+    emg = EMG.from_file('examples/one_sessantaquattro_truncated.otb+', importer='otb')
 
     # Print metadata
     print("\nDevice Information:")
@@ -28,24 +28,25 @@ def main():
     for ch_type, count in channel_types.items():
         print(f"{ch_type}: {count} channels")
 
-    # # Plot EMG channels
-    # emg_data = emg.select_channels(channel_type='EMG')
-    # if emg_data.signals is not None and not emg_data.signals.empty:
-    #     print("\nPlotting EMG channels...")
-    #     emg_data.plot_signals(
-    #         title='EMG Channels',
-    #         style='line',
-    #         grid=True
-    #     )
-    #     plt.show()
-    # else:
-    #     print("\nNo EMG channels found in the data")
+    # Plot EMG channels
+    emg_data = emg.select_channels(channel_type='EMG')
+    if emg_data.signals is not None and not emg_data.signals.empty:
+        print("\nPlotting EMG channels...")
+        emg_data.plot_signals(
+            title='EMG Channels',
+            grid=True,
+            channels=list(emg.channels.keys())[33:-1]  # optionally plot a subset of channels
+        )
+        plt.show()
+    else:
+        print("\nNo EMG channels found in the data")
 
     output_path = 'examples/otb_emg'
     emg.select_channels(channel_type='EMG')
     emg.to_edf(output_path)
 
     print("\nExport complete!")
+
 
 if __name__ == '__main__':
     main()

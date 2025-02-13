@@ -138,20 +138,26 @@ class EMG:
 
     def plot_signals(self, channels: Optional[List[str]] = None,
                      time_range: Optional[tuple] = None,
-                     style: str = 'line',
+                     offset_scale: float = 0.8,
+                     uniform_scale: bool = True,
+                     detrend: bool = False,
                      grid: bool = True,
                      title: Optional[str] = None,
                      show: bool = True,
                      plt_module: Any = plt) -> None:
         """
-        Plot EMG signals with enhanced visualization options.
+        Plot EMG signals in a single plot with vertical offsets.
 
         Args:
             channels: List of channels to plot. If None, plot all channels
             time_range: Tuple of (start_time, end_time) to plot. If None, plot all data
-            style: Plot style ('line' or 'dots')
+            offset_scale: Portion of allocated space each signal can use (0.0 to 1.0)
+            uniform_scale: Whether to use the same scale for all signals
+            detrend: Whether to remove mean from signals before plotting
             grid: Whether to show grid lines
-            title: Optional title for the entire figure
+            title: Optional title for the figure
+            show: Whether to display the plot
+            plt_module: Matplotlib pyplot module to use
         """
         if self.signals is None:
             raise ValueError("No signals loaded")
@@ -162,43 +168,67 @@ class EMG:
             missing = [ch for ch in channels if ch not in self.signals.columns]
             raise ValueError(f"Channels not found: {missing}")
 
-        # Create figure with shared x-axis
-        fig, axes = plt_module.subplots(
-            len(channels), 1,
-            figsize=(12, 3 * len(channels)),
-            sharex=True
-        )
-        if len(channels) == 1:
-            axes = [axes]
+        # Create figure
+        fig, ax = plt_module.subplots(figsize=(12, 8))
 
         # Set figure title if provided
         if title:
-            fig.suptitle(title, fontsize=14, y=1.02)
+            ax.set_title(title, fontsize=14, pad=20)
 
-        for ax, channel in zip(axes, channels):
+        # Process signals
+        processed_data = {}
+        max_range = 0
+
+        for i, channel in enumerate(channels):
             data = self.signals[channel]
             if time_range:
                 start, end = time_range
                 data = data.loc[start:end]
 
-            # Plot based on style
-            if style == 'dots':
-                ax.scatter(data.index, data.values, s=1, alpha=0.6)
-            else:  # default to line
-                ax.plot(data.index, data.values, linewidth=1)
+            # Detrend if requested
+            if detrend:
+                data = data - data.mean()
 
-            # Channel info in title
-            ch_info = self.channels[channel]
-            ax.set_title(f"{channel} ({ch_info['type']} - {ch_info['sampling_freq']} Hz)")
-            ax.set_ylabel(f"{ch_info['unit']}")
+            processed_data[channel] = data
+            max_range = max(max_range, data.max() - data.min())
 
-            if grid:
-                ax.grid(True, linestyle='--', alpha=0.7)
+        # Plot each signal with offset
+        n_channels = len(channels)
+        yticks = []
+        yticklabels = []
 
-        # Common x-axis label
-        axes[-1].set_xlabel("Time (s)")
+        for i, channel in enumerate(channels):
+            data = processed_data[channel]
 
-        # Adjust layout to prevent label overlap
+            # Calculate offset and scaling
+            offset = n_channels - i - 1  # Reverse order (top to bottom)
+            if uniform_scale:
+                scale = offset_scale / max_range
+            else:
+                scale = offset_scale / (data.max() - data.min())
+
+            # Scale and offset the signal
+            scaled_data = data * scale + offset
+
+            # Plot the signal
+            ax.plot(data.index, scaled_data, linewidth=1, label=channel)
+
+            # Store tick position and label
+            yticks.append(offset)
+            yticklabels.append(f"{channel}")
+
+        # Set axis labels and ticks
+        ax.set_xlabel("Time (s)")
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticklabels)
+
+        # Set y-axis limits with some padding
+        ax.set_ylim(-0.5, n_channels - 0.5)
+
+        if grid:
+            ax.grid(True, linestyle='--', alpha=0.7)
+
+        # Adjust layout
         plt_module.tight_layout()
         if show:
             plt_module.show()

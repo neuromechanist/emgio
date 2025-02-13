@@ -9,7 +9,6 @@ This example shows how to:
 
 import os
 from emgio import EMG
-import matplotlib.pyplot as plt
 
 
 def main():
@@ -38,10 +37,31 @@ def main():
     emg_channels = [ch for ch, info in emg.channels.items() if info['type'] == 'EMG']
     # emg.select_channels(emg_channels)  # TODO: #3 This removes all other channels in place, behavior should change.
 
-    # Plot the first 5 seconds of data
+    # Plot the first 5 seconds of data with different configurations
     print("\nPlotting EMG signals...")
-    emg.plot_signals(time_range=(0, 5), channels=emg_channels)
-    plt.suptitle("First 5 seconds of EMG data")
+
+    # Default plot with uniform scaling
+    emg.plot_signals(
+        time_range=(0, 5),
+        channels=emg_channels,
+        title="EMG Signals - Uniform Scale"
+    )
+
+    # Plot with detrending
+    emg.plot_signals(
+        time_range=(0, 5),
+        channels=emg_channels,
+        detrend=True,
+        title="EMG Signals - Detrended"
+    )
+
+    # Plot with individual scaling
+    emg.plot_signals(
+        time_range=(0, 5),
+        channels=emg_channels,
+        uniform_scale=False,
+        title="EMG Signals - Individual Scaling"
+    )
 
     # Export to EDF/BDF (format will be automatically selected)
     output_path = 'examples/trigno_emg'  # Extension will be added by the exporter (.edf or .bdf)
