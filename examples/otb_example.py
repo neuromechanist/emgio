@@ -19,7 +19,7 @@ def main():
     print("-" * 50)
     channel_types = {}
     for ch_info in emg.channels.values():
-        ch_type = ch_info['type']
+        ch_type = ch_info['channel_type']
         if ch_type not in channel_types:
             channel_types[ch_type] = 1
         else:
@@ -35,7 +35,7 @@ def main():
         emg_data.plot_signals(
             title='EMG Channels',
             grid=True,
-            channels=list(emg.channels.keys())[33:-1]  # optionally plot a subset of channels
+            channels=list(emg_data.channels.keys())[33:-1]  # optionally plot a subset of channels
         )
         plt.show()
     else:

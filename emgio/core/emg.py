@@ -60,8 +60,11 @@ class EMG:
         # Create importer instance and load data
         return importer_class().load(filepath)
 
-    def select_channels(self, channels: Union[str, List[str], None] = None,
-                        channel_type: Optional[str] = None, inplace: bool = False) -> 'EMG':
+    def select_channels(
+            self,
+            channels: Union[str, List[str], None] = None,
+            channel_type: Optional[str] = None,
+            inplace: bool = False) -> 'EMG':
         """
         Select specific channels from the data and return a new EMG object.
 
@@ -90,8 +93,10 @@ class EMG:
 
         # If channel_type specified but no channels, select all of that type
         if channels is None and channel_type is not None:
-            channels = [ch for ch, info in self.channels.items()
-                        if info['type'] == channel_type]
+            channels = [
+                ch for ch, info in self.channels.items()
+                if info['channel_type'] == channel_type
+            ]
             if not channels:
                 raise ValueError(f"No channels found of type: {channel_type}")
         elif isinstance(channels, str):
@@ -104,11 +109,13 @@ class EMG:
 
         # Filter by type if specified
         if channel_type is not None:
-            channels = [ch for ch in channels
-                        if self.channels[ch]['type'] == channel_type]
+            channels = [
+                ch for ch in channels
+                if self.channels[ch]['channel_type'] == channel_type
+            ]
             if not channels:
                 raise ValueError(
-                    f"None of the selected channels are of type: {channel_type}")
+                        f"None of the selected channels are of type: {channel_type}")
 
         # Create new EMG object
         new_emg = EMG()
@@ -128,7 +135,6 @@ class EMG:
             self.metadata = new_emg.metadata
             return self
 
-
     def get_channel_types(self) -> List[str]:
         """
         Get list of unique channel types in the data.
@@ -136,7 +142,7 @@ class EMG:
         Returns:
             List of channel types (e.g., ['EMG', 'ACC', 'GYRO'])
         """
-        return list(set(info['type'] for info in self.channels.values()))
+        return list(set(info['channel_type'] for info in self.channels.values()))
 
     def get_channels_by_type(self, channel_type: str) -> List[str]:
         """
@@ -149,17 +155,18 @@ class EMG:
             List of channel names of the specified type
         """
         return [ch for ch, info in self.channels.items()
-                if info['type'] == channel_type]
+                if info['channel_type'] == channel_type]
 
-    def plot_signals(self, channels: Optional[List[str]] = None,
-                     time_range: Optional[tuple] = None,
-                     offset_scale: float = 0.8,
-                     uniform_scale: bool = True,
-                     detrend: bool = False,
-                     grid: bool = True,
-                     title: Optional[str] = None,
-                     show: bool = True,
-                     plt_module: Any = plt) -> None:
+    def plot_signals(
+            self, channels: Optional[List[str]] = None,
+            time_range: Optional[tuple] = None,
+            offset_scale: float = 0.8,
+            uniform_scale: bool = True,
+            detrend: bool = False,
+            grid: bool = True,
+            title: Optional[str] = None,
+            show: bool = True,
+            plt_module: Any = plt) -> None:
         """
         Plot EMG signals in a single plot with vertical offsets.
 
@@ -287,28 +294,29 @@ class EMG:
         """
         return self.metadata.get(key)
 
-    def add_channel(self, name: str, data: np.ndarray, sampling_freq: float,
-                    unit: str, prefilter: str = 'n/a', ch_type: str = 'EMG') -> None:
+    def add_channel(
+            self, label: str, data: np.ndarray, sample_frequency: float,
+            physical_dimension: str, prefilter: str = 'n/a', channel_type: str = 'EMG') -> None:
         """
         Add a new channel to the EMG data.
 
         Args:
-            name: Channel name
+            label: Channel label or name (as per EDF specification)
             data: Channel data
-            sampling_freq: Sampling frequency in Hz
-            unit: Unit of measurement
+            sample_frequency: Sampling frequency in Hz (as per EDF specification)
+            physical_dimension: Physical dimension/unit of measurement (as per EDF specification)
             prefilter: Pre-filtering applied to the channel
-            ch_type: Channel type ('EMG', 'ACC', 'GYRO', etc.)
+            channel_type: Channel type ('EMG', 'ACC', 'GYRO', etc.)
         """
         if self.signals is None:
             # Create DataFrame with time index
-            time = np.arange(len(data)) / sampling_freq
+            time = np.arange(len(data)) / sample_frequency
             self.signals = pd.DataFrame(index=time)
 
-        self.signals[name] = data
-        self.channels[name] = {
-            'sampling_freq': sampling_freq,
-            'unit': unit,
+        self.signals[label] = data
+        self.channels[label] = {
+            'sample_frequency': sample_frequency,
+            'physical_dimension': physical_dimension,
             'prefilter': prefilter,
-            'type': ch_type
+            'channel_type': channel_type
         }

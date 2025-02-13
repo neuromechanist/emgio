@@ -64,8 +64,8 @@ class TrignoImporter(BaseImporter):
                 unit = line[line.find('Unit:') + 5:line.find('Domain')].strip()
 
                 channel_info[name_part] = {
-                    'sampling_freq': sampling_freq,
-                    'unit': unit
+                    'sample_frequency': sampling_freq,
+                    'physical_dimension': unit
                 }
 
         return channel_info
@@ -96,33 +96,33 @@ class TrignoImporter(BaseImporter):
         df.columns = [col.replace('X[s]', '').strip('"') for col in df.columns]
 
         # Get valid channel names (excluding time columns and extra columns)
-        channel_names = [col for col in df.columns if col and not col.startswith('.')]
+        channel_labels = [col for col in df.columns if col and not col.startswith('.')]
 
         # Create time index
         time_col = df.columns[0]  # First column is time
         df.set_index(time_col, inplace=True)
 
         # Add channels to EMG object
-        for channel_name in channel_names:
-            if channel_name in channel_info:
-                info = channel_info[channel_name]
+        for label in channel_labels:
+            if label in channel_info:
+                info = channel_info[label]
 
                 # Determine channel type
-                if 'EMG' in channel_name:
+                if 'EMG' in label:
                     ch_type = 'EMG'
-                elif 'ACC' in channel_name:
+                elif 'ACC' in label:
                     ch_type = 'ACC'
-                elif 'GYRO' in channel_name:
+                elif 'GYRO' in label:
                     ch_type = 'GYRO'
                 else:
                     ch_type = 'OTHER'
 
                 emg.add_channel(
-                    name=channel_name,
-                    data=df[channel_name].values,
-                    sampling_freq=info['sampling_freq'],
-                    unit=info['unit'],
-                    ch_type=ch_type
+                    label=label,
+                    data=df[label].values,
+                    sample_frequency=info['sample_frequency'],
+                    physical_dimension=info['physical_dimension'],
+                    channel_type=ch_type
                 )
 
         # Add file metadata
