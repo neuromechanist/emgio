@@ -49,15 +49,22 @@ def test_add_channel(empty_emg):
 
 def test_select_channels(sample_emg):
     """Test channel selection."""
+    # Store original state
+    original_channels = list(sample_emg.signals.columns)
+    
     # Select multiple channels
     emg_multi = sample_emg.select_channels(['EMG1', 'ACC1'])
     assert list(emg_multi.signals.columns) == ['EMG1', 'ACC1']
     assert list(emg_multi.channels.keys()) == ['EMG1', 'ACC1']
+    # Verify original object is unchanged
+    assert list(sample_emg.signals.columns) == original_channels
 
     # Select single channel
     emg_single = sample_emg.select_channels('EMG1')
     assert list(emg_single.signals.columns) == ['EMG1']
     assert list(emg_single.channels.keys()) == ['EMG1']
+    # Verify original object is unchanged
+    assert list(sample_emg.signals.columns) == original_channels
 
 
 def test_metadata(empty_emg):
@@ -117,14 +124,21 @@ def test_get_channels_by_type(sample_emg):
 
 def test_select_channels_with_type_filter(sample_emg):
     """Test channel selection with type filtering."""
+    # Store original state
+    original_channels = list(sample_emg.signals.columns)
+    
     # Select specific channels with type filter
     result = sample_emg.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
     assert list(result.signals.columns) == ['EMG1']
     assert all(info['type'] == 'EMG' for info in result.channels.values())
+    # Verify original object is unchanged
+    assert list(sample_emg.signals.columns) == original_channels
 
     # Test when no channels match type
     with pytest.raises(ValueError):
         sample_emg.select_channels(['EMG1', 'ACC1'], channel_type='GYRO')
+    # Verify original object is unchanged after error
+    assert list(sample_emg.signals.columns) == original_channels
 
 
 def test_add_channel_validation(empty_emg):
@@ -418,11 +432,14 @@ def test_select_channels_none_with_type(sample_emg):
     # Add another EMG channel for testing
     data = np.linspace(0, 1, 1000)
     sample_emg.add_channel('EMG2', data, 1000, 'mV', ch_type='EMG')
+    original_channels = list(sample_emg.signals.columns)
 
     # Select all EMG channels
     result = sample_emg.select_channels(channels=None, channel_type='EMG')
     assert set(result.signals.columns) == {'EMG1', 'EMG2'}
     assert all(info['type'] == 'EMG' for info in result.channels.values())
+    # Verify original object is unchanged
+    assert list(sample_emg.signals.columns) == original_channels
 
 
 def test_plot_single_axis(sample_emg, mock_plt):
