@@ -33,34 +33,18 @@ def main():
         print(f"  Sampling rate: {ch_info['sampling_freq']} Hz")
         print(f"  Unit: {ch_info['unit']}")
 
-    # Select EMG channels only
+    # Select EMG channels only and create a new EMG object
     emg_channels = [ch for ch, info in emg.channels.items() if info['type'] == 'EMG']
-    # emg.select_channels(emg_channels)  # TODO: #3 This removes all other channels in place, behavior should change.
+    emg_only = emg.select_channels(emg_channels)  # Creates a new EMG object with only EMG channels
+    # Original emg object remains unchanged with all channels
 
     # Plot the first 5 seconds of data with different configurations
-    print("\nPlotting EMG signals...")
+    print("\nPlotting EMG signals from EMG-only channels...")
 
     # Default plot with uniform scaling
-    emg.plot_signals(
+    emg_only.plot_signals(
         time_range=(0, 5),
-        channels=emg_channels,
         title="EMG Signals - Uniform Scale"
-    )
-
-    # Plot with detrending
-    emg.plot_signals(
-        time_range=(0, 5),
-        channels=emg_channels,
-        detrend=True,
-        title="EMG Signals - Detrended"
-    )
-
-    # Plot with individual scaling
-    emg.plot_signals(
-        time_range=(0, 5),
-        channels=emg_channels,
-        uniform_scale=False,
-        title="EMG Signals - Individual Scaling"
     )
 
     # Export to EDF/BDF (format will be automatically selected)

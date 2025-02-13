@@ -28,7 +28,7 @@ def main():
     for ch_type, count in channel_types.items():
         print(f"{ch_type}: {count} channels")
 
-    # Plot EMG channels
+    # Create a new EMG object with only EMG channels
     emg_data = emg.select_channels(channel_type='EMG')
     if emg_data.signals is not None and not emg_data.signals.empty:
         print("\nPlotting EMG channels...")
@@ -41,9 +41,9 @@ def main():
     else:
         print("\nNo EMG channels found in the data")
 
+    # Export EMG channels to EDF
     output_path = 'examples/otb_emg'
-    emg.select_channels(channel_type='EMG')
-    emg.to_edf(output_path)
+    emg_data.to_edf(output_path)  # Use the EMG-only data for export
 
     print("\nExport complete!")
 
