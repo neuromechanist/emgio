@@ -156,10 +156,10 @@ class OTBImporter(BaseImporter):
                         prefilter = ' '.join(filters)
 
                     metadata['channels'][f'CH{channel_num}'] = {
-                        'type': ch_type,
+                        'channel_type': ch_type,
                         'adapter': adapter_id,
-                        'sampling_freq': metadata['device']['sampling_frequency'],
-                        'unit': unit,
+                        'sample_frequency': metadata['device']['sampling_frequency'],
+                        'physical_dimension': unit,
                         'gain': adapter_gain,
                         'description': channel.attrib.get('Description', ''),
                         'muscle': channel.attrib.get('Muscle', ''),
@@ -211,7 +211,7 @@ class OTBImporter(BaseImporter):
 
             # Apply scaling formula: data * PowerSupply / (2^ad_bits) * 1000 / gain
             # 1000 factor converts to mV
-            if ch_info['type'] == 'EMG':
+            if ch_info['channel_type'] == 'EMG':
                 scale = power_supply / (2**ad_bits) * 1000 / gain
             else:
                 # For non-EMG channels (like control signals), use no scaling
@@ -266,12 +266,12 @@ class OTBImporter(BaseImporter):
             for ch_name, ch_info in metadata['channels'].items():
                 ch_idx = int(ch_name[2:]) - 1  # Extract channel number from 'CHx'
                 emg.add_channel(
-                    name=ch_name,
+                    label=ch_name,
                     data=data[ch_idx],
-                    sampling_freq=ch_info['sampling_freq'],
-                    unit=ch_info['unit'],
+                    sample_frequency=ch_info['sample_frequency'],
+                    physical_dimension=ch_info['physical_dimension'],
                     prefilter=ch_info['prefilter'],
-                    ch_type=ch_info['type']
+                    channel_type=ch_info['channel_type']
                 )
 
             # Add metadata

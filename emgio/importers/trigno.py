@@ -64,8 +64,8 @@ class TrignoImporter(BaseImporter):
                 unit = line[line.find('Unit:') + 5:line.find('Domain')].strip()
 
                 channel_info[name_part] = {
-                    'sampling_freq': sampling_freq,
-                    'unit': unit
+                    'sample_frequency': sampling_freq,
+                    'physical_dimension': unit
                 }
 
         return channel_info
@@ -120,9 +120,9 @@ class TrignoImporter(BaseImporter):
                 emg.add_channel(
                     name=channel_name,
                     data=df[channel_name].values,
-                    sampling_freq=info['sampling_freq'],
-                    unit=info['unit'],
-                    ch_type=ch_type
+                    sample_frequency=info['sample_frequency'],
+                    physical_dimension=info['physical_dimension'],
+                    channel_type=ch_type
                 )
 
         # Add file metadata
