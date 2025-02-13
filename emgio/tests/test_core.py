@@ -42,9 +42,9 @@ def test_add_channel(empty_emg):
 
     assert 'EMG1' in empty_emg.signals.columns
     assert 'EMG1' in empty_emg.channels
-    assert empty_emg.channels['EMG1']['sampling_freq'] == 1000
-    assert empty_emg.channels['EMG1']['unit'] == 'mV'
-    assert empty_emg.channels['EMG1']['type'] == 'EMG'
+    assert empty_emg.channels['EMG1']['sample_frequency'] == 1000
+    assert empty_emg.channels['EMG1']['physical_dimension'] == 'mV'
+    assert empty_emg.channels['EMG1']['channel_type'] == 'EMG'
 
 
 def test_select_channels(sample_emg):
@@ -110,12 +110,12 @@ def test_get_channels_by_type(sample_emg):
 #     # Select all EMG channels
 #     emg_only = sample_emg.select_channels(channel_type='EMG')
 #     assert list(emg_only.signals.columns) == ['EMG1']
-#     assert all(info['type'] == 'EMG' for info in emg_only.channels.values())
+#     assert all(info['channel_type'] == 'EMG' for info in emg_only.channels.values())
 
 #     # Select all ACC channels
 #     acc_only = sample_emg.select_channels(channel_type='ACC')
 #     assert list(acc_only.signals.columns) == ['ACC1']
-#     assert all(info['type'] == 'ACC' for info in acc_only.channels.values())
+#     assert all(info['channel_type'] == 'ACC' for info in acc_only.channels.values())
 
 #     # Test with non-existent type
 #     with pytest.raises(ValueError):
@@ -130,7 +130,7 @@ def test_select_channels_with_type_filter(sample_emg):
     # Select specific channels with type filter
     result = sample_emg.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
     assert list(result.signals.columns) == ['EMG1']
-    assert all(info['type'] == 'EMG' for info in result.channels.values())
+    assert all(info['channel_type'] == 'EMG' for info in result.channels.values())
     # Verify original object is unchanged
     assert list(sample_emg.signals.columns) == original_channels
 
@@ -154,10 +154,10 @@ def test_add_channel_validation(empty_emg):
     assert np.array_equal(empty_emg.signals['FLOAT'].values, data_float)
 
     # Test channel info storage
-    assert empty_emg.channels['INT']['type'] == 'OTHER'
-    assert empty_emg.channels['FLOAT']['type'] == 'EMG'  # default type
-    assert empty_emg.channels['INT']['sampling_freq'] == 1000
-    assert empty_emg.channels['INT']['unit'] == 'count'
+    assert empty_emg.channels['INT']['channel_type'] == 'OTHER'
+    assert empty_emg.channels['FLOAT']['channel_type'] == 'EMG'  # default type
+    assert empty_emg.channels['INT']['sample_frequency'] == 1000
+    assert empty_emg.channels['INT']['physical_dimension'] == 'count'
 
 
 @pytest.fixture
@@ -213,12 +213,12 @@ def test_from_file(mock_importers, tmp_path):
     # Test Trigno importer
     emg_trigno = EMG.from_file(str(trigno_file), importer='trigno')
     assert 'TEST' in emg_trigno.signals.columns
-    assert emg_trigno.channels['TEST']['sampling_freq'] == 1000
+    assert emg_trigno.channels['TEST']['sample_frequency'] == 1000
 
     # Test OTB importer
     emg_otb = EMG.from_file(str(otb_file), importer='otb')
     assert 'OTB' in emg_otb.signals.columns
-    assert emg_otb.channels['OTB']['sampling_freq'] == 2000
+    assert emg_otb.channels['OTB']['sample_frequency'] == 2000
 
     # Test invalid importer
     with pytest.raises(ValueError) as exc_info:
@@ -437,7 +437,7 @@ def test_select_channels_none_with_type(sample_emg):
     # Select all EMG channels
     result = sample_emg.select_channels(channels=None, channel_type='EMG')
     assert set(result.signals.columns) == {'EMG1', 'EMG2'}
-    assert all(info['type'] == 'EMG' for info in result.channels.values())
+    assert all(info['channel_type'] == 'EMG' for info in result.channels.values())
     # Verify original object is unchanged
     assert list(sample_emg.signals.columns) == original_channels
 
@@ -471,7 +471,7 @@ def test_add_multiple_channels(empty_emg):
 
     # Verify both channels exist with correct properties
     assert set(empty_emg.signals.columns) == {'CH1', 'CH2'}
-    assert empty_emg.channels['CH1']['sampling_freq'] == 1000
-    assert empty_emg.channels['CH2']['sampling_freq'] == 2000
-    assert empty_emg.channels['CH1']['type'] == 'EMG'
-    assert empty_emg.channels['CH2']['type'] == 'ACC'
+    assert empty_emg.channels['CH1']['sample_frequency'] == 1000
+    assert empty_emg.channels['CH2']['sample_frequency'] == 2000
+    assert empty_emg.channels['CH1']['channel_type'] == 'EMG'
+    assert empty_emg.channels['CH2']['channel_type'] == 'ACC'

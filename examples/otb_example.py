@@ -19,7 +19,7 @@ def main():
     print("-" * 50)
     channel_types = {}
     for ch_info in emg.channels.values():
-        ch_type = ch_info['type']
+        ch_type = ch_info['channel_type']
         if ch_type not in channel_types:
             channel_types[ch_type] = 1
         else:
