@@ -35,7 +35,7 @@ def main():
         emg_data.plot_signals(
             title='EMG Channels',
             grid=True,
-            channels=list(emg.channels.keys())[33:-1]  # optionally plot a subset of channels
+            channels=list(emg_data.channels.keys())[33:-1]  # optionally plot a subset of channels
         )
         plt.show()
     else:
