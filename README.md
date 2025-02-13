@@ -48,10 +48,10 @@ emg.to_edf('output.edf')
 
 ```python
 # Select specific channels
-emg.select_channels(['EMG1', 'EMG2', 'ACC1'])
+subset_emg = emg.select_channels(['EMG1', 'EMG2', 'ACC1'])
 
 # Plot selected channels
-emg.plot_signals()
+subset_emg.plot_signals()
 ```
 
 ### Metadata Handling
