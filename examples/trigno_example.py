@@ -29,12 +29,12 @@ def main():
     # Print available channels
     print("\nAvailable channels:")
     for ch_name, ch_info in emg.channels.items():
-        print(f"- {ch_name} ({ch_info['type']})")
-        print(f"  Sampling rate: {ch_info['sampling_freq']} Hz")
-        print(f"  Unit: {ch_info['unit']}")
+        print(f"- {ch_name} ({ch_info['channel_type']})")
+        print(f"  Sampling rate: {ch_info['sample_frequency']} Hz")
+        print(f"  Dimension: {ch_info['physical_dimension']}")
 
     # Select EMG channels only and create a new EMG object
-    emg_channels = [ch for ch, info in emg.channels.items() if info['type'] == 'EMG']
+    emg_channels = [ch for ch, info in emg.channels.items() if info['channel_type'] == 'EMG']
     emg_only = emg.select_channels(emg_channels)  # Creates a new EMG object with only EMG channels
     # Original emg object remains unchanged with all channels
 
