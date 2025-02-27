@@ -36,7 +36,8 @@ class EMG:
         importers = {
             'trigno': 'TrignoImporter',
             'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
-            'edf': 'EDFImporter'  # EDF/EDF+/BDF format
+            'edf': 'EDFImporter',  # EDF/EDF+/BDF format
+            'eeglab': 'EEGLABImporter'  # EEGLAB .set files
         }
 
         if importer not in importers:
@@ -45,7 +46,8 @@ class EMG:
                 f"Available importers: {list(importers.keys())}\n"
                 "- trigno: Delsys Trigno EMG system\n"
                 "- otb: OTB/OTB+ EMG system\n"
-                "- edf: EDF/EDF+/BDF format"
+                "- edf: EDF/EDF+/BDF format\n"
+                "- eeglab: EEGLAB .set files"
             )
 
         # Import the appropriate importer class
