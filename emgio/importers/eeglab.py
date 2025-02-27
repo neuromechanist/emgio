@@ -246,7 +246,7 @@ class EEGLABImporter(BaseImporter):
                 
                 # Create time array for index
                 if 'times' in data and data['times'].size > 0:
-                    time_index = data['times'][0]
+                    time_index = data['times'][0] / srate
                 else:
                     # Create time array based on number of points and sampling rate
                     pnts = metadata.get('pnts', signal_data.shape[1])
