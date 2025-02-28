@@ -46,12 +46,12 @@ def test_determine_scaling_factors():
     # Test constant signal
     phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(1.0, 1.0)
     assert phys_min < phys_max  # Should create a small range
-    assert abs(abs(phys_max - phys_min) - 0.002) < 1e-4  # 0.1% margin on each side
+    assert abs(abs(phys_max - phys_min) - 0.02) < 1e-4  # 1% margin on each side
 
     # Test zero signal
     phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(0.0, 0.0)
-    assert phys_min == -1.0
-    assert phys_max == 1.0
+    assert phys_min == -1.0e-6  # Small range around zero
+    assert phys_max == 1.0e-6
 
 
 def test_calculate_precision_loss():

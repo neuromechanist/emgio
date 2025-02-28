@@ -209,7 +209,7 @@ def _format_physical_value(value: float, max_chars: int) -> tuple:
         return 0.0, "0"
         
     # For values close to integers, handle as integers
-    if abs(value - round(value)) < 1e-6:
+    if abs((value - round(value)) / value) < 1e-6:
         value = int(round(value))  # Convert to integer
         scale = 1
         while True:
@@ -234,8 +234,8 @@ def _format_physical_value(value: float, max_chars: int) -> tuple:
         scale = 1
         scaled_value = value
         while True:
-            # Try without decimal places first
-            formatted = str(round(scaled_value))
+            # Try without any changes
+            formatted = f"{scaled_value}"
             if len(formatted) <= max_chars:
                 return float(formatted), formatted
             # If that doesn't work, scale down
