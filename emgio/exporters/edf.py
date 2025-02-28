@@ -77,11 +77,12 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
     # Get signal characteristics
     signal_dr = analysis['dynamic_range_db']
     signal_snr = analysis.get('snr_db', 0)
-    signal_range = analysis['range']
+    # signal_range = analysis['range']  # Uncomment if needed for range-based decisions
 
+    # Currently, range check is suppressed in favor of dynamic range
     # Check amplitude first - if signal range is large, use BDF
-    if signal_range > 1e5:  # 100,000 units threshold
-        return True, f"Large amplitude signal ({signal_range:.1f}), using BDF", signal_snr
+    # if analysis['range'] > 1e5:  # 100,000 units threshold
+    #     return True, f"Large amplitude signal ({analysis['range']:.1f}), using BDF", signal_snr
 
     # Then check dynamic range with safety margin
     if signal_dr <= (edf_dynamic_range - safety_margin):
@@ -192,31 +193,67 @@ def quantization_analysis(signal: np.ndarray, bits: int) -> dict:
     }
 
 
-def _round_physical_value(value: float) -> float:
+def _format_physical_value(value: float, max_chars: int) -> tuple:
     """
-    Round physical value to fit within EDF+ 8-character limit.
-
+    Format a physical value to fit within EDF character limits.
+    
     Args:
-        value: Physical value to round
-
+        value: Physical value to format
+        max_chars: Maximum number of characters allowed
+        
     Returns:
-        float: Rounded value that fits in 8 characters when formatted
+        tuple: (formatted_value, formatted_string)
     """
-    # EDF+ allows 8 characters including decimal point and sign
-    # Try different precisions until we get a string <= 8 chars
-    for decimals in range(6, -1, -1):
-        rounded = round(value, decimals)
-        # Convert to string, handling scientific notation
-        str_val = f"{rounded:g}"
-        if len(str_val) <= 8:
-            return rounded
-    # If we get here, round to integer
-    return round(value)
+    # For zero or very small values, return as is
+    if abs(value) < 1e-6:
+        return 0.0, "0"
+        
+    # For values close to integers, handle as integers
+    if abs(value - round(value)) < 1e-6:
+        value = int(round(value))  # Convert to integer
+        scale = 1
+        while True:
+            value_str = str(value)
+            if len(value_str) <= max_chars:
+                return value, value_str
+            # Integer division to reduce digits
+            scale *= 10
+            value = value // 10
+    
+    # For decimal numbers
+    if abs(value) < 1:
+        # Use scientific notation with reduced precision
+        for precision in range(6, 0, -1):
+            formatted = f"{value:.{precision}e}"
+            if len(formatted) <= max_chars:
+                return float(formatted), formatted
+        # If still too long, return minimal representation
+        return float(f"{value:.1e}"), f"{value:.1e}"
+    else:
+        # For larger decimals, try fixed point first
+        scale = 1
+        scaled_value = value
+        while True:
+            # Try without decimal places first
+            formatted = str(round(scaled_value))
+            if len(formatted) <= max_chars:
+                return float(formatted), formatted
+            # If that doesn't work, scale down
+            scale *= 10
+            scaled_value = value / scale
+            # If we've scaled down a lot and still not fitting, switch to scientific
+            if scale > 1e9:
+                for precision in range(4, 0, -1):
+                    formatted = f"{value:.{precision}e}"
+                    if len(formatted) <= max_chars:
+                        return float(formatted), formatted
+                return float(f"{value:.1e}"), f"{value:.1e}"
 
 
 def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bool = False) -> tuple:
     """
     Calculate optimal scaling factors for EDF/BDF signal conversion.
+    Automatically scales values to fit format character limits.
 
     Args:
         signal_min: Minimum value of the signal
@@ -232,30 +269,46 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
     # Handle special cases
     if np.isclose(signal_min, signal_max):
         if np.isclose(signal_min, 0):
-            signal_min, signal_max = -1, 1  # Default range for constant zero signal
+            # For zero signal, use minimal range around zero
+            # Use small values that will scale well with typical EMG signals
+            signal_min, signal_max = -1e-6, 1e-6
         else:
-            # For constant non-zero signal, create small range around it
-            margin = abs(signal_min) * 0.001
+            # For constant non-zero signal, create range around the value
+            # Use a percentage of the value to maintain scale
+            margin = abs(signal_min) * 0.01  # 1% margin
             signal_min -= margin
             signal_max += margin
 
-    # Set digital range based on format
+    # Ensure physical range is never too small
+    physical_range = signal_max - signal_min
+    if abs(physical_range) < np.finfo(float).eps * 1e3:
+        # If range is effectively zero, create a minimal range
+        # Scale it relative to the signal magnitude
+        base = max(abs(signal_min), abs(signal_max), 1e-6)
+        physical_range = base * 1e-6
+        signal_max = signal_min + physical_range
+        # Ensure we have a valid range for scaling
+        if physical_range == 0:
+            physical_range = 1e-6
+
+    # Set digital range and character limits based on format
     if use_bdf:
         digital_min, digital_max = -8388608, 8388607  # 24-bit
+        max_chars = 12
     else:
         digital_min, digital_max = -32768, 32767  # 16-bit
+        max_chars = 8
+
+    # Format values to fit character limits
+    signal_min, _ = _format_physical_value(signal_min, max_chars)
+    signal_max, _ = _format_physical_value(signal_max, max_chars)
 
     digital_range = digital_max - digital_min
     physical_range = signal_max - signal_min
 
-    # Calculate scaling factor to map physical range to digital range
+    # Calculate scaling factor
     # We use slightly less than the full range to prevent overflow at boundaries
-    # and ensure proper rounding behavior
     scaling_factor = (digital_range - 1) / physical_range
-
-    # Round physical values to fit EDF+ format
-    signal_min = _round_physical_value(signal_min)
-    signal_max = _round_physical_value(signal_max)
 
     return signal_min, signal_max, digital_min, digital_max, scaling_factor
 
@@ -382,12 +435,18 @@ class EDFExporter:
                 signal = emg.signals[ch_name].values
                 ch_info = emg.channels[ch_name]
 
-                # Calculate scaling factors for header
-                phys_min, phys_max, dig_min, dig_max, _ = _determine_scaling_factors(
-                    float(np.min(signal)), float(np.max(signal)), use_bdf=use_bdf
+                # Get signal min/max
+                signal_min = float(np.min(signal))
+                signal_max = float(np.max(signal))
+
+                # Calculate scaling factors for header and get scaling factor
+                phys_min, phys_max, dig_min, dig_max, scale_factor = _determine_scaling_factors(
+                    signal_min, signal_max, use_bdf=use_bdf
                 )
 
-                signals.append(signal)  # Use original physical signal
+                # Scale the signal to match the physical min/max scaling
+                scaled_signal = signal / scale_factor  # Scale down like we did for phys_min/max
+                signals.append(scaled_signal)
 
                 # Prepare channel info
                 ch_dict = {
