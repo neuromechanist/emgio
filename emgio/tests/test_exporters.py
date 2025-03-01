@@ -201,7 +201,7 @@ def test_format_selection():
 
     # Test case 2: Noisy signal with high dynamic range (should use BDF)
     base_signal = np.sin(2 * np.pi * 10 * time) * 1e5
-    noise = np.random.normal(0, 100, 1000)
+    noise = np.random.normal(0, 10, 1000)
     noisy_signal = base_signal + noise  # Noisy with high amplitude
     emg.add_channel('Noisy', noisy_signal, 1000, 'uV', 'EMG')
 
