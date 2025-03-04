@@ -27,18 +27,50 @@ def analyze_signal(signal: np.ndarray) -> dict:
 
     # Remove DC offset for better analysis
     detrended = signal - np.mean(signal)
-
-    # Dynamic range - use peak-to-peak of detrended signal
+    
+    # Calculate signal range (peak-to-peak)
     signal_range = np.max(detrended) - np.min(detrended)
-
-    # Noise floor estimation using standard deviation of detrended signal
-    # Use a more conservative estimate for noise floor
-    noise_floor = np.std(detrended) / np.sqrt(2)  # RMS to peak conversion
-
+    
+    # Improved noise floor estimation:
+    # 1. Find signal frequency components using FFT
+    n = len(detrended)
+    fft = np.fft.rfft(detrended)
+    freq = np.fft.rfftfreq(n)
+    
+    # 2. Get power spectrum
+    power = np.abs(fft) ** 2
+    
+    # 3. Find significant frequency peaks
+    # Use median as threshold to separate signal from noise
+    threshold = np.median(power) * 10
+    signal_freqs = freq[power > threshold]
+    
+    if len(signal_freqs) > 0:
+        # 4. Create band-stop filter around main signal frequencies
+        filtered = detrended.copy()
+        for f in signal_freqs:
+            if f > 0:  # Skip DC component
+                # Create notch filter using moving average
+                window = int(1 / (f * 2))  # Window size based on frequency
+                if window > 1:
+                    window = min(window, len(filtered) // 10)  # Limit window size
+                    filtered = filtered - np.convolve(filtered, 
+                                                    np.ones(window)/window, 
+                                                    mode='same')
+    
+        # 5. Estimate noise floor from residual signal
+        # Use robust statistics (MAD) to avoid outlier influence
+        noise_floor = np.median(np.abs(filtered - np.median(filtered))) * 1.4826
+    else:
+        # If no clear frequency components, use traditional methods
+        # Use difference method which is good for high-frequency noise
+        diffs = np.diff(detrended)
+        noise_floor = np.std(diffs) / np.sqrt(2)
+    
     # Ensure minimum noise floor
     noise_floor = max(noise_floor, np.finfo(float).eps)
 
-    # Dynamic Range in dB
+    # Calculate dynamic range in dB
     dynamic_range_db = 20 * np.log10(signal_range / noise_floor)
 
     # Calculate signal SNR
