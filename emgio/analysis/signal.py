@@ -65,13 +65,13 @@ def analyze_signal_svd(detrended: np.ndarray, svd_rank: int = None) -> float:
     
     # Determine rank cutoff (elbow point) if not provided
     if svd_rank is None:
-        # Use a more conservative approach for rank estimation
+        # Use a more accurate approach for rank estimation
         # Calculate cumulative energy
         cumulative_energy = np.cumsum(S**2) / np.sum(S**2)
         
-        # Find where cumulative energy exceeds threshold (e.g., 99%)
-        # Reduced from 99.9% to 99% to be more conservative
-        energy_threshold = 0.99
+        # Find where cumulative energy exceeds threshold
+        # Increased threshold to better preserve high dynamic range signals
+        energy_threshold = 0.995  # More accurate for high dynamic range signals
         signal_indices = np.where(cumulative_energy >= energy_threshold)[0]
         if len(signal_indices) > 0:
             svd_rank = signal_indices[0] + 1  # +1 to include the threshold-crossing component
@@ -79,8 +79,8 @@ def analyze_signal_svd(detrended: np.ndarray, svd_rank: int = None) -> float:
             # Fallback to elbow method if energy threshold approach fails
             svd_rank = find_elbow_point(S)
     
-    # Ensure svd_rank is at least 1 and at most 1/3 of singular values
-    svd_rank = max(1, min(svd_rank, len(S) // 3))
+    # Ensure svd_rank is at least 1 and at most 1/2 of singular values (less aggressive)
+    svd_rank = max(1, min(svd_rank, len(S) // 2))
     
     # Separate signal and noise subspaces
     # Signal is represented by the first svd_rank singular values
@@ -90,17 +90,19 @@ def analyze_signal_svd(detrended: np.ndarray, svd_rank: int = None) -> float:
     # If all eigenvalues are considered signal, use a small value
     if len(noise_eigenvalues) == 0 or np.all(noise_eigenvalues < np.finfo(float).eps * 1e3):
         # Use a very small fraction of the smallest signal eigenvalue
-        return S[-1] * 1e-6 if len(S) > 0 else np.finfo(float).eps
+        # More aggressive for high dynamic range signals
+        return S[-1] * 1e-8 if len(S) > 0 else np.finfo(float).eps
     
     # Estimate noise floor from the median of noise eigenvalues (more robust than mean)
     # Scale appropriately to convert back to original signal scale
     noise_floor = np.median(noise_eigenvalues) / np.sqrt(m)
     
-    # For very small noise floors, use a more conservative estimate
+    # For very small noise floors, use a more accurate estimate
+    # This is critical for high dynamic range signals
     if noise_floor < np.finfo(float).eps * 1e3:
-        # Use a fraction of the signal range as a minimum noise floor
+        # Use a smaller fraction of the signal range to preserve high dynamic range
         signal_range = np.max(detrended) - np.min(detrended)
-        min_noise_floor = signal_range * 1e-4  # Less aggressive, ensures at most 80dB dynamic range
+        min_noise_floor = signal_range * 1e-6  # More aggressive, ensures up to 120dB dynamic range
         noise_floor = max(noise_floor, min_noise_floor)
     
     return noise_floor
@@ -120,7 +122,9 @@ def analyze_signal_fft(detrended: np.ndarray, fft_noise_range: tuple = None) -> 
     """
     # Compute FFT
     n = len(detrended)
-    fft = np.fft.rfft(detrended)
+    # Apply Blackman window for better spectral resolution
+    windowed = detrended * np.blackman(len(detrended))
+    fft = np.fft.rfft(windowed)
     freq = np.fft.rfftfreq(n)
     power = np.abs(fft) ** 2
     
@@ -134,18 +138,13 @@ def analyze_signal_fft(detrended: np.ndarray, fft_noise_range: tuple = None) -> 
             noise_floor = np.sqrt(np.median(noise_power))
             return noise_floor
     
-    # Otherwise, use adaptive threshold method
-    # Apply window to reduce spectral leakage
-    windowed = detrended * np.hanning(len(detrended))
-    fft_windowed = np.fft.rfft(windowed)
-    power_windowed = np.abs(fft_windowed) ** 2
-    
+    # Otherwise, use improved adaptive threshold method
     # Sort power spectrum
-    sorted_power = np.sort(power_windowed)
+    sorted_power = np.sort(power)
     
-    # Use the lower 20% of the spectrum as noise (more conservative)
-    # Increased from 10% to 20% to get a higher noise floor estimate
-    noise_idx = max(1, int(len(sorted_power) * 0.2))
+    # Use the lower 10% of the spectrum as noise (more accurate for high dynamic range)
+    # Reduced from 20% to 10% to better estimate true noise floor
+    noise_idx = max(1, int(len(sorted_power) * 0.1))
     noise_power = sorted_power[:noise_idx]
     
     # If we have enough noise samples, use their median
@@ -156,9 +155,9 @@ def analyze_signal_fft(detrended: np.ndarray, fft_noise_range: tuple = None) -> 
         diffs = np.diff(detrended)
         noise_floor = np.std(diffs) / np.sqrt(2)
     
-    # For very small noise floors, use a more conservative estimate
+    # For very small noise floors, use a more accurate estimate
     signal_range = np.max(detrended) - np.min(detrended)
-    min_noise_floor = signal_range * 1e-4  # Less aggressive, ensures at most 80dB dynamic range
+    min_noise_floor = signal_range * 1e-6  # More aggressive, ensures up to 120dB dynamic range
     noise_floor = max(noise_floor, min_noise_floor)
     
     return noise_floor
@@ -194,13 +193,21 @@ def analyze_signal(signal: np.ndarray, method: str = 'svd',
     # Calculate signal range (peak-to-peak)
     signal_range = np.max(detrended) - np.min(detrended)
     
-    # Choose noise floor estimation method
-    if method.lower() == 'svd':
-        noise_floor = analyze_signal_svd(detrended, svd_rank)
-    elif method.lower() == 'fft':
-        noise_floor = analyze_signal_fft(detrended, fft_noise_range)
+    # Use both methods and take the minimum noise floor for better accuracy
+    # This helps preserve high dynamic range signals
+    if method.lower() == 'both':
+        noise_floor_svd = analyze_signal_svd(detrended, svd_rank)
+        noise_floor_fft = analyze_signal_fft(detrended, fft_noise_range)
+        noise_floor = min(noise_floor_svd, noise_floor_fft)
+        method = 'both (min)'
     else:
-        raise ValueError(f"Unknown method: {method}. Use 'svd' or 'fft'.")
+        # Choose noise floor estimation method
+        if method.lower() == 'svd':
+            noise_floor = analyze_signal_svd(detrended, svd_rank)
+        elif method.lower() == 'fft':
+            noise_floor = analyze_signal_fft(detrended, fft_noise_range)
+        else:
+            raise ValueError(f"Unknown method: {method}. Use 'svd', 'fft', or 'both'.")
     
     # Ensure minimum noise floor
     noise_floor = max(noise_floor, np.finfo(float).eps)
@@ -228,7 +235,7 @@ def analyze_signal(signal: np.ndarray, method: str = 'svd',
     snr_db = 20 * np.log10(signal_std / noise_floor)
     
     # Cap SNR at realistic values
-    max_realistic_snr = 130  # Maximum realistic SNR in dB
+    max_realistic_snr = 140  # Increased maximum realistic SNR in dB
     if snr_db > max_realistic_snr:
         snr_db = max_realistic_snr
 
@@ -260,8 +267,8 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
 
     # Theoretical format capabilities
     edf_dynamic_range = 90  # dB (16-bit) - slightly reduced from theoretical 96dB for safety
-    bdf_dynamic_range = 130  # dB (24-bit) - slightly reduced from theoretical 144dB for safety
-    safety_margin = 6  # dB
+    bdf_dynamic_range = 140  # dB (24-bit) - slightly reduced from theoretical 144dB for safety
+    safety_margin = 3  # dB - reduced to better preserve high dynamic range signals
 
     # Get signal characteristics
     signal_dr = analysis['dynamic_range_db']
@@ -269,7 +276,7 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
     signal_range = analysis['range']
 
     # Check amplitude first - if signal range is very large, use BDF
-    if signal_range > 1e6:  # Very large amplitude threshold
+    if signal_range > 1e5:  # Reduced threshold to catch more high-amplitude signals
         return True, f"Large amplitude signal ({signal_range:.1f}), using BDF", signal_snr
 
     # Then check dynamic range with safety margin

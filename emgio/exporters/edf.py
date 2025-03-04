@@ -117,6 +117,24 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
         if physical_range == 0:
             physical_range = 1e-6
 
+    # For high dynamic range signals, preserve the original range
+    # This is critical for maintaining the dynamic range in the exported file
+    if (signal_max - signal_min) > 1e5 or (signal_max / max(abs(signal_min), 1e-10)) > 1e5:
+        # High dynamic range detected - preserve it for BDF format
+        if use_bdf:
+            # For BDF, we can handle the full range directly
+            # Just ensure the values fit within character limits
+            signal_min, _ = _format_physical_value(signal_min, max_chars)
+            signal_max, _ = _format_physical_value(signal_max, max_chars)
+            
+            digital_range = digital_max - digital_min
+            physical_range = signal_max - signal_min
+            
+            # Calculate scaling factor to use full digital range
+            scaling_factor = digital_range / physical_range
+            
+            return signal_min, signal_max, digital_min, digital_max, scaling_factor
+    
     # Only normalize extreme values that would cause problems with EDF/BDF format
     # This preserves the original scaling for most signals while handling extreme cases
     if abs(signal_min) > 1e6 or abs(signal_max) > 1e6 or abs(signal_min) < 1e-6 or abs(signal_max) < 1e-6:
@@ -124,7 +142,7 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
         # But preserve the original ratio between min and max
         ratio = abs(signal_max / signal_min) if signal_min != 0 else 1.0
         
-        if ratio > 1e6:  # Very large ratio, use a more balanced range
+        if ratio > 1e6 and not use_bdf:  # Very large ratio, use a more balanced range for EDF only
             signal_min = -1.0
             signal_max = 1.0
         else:  # Preserve ratio but scale to reasonable values
@@ -294,8 +312,9 @@ class EDFExporter:
             signal = emg.signals[ch_name].values
             ch_info = emg.channels[ch_name]
 
-            # Analyze signal characteristics with SVD method by default
-            analysis = analyze_signal(signal, method='svd')
+            # Analyze signal characteristics with both methods for better accuracy
+            # This helps preserve high dynamic range signals
+            analysis = analyze_signal(signal, method='both')
             use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
 
             # Perform quantization analysis for chosen format
@@ -379,12 +398,28 @@ class EDFExporter:
             # Set headers and write data
             writer.setSignalHeaders(channel_info_list)
             writer.writeSamples(signals)  # Pass physical signals directly
-
+            
+            # Explicitly flush and close the writer to ensure all data is written
+            writer.close()
+            
+            # Wait a moment to ensure file system operations are complete
+            import time
+            time.sleep(0.1)
+            
+            # Verify the file exists and has the correct size
+            if not os.path.exists(filepath):
+                raise IOError(f"File {filepath} was not created")
+                
+            file_size = os.path.getsize(filepath)
+            if file_size == 0:
+                raise IOError(f"File {filepath} was created but is empty")
+            
+            # Create a new writer for the channels.tsv file
             # Store analyses for summary
             analyses = {}
             for ch_name in emg.channels:
                 signal = emg.signals[ch_name].values
-                analysis = analyze_signal(signal, method='svd')
+                analysis = analyze_signal(signal, method='both')
                 use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
                 analysis['snr'] = snr
                 analysis['use_bdf'] = use_bdf_for_channel
@@ -413,10 +448,20 @@ class EDFExporter:
             return filepath
         except Exception as e:
             # Clean up if there was an error
-            writer.close()
+            if hasattr(writer, 'close') and callable(writer.close):
+                try:
+                    writer.close()
+                except:
+                    pass  # Ignore errors during cleanup
+                    
+            # Wait a moment before trying to delete the file
+            import time
+            time.sleep(0.1)
+            
             if os.path.exists(filepath):
-                os.unlink(filepath)
+                try:
+                    os.unlink(filepath)
+                except:
+                    pass  # Ignore errors during cleanup
+                    
             raise e
-        finally:
-            # Always close the writer
-            writer.close()
