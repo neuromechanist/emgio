@@ -273,11 +273,11 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
     # Get signal characteristics
     signal_dr = analysis['dynamic_range_db']
     signal_snr = analysis.get('snr_db', 0)
-    signal_range = analysis['range']
+    # signal_range = analysis['range']  # Not used for format selection
 
-    # Check amplitude first - if signal range is very large, use BDF
-    if signal_range > 1e5:  # Reduced threshold to catch more high-amplitude signals
-        return True, f"Large amplitude signal ({signal_range:.1f}), using BDF", signal_snr
+    # # Check amplitude first - if signal range is very large, use BDF
+    # if signal_range > 1e5:  # Reduced threshold to catch more high-amplitude signals
+    #     return True, f"Large amplitude signal ({signal_range:.1f}), using BDF", signal_snr
 
     # Then check dynamic range with safety margin
     if signal_dr <= (edf_dynamic_range - safety_margin):
