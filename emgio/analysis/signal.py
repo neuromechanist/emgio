@@ -58,7 +58,7 @@ def analyze_signal_svd(detrended: np.ndarray, svd_rank: int = None) -> float:
     # Form the Hankel matrix
     hankel = np.zeros((m, k))
     for i in range(m):
-        hankel[i, :] = detrended[i:i+k]
+        hankel[i, :] = detrended[i:i + k]
     
     # Perform SVD
     U, S, Vh = np.linalg.svd(hankel, full_matrices=False)
@@ -164,14 +164,14 @@ def analyze_signal_fft(detrended: np.ndarray, fft_noise_range: tuple = None) -> 
 
 
 # High-level analysis functions
-def analyze_signal(signal: np.ndarray, method: str = 'svd', 
-                  fft_noise_range: tuple = None, svd_rank: int = None) -> dict:
+def analyze_signal(signal: np.ndarray, method: str = 'svd',
+                   fft_noise_range: tuple = None, svd_rank: int = None) -> dict:
     """
     Analyze signal characteristics including noise floor and dynamic range.
 
     Args:
         signal: Input signal array
-        method: Method for noise floor estimation: 'svd' (default) or 'fft'
+        method: Method for noise floor estimation: 'svd' (default), 'fft', or 'both'
         fft_noise_range: Optional tuple (min_freq, max_freq) for FFT method
         svd_rank: Optional rank cutoff for SVD method
 
@@ -196,18 +196,39 @@ def analyze_signal(signal: np.ndarray, method: str = 'svd',
     # Use both methods and take the minimum noise floor for better accuracy
     # This helps preserve high dynamic range signals
     if method.lower() == 'both':
-        noise_floor_svd = analyze_signal_svd(detrended, svd_rank)
-        noise_floor_fft = analyze_signal_fft(detrended, fft_noise_range)
-        noise_floor = min(noise_floor_svd, noise_floor_fft)
-        method = 'both (min)'
+        # Try SVD first, fall back to FFT if it fails
+        try:
+            noise_floor_svd = analyze_signal_svd(detrended, svd_rank)
+            try:
+                noise_floor_fft = analyze_signal_fft(detrended, fft_noise_range)
+                noise_floor = min(noise_floor_svd, noise_floor_fft)
+                method = 'both (min)'
+            except Exception:
+                # If FFT fails but SVD worked, use SVD result
+                noise_floor = noise_floor_svd
+                method = 'svd (fallback)'
+        except Exception:
+            # If SVD fails, try FFT
+            try:
+                noise_floor = analyze_signal_fft(detrended, fft_noise_range)
+                method = 'fft (fallback)'
+            except Exception:
+                # If both methods fail, use a simple statistical approach
+                noise_floor = np.std(np.diff(detrended)) / np.sqrt(2)
+                method = 'statistical (fallback)'
     else:
         # Choose noise floor estimation method
-        if method.lower() == 'svd':
-            noise_floor = analyze_signal_svd(detrended, svd_rank)
-        elif method.lower() == 'fft':
-            noise_floor = analyze_signal_fft(detrended, fft_noise_range)
-        else:
-            raise ValueError(f"Unknown method: {method}. Use 'svd', 'fft', or 'both'.")
+        try:
+            if method.lower() == 'svd':
+                noise_floor = analyze_signal_svd(detrended, svd_rank)
+            elif method.lower() == 'fft':
+                noise_floor = analyze_signal_fft(detrended, fft_noise_range)
+            else:
+                raise ValueError(f"Unknown method: {method}. Use 'svd', 'fft', or 'both'.")
+        except Exception:
+            # Fallback to simple statistical approach if the chosen method fails
+            noise_floor = np.std(np.diff(detrended)) / np.sqrt(2)
+            method = f"{method} failed, using statistical (fallback)"
     
     # Ensure minimum noise floor
     noise_floor = max(noise_floor, np.finfo(float).eps)
