@@ -467,6 +467,98 @@ if __name__ == "__main__":
     print("Final dynamic range: {:.2f} dB".format(dr))
 
 
+def test_user_format_selection():
+    """Test explicit format selection by user."""
+    # Create EMG object
+    emg = EMG()
+    time = np.linspace(0, 1, 1000)
+
+    # Test case 1: High quality signal (would normally use EDF)
+    clean_signal = np.sin(2 * np.pi * 10 * time) * 1000  # Clean 10 Hz sine
+    emg.add_channel('Clean', clean_signal, 1000, 'uV', 'EMG')
+
+    # Test case 2: High dynamic range signal (would normally use BDF)
+    hdr_signal, actual_dr = generate_high_dynamic_range_signal(dynamic_range_db=95)
+    emg.add_channel('HDR', hdr_signal, 1000, 'uV', 'EMG')
+
+    with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
+        edf_path = f.name
+        bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
+
+    try:
+        # 1. Test explicit EDF format selection (warning expected)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            EDFExporter.export(emg, edf_path, format='edf')
+            # Should have created an EDF file despite one HDR channel
+            assert os.path.exists(edf_path)
+            # Should have warned about potential precision loss
+            format_warnings = [warn for warn in w 
+                              if "EDF format" in str(warn.message) 
+                              and "precision loss" in str(warn.message)]
+            assert len(format_warnings) > 0, "No warning about precision loss when using EDF format"
+
+        # Clean up first test
+        if os.path.exists(edf_path):
+            os.unlink(edf_path)
+        if os.path.exists(bdf_path):
+            os.unlink(bdf_path)
+
+        # 2. Test explicit BDF format selection (warning expected)
+        emg = EMG()  # Create a new EMG object with only clean signal
+        
+        # Add some noise to ensure a more realistic dynamic range that won't trigger BDF
+        np.random.seed(42)  # For reproducibility
+        noisy_signal = np.sin(2 * np.pi * 10 * time) * 100  # Lower amplitude signal
+        noise = np.random.normal(0, 5.0, 1000)  # Add significant noise (5% of signal)
+        noisy_signal = noisy_signal + noise  # This will reduce dynamic range
+        
+        emg.add_channel('LowDR', noisy_signal, 1000, 'uV', 'EMG')
+        
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            EDFExporter.export(emg, edf_path, format='bdf')
+            # Should have created a BDF file despite only having clean signals
+            assert os.path.exists(bdf_path)
+            # Should have warned about unnecessary storage
+            format_warnings = [warn for warn in w 
+                               if "BDF format" in str(warn.message) 
+                               and "storage" in str(warn.message)]
+            assert len(format_warnings) > 0, "No warning about unnecessary storage when using BDF format"
+
+        # Clean up second test
+        if os.path.exists(edf_path):
+            os.unlink(edf_path)
+        if os.path.exists(bdf_path):
+            os.unlink(bdf_path)
+
+        # 3. Test force_format parameter
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            # Create a new EMG object with high dynamic range signal
+            emg = EMG()
+            emg.add_channel('HDR', hdr_signal, 1000, 'uV', 'EMG')
+            
+            # Force EDF format despite high dynamic range
+            EDFExporter.export(emg, edf_path, format='edf', force_format=True)
+            
+            # Should have created an EDF file with no warnings
+            assert os.path.exists(edf_path)
+            
+            # Should not have warned about precision loss when force_format=True
+            format_warnings = [warn for warn in w 
+                               if "EDF format" in str(warn.message) 
+                               and "precision loss" in str(warn.message)]
+            assert len(format_warnings) == 0, "Warning shown despite force_format=True"
+
+    finally:
+        # Cleanup
+        if os.path.exists(edf_path):
+            os.unlink(edf_path)
+        if os.path.exists(bdf_path):
+            os.unlink(bdf_path)
+
+
 def test_high_dynamic_range():
     """Test export of signals with very high dynamic range (>90dB)."""
     # Create EMG object

@@ -255,12 +255,13 @@ class EMG:
 
     def to_edf(self, filepath: str, method: str = 'both',
                fft_noise_range: tuple = None, svd_rank: int = None,
-               precision_threshold: float = 0.01, **kwargs) -> None:
+               precision_threshold: float = 0.01, format: str = 'auto',
+               force_format: bool = False, **kwargs) -> None:
         """
-        Export data to EDF format with corresponding channels.tsv file.
+        Export data to EDF/BDF format with corresponding channels.tsv file.
 
         Args:
-            filepath: Path to save the EDF file
+            filepath: Path to save the EDF/BDF file
             method: Method for signal analysis ('svd', 'fft', or 'both')
                 'svd': Uses Singular Value Decomposition for noise floor estimation
                 'fft': Uses Fast Fourier Transform for noise floor estimation
@@ -268,6 +269,11 @@ class EMG:
             fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method
             svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method
             precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
+            format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
+                based on signal characteristics. When specified, the system will still warn
+                if the chosen format is not optimal.
+            force_format: When True, bypasses all format suitability checks and uses the 
+                specified format without warnings. Default is False.
             **kwargs: Additional arguments for the EDF exporter
 
         Raises:
@@ -285,6 +291,12 @@ class EMG:
             'svd_rank': svd_rank,
             'precision_threshold': precision_threshold
         }
+        
+        # Add format parameters
+        if format != 'auto':
+            analysis_params['format'] = format
+        if force_format:
+            analysis_params['force_format'] = force_format
 
         # Combine with any other kwargs
         all_params = {**analysis_params, **kwargs}
