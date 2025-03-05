@@ -12,22 +12,22 @@ from ..analysis.signal import (
 def _format_physical_value(value: float, max_chars: int) -> tuple:
     """
     Format a physical value to fit within EDF character limits.
-    
+
     Args:
         value: Physical value to format
         max_chars: Maximum number of characters allowed
-        
+
     Returns:
         tuple: (formatted_value, formatted_string)
     """
     # Handle NaN values
     if np.isnan(value):
         return 0.0, "0"
-        
+
     # For zero or very small values, return as is
     if abs(value) < 1e-6:
         return 0.0, "0"
-        
+
     # For values close to integers, handle as integers
     try:
         if abs((value - round(value)) / value) < 1e-6:
@@ -43,7 +43,7 @@ def _format_physical_value(value: float, max_chars: int) -> tuple:
     except (ValueError, ZeroDivisionError):
         # Handle any other numerical issues
         return 0.0, "0"
-    
+
     # For decimal numbers
     if abs(value) < 1:
         # Use scientific notation with reduced precision
@@ -91,7 +91,7 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
     if np.isnan(signal_min) or np.isnan(signal_max):
         signal_min = -1e-6 if np.isnan(signal_min) else signal_min
         signal_max = 1e-6 if np.isnan(signal_max) else signal_max
-    
+
     if signal_min > signal_max:
         signal_min, signal_max = signal_max, signal_min
 
@@ -139,22 +139,22 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
             # Just ensure the values fit within character limits
             signal_min, _ = _format_physical_value(signal_min, max_chars)
             signal_max, _ = _format_physical_value(signal_max, max_chars)
-            
+
             digital_range = digital_max - digital_min
             physical_range = signal_max - signal_min
-            
+
             # Calculate scaling factor to use full digital range
             scaling_factor = digital_range / physical_range
-            
+
             return signal_min, signal_max, digital_min, digital_max, scaling_factor
-    
+
     # Only normalize extreme values that would cause problems with EDF/BDF format
     # This preserves the original scaling for most signals while handling extreme cases
     if abs(signal_min) > 1e6 or abs(signal_max) > 1e6 or abs(signal_min) < 1e-6 or abs(signal_max) < 1e-6:
         # For extreme values, normalize to a reasonable range
         # But preserve the original ratio between min and max
         ratio = abs(signal_max / signal_min) if signal_min != 0 else 1.0
-        
+
         if ratio > 1e6 and not use_bdf:  # Very large ratio, use a more balanced range for EDF only
             signal_min = -1.0
             signal_max = 1.0
@@ -296,7 +296,7 @@ class EDFExporter:
 
     @staticmethod
     def export(emg: EMG, filepath: str, precision_threshold: float = 0.01,
-               method: str = 'both', fft_noise_range: tuple = None, 
+               method: str = 'both', fft_noise_range: tuple = None,
                svd_rank: int = None, **kwargs) -> None:
         """
         Export EMG data to EDF format with corresponding channels.tsv file.
@@ -336,7 +336,7 @@ class EDFExporter:
 
             # Analyze signal characteristics with the specified method
             # Pass through the analysis parameters
-            analysis = analyze_signal(signal, method=method, 
+            analysis = analyze_signal(signal, method=method,
                                       fft_noise_range=fft_noise_range,
                                       svd_rank=svd_rank)
             use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
@@ -392,10 +392,10 @@ class EDFExporter:
 
                 # Scale the signal to match the physical min/max scaling
                 scaled_signal = signal.copy()  # Make a copy to avoid modifying original
-                
+
                 # Replace NaN values with zeros
                 scaled_signal = np.nan_to_num(scaled_signal, nan=0.0)
-                
+
                 # Only scale if needed
                 if not np.isclose(scale_factor, 1.0):
                     scaled_signal = scaled_signal / scale_factor
@@ -426,22 +426,22 @@ class EDFExporter:
             # Set headers and write data
             writer.setSignalHeaders(channel_info_list)
             writer.writeSamples(signals)  # Pass physical signals directly
-            
+
             # Explicitly flush and close the writer to ensure all data is written
             writer.close()
-            
+
             # Wait a moment to ensure file system operations are complete
             import time
             time.sleep(0.1)
-            
+
             # Verify the file exists and has the correct size
             if not os.path.exists(filepath):
                 raise IOError(f"File {filepath} was not created")
-                
+
             file_size = os.path.getsize(filepath)
             if file_size == 0:
                 raise IOError(f"File {filepath} was created but is empty")
-            
+
             # Create a new writer for the channels.tsv file
             # Store analyses for summary
             analyses = {}
@@ -483,15 +483,15 @@ class EDFExporter:
                     writer.close()
                 except Exception:
                     pass  # Ignore errors during cleanup
-                    
+
             # Wait a moment before trying to delete the file
             import time
             time.sleep(0.1)
-            
+
             if os.path.exists(filepath):
                 try:
                     os.unlink(filepath)
                 except Exception:
                     pass  # Ignore errors during cleanup
-                    
+
             raise e

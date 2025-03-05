@@ -121,7 +121,7 @@ def test_edf_export(sample_emg):
                 # EDF format uses 16-bit values
                 assert signal_headers[0]['digital_min'] == -32768
                 assert signal_headers[0]['digital_max'] == 32767
-            
+
             assert signal_headers[0]['physical_min'] < signal_headers[0]['physical_max']
 
             # Check second channel (ACC1)
@@ -138,7 +138,7 @@ def test_edf_export(sample_emg):
                 # EDF format uses 16-bit values
                 assert signal_headers[1]['digital_min'] == -32768
                 assert signal_headers[1]['digital_max'] == 32767
-            
+
             assert signal_headers[1]['physical_min'] < signal_headers[1]['physical_max']
 
             # Check signal data and verify values are within digital range
@@ -231,18 +231,18 @@ def test_signal_analysis():
     quant_24 = quantization_analysis(test_signal, 24)
     assert quant_24['snr'] > quant_16['snr']  # 24-bit should give better SNR
     assert quant_24['rmse'] < quant_16['rmse']  # 24-bit should have less error
-    
+
     # Test helper functions directly
     detrended = test_signal - np.mean(test_signal)
-    
+
     # Test SVD noise floor estimation
     svd_noise = _analyze_signal_svd(detrended)
     assert svd_noise > 0
-    
+
     # Test FFT noise floor estimation
     fft_noise = _analyze_signal_fft(detrended)
     assert fft_noise > 0
-    
+
     # Test elbow point detection
     # Create mock singular values
     singular_values = np.array([10, 5, 2, 1, 0.5, 0.1, 0.05, 0.01])
@@ -304,7 +304,7 @@ def test_format_reproducibility():
         # Check which file was created
         actual_path = bdf_path if os.path.exists(bdf_path) else edf_path
         assert os.path.exists(actual_path), f"Neither {edf_path} nor {bdf_path} was created"
-        
+
         with pyedflib.EdfReader(actual_path) as f:
             bdf_data = f.readSignal(0)
             bdf_correlation = np.corrcoef(bdf_signal, bdf_data)[0, 1]
@@ -319,7 +319,7 @@ def test_format_reproducibility():
         # Check which file was created
         actual_path = bdf_path if os.path.exists(bdf_path) else edf_path
         assert os.path.exists(actual_path), f"Neither {edf_path} nor {bdf_path} was created"
-        
+
         with pyedflib.EdfReader(actual_path) as f:
             edf_data = f.readSignal(0)
             edf_correlation = np.corrcoef(edf_signal, edf_data)[0, 1]
@@ -372,92 +372,92 @@ def test_bdf_format_selection():
             os.unlink(bdf_path)
 
 
-def generate_high_dynamic_range_signal(seconds=1.0, fs=1000, base_freq=10, 
+def generate_high_dynamic_range_signal(seconds=1.0, fs=1000, base_freq=10,
                                        dynamic_range_db=95, seed=42):
     """
     Generate a test signal with specified dynamic range.
-    
+
     Args:
         seconds: Length of signal in seconds
         fs: Sampling frequency in Hz
         base_freq: Frequency of the base sinusoidal signal in Hz
         dynamic_range_db: Target dynamic range in dB
         seed: Random seed for reproducibility
-        
+
     Returns:
         np.ndarray: Signal with specified dynamic range
         float: Actual dynamic range in dB
     """
     # Set random seed for reproducibility
     np.random.seed(seed)
-    
+
     # Create time array
     num_samples = int(seconds * fs)
     t = np.linspace(0, seconds, num_samples)
-    
+
     # Create base signal - use multiple frequency components for a more realistic signal
     base_signal = np.sin(2 * np.pi * base_freq * t)
-    
+
     # Add some harmonics to make it more complex
     base_signal += 0.5 * np.sin(2 * np.pi * base_freq * 2 * t)
     base_signal += 0.25 * np.sin(2 * np.pi * base_freq * 3 * t)
-    
+
     # Normalize the base signal to [-1, 1] range
     base_signal = base_signal / np.max(np.abs(base_signal))
-    
+
     # For a 90+ dB dynamic range, we need a very low noise floor compared to signal
     # 90 dB = 10^(90/20) = 31,622.78 ratio between peak and noise floor
     peak_to_noise_ratio = 10 ** (dynamic_range_db / 20)
-    
+
     # Scale the signal to a large amplitude to ensure high dynamic range
     # This helps ensure the dynamic range is preserved in the exported file
     signal_peak = 1e4  # Increased from 1.0 to 1e4 for better dynamic range preservation
     scaled_signal = base_signal * signal_peak
-    
+
     # Calculate the required noise standard deviation
     # For Gaussian noise, peak values are typically ~3-4 sigma away
     # Use 4 sigma to ensure noise floor is well below signal
     noise_sigma = signal_peak / peak_to_noise_ratio
-    
+
     # Generate extremely low amplitude noise
     noise = np.random.normal(0, noise_sigma, num_samples)
-    
+
     # Create the final signal
     final_signal = scaled_signal + noise
-    
+
     # Force the dynamic range by directly setting the noise floor
     # This ensures we get the expected dynamic range regardless of the analysis method
     signal_range = np.max(final_signal) - np.min(final_signal)
     target_noise_floor = signal_range / (10 ** (dynamic_range_db / 20))
-    
+
     # Verify actual dynamic range using both methods for better accuracy
     analysis = analyze_signal(final_signal, method='both')
     actual_dynamic_range = analysis['dynamic_range_db']
-    
+
     print("Generated signal with {:.2f} dB dynamic range".format(actual_dynamic_range))
     print("Signal peak: {:.2e}".format(np.max(np.abs(scaled_signal))))
     print("Noise sigma: {:.2e}".format(noise_sigma))
     print("Signal range: {:.2e}".format(analysis['range']))
     print("Noise floor: {:.2e}".format(analysis['noise_floor']))
     print("Target noise floor: {:.2e}".format(target_noise_floor))
-    
+
     # If we need to force the dynamic range for testing purposes
     if actual_dynamic_range < dynamic_range_db:
         print("Forcing dynamic range to {} dB for testing".format(dynamic_range_db))
         # Create a synthetic signal with exact dynamic range by directly manipulating the analysis
         # This is a more reliable approach for testing
-        
+
         # Start with a clean sine wave
         clean_signal = np.sin(2 * np.pi * base_freq * t) * signal_peak
-        
+
         # Add a very small amount of noise to ensure the SVD can detect it
         # But make it small enough that it won't affect the dynamic range calculation
         noise_floor = signal_peak / (10 ** (dynamic_range_db / 20))
         tiny_noise = np.random.normal(0, noise_floor / 10, num_samples)
         final_signal = clean_signal + tiny_noise
-        
+
         return final_signal, dynamic_range_db
-    
+
     return final_signal, actual_dynamic_range
 
 
@@ -471,58 +471,58 @@ def test_high_dynamic_range():
     """Test export of signals with very high dynamic range (>90dB)."""
     # Create EMG object
     emg = EMG()
-    
+
     # Generate a high dynamic range signal (>90dB)
     hdr_signal, actual_dr = generate_high_dynamic_range_signal(dynamic_range_db=95)
-    
+
     # Ensure we actually got a high dynamic range signal
     assert actual_dr > 90, "Generated signal has {:.1f}dB dynamic range, expected >90dB".format(actual_dr)
-    
+
     # Add the high dynamic range channel
     emg.add_channel('HDR_EMG', hdr_signal, 1000, 'uV', 'n/a', 'EMG')
-    
+
     # Add a regular channel for comparison
     time = np.linspace(0, 1, 1000)
     regular_signal = np.sin(2 * np.pi * 10 * time) * 1000  # Regular 10Hz sine wave
     emg.add_channel('REG_EMG', regular_signal, 1000, 'uV', 'n/a', 'EMG')
-    
+
     with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
         edf_path = f.name
         bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
-    
+
     try:
         # Export the EMG data
         EDFExporter.export(emg, edf_path)
-        
+
         # Check which file was created
         actual_path = bdf_path if os.path.exists(bdf_path) else edf_path
         assert os.path.exists(actual_path), f"Neither {edf_path} nor {bdf_path} was created"
-        
+
         # For high dynamic range signals, we expect BDF format
         if actual_path == edf_path:
             print("Warning: Using EDF format for high dynamic range signal")
-        
+
         # Verify the file content
         with pyedflib.EdfReader(actual_path) as f:
             headers = f.getSignalHeaders()
-            
+
             # Verify we're using 24-bit resolution for high dynamic range channel
             assert headers[0]['digital_min'] == -8388608
             assert headers[0]['digital_max'] == 8388607
-            
+
             # Read signals
             hdr_data = f.readSignal(0)
             regular_data = f.readSignal(1)
-            
+
             # Calculate correlation to verify signal fidelity
             hdr_correlation = np.corrcoef(hdr_signal, hdr_data)[0, 1]
             regular_correlation = np.corrcoef(regular_signal, regular_data)[0, 1]
-            
+
             # Both signals should be preserved well - use a more permissive threshold
             # The synthetic signal with exact dynamic range might have lower correlation
             assert hdr_correlation > 0.75, "HDR correlation ({}) below threshold".format(hdr_correlation)
             assert regular_correlation > 0.95, "Regular correlation ({}) below threshold".format(regular_correlation)
-            
+
             # For the exported signal, verify the dynamic range is preserved
             # Use both methods for better accuracy
             exported_analysis = analyze_signal(hdr_data, method='both')
@@ -530,7 +530,7 @@ def test_high_dynamic_range():
             assert exported_analysis['dynamic_range_db'] > 70, \
                 "Exported signal has {:.1f}dB dynamic range, expected >70dB".format(
                     exported_analysis['dynamic_range_db'])
-            
+
     finally:
         # Cleanup
         if os.path.exists(edf_path):
@@ -544,17 +544,17 @@ def test_dynamic_range_calculation():
     # Create a clean sine wave
     time = np.linspace(0, 1, 1000)
     clean_signal = np.sin(2 * np.pi * 10 * time)  # 10 Hz sine wave
-    
+
     # Add very small noise (should give us ~100dB dynamic range)
     noise_amplitude = 1e-5  # -100dB relative to signal
     np.random.seed(42)  # For reproducibility
     noise = np.random.normal(0, noise_amplitude, 1000)
     test_signal = clean_signal + noise
-    
+
     # Calculate the theoretical dynamic range
     signal_range = np.max(clean_signal) - np.min(clean_signal)
     theoretical_dr = 20 * np.log10(signal_range / noise_amplitude)
-    
+
     # Analyze the signal using SVD method for better noise floor estimation
     analysis = analyze_signal(test_signal, method='svd')
     print("\nDynamic Range Test Results:")
@@ -563,7 +563,7 @@ def test_dynamic_range_calculation():
     print("Actual noise amplitude: {:.2e}".format(noise_amplitude))
     print("Calculated dynamic range: {:.2f} dB".format(analysis['dynamic_range_db']))
     print("Theoretical dynamic range: {:.2f} dB".format(theoretical_dr))
-    
+
     # The dynamic range should be close to the theoretical value
     # Make the threshold very permissive (30 dB) for this test
     assert abs(analysis['dynamic_range_db'] - theoretical_dr) < 30, \

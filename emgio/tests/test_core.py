@@ -51,7 +51,7 @@ def test_select_channels(sample_emg):
     """Test channel selection."""
     # Store original state
     original_channels = list(sample_emg.signals.columns)
-    
+
     # Select multiple channels
     emg_multi = sample_emg.select_channels(['EMG1', 'ACC1'])
     assert list(emg_multi.signals.columns) == ['EMG1', 'ACC1']
@@ -126,7 +126,7 @@ def test_select_channels_with_type_filter(sample_emg):
     """Test channel selection with type filtering."""
     # Store original state
     original_channels = list(sample_emg.signals.columns)
-    
+
     # Select specific channels with type filter
     result = sample_emg.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
     assert list(result.signals.columns) == ['EMG1']
@@ -376,9 +376,9 @@ def mock_edf_exporter(monkeypatch):
     """Mock EDF exporter for testing export functionality."""
     class MockEDFExporter:
         last_export = {}
-        
+
         @staticmethod
-        def export(emg_obj, filepath, method='both', fft_noise_range=None, 
+        def export(emg_obj, filepath, method='both', fft_noise_range=None,
                    svd_rank=None, precision_threshold=0.01, **kwargs):
             if not filepath.endswith('.edf') and not filepath.endswith('.bdf'):
                 raise ValueError("File must have .edf or .bdf extension")
@@ -394,9 +394,9 @@ def mock_edf_exporter(monkeypatch):
     from ..exporters import edf
     original_exporter = edf.EDFExporter
     monkeypatch.setattr(edf, 'EDFExporter', MockEDFExporter)
-    
+
     yield MockEDFExporter
-    
+
     # Restore the original exporter after the test
     monkeypatch.setattr(edf, 'EDFExporter', original_exporter)
 

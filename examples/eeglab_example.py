@@ -64,30 +64,30 @@ def main():
     emg_channels = emg.get_channels_by_type('EMG')
     if emg_channels:
         emg_only = emg.select_channels(emg_channels)  # Creates a new EMG object with only EMG channels
-        
+
         # Plot the first 5 seconds of data with different configurations
         print("\nPlotting EMG signals...")
-        
+
         # Get the maximum time value to determine plot range
         max_time = emg_only.signals.index[-1]
         plot_end = min(5.0, max_time)  # Plot up to 5 seconds or the end of the data
-        
+
         # Default plot with uniform scaling
         emg_only.plot_signals(
             channels=emg_only.signals.columns[:8],  # Plot first 8 channels
             time_range=(0, plot_end),
             title="EMG Signals - Uniform Scale"
         )
-        
+
         # Export to EDF/BDF (format will be automatically selected)
         output_path = 'examples/eeglab_emg'  # Extension will be added by the exporter (.edf or .bdf)
         print("\nExporting EMG data...")
         print("Note: The exporter will automatically:")
         print("- Choose between EDF/BDF based on precision requirements")
         print("- Handle value truncation with appropriate warnings")
-        
+
         emg.to_edf(output_path)
-        
+
         print("\nExport complete! Files created:")
         print(f"- {output_path}.edf or {output_path}.bdf (depending on precision requirements)")
         print(f"- {output_path}_channels.tsv (channel metadata)")

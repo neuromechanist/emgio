@@ -117,14 +117,14 @@ class EMG:
 
         # Create new EMG object
         new_emg = EMG()
-        
+
         # Copy selected signals and channels
         new_emg.signals = self.signals[channels].copy()
         new_emg.channels = {ch: self.channels[ch].copy() for ch in channels}
-        
+
         # Copy metadata
         new_emg.metadata = self.metadata.copy()
-        
+
         if not inplace:
             return new_emg
         else:
@@ -253,7 +253,7 @@ class EMG:
         if show:
             plt_module.show()
 
-    def to_edf(self, filepath: str, method: str = 'both', 
+    def to_edf(self, filepath: str, method: str = 'both',
                fft_noise_range: tuple = None, svd_rank: int = None,
                precision_threshold: float = 0.01, **kwargs) -> None:
         """
@@ -277,7 +277,7 @@ class EMG:
             raise ValueError("No signals loaded")
 
         from ..exporters.edf import EDFExporter
-        
+
         # Pass analysis parameters to the exporter
         analysis_params = {
             'method': method,
@@ -285,10 +285,10 @@ class EMG:
             'svd_rank': svd_rank,
             'precision_threshold': precision_threshold
         }
-        
+
         # Combine with any other kwargs
         all_params = {**analysis_params, **kwargs}
-        
+
         EDFExporter.export(self, filepath, **all_params)
 
     def set_metadata(self, key: str, value: any) -> None:
