@@ -95,10 +95,8 @@ class EMG:
 
         # If channel_type specified but no channels, select all of that type
         if channels is None and channel_type is not None:
-            channels = [
-                ch for ch, info in self.channels.items()
-                if info['channel_type'] == channel_type
-            ]
+            channels = [ch for ch, info in self.channels.items()
+                        if info['channel_type'] == channel_type]
             if not channels:
                 raise ValueError(f"No channels found of type: {channel_type}")
         elif isinstance(channels, str):
@@ -111,13 +109,11 @@ class EMG:
 
         # Filter by type if specified
         if channel_type is not None:
-            channels = [
-                ch for ch in channels
-                if self.channels[ch]['channel_type'] == channel_type
-            ]
+            channels = [ch for ch in channels
+                        if self.channels[ch]['channel_type'] == channel_type]
             if not channels:
                 raise ValueError(
-                        f"None of the selected channels are of type: {channel_type}")
+                    f"None of the selected channels are of type: {channel_type}")
 
         # Create new EMG object
         new_emg = EMG()
@@ -257,12 +253,21 @@ class EMG:
         if show:
             plt_module.show()
 
-    def to_edf(self, filepath: str, **kwargs) -> None:
+    def to_edf(self, filepath: str, method: str = 'both', 
+               fft_noise_range: tuple = None, svd_rank: int = None,
+               precision_threshold: float = 0.01, **kwargs) -> None:
         """
         Export data to EDF format with corresponding channels.tsv file.
 
         Args:
             filepath: Path to save the EDF file
+            method: Method for signal analysis ('svd', 'fft', or 'both')
+                'svd': Uses Singular Value Decomposition for noise floor estimation
+                'fft': Uses Fast Fourier Transform for noise floor estimation
+                'both': Uses both methods and takes the minimum noise floor (default)
+            fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method
+            svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method
+            precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
             **kwargs: Additional arguments for the EDF exporter
 
         Raises:
@@ -272,7 +277,19 @@ class EMG:
             raise ValueError("No signals loaded")
 
         from ..exporters.edf import EDFExporter
-        EDFExporter.export(self, filepath, **kwargs)
+        
+        # Pass analysis parameters to the exporter
+        analysis_params = {
+            'method': method,
+            'fft_noise_range': fft_noise_range,
+            'svd_rank': svd_rank,
+            'precision_threshold': precision_threshold
+        }
+        
+        # Combine with any other kwargs
+        all_params = {**analysis_params, **kwargs}
+        
+        EDFExporter.export(self, filepath, **all_params)
 
     def set_metadata(self, key: str, value: any) -> None:
         """
