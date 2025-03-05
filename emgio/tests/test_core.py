@@ -190,9 +190,9 @@ def mock_importers(monkeypatch):
         # Only intercept our specific importer paths
         if any(x in name for x in ['emgio.importers.trigno', 'emgio.importers.otb']):
             if 'trigno' in name:
-                return type('Module', (), {'TrignoImporter': MockTrignoImporter})
+                return type('TrignoModule', (), {'TrignoImporter': MockTrignoImporter})
             elif 'otb' in name:
-                return type('Module', (), {'OTBImporter': MockOTBImporter})
+                return type('OTBModule', (), {'OTBImporter': MockOTBImporter})
         # Let all other imports pass through to the original __import__
         return original_import(name, *args)
 
@@ -375,22 +375,30 @@ def test_plot_signals_time_range(sample_emg, mock_plt):
 def mock_edf_exporter(monkeypatch):
     """Mock EDF exporter for testing export functionality."""
     class MockEDFExporter:
+        last_export = {}
+        
         @staticmethod
-        def export(emg_obj, filepath, **kwargs):
-            if not filepath.endswith('.edf'):
-                raise ValueError("File must have .edf extension")
+        def export(emg_obj, filepath, method='both', fft_noise_range=None, 
+                   svd_rank=None, precision_threshold=0.01, **kwargs):
+            if not filepath.endswith('.edf') and not filepath.endswith('.bdf'):
+                raise ValueError("File must have .edf or .bdf extension")
             # Store export parameters for verification
             MockEDFExporter.last_export = {
                 'filepath': filepath,
                 'channels': list(emg_obj.channels.keys()),
-                'kwargs': kwargs
+                'kwargs': kwargs  # Only store the custom kwargs, not the default ones
             }
+            return filepath
 
-    def mock_import(*args):
-        return type('Module', (), {'EDFExporter': MockEDFExporter})
-
-    monkeypatch.setattr('builtins.__import__', mock_import)
-    return MockEDFExporter
+    # Directly patch the EDFExporter in the exporters.edf module
+    from ..exporters import edf
+    original_exporter = edf.EDFExporter
+    monkeypatch.setattr(edf, 'EDFExporter', MockEDFExporter)
+    
+    yield MockEDFExporter
+    
+    # Restore the original exporter after the test
+    monkeypatch.setattr(edf, 'EDFExporter', original_exporter)
 
 
 def test_to_edf_export(sample_emg, mock_edf_exporter):
