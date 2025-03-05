@@ -20,21 +20,29 @@ def _format_physical_value(value: float, max_chars: int) -> tuple:
     Returns:
         tuple: (formatted_value, formatted_string)
     """
+    # Handle NaN values
+    if np.isnan(value):
+        return 0.0, "0"
+        
     # For zero or very small values, return as is
     if abs(value) < 1e-6:
         return 0.0, "0"
         
     # For values close to integers, handle as integers
-    if abs((value - round(value)) / value) < 1e-6:
-        value = int(round(value))  # Convert to integer
-        scale = 1
-        while True:
-            value_str = str(value)
-            if len(value_str) <= max_chars:
-                return value, value_str
-            # Integer division to reduce digits
-            scale *= 10
-            value = value // 10
+    try:
+        if abs((value - round(value)) / value) < 1e-6:
+            value = int(round(value))  # Convert to integer
+            scale = 1
+            while True:
+                value_str = str(value)
+                if len(value_str) <= max_chars:
+                    return value, value_str
+                # Integer division to reduce digits
+                scale *= 10
+                value = value // 10
+    except (ValueError, ZeroDivisionError):
+        # Handle any other numerical issues
+        return 0.0, "0"
     
     # For decimal numbers
     if abs(value) < 1:
@@ -79,6 +87,11 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
     Returns:
         tuple: (physical_min, physical_max, digital_min, digital_max, scaling_factor)
     """
+    # Handle NaN values
+    if np.isnan(signal_min) or np.isnan(signal_max):
+        signal_min = -1e-6 if np.isnan(signal_min) else signal_min
+        signal_max = 1e-6 if np.isnan(signal_max) else signal_max
+    
     if signal_min > signal_max:
         signal_min, signal_max = signal_max, signal_min
 
@@ -282,14 +295,23 @@ class EDFExporter:
     """Exporter for EDF format with channels.tsv generation."""
 
     @staticmethod
-    def export(emg: EMG, filepath: str, precision_threshold: float = 0.01) -> None:
+    def export(emg: EMG, filepath: str, precision_threshold: float = 0.01,
+               method: str = 'both', fft_noise_range: tuple = None, 
+               svd_rank: int = None, **kwargs) -> None:
         """
         Export EMG data to EDF format with corresponding channels.tsv file.
 
         Args:
             emg: EMG object containing the data
             filepath: Path to save the EDF file
-            precision_threshold: Maximum acceptable precision loss percentage (default: 0.1%)
+            precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
+            method: Method for signal analysis ('svd', 'fft', or 'both')
+                'svd': Uses Singular Value Decomposition for noise floor estimation
+                'fft': Uses Fast Fourier Transform for noise floor estimation
+                'both': Uses both methods and takes the minimum noise floor (default)
+            fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method
+            svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method
+            **kwargs: Additional arguments for the exporter
         """
         if emg.signals is None:
             raise ValueError("No signals to export")
@@ -312,9 +334,11 @@ class EDFExporter:
             signal = emg.signals[ch_name].values
             ch_info = emg.channels[ch_name]
 
-            # Analyze signal characteristics with both methods for better accuracy
-            # This helps preserve high dynamic range signals
-            analysis = analyze_signal(signal, method='both')
+            # Analyze signal characteristics with the specified method
+            # Pass through the analysis parameters
+            analysis = analyze_signal(signal, method=method, 
+                                      fft_noise_range=fft_noise_range,
+                                      svd_rank=svd_rank)
             use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
 
             # Perform quantization analysis for chosen format
@@ -368,9 +392,13 @@ class EDFExporter:
 
                 # Scale the signal to match the physical min/max scaling
                 scaled_signal = signal.copy()  # Make a copy to avoid modifying original
+                
+                # Replace NaN values with zeros
+                scaled_signal = np.nan_to_num(scaled_signal, nan=0.0)
+                
                 # Only scale if needed
                 if not np.isclose(scale_factor, 1.0):
-                    scaled_signal = signal / scale_factor
+                    scaled_signal = scaled_signal / scale_factor
                 signals.append(scaled_signal)
 
                 # Prepare channel info
@@ -419,7 +447,9 @@ class EDFExporter:
             analyses = {}
             for ch_name in emg.channels:
                 signal = emg.signals[ch_name].values
-                analysis = analyze_signal(signal, method='both')
+                analysis = analyze_signal(signal, method=method,
+                                          fft_noise_range=fft_noise_range,
+                                          svd_rank=svd_rank)
                 use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
                 analysis['snr'] = snr
                 analysis['use_bdf'] = use_bdf_for_channel
@@ -451,7 +481,7 @@ class EDFExporter:
             if hasattr(writer, 'close') and callable(writer.close):
                 try:
                     writer.close()
-                except:
+                except Exception:
                     pass  # Ignore errors during cleanup
                     
             # Wait a moment before trying to delete the file
@@ -461,7 +491,7 @@ class EDFExporter:
             if os.path.exists(filepath):
                 try:
                     os.unlink(filepath)
-                except:
+                except Exception:
                     pass  # Ignore errors during cleanup
                     
             raise e
