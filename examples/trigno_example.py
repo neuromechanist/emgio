@@ -54,8 +54,25 @@ def main():
     print("- Convert voltage units to mV if needed")
     print("- Choose between EDF/BDF based on precision requirements")
     print("- Handle value truncation with appropriate warnings")
+    print("- Use the specified signal analysis method")
 
-    emg.to_edf(output_path)
+    # Example of using the exposed parameters for signal analysis
+    # method: 'svd', 'fft', or 'both' (default)
+    # svd_rank: Optional manual rank cutoff for SVD method
+    # fft_noise_range: Optional tuple (min_freq, max_freq) for FFT method
+    # Since the non-emg channels have different sampling frequency, the output will become bdf to handle 
+    # NaNs for the missing values in the non-emg channels. This is the default behavior for mixed sampling frequencies.
+    emg_only.to_edf(output_path, method='both', svd_rank=None, fft_noise_range=None)
+
+    # Alternative examples:
+    # Using only FFT method:
+    # emg.to_edf(output_path, method='fft')
+    
+    # Using only SVD method with custom rank:
+    # emg.to_edf(output_path, method='svd', svd_rank=5)
+    
+    # Using both methods with custom FFT noise range:
+    # emg.to_edf(output_path, method='both', fft_noise_range=(0.1, 10))
 
     print("\nExport complete!")
 
