@@ -297,13 +297,14 @@ class EDFExporter:
     @staticmethod
     def export(emg: EMG, filepath: str, precision_threshold: float = 0.01,
                method: str = 'both', fft_noise_range: tuple = None,
-               svd_rank: int = None, **kwargs) -> None:
+               svd_rank: int = None, format: str = 'auto',
+               force_format: bool = False, **kwargs) -> None:
         """
-        Export EMG data to EDF format with corresponding channels.tsv file.
+        Export EMG data to EDF/BDF format with corresponding channels.tsv file.
 
         Args:
             emg: EMG object containing the data
-            filepath: Path to save the EDF file
+            filepath: Path to save the EDF/BDF file
             precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
             method: Method for signal analysis ('svd', 'fft', or 'both')
                 'svd': Uses Singular Value Decomposition for noise floor estimation
@@ -311,6 +312,11 @@ class EDFExporter:
                 'both': Uses both methods and takes the minimum noise floor (default)
             fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method
             svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method
+            format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
+                based on signal characteristics. When specified, the system will still warn
+                if the chosen format is not optimal.
+            force_format: When True, bypasses all format suitability checks and uses the 
+                specified format without warnings. Default is False.
             **kwargs: Additional arguments for the exporter
         """
         if emg.signals is None:
@@ -320,8 +326,25 @@ class EDFExporter:
         print("\nSignal Analysis:")
         print("--------------")
 
+        # Initialize format variables
         use_bdf = False
         bdf_reason = ""
+        user_format_choice = None
+        
+        # Check if user has specified a format
+        if format.lower() != 'auto':
+            if format.lower() == 'bdf':
+                user_format_choice = True
+                if force_format:
+                    use_bdf = True
+                    print("\nUser requested BDF format (forced).")
+            elif format.lower() == 'edf':
+                user_format_choice = False
+                if force_format:
+                    use_bdf = False
+                    print("\nUser requested EDF format (forced).")
+            else:
+                warnings.warn(f"Unknown format: {format}. Valid options are 'auto', 'edf', or 'bdf'. Using 'auto'.")
         signal_info = []
         channel_info_list = []
         channels_tsv_data = {
@@ -329,7 +352,7 @@ class EDFExporter:
             'sample_frequency': [], 'reference': [], 'status': []
         }
 
-        # First pass: analyze signals and determine format
+        # First pass: analyze signals and determine recommended format
         for ch_name in emg.channels:
             signal = emg.signals[ch_name].values
             ch_info = emg.channels[ch_name]
@@ -339,17 +362,20 @@ class EDFExporter:
             analysis = analyze_signal(signal, method=method,
                                       fft_noise_range=fft_noise_range,
                                       svd_rank=svd_rank)
-            use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
-
-            # Perform quantization analysis for chosen format
-            if use_bdf_for_channel:
-                use_bdf = True
-                if not bdf_reason:  # Only set reason for first channel requiring BDF
-                    bdf_reason = f"Channel {ch_name}: {reason}"
+            recommend_bdf, reason, snr = determine_format_suitability(signal, analysis)
+            
+            # If using automatic format determination or not forced
+            if user_format_choice is None or not force_format:
+                # Perform quantization analysis for chosen format
+                if recommend_bdf:
+                    use_bdf = True
+                    if not bdf_reason:  # Only set reason for first channel requiring BDF
+                        bdf_reason = f"Channel {ch_name}: {reason}"
 
             # Calculate scaling factors
             phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
-                float(np.min(signal)), float(np.max(signal)), use_bdf=use_bdf_for_channel
+                float(np.min(signal)), float(np.max(signal)), 
+                use_bdf=recommend_bdf if user_format_choice is None else user_format_choice
             )
 
             signal_info.append(
@@ -359,19 +385,40 @@ class EDFExporter:
                 f"\n    Noise Floor: {analysis['noise_floor']:.2e} {ch_info['physical_dimension']}"
                 f"\n    SNR: {snr:.1f} dB"
                 f"\n    Method: {analysis.get('method', 'svd')}"
-                f"\n    Format: {'BDF' if use_bdf_for_channel else 'EDF'}"
+                f"\n    Recommended Format: {'BDF' if recommend_bdf else 'EDF'}"
             )
 
+        # Handle user format choice if specified
+        if user_format_choice is not None and not force_format:
+            # Warn if user choice conflicts with recommendation
+            if user_format_choice and not use_bdf:
+                warnings.warn("User requested BDF format, but analysis suggests EDF would be sufficient. "
+                              "Respecting user choice but be aware this may use more storage than necessary.")
+                use_bdf = True
+                print("\nUsing BDF format (24-bit) as requested by user, though EDF would be sufficient.")
+            elif not user_format_choice and use_bdf:
+                warnings.warn(f"User requested EDF format, but analysis suggests BDF is needed: {bdf_reason}. "
+                              "Respecting user choice but be aware this may result in precision loss.")
+                use_bdf = False
+                print("\nUsing EDF format (16-bit) as requested by user, despite recommendation for BDF.")
+                print(f"This may result in precision loss. Reason for BDF recommendation: {bdf_reason}")
+            elif user_format_choice and use_bdf:
+                print("\nUsing BDF format (24-bit) as requested by user, which matches the recommendation.")
+            else:  # not user_format_choice and not use_bdf:
+                print("\nUsing EDF format (16-bit) as requested by user, which matches the recommendation.")
+        
         # Set file format and create writer
         if use_bdf:
             filepath = os.path.splitext(filepath)[0] + '.bdf'
-            print("\nUsing BDF format (24-bit) to preserve precision.")
-            print(f"Reason: {bdf_reason}")
-            warnings.warn(f"Using BDF format to preserve precision. Reason: {bdf_reason}")
+            if user_format_choice is None:  # Only show this message for automatic selection
+                print("\nUsing BDF format (24-bit) to preserve precision.")
+                print(f"Reason: {bdf_reason}")
+                warnings.warn(f"Using BDF format to preserve precision. Reason: {bdf_reason}")
             writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=pyedflib.FILETYPE_BDFPLUS)
         else:
             filepath = os.path.splitext(filepath)[0] + '.edf'
-            print("\nUsing EDF format (16-bit) as precision loss is within acceptable range.")
+            if user_format_choice is None:  # Only show this message for automatic selection
+                print("\nUsing EDF format (16-bit) as precision loss is within acceptable range.")
             writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=pyedflib.FILETYPE_EDFPLUS)
 
         try:
@@ -455,10 +502,12 @@ class EDFExporter:
                 analysis['use_bdf'] = use_bdf_for_channel
                 analyses[ch_name] = analysis
 
-                if use_bdf_for_channel:
-                    use_bdf = True
-                    if not bdf_reason:
-                        bdf_reason = f"Channel {ch_name}: {reason}"
+                # Only update use_bdf if we're in automatic mode
+                if user_format_choice is None:
+                    if use_bdf_for_channel:
+                        use_bdf = True
+                        if not bdf_reason:
+                            bdf_reason = f"Channel {ch_name}: {reason}"
 
             # Print signal info
             for info in signal_info:
