@@ -3,14 +3,19 @@
 [![Tests](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/neuromechanist/emgio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/emgio)
 
-A Python package for EMG data import/export and manipulation. This package provides a unified interface for working with EMG data from various systems (Trigno, Noraxon, OTB) and exporting to standardized formats like EDF.
+A Python package for EMG data import/export and manipulation. This package provides a unified interface for working with EMG data from various systems (Trigno, EEGLAB, OTB, etc) and exporting to standardized formats like EDF and BDF with harmonized metadata.
+
+The determination of the EDF/BDF format is based on the dynamic range of the data. If the data is within the range of 16-bit integers (~90dB), the EDF format is used. Otherwise, the BDF format is used. This is to ensure that the data is stored in the most efficient format possible. This determination is made automatically using SVD decomposition and/or FFT to determine the dynamic range of the data.
 
 ## Features
 
 - Import EMG data from multiple systems:
+  - EEGLAB set files (supported)
   - Delsys Trigno (supported)
+  - OTB Systems (supported)
+  - EDF (supported)
   - Noraxon (planned)
-  - OTB Systems (planned)
+  
 - Export to standardized formats:
   - EDF with channels.tsv metadata
 - Data manipulation:
