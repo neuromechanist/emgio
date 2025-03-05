@@ -329,17 +329,17 @@ class EDFExporter:
         # Initialize format variables
         use_bdf = False
         bdf_reason = ""
-        user_format_choice = None
+        user_chose_bdf = None
         
         # Check if user has specified a format
         if format.lower() != 'auto':
             if format.lower() == 'bdf':
-                user_format_choice = True
+                user_chose_bdf = True
                 if force_format:
                     use_bdf = True
                     print("\nUser requested BDF format (forced).")
             elif format.lower() == 'edf':
-                user_format_choice = False
+                user_chose_bdf = False
                 if force_format:
                     use_bdf = False
                     print("\nUser requested EDF format (forced).")
@@ -365,7 +365,7 @@ class EDFExporter:
             recommend_bdf, reason, snr = determine_format_suitability(signal, analysis)
             
             # If using automatic format determination or not forced
-            if user_format_choice is None or not force_format:
+            if user_chose_bdf is None or not force_format:
                 # Perform quantization analysis for chosen format
                 if recommend_bdf:
                     use_bdf = True
@@ -375,7 +375,7 @@ class EDFExporter:
             # Calculate scaling factors
             phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
                 float(np.min(signal)), float(np.max(signal)), 
-                use_bdf=recommend_bdf if user_format_choice is None else user_format_choice
+                use_bdf=recommend_bdf if user_chose_bdf is None else user_chose_bdf
             )
 
             signal_info.append(
@@ -389,20 +389,20 @@ class EDFExporter:
             )
 
         # Handle user format choice if specified
-        if user_format_choice is not None and not force_format:
+        if user_chose_bdf is not None and not force_format:
             # Warn if user choice conflicts with recommendation
-            if user_format_choice and not use_bdf:
+            if user_chose_bdf and not use_bdf:
                 warnings.warn("User requested BDF format, but analysis suggests EDF would be sufficient. "
                               "Respecting user choice but be aware this may use more storage than necessary.")
                 use_bdf = True
                 print("\nUsing BDF format (24-bit) as requested by user, though EDF would be sufficient.")
-            elif not user_format_choice and use_bdf:
+            elif not user_chose_bdf and use_bdf:
                 warnings.warn(f"User requested EDF format, but analysis suggests BDF is needed: {bdf_reason}. "
                               "Respecting user choice but be aware this may result in precision loss.")
                 use_bdf = False
                 print("\nUsing EDF format (16-bit) as requested by user, despite recommendation for BDF.")
                 print(f"This may result in precision loss. Reason for BDF recommendation: {bdf_reason}")
-            elif user_format_choice and use_bdf:
+            elif user_chose_bdf and use_bdf:
                 print("\nUsing BDF format (24-bit) as requested by user, which matches the recommendation.")
             else:  # not user_format_choice and not use_bdf:
                 print("\nUsing EDF format (16-bit) as requested by user, which matches the recommendation.")
@@ -410,14 +410,14 @@ class EDFExporter:
         # Set file format and create writer
         if use_bdf:
             filepath = os.path.splitext(filepath)[0] + '.bdf'
-            if user_format_choice is None:  # Only show this message for automatic selection
+            if user_chose_bdf is None:  # Only show this message for automatic selection
                 print("\nUsing BDF format (24-bit) to preserve precision.")
                 print(f"Reason: {bdf_reason}")
                 warnings.warn(f"Using BDF format to preserve precision. Reason: {bdf_reason}")
             writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=pyedflib.FILETYPE_BDFPLUS)
         else:
             filepath = os.path.splitext(filepath)[0] + '.edf'
-            if user_format_choice is None:  # Only show this message for automatic selection
+            if user_chose_bdf is None:  # Only show this message for automatic selection
                 print("\nUsing EDF format (16-bit) as precision loss is within acceptable range.")
             writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=pyedflib.FILETYPE_EDFPLUS)
 
@@ -503,7 +503,7 @@ class EDFExporter:
                 analyses[ch_name] = analysis
 
                 # Only update use_bdf if we're in automatic mode
-                if user_format_choice is None:
+                if user_chose_bdf is None:
                     if use_bdf_for_channel:
                         use_bdf = True
                         if not bdf_reason:
