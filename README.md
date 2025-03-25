@@ -105,3 +105,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the BSD 3-Clause License - see the LICENSE file for details.
+
+## Acknowledgment
+This project is partially supported by a Meta Reality Labs gift to @sccn and NIH 5R01NS047293.
