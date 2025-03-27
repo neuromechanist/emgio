@@ -1,0 +1,79 @@
+site_name: EMGIO Documentation
+site_description: Documentation for EMGIO - EMG data import/export and manipulation
+site_author: EMGIO Team
+repo_url: https://github.com/neuromechanist/emgio
+repo_name: neuromechanist/emgio
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.indexes
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search:
+      lang: en
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            show_source: true
+            show_root_heading: true
+  - mkdocs-jupyter
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - footnotes
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - Installation: user-guide/installation.md
+    - Basic Usage: user-guide/basic-usage.md
+    - Channel Selection: user-guide/channel-selection.md
+    - EDF/BDF Format Selection: user-guide/edf-bdf-selection.md
+    - Metadata Handling: user-guide/metadata.md
+  - Data Formats:
+    - Trigno: formats/trigno.md
+    - EEGLAB: formats/eeglab.md
+    - OTB: formats/otb.md
+    - EDF: formats/edf.md
+  - API Reference: 
+    - EMG Class: api/emg.md
+    - Importers:
+      - Base Importer: api/importers/base.md
+      - Trigno Importer: api/importers/trigno.md
+      - EEGLAB Importer: api/importers/eeglab.md
+      - OTB Importer: api/importers/otb.md
+      - EDF Importer: api/importers/edf.md
+    - Exporters:
+      - EDF/BDF Exporter: api/exporters/edf.md
+  - Examples:
+    - Trigno Examples: examples/trigno.md
+    - EEGLAB Examples: examples/eeglab.md
+    - OTB Examples: examples/otb.md
+    - Converting Jupyter Notebooks: examples/notebooks.md
+  - Contributing: contributing.md
+
+extra:
+  version:
+    provider: mike
+    default: latest 
