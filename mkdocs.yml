@@ -1,14 +1,34 @@
 site_name: EMGIO Documentation
 site_description: Documentation for EMGIO - EMG data import/export and manipulation
-site_author: EMGIO Team
+site_author: Seyed (Yahya) Shirazi
 repo_url: https://github.com/neuromechanist/emgio
 repo_name: neuromechanist/emgio
 
 theme:
   name: material
   palette:
-    primary: indigo
-    accent: indigo
+    - primary: custom
+    - accent: custom
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default 
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
   features:
     - navigation.instant
     - navigation.tracking
@@ -16,6 +36,10 @@ theme:
     - navigation.indexes
     - content.code.copy
     - content.code.annotate
+  
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search:
