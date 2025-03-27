@@ -7,6 +7,10 @@ A Python package for EMG data import/export and manipulation. This package provi
 
 The determination of the EDF/BDF format is based on the dynamic range of the data. If the data is within the range of 16-bit integers (~90dB), the EDF format is used. Otherwise, the BDF format is used. This is to ensure that the data is stored in the most efficient format possible. This determination is made automatically using SVD decomposition and/or FFT to determine the dynamic range of the data.
 
+## Documentation
+
+The documentation including installation instructions, examples, and API reference is available at [https://neuromechanist.github.io/emgio/](https://neuromechanist.github.io/emgio/).
+
 ## Features
 
 - Import EMG data from multiple systems:
