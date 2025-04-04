@@ -48,7 +48,7 @@ emg = EMG.from_file('data.csv', importer='trigno')
 emg.plot_signals(['EMG1', 'EMG2'])
 
 # Export to EDF/BDF (format automatically determined)
-emg.to_edf('output')  # Extension will be added automatically
+emg.to_edf('output.edf')  # Extension will be added if not provided
 ```
 
 ## Documentation Structure

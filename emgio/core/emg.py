@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 from typing import List, Optional, Union, Any
 
 
@@ -21,18 +22,40 @@ class EMG:
         self.metadata = {}
         self.channels = {}
 
+    def _infer_importer(cls, filepath: str) -> str:
+        """
+        Infer the importer to use based on the file extension.
+        """
+        extension = os.path.splitext(filepath)[1].lower()
+        if extension in ['.edf', '.bdf']:
+            return 'edf'
+        elif extension in ['.set']:
+            return 'eeglab'
+        elif extension in ['.trc']:
+            return 'trigno'
+        elif extension in ['.otb']:
+            return 'otb'
+        elif extension in ['.csv']:
+            return 'csv'
+        else:
+            raise ValueError(f"Unsupported file extension: {extension}")
+
     @classmethod
-    def from_file(cls, filepath: str, importer: str = 'trigno') -> 'EMG':
+    def from_file(cls, filepath: str, importer: str | None = None) -> 'EMG':
         """
         Factory method to create EMG object from file.
 
         Args:
             filepath: Path to the input file
             importer: Name of the importer to use ('trigno', 'noraxon', 'otb')
+                If None, the importer will be inferred from the file extension.
 
         Returns:
             EMG: New EMG object with loaded data
         """
+        if importer is None:
+            importer = cls._infer_importer(filepath)
+
         importers = {
             'trigno': 'TrignoImporter',
             'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
