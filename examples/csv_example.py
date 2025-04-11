@@ -45,45 +45,44 @@ def main():
     print("Loading EMG data...")
 
     try:
-        # Import the CSVImporter directly
-        from emgio.importers.csv import CSVImporter
-
         # Prepare parameters for the CSV importer
         csv_params = {
             'columns': [0, 1, 2, 3],  # Select columns by index (0-based)
             'has_header': False,       # No header in this file
             'delimiter': None,         # Auto-detect delimiter
             'sample_frequency': 1000.0,  # 1kHz sampling rate
+            'channel_names': channel_names,
+            'channel_types': channel_types,
+            'physical_dimensions': physical_dimensions,
             'metadata': metadata
         }
 
         # Create importer and load the data
-        importer = CSVImporter()
-        emg = importer.load(data_path, **csv_params)
+        emg = EMG.from_file(data_path, importer='csv', **csv_params)
 
         # Rename channels and set their types and units
         print("Renaming channels and setting metadata...")
 
-        # Create a new EMG object with renamed channels
-        new_emg = EMG()
+        # # Create a new EMG object with renamed channels
+        # new_emg = EMG()
 
-        # Copy metadata
-        for key, value in emg.metadata.items():
-            new_emg.set_metadata(key, value)
+        # # Copy metadata
+        # for key, value in emg.metadata.items():
+        #     new_emg.set_metadata(key, value)
 
-        # Copy data with new channel names and metadata
-        for i, (old_name, new_name) in enumerate(zip(emg.channels.keys(), channel_names)):
-            ch_info = emg.channels[old_name]
-            new_emg.add_channel(
-                label=new_name,
-                data=emg.signals[old_name].values,
-                sample_frequency=ch_info['sample_frequency'],
-                physical_dimension=physical_dimensions[new_name],
-                channel_type=channel_types[new_name]
-            )
+        # # Copy data with new channel names and metadata
+        # for i, (old_name, new_name) in enumerate(zip(emg.channels.keys(), channel_names)):
+        #     ch_info = emg.channels[old_name]
+        #     new_emg.add_channel(
+        #         label=new_name,
+        #         data=emg.signals[old_name].values,
+        #         sample_frequency=ch_info['sample_frequency'],
+        #         physical_dimension=physical_dimensions[new_name],
+        #         channel_type=channel_types[new_name]
+        #     )
 
-        # Replace our reference to emg with the new object
-        emg = new_emg
+        # # Replace our reference to emg with the new object
+        # emg = new_emg
     except Exception as e:
         print(f"Error loading data: {str(e)}")
         return
