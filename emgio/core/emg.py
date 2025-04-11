@@ -22,45 +22,94 @@ class EMG:
         self.channels = {}
 
     @classmethod
-    def from_file(cls, filepath: str, importer: str = 'trigno') -> 'EMG':
+    def from_file(cls, filepath: str, importer: str = 'auto', **kwargs) -> 'EMG':
         """
         Factory method to create EMG object from file.
 
         Args:
             filepath: Path to the input file
-            importer: Name of the importer to use ('trigno', 'noraxon', 'otb')
+            importer: Name of the importer to use ('auto', 'csv', 'trigno', 'otb', 'edf', 'eeglab').
+                      If 'auto', tries to guess the importer based on file extension.
+            **kwargs: Additional arguments to pass to the specific importer.
 
         Returns:
             EMG: New EMG object with loaded data
         """
+        # Map importer names to class names and modules
         importers = {
-            'trigno': 'TrignoImporter',
-            'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
-            'edf': 'EDFImporter',  # EDF/EDF+/BDF format
-            'eeglab': 'EEGLABImporter'  # EEGLAB .set files
+            'trigno': ('TrignoImporter', 'trigno'),
+            'otb': ('OTBImporter', 'otb'),
+            'edf': ('EDFImporter', 'edf'),
+            'eeglab': ('EEGLABImporter', 'eeglab'),
+            'csv': ('CSVImporter', 'csv')
         }
 
+        # Auto-detect importer based on file extension if set to 'auto'
+        if importer == 'auto':
+            extension = filepath.split('.')[-1].lower()
+            if extension == 'csv':
+                # Default to CSV importer for .csv files,
+                # but allow override via kwargs or specific checks later if needed
+                importer = 'csv' 
+            elif extension in ['otb', 'otb+']:
+                importer = 'otb'
+            elif extension in ['edf', 'bdf']:
+                importer = 'edf'
+            elif extension == 'set':
+                importer = 'eeglab'
+            # Add more auto-detection rules here if needed
+            else:
+                # Fallback or raise error if no suitable importer found
+                # For now, let's default to CSV for unknown extensions
+                # and let it fail if it's not a CSV.
+                 print(f"[WARN] Unknown file extension '{extension}'. Attempting to load as CSV. "
+                      "Specify importer explicitly if this fails.")
+                 importer = 'csv'
+
+        # Special handling for Trigno CSVs if explicitly requested
+        # or if auto-detected as CSV but might be Trigno
+        if importer == 'csv':
+            # Check if user explicitly wants 'trigno' importer for this CSV
+            if kwargs.get('force_trigno', False):
+                importer = 'trigno'
+            else:
+                 # Simple check: If it's a CSV and potentially Trigno, use TrignoImporter
+                 # You might want a more robust check here (e.g., reading first few lines)
+                 # For now, assume 'trigno' importer must be specified explicitly for Trigno CSVs.
+                 # So, if importer is 'csv', we use the CSVImporter.
+                 pass # Keep importer as 'csv'
+
+
         if importer not in importers:
+            available = list(importers.keys()) + ['auto']
             raise ValueError(
-                f"Unsupported importer: {importer}. "
-                f"Available importers: {list(importers.keys())}\n"
-                "- trigno: Delsys Trigno EMG system\n"
-                "- otb: OTB/OTB+ EMG system\n"
-                "- edf: EDF/EDF+/BDF format\n"
+                f"Unsupported or undetected importer: {importer}. "
+                f"Available importers: {available}\\n"
+                "- auto: Detect based on file extension\\n"
+                "- csv: General CSV importer\\n"
+                "- trigno: Delsys Trigno CSV format\\n"
+                "- otb: OTB/OTB+ EMG system\\n"
+                "- edf: EDF/EDF+/BDF format\\n"
                 "- eeglab: EEGLAB .set files"
             )
 
-        # Import the appropriate importer class
-        importer_module = __import__(
-            f'emgio.importers.{importer}',
-            globals(),
-            locals(),
-            [importers[importer]]
-        )
-        importer_class = getattr(importer_module, importers[importer])
+        importer_class_name, importer_module_name = importers[importer]
 
-        # Create importer instance and load data
-        return importer_class().load(filepath)
+        # Import the appropriate importer class dynamically
+        try:
+            importer_module = __import__(
+                f'emgio.importers.{importer_module_name}',
+                globals(),
+                locals(),
+                [importer_class_name]
+            )
+            importer_class = getattr(importer_module, importer_class_name)
+        except ImportError:
+            raise ImportError(f"Could not import the '{importer}' importer. "
+                              "Ensure necessary dependencies are installed.")
+
+        # Create importer instance and load data, passing kwargs
+        return importer_class().load(filepath, **kwargs)
 
     def select_channels(
             self,
