@@ -210,20 +210,22 @@ def test_from_file(mock_importers, tmp_path):
     otb_file = tmp_path / "test.otb"
     otb_file.write_text("")
 
-    # Test Trigno importer
+    # Test Trigno importer (including failing auto-detection)
     emg_trigno = EMG.from_file(str(trigno_file), importer='trigno')
     assert 'TEST' in emg_trigno.signals.columns
     assert emg_trigno.channels['TEST']['sample_frequency'] == 1000
+    with pytest.raises(ValueError, match="not supported for automatic import"):
+        EMG.from_file(str(trigno_file), importer=None)
 
-    # Test OTB importer
-    emg_otb = EMG.from_file(str(otb_file), importer='otb')
-    assert 'OTB' in emg_otb.signals.columns
-    assert emg_otb.channels['OTB']['sample_frequency'] == 2000
+    # Test OTB importer (including auto-detection)
+    for importer in ['otb', None]:
+        emg_otb = EMG.from_file(str(otb_file), importer=importer)
+        assert 'OTB' in emg_otb.signals.columns
+        assert emg_otb.channels['OTB']['sample_frequency'] == 2000
 
     # Test invalid importer
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="Unsupported importer"):
         EMG.from_file(str(trigno_file), importer='invalid')
-    assert "Unsupported importer" in str(exc_info.value)
 
 
 class MockPlt:
