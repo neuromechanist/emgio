@@ -69,6 +69,7 @@ class CSVImporter(BaseImporter):
             
         Raises:
             ValueError: If a specialized format is detected and force_generic is False
+            FileNotFoundError: If the file does not exist
         """
         # Check if this file matches a specialized format
         if not force_generic:
@@ -102,13 +103,17 @@ class CSVImporter(BaseImporter):
         metadata = kwargs.get('metadata', {})
         
         # Analyze file structure if parameters not explicitly provided
-        if any(param is None for param in [has_header, skiprows, delimiter]):
-            analyzed_params = self._analyze_csv_structure(filepath)
+        try:
+            if any(param is None for param in [has_header, skiprows, delimiter]):
+                analyzed_params = self._analyze_csv_structure(filepath)
 
-            # Use analyzed parameters for any not explicitly provided
-            has_header = has_header if has_header is not None else analyzed_params['has_header']
-            skiprows = skiprows if skiprows is not None else analyzed_params['skiprows']
-            delimiter = delimiter if delimiter is not None else analyzed_params['delimiter']
+                # Use analyzed parameters for any not explicitly provided
+                has_header = has_header if has_header is not None else analyzed_params['has_header']
+                skiprows = skiprows if skiprows is not None else analyzed_params['skiprows']
+                delimiter = delimiter if delimiter is not None else analyzed_params['delimiter']
+        except FileNotFoundError:
+            # Pass through file not found errors
+            raise
 
         # Read the CSV file
         try:
@@ -119,6 +124,9 @@ class CSVImporter(BaseImporter):
                 delimiter=delimiter,
                 index_col=None
             )
+        except FileNotFoundError:
+            # Pass through file not found errors
+            raise
         except Exception as e:
             raise ValueError(f"Failed to read CSV file: {str(e)}")
 
@@ -140,7 +148,18 @@ class CSVImporter(BaseImporter):
             if all(isinstance(col, int) for col in columns):
                 # Convert numerical indices to column names
                 col_names = [df.columns[i] for i in columns]
+                # Save original columns for potential renumbering
+                original_cols = col_names.copy()
                 df = df[col_names]
+                
+                # If using default channel names, renumber them sequentially
+                if not has_header and not channel_names:
+                    # Check if these are auto-generated channel names
+                    if all(col.startswith('Channel_') for col in col_names):
+                        # Rename columns to be sequential
+                        new_names = [f"Channel_{i}" for i in range(len(col_names))]
+                        rename_map = {old: new for old, new in zip(col_names, new_names)}
+                        df = df.rename(columns=rename_map)
             else:
                 # Filter by column names
                 df = df[columns]
@@ -156,10 +175,9 @@ class CSVImporter(BaseImporter):
                 df.set_index(time_column, inplace=True)
             else:
                 raise ValueError(f"Time column '{time_column}' not found in data")
-        else:
-            # Try to auto-detect time column
+        elif has_header:
+            # When header exists, try to auto-detect time column only if has_header is True
             time_col = self._detect_time_column(df)
-
             if time_col:
                 df.set_index(time_col, inplace=True)
             elif sample_frequency:
@@ -171,6 +189,19 @@ class CSVImporter(BaseImporter):
                 raise ValueError(
                     "No time column detected and no sample_frequency provided. "
                     "Please specify either time_column or sample_frequency."
+                )
+        else:
+            # For headerless data, don't attempt to auto-detect time column
+            # to avoid treating the first column as time
+            if sample_frequency:
+                # Create time index based on provided sampling frequency
+                time_index = np.arange(len(df)) / sample_frequency
+                df.index = time_index
+            else:
+                # No sample frequency provided
+                raise ValueError(
+                    "No sample_frequency provided for headerless data. "
+                    "Please specify sample_frequency for proper time indexing."
                 )
 
         # Create EMG object
@@ -249,60 +280,69 @@ class CSVImporter(BaseImporter):
             'skiprows': 0
         }
 
-        # Read first few lines to analyze
         try:
+            # Read the first few lines to analyze structure
             with open(filepath, 'r') as f:
-                lines = [f.readline().strip() for _ in range(20)]
+                lines = [f.readline().strip() for _ in range(30)]  # Read first 30 lines or until EOF
                 lines = [line for line in lines if line]  # Remove empty lines
-        except Exception:
-            return results
-
-        if not lines:
-            return results
-
-        # Detect delimiter
-        delimiters = [',', '\t', ';', '|', ' ']
-        delimiter_counts = {}
-
-        for delim in delimiters:
-            counts = [line.count(delim) for line in lines]
-            if all(count > 0 for count in counts[:5]):  # Check first 5 non-empty lines
-                avg_count = sum(counts) / len(counts)
-                delimiter_counts[delim] = avg_count
-
-        if delimiter_counts:
-            results['delimiter'] = max(delimiter_counts, key=delimiter_counts.get)
-
-        # Detect header and rows to skip
-        potential_header_line = None
-        skiprows = 0
-
-        for i, line in enumerate(lines):
-            parts = line.split(results['delimiter'])
-
-            # Check if line might be a header (contains text fields)
-            contains_text = any(
-                part.strip() and not self._is_numeric(part.strip())
-                for part in parts
-            )
-
-            if contains_text:
-                # Header might be mixing text/numbers, but predominantly text
-                text_ratio = sum(1 for p in parts if p.strip() and not self._is_numeric(p.strip())) / len(parts)
-                if text_ratio > 0.5:  # More than half are text fields
-                    potential_header_line = i
-                    break
-
-            skiprows += 1
-
-        # If we found a potential header line
-        if potential_header_line is not None:
-            results['has_header'] = True
-            results['skiprows'] = potential_header_line
-        else:
-            results['has_header'] = False
-            results['skiprows'] = 0
-
+                
+                # Special case for Trigno CSV format
+                data_start = 0
+                for i, line in enumerate(lines):
+                    if 'X[s]' in line:
+                        data_start = i
+                        results['skiprows'] = data_start
+                        results['has_header'] = True
+                        break
+                
+                if data_start > 0:
+                    # Found a header line with X[s], use the line after it as data
+                    return results
+                
+                # If not a special format, continue with regular analysis
+                # Count occurrences of each delimiter and choose the most common one
+                delimiters = {',': 0, '\t': 0, ';': 0, '|': 0}
+                
+                for line in lines[:5]:  # Check first 5 lines
+                    if not line or line.startswith('#'):
+                        continue
+                        
+                    for delim in delimiters:
+                        if delim in line:
+                            # Count occurrences but also consider how many fields it creates
+                            fields = line.split(delim)
+                            if len(fields) > 1:  # Must create at least 2 fields to be valid
+                                delimiters[delim] += len(fields)
+                
+                # Choose the delimiter that creates the most fields
+                if any(delimiters.values()):
+                    most_common = max(delimiters.items(), key=lambda x: x[1])
+                    results['delimiter'] = most_common[0]
+                
+                # Infer if file has a header by checking if first row looks different from data rows
+                if len(lines) >= 2:
+                    possible_header = lines[0]
+                    possible_data = lines[1]
+                    
+                    # If first row contains alphabetic characters and data rows are numeric
+                    header_values = possible_header.split(results['delimiter'])
+                    data_values = possible_data.split(results['delimiter'])
+                    
+                    # Check for alpha chars in header
+                    has_alpha = any(any(c.isalpha() for c in val) for val in header_values if val.strip())
+                    # Check if data rows are numeric
+                    numeric_data = all(self._is_numeric(val) for val in data_values if val.strip())
+                    
+                    if has_alpha and numeric_data:
+                        results['has_header'] = True
+                    else:
+                        # If no clear distinction, assume no header if all fields look numeric
+                        results['has_header'] = not all(self._is_numeric(val) for val in header_values if val.strip())
+                
+        except Exception as e:
+            # If analysis fails, return defaults
+            pass
+            
         return results
 
     def _is_numeric(self, value: str) -> bool:
