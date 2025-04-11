@@ -34,9 +34,8 @@ class EMG:
             return 'eeglab'
         elif extension in {'.otb', '.otb+'}:
             return 'otb'
-        elif extension in {'.csv'}:
-            raise ValueError("CSV files are not supported for automatic import. "
-                             "Please specify the importer explicitly.")
+        elif extension in {'.csv', '.txt'}:
+            return 'csv'
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -44,7 +43,7 @@ class EMG:
     def from_file(
             cls,
             filepath: str,
-            importer: Literal['trigno', 'otb', 'eeglab', 'edf'] | None = None,
+            importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv'] | None = None,
         ) -> 'EMG':
         """
         Factory method to create EMG object from file.
@@ -56,6 +55,7 @@ class EMG:
                 - 'otb': OTB/OTB+ EMG system (OTB, OTB+)
                 - 'eeglab': EEGLAB .set files (SET)
                 - 'edf': EDF/EDF+/BDF format (EDF, EDF+, BDF)
+                - 'csv': Generic CSV files with columnar data
                 If None, the importer will be inferred from the file extension.
                 Automatic import is not supported for CSV files.
 
@@ -69,7 +69,8 @@ class EMG:
             'trigno': 'TrignoImporter',
             'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
             'edf': 'EDFImporter',  # EDF/EDF+/BDF format
-            'eeglab': 'EEGLABImporter'  # EEGLAB .set files
+            'eeglab': 'EEGLABImporter',  # EEGLAB .set files
+            'csv': 'CSVImporter'  # Generic CSV/Text files
         }
 
         if importer not in importers:
@@ -79,7 +80,8 @@ class EMG:
                 "- trigno: Delsys Trigno EMG system\n"
                 "- otb: OTB/OTB+ EMG system\n"
                 "- edf: EDF/EDF+/BDF format\n"
-                "- eeglab: EEGLAB .set files"
+                "- eeglab: EEGLAB .set files\n"
+                "- csv: Generic CSV/Text files"
             )
 
         # Import the appropriate importer class
@@ -104,10 +106,10 @@ class EMG:
 
         Args:
             channels: Channel name or list of channel names to select. If None and
-                     channel_type is specified, selects all channels of that type.
+                    channel_type is specified, selects all channels of that type.
             channel_type: Type of channels to select ('EMG', 'ACC', 'GYRO', etc.).
-                         If specified with channels, filters the selection to only
-                         channels of this type.
+                        If specified with channels, filters the selection to only
+                        channels of this type.
 
         Returns:
             EMG: A new EMG object containing only the selected channels
