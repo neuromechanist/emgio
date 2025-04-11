@@ -28,7 +28,7 @@ class EMG:
         Infer the importer to use based on the file extension.
         """
         extension = os.path.splitext(filepath)[1].lower()
-        if extension in {'.edf', 'edf+', '.bdf'}:
+        if extension in {'.edf', '.edf+', '.bdf'}:
             return 'edf'
         elif extension in {'.set'}:
             return 'eeglab'
