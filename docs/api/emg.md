@@ -50,10 +50,13 @@ The `EMG` class is the main class in EMGIO for working with EMG data. It encapsu
 from emgio import EMG
 
 # Load from file with automatic importer selection
-emg = EMG.from_file('data.csv')
+emg = EMG.from_file("data.otb+")
 
 # Load with explicit importer
-emg = EMG.from_file('data.csv', importer='trigno')
+emg = EMG.from_file("data.otb+", importer="otb")
+
+# Load with explicit importer (.csv does not support automatic importer selection)
+emg = EMG.from_file("data.csv", importer='trigno')
 ```
 
 ### Creating from DataFrame

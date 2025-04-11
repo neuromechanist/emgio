@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from typing import List, Optional, Union, Any
+import os
+from typing import List, Optional, Union, Any, Literal
 
 
 class EMG:
@@ -22,17 +23,48 @@ class EMG:
         self.channels = {}
 
     @classmethod
-    def from_file(cls, filepath: str, importer: str = 'trigno') -> 'EMG':
+    def _infer_importer(cls, filepath: str) -> str:
+        """
+        Infer the importer to use based on the file extension.
+        """
+        extension = os.path.splitext(filepath)[1].lower()
+        if extension in {'.edf', '.edf+', '.bdf'}:
+            return 'edf'
+        elif extension in {'.set'}:
+            return 'eeglab'
+        elif extension in {'.otb', '.otb+'}:
+            return 'otb'
+        elif extension in {'.csv'}:
+            raise ValueError("CSV files are not supported for automatic import. "
+                             "Please specify the importer explicitly.")
+        else:
+            raise ValueError(f"Unsupported file extension: {extension}")
+
+    @classmethod
+    def from_file(
+            cls,
+            filepath: str,
+            importer: Literal['trigno', 'otb', 'eeglab', 'edf'] | None = None,
+        ) -> 'EMG':
         """
         Factory method to create EMG object from file.
 
         Args:
             filepath: Path to the input file
-            importer: Name of the importer to use ('trigno', 'noraxon', 'otb')
+            importer: Name of the importer to use. Can be one of the following:
+                - 'trigno': Delsys Trigno EMG system (CSV, TXT, TRC)
+                - 'otb': OTB/OTB+ EMG system (OTB, OTB+)
+                - 'eeglab': EEGLAB .set files (SET)
+                - 'edf': EDF/EDF+/BDF format (EDF, EDF+, BDF)
+                If None, the importer will be inferred from the file extension.
+                Automatic import is not supported for CSV files.
 
         Returns:
             EMG: New EMG object with loaded data
         """
+        if importer is None:
+            importer = cls._infer_importer(filepath)
+
         importers = {
             'trigno': 'TrignoImporter',
             'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
