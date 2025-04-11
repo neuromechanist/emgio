@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-import re
-import os
+from typing import Dict, Optional
 from .base import BaseImporter
 from ..core.emg import EMG
 
@@ -27,9 +25,9 @@ class CSVImporter(BaseImporter):
                 - has_header: Whether file has a header row (default: auto-detect)
                 - skiprows: Number of rows to skip at the beginning (default: auto-detect)
                 - delimiter: Column delimiter (default: auto-detect)
-                - sample_freq: Sampling frequency in Hz (required if no time column)
+                - sample_frequency: Sampling frequency in Hz (required if no time column)
                 - channel_types: Dict mapping column names to channel types ('EMG', 'ACC', etc.)
-                - physical_dims: Dict mapping column names to physical dimensions
+                - physical_dimensions: Dict mapping column names to physical dimensions
                 - metadata: Dict of additional metadata to include
 
         Returns:
@@ -41,9 +39,9 @@ class CSVImporter(BaseImporter):
         has_header = kwargs.get('has_header', None)
         skiprows = kwargs.get('skiprows', None)
         delimiter = kwargs.get('delimiter', None)
-        sample_freq = kwargs.get('sample_freq', None)
+        sample_frequency = kwargs.get('sample_frequency', None)
         channel_types = kwargs.get('channel_types', {})
-        physical_dims = kwargs.get('physical_dims', {})
+        physical_dimensions = kwargs.get('physical_dimensions', {})
         metadata = kwargs.get('metadata', {})
 
         # Analyze file structure if parameters not explicitly provided
@@ -98,15 +96,15 @@ class CSVImporter(BaseImporter):
 
             if time_col:
                 df.set_index(time_col, inplace=True)
-            elif sample_freq:
+            elif sample_frequency:
                 # Create time index based on provided sampling frequency
-                time_index = np.arange(len(df)) / sample_freq
+                time_index = np.arange(len(df)) / sample_frequency
                 df.index = time_index
             else:
                 # No time column and no sample frequency provided
                 raise ValueError(
-                    "No time column detected and no sample_freq provided. "
-                    "Please specify either time_column or sample_freq."
+                    "No time column detected and no sample_frequency provided. "
+                    "Please specify either time_column or sample_frequency."
                 )
 
         # Create EMG object
@@ -121,7 +119,7 @@ class CSVImporter(BaseImporter):
             emg.set_metadata(key, value)
 
         # Default sampling frequency if not specified
-        default_sample_freq = 1000.0  # 1 kHz is a common default for EMG
+        default_sample_frequency = 1000.0  # 1 kHz is a common default for EMG
         if hasattr(df.index, 'to_series'):
             # Calculate sampling frequency from time index if possible
             try:
@@ -130,7 +128,7 @@ class CSVImporter(BaseImporter):
                     avg_diff = time_diffs.mean()
                     if avg_diff > 0:
                         calculated_freq = 1.0 / avg_diff
-                        default_sample_freq = calculated_freq
+                        default_sample_frequency = calculated_freq
             except Exception:
                 # If calculation fails, keep default
                 pass
@@ -145,8 +143,8 @@ class CSVImporter(BaseImporter):
                 ch_type = self._infer_channel_type(column)
 
             # Determine physical dimension
-            if column in physical_dims:
-                phys_dim = physical_dims[column]
+            if column in physical_dimensions:
+                phys_dim = physical_dimensions[column]
             else:
                 # Default based on channel type
                 phys_dim = self._default_physical_dimension(ch_type)
@@ -155,7 +153,7 @@ class CSVImporter(BaseImporter):
             emg.add_channel(
                 label=column,
                 data=df[column].values,
-                sample_frequency=sample_freq or default_sample_freq,
+                sample_frequency=sample_frequency or default_sample_frequency,
                 physical_dimension=phys_dim,
                 channel_type=ch_type
             )
@@ -197,7 +195,7 @@ class CSVImporter(BaseImporter):
             return results
 
         # Detect delimiter
-        delimiters = [',', '	', ';', '|', ' ']
+        delimiters = [',', '\t', ';', '|', ' ']
         delimiter_counts = {}
 
         for delim in delimiters:
@@ -270,11 +268,11 @@ class CSVImporter(BaseImporter):
         # Check if first column is monotonically increasing (typical for time)
         first_col = df.columns[0]
         if len(df) > 1 and pd.Series(df[first_col]).is_monotonic_increasing:
-             # Check if the values are plausible time values (e.g., not all integers if diff is small)
+            # Check if the values are plausible time values (e.g., not all integers if diff is small)
             if df[first_col].dtype in [np.float64, np.float32]:
-                 return first_col
-            elif df[first_col].diff().dropna().mean() > 1e-9: # Avoid treating integer indices as time
-                 return first_col
+                return first_col
+            elif df[first_col].diff().dropna().mean() > 1e-9:  # Avoid treating integer indices as time
+                return first_col
 
         return None
 
@@ -297,7 +295,7 @@ class CSVImporter(BaseImporter):
         elif any(keyword in name_lower for keyword in ['gyro']):
             return 'GYRO'
         elif any(keyword in name_lower for keyword in ['time', 'second']):
-            return 'TIME' # Might be redundant if used as index, but useful for metadata
+            return 'TIME'  # Might be redundant if used as index, but useful for metadata
         else:
             return 'OTHER'
 
@@ -331,9 +329,7 @@ class CSVImporter(BaseImporter):
         missing = [meta for meta in essential_metadata if meta not in emg.metadata]
 
         if missing:
-            print("
-[INFO] Reminder: Consider adding essential metadata for better context:")
+            print("[INFO] Reminder: Consider adding essential metadata for better context:")
             for meta in missing:
                 print(f"  emg.set_metadata('{meta}', '<Your {meta.replace('_', ' ').title()}>')")
-            print("Example: emg.set_metadata('subject', 'S001')
-") 
+            print("Example: emg.set_metadata('subject', 'S001')")
