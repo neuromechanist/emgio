@@ -13,12 +13,46 @@ class CSVImporter(BaseImporter):
     headers, time columns, and allow for specific column selection.
     """
 
-    def load(self, filepath: str, **kwargs) -> EMG:
+    def _detect_specialized_format(self, filepath: str) -> Optional[str]:
+        """
+        Detect if the file matches a known specialized format.
+        
+        Args:
+            filepath: Path to the CSV file
+            
+        Returns:
+            Name of the detected specialized format, or None if no specific format is detected
+        """
+        # Try to read the first few lines to check for format signatures
+        try:
+            with open(filepath, 'r') as f:
+                header_lines = [f.readline().strip() for _ in range(20)]
+                header_text = '\n'.join(header_lines)
+                
+                # Check for Trigno format signatures
+                if any(marker in header_text for marker in ['Trigno', 'Delsys', 'Label:', 'X[s]']):
+                    return 'trigno'
+                    
+                # Additional format checks can be added here for other importers
+                # For example: 
+                # if 'OTB' in header_text or 'Sessantaquattro' in header_text:
+                #     return 'otb'
+                
+        except Exception:
+            # If we can't read the file or encounter an error, 
+            # don't try to guess the format
+            pass
+            
+        return None
+
+    def load(self, filepath: str, force_generic: bool = False, **kwargs) -> EMG:
         """
         Load EMG data from a CSV file.
 
         Args:
             filepath: Path to the CSV file
+            force_generic: If True, forces using the generic CSV importer even if a 
+                          specialized format is detected
             **kwargs: Additional options including:
                 - columns: List of column names or indices to include
                 - time_column: Name or index of column to use as time index (default: auto-detect)
@@ -32,7 +66,29 @@ class CSVImporter(BaseImporter):
 
         Returns:
             EMG: EMG object containing the loaded data
+            
+        Raises:
+            ValueError: If a specialized format is detected and force_generic is False
         """
+        # Check if this file matches a specialized format
+        if not force_generic:
+            format_name = self._detect_specialized_format(filepath)
+            if format_name:
+                importer_messages = {
+                    'trigno': (
+                        "This file appears to be a Delsys Trigno CSV export. "
+                        "For better metadata extraction and channel detection, use:\n\n"
+                        "emg = EMG.from_file(filepath, importer='trigno')\n\n"
+                        "If you still want to use the generic CSV importer, set force_generic=True:\n"
+                        "importer = CSVImporter()\n"
+                        "emg = importer.load(filepath, force_generic=True, **params)"
+                    )
+                    # Add more format-specific messages here as new importers are developed
+                }
+                
+                if format_name in importer_messages:
+                    raise ValueError(importer_messages[format_name])
+        
         # Extract kwargs with defaults
         columns = kwargs.get('columns', None)
         time_column = kwargs.get('time_column', None)
@@ -40,10 +96,11 @@ class CSVImporter(BaseImporter):
         skiprows = kwargs.get('skiprows', None)
         delimiter = kwargs.get('delimiter', None)
         sample_frequency = kwargs.get('sample_frequency', None)
+        channel_names = kwargs.get('channel_names', [])
         channel_types = kwargs.get('channel_types', {})
         physical_dimensions = kwargs.get('physical_dimensions', {})
         metadata = kwargs.get('metadata', {})
-
+        
         # Analyze file structure if parameters not explicitly provided
         if any(param is None for param in [has_header, skiprows, delimiter]):
             analyzed_params = self._analyze_csv_structure(filepath)
@@ -68,6 +125,15 @@ class CSVImporter(BaseImporter):
         # If no header, generate column names
         if not has_header:
             df.columns = [f"Channel_{i}" for i in range(len(df.columns))]
+
+        # If channel names are provided, use them.
+        # Also, handle the case where the length of channel_names is less than the number of columns.
+        if channel_names:
+            if len(channel_names) < len(df.columns):
+                raise ValueError(
+                    "Number of channel names provided is less than the number of columns in the CSV file."
+                )
+            df.columns = channel_names
 
         # Filter columns if specified
         if columns is not None:
