@@ -44,6 +44,8 @@ class EMG:
             cls,
             filepath: str,
             importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv'] | None = None,
+            force_csv: bool = False,
+            **kwargs,
         ) -> 'EMG':
         """
         Factory method to create EMG object from file.
@@ -57,7 +59,10 @@ class EMG:
                 - 'edf': EDF/EDF+/BDF format (EDF, EDF+, BDF)
                 - 'csv': Generic CSV files with columnar data
                 If None, the importer will be inferred from the file extension.
-                Automatic import is not supported for CSV files.
+                Automatic import is supported for CSV/TXT files.
+            force_csv: If True and importer is 'csv', forces using the generic CSV
+                      importer even if the file appears to match a specialized format.
+            **kwargs: Additional arguments passed to the importer
 
         Returns:
             EMG: New EMG object with loaded data
@@ -84,6 +89,10 @@ class EMG:
                 "- csv: Generic CSV/Text files"
             )
 
+        # If using CSV importer and force_csv is set, pass it as force_generic
+        if importer == 'csv':
+            kwargs['force_generic'] = force_csv
+
         # Import the appropriate importer class
         importer_module = __import__(
             f'emgio.importers.{importer}',
@@ -94,7 +103,7 @@ class EMG:
         importer_class = getattr(importer_module, importers[importer])
 
         # Create importer instance and load data
-        return importer_class().load(filepath)
+        return importer_class().load(filepath, **kwargs)
 
     def select_channels(
             self,
