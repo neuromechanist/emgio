@@ -80,6 +80,7 @@ nav:
     - EEGLAB: formats/eeglab.md
     - OTB: formats/otb.md
     - EDF: formats/edf.md
+    - CSV: formats/csv.md
   - API Reference: 
     - EMG Class: api/emg.md
     - Importers:
@@ -88,6 +89,7 @@ nav:
       - EEGLAB Importer: api/importers/eeglab.md
       - OTB Importer: api/importers/otb.md
       - EDF Importer: api/importers/edf.md
+      - CSV Importer: api/importers/csv.md
     - Exporters:
       - EDF/BDF Exporter: api/exporters/edf.md
   - Examples:
