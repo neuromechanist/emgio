@@ -16,10 +16,10 @@ class CSVImporter(BaseImporter):
     def _detect_specialized_format(self, filepath: str) -> Optional[str]:
         """
         Detect if the file matches a known specialized format.
-        
+
         Args:
             filepath: Path to the CSV file
-            
+
         Returns:
             Name of the detected specialized format, or None if no specific format is detected
         """
@@ -28,21 +28,21 @@ class CSVImporter(BaseImporter):
             with open(filepath, 'r') as f:
                 header_lines = [f.readline().strip() for _ in range(20)]
                 header_text = '\n'.join(header_lines)
-                
+
                 # Check for Trigno format signatures
                 if any(marker in header_text for marker in ['Trigno', 'Delsys', 'Label:', 'X[s]']):
                     return 'trigno'
-                    
+
                 # Additional format checks can be added here for other importers
-                # For example: 
+                # For example:
                 # if 'OTB' in header_text or 'Sessantaquattro' in header_text:
                 #     return 'otb'
-                
+
         except Exception:
-            # If we can't read the file or encounter an error, 
+            # If we can't read the file or encounter an error,
             # don't try to guess the format
             pass
-            
+
         return None
 
     def load(self, filepath: str, force_generic: bool = False, **kwargs) -> EMG:
@@ -51,7 +51,7 @@ class CSVImporter(BaseImporter):
 
         Args:
             filepath: Path to the CSV file
-            force_generic: If True, forces using the generic CSV importer even if a 
+            force_generic: If True, forces using the generic CSV importer even if a
                           specialized format is detected
             **kwargs: Additional options including:
                 - columns: List of column names or indices to include
@@ -66,7 +66,7 @@ class CSVImporter(BaseImporter):
 
         Returns:
             EMG: EMG object containing the loaded data
-            
+
         Raises:
             ValueError: If a specialized format is detected and force_generic is False
             FileNotFoundError: If the file does not exist
@@ -86,10 +86,10 @@ class CSVImporter(BaseImporter):
                     )
                     # Add more format-specific messages here as new importers are developed
                 }
-                
+
                 if format_name in importer_messages:
                     raise ValueError(importer_messages[format_name])
-        
+
         # Extract kwargs with defaults
         columns = kwargs.get('columns', None)
         time_column = kwargs.get('time_column', None)
@@ -101,7 +101,7 @@ class CSVImporter(BaseImporter):
         channel_types = kwargs.get('channel_types', {})
         physical_dimensions = kwargs.get('physical_dimensions', {})
         metadata = kwargs.get('metadata', {})
-        
+
         # Analyze file structure if parameters not explicitly provided
         try:
             if any(param is None for param in [has_header, skiprows, delimiter]):
@@ -150,7 +150,7 @@ class CSVImporter(BaseImporter):
                 col_names = [df.columns[i] for i in columns]
                 # Save original columns for potential renumbering
                 df = df[col_names]
-                
+
                 # If using default channel names, renumber them sequentially
                 if not has_header and not channel_names:
                     # Check if these are auto-generated channel names
@@ -284,7 +284,7 @@ class CSVImporter(BaseImporter):
             with open(filepath, 'r') as f:
                 lines = [f.readline().strip() for _ in range(30)]  # Read first 30 lines or until EOF
                 lines = [line for line in lines if line]  # Remove empty lines
-                
+
                 # Special case for Trigno CSV format
                 data_start = 0
                 for i, line in enumerate(lines):
@@ -293,55 +293,55 @@ class CSVImporter(BaseImporter):
                         results['skiprows'] = data_start
                         results['has_header'] = True
                         break
-                
+
                 if data_start > 0:
                     # Found a header line with X[s], use the line after it as data
                     return results
-                
+
                 # If not a special format, continue with regular analysis
                 # Count occurrences of each delimiter and choose the most common one
                 delimiters = {',': 0, '\t': 0, ';': 0, '|': 0}
-                
+
                 for line in lines[:5]:  # Check first 5 lines
                     if not line or line.startswith('#'):
                         continue
-                        
+
                     for delim in delimiters:
                         if delim in line:
                             # Count occurrences but also consider how many fields it creates
                             fields = line.split(delim)
                             if len(fields) > 1:  # Must create at least 2 fields to be valid
                                 delimiters[delim] += len(fields)
-                
+
                 # Choose the delimiter that creates the most fields
                 if any(delimiters.values()):
                     most_common = max(delimiters.items(), key=lambda x: x[1])
                     results['delimiter'] = most_common[0]
-                
+
                 # Infer if file has a header by checking if first row looks different from data rows
                 if len(lines) >= 2:
                     possible_header = lines[0]
                     possible_data = lines[1]
-                    
+
                     # If first row contains alphabetic characters and data rows are numeric
                     header_values = possible_header.split(results['delimiter'])
                     data_values = possible_data.split(results['delimiter'])
-                    
+
                     # Check for alpha chars in header
                     has_alpha = any(any(c.isalpha() for c in val) for val in header_values if val.strip())
                     # Check if data rows are numeric
                     numeric_data = all(self._is_numeric(val) for val in data_values if val.strip())
-                    
+
                     if has_alpha and numeric_data:
                         results['has_header'] = True
                     else:
                         # If no clear distinction, assume no header if all fields look numeric
                         results['has_header'] = not all(self._is_numeric(val) for val in header_values if val.strip())
-                
+
         except Exception:
             # If analysis fails, return defaults
             pass
-            
+
         return results
 
     def _is_numeric(self, value: str) -> bool:

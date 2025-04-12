@@ -315,7 +315,7 @@ class EMG:
             format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
                 based on signal characteristics. When specified, the system will still warn
                 if the chosen format is not optimal.
-            force_format: When True, bypasses all format suitability checks and uses the 
+            force_format: When True, bypasses all format suitability checks and uses the
                 specified format without warnings. Default is False.
             **kwargs: Additional arguments for the EDF exporter
 
@@ -334,7 +334,7 @@ class EMG:
             'svd_rank': svd_rank,
             'precision_threshold': precision_threshold
         }
-        
+
         # Add format parameters
         if format != 'auto':
             analysis_params['format'] = format

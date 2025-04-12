@@ -31,12 +31,12 @@ def test_format_detection():
             print("File loaded successfully (you shouldn't see this)")
         except ValueError as e:
             print(f"Format detection message: {str(e)}")
-            
+
         # Load with the specialized importer
         print("\nLoading with specialized Trigno importer...")
         try:
             trigno_emg = EMG.from_file(trigno_csv, importer='trigno')
-            
+
             # Print channel information from Trigno importer
             print("\nChannel Information (Trigno Importer):")
             print("-" * 50)
@@ -47,10 +47,10 @@ def test_format_detection():
                     ch_types[ch_type] = 1
                 else:
                     ch_types[ch_type] += 1
-            
+
             for ch_type, count in ch_types.items():
                 print(f"- {ch_type}: {count} channels")
-                
+
             # Print sample of channels
             print("\nSample channels:")
             for ch_name in list(trigno_emg.channels.keys())[:3]:
@@ -58,7 +58,7 @@ def test_format_detection():
                 print(f"- {ch_name} ({ch_info['channel_type']})")
                 print(f"  Sampling rate: {ch_info['sample_frequency']} Hz")
                 print(f"  Dimension: {ch_info['physical_dimension']}")
-                
+
             print("\nMetadata from Trigno importer:")
             for key, value in trigno_emg.metadata.items():
                 if key != 'source_file':
@@ -70,13 +70,13 @@ def test_format_detection():
 
     # Test generic CSV file
     print("\n=== Testing with Generic CSV File ===\n")
-    
+
     if os.path.exists(generic_csv):
         print("Testing with generic CSV/text file...")
         try:
             # This should work fine with the CSV importer
             print("Loading generic CSV with CSV importer...")
-            
+
             # We need to provide additional parameters for the generic CSV
             csv_params = {
                 'has_header': False,
@@ -94,9 +94,9 @@ def test_format_detection():
                     'Channel_3': 'mV'
                 }
             }
-            
+
             generic_emg = EMG.from_file(generic_csv, importer='csv', **csv_params)
-            
+
             # Print channel information
             print("\nChannel Information (Generic CSV):")
             print("-" * 50)
@@ -104,7 +104,7 @@ def test_format_detection():
                 print(f"- {ch_name} ({ch_info['channel_type']})")
                 print(f"  Sampling rate: {ch_info['sample_frequency']} Hz")
                 print(f"  Dimension: {ch_info['physical_dimension']}")
-                
+
             print("\nWith the generic CSV importer, we need to manually specify:")
             print("- Channel types")
             print("- Physical dimensions")
@@ -114,7 +114,7 @@ def test_format_detection():
             print(f"Error loading generic CSV: {str(e)}")
     else:
         print(f"Sample generic CSV file not found: {generic_csv}")
-        
+
     print("\n=== Conclusion ===\n")
     print("The format detection feature helps users by:")
     print("1. Identifying specialized formats like Trigno CSV exports")
@@ -124,4 +124,4 @@ def test_format_detection():
 
 
 if __name__ == "__main__":
-    test_format_detection() 
+    test_format_detection()
