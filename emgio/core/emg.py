@@ -45,8 +45,8 @@ class EMG:
             filepath: str,
             importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv'] | None = None,
             force_csv: bool = False,
-            **kwargs,
-        ) -> 'EMG':
+            **kwargs
+    ) -> 'EMG':
         """
         Factory method to create EMG object from file.
 

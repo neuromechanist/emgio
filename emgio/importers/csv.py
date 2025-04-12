@@ -149,7 +149,6 @@ class CSVImporter(BaseImporter):
                 # Convert numerical indices to column names
                 col_names = [df.columns[i] for i in columns]
                 # Save original columns for potential renumbering
-                original_cols = col_names.copy()
                 df = df[col_names]
                 
                 # If using default channel names, renumber them sequentially
@@ -339,7 +338,7 @@ class CSVImporter(BaseImporter):
                         # If no clear distinction, assume no header if all fields look numeric
                         results['has_header'] = not all(self._is_numeric(val) for val in header_values if val.strip())
                 
-        except Exception as e:
+        except Exception:
             # If analysis fails, return defaults
             pass
             
