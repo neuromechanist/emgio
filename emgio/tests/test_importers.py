@@ -6,6 +6,7 @@ import pyedflib
 from ..importers.trigno import TrignoImporter
 from ..importers.otb import OTBImporter
 from ..importers.edf import EDFImporter
+from ..importers.csv import CSVImporter
 
 
 @pytest.fixture
@@ -21,6 +22,26 @@ X[s],"EMG1","EMG2","ACC1"
 0.002,0.3,0.4,0.5
 0.003,0.4,0.5,0.6
 0.004,0.5,0.6,0.7'''
+
+    # Create temporary file
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        f.write(content)
+        temp_path = f.name
+
+    yield temp_path
+
+    # Cleanup
+    os.unlink(temp_path)
+
+
+@pytest.fixture
+def sample_generic_csv():
+    """Create a sample generic CSV file with unlabeled numeric data."""
+    content = '''0.1,0.2,0.3
+0.2,0.3,0.4
+0.3,0.4,0.5
+0.4,0.5,0.6
+0.5,0.6,0.7'''
 
     # Create temporary file
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
@@ -86,6 +107,167 @@ def test_trigno_csv_structure_analysis(sample_trigno_csv):
     assert len(metadata_lines) == 3  # Three channel definitions
     assert data_start == 5  # Data starts at line 5
     assert 'X[s]' in header_line  # Header contains time column
+
+
+def test_csv_importer_basic(sample_generic_csv):
+    """Test basic CSV importer functionality."""
+    importer = CSVImporter()
+
+    # Test with default parameters
+    emg = importer.load(sample_generic_csv,
+                        sample_frequency=1000,  # Required since no time column
+                        has_header=False)
+
+    # Check if channels were created
+    assert len(emg.channels) == 3  # 3 columns in our test data
+    assert 'Channel_0' in emg.channels
+    assert 'Channel_1' in emg.channels
+    assert 'Channel_2' in emg.channels
+
+    # Check data shape
+    assert len(emg.signals) == 5  # 5 samples
+    assert len(emg.signals.columns) == 3  # 3 channels
+
+    # Check metadata
+    assert emg.get_metadata('source_file') == sample_generic_csv
+    assert emg.get_metadata('file_format') == 'CSV'
+
+
+def test_csv_importer_channel_params(sample_generic_csv):
+    """Test CSV importer with channel parameters."""
+    importer = CSVImporter()
+
+    # Define channel types and dimensions
+    channel_types = {
+        'Channel_0': 'EMG',
+        'Channel_1': 'EMG',
+        'Channel_2': 'ACC'
+    }
+
+    physical_dimensions = {
+        'Channel_0': 'mV',
+        'Channel_1': 'mV',
+        'Channel_2': 'g'
+    }
+
+    # Test with custom channel parameters
+    emg = importer.load(sample_generic_csv,
+                        sample_frequency=1000,
+                        has_header=False,
+                        channel_types=channel_types,
+                        physical_dimensions=physical_dimensions)
+
+    # Check channel properties
+    assert emg.channels['Channel_0']['channel_type'] == 'EMG'
+    assert emg.channels['Channel_0']['physical_dimension'] == 'mV'
+
+    assert emg.channels['Channel_2']['channel_type'] == 'ACC'
+    assert emg.channels['Channel_2']['physical_dimension'] == 'g'
+
+
+def test_csv_importer_selection(sample_generic_csv):
+    """Test CSV importer with column selection."""
+    importer = CSVImporter()
+
+    # Test with column selection
+    emg = importer.load(sample_generic_csv,
+                        sample_frequency=1000,
+                        has_header=False,
+                        columns=[0, 2])  # Select only first and third columns
+
+    # Check if only selected channels were loaded
+    assert len(emg.channels) == 2
+    assert 'Channel_0' in emg.channels
+    assert 'Channel_1' in emg.channels
+    assert 'Channel_2' not in emg.channels  # This should not exist
+
+    # Check data shape
+    assert len(emg.signals.columns) == 2
+
+
+def test_csv_importer_custom_names(sample_generic_csv):
+    """Test CSV importer with custom channel names."""
+    importer = CSVImporter()
+
+    channel_names = ['EMG_L', 'EMG_R', 'ACC_X']
+
+    # Test with custom channel names
+    emg = importer.load(sample_generic_csv,
+                        sample_frequency=1000,
+                        has_header=False,
+                        channel_names=channel_names)
+
+    # Check if channels have correct names
+    assert 'EMG_L' in emg.channels
+    assert 'EMG_R' in emg.channels
+    assert 'ACC_X' in emg.channels
+
+    # Check data shape
+    assert len(emg.signals.columns) == 3
+
+
+def test_csv_format_detection(sample_trigno_csv):
+    """Test the format detection feature for specialized formats."""
+    importer = CSVImporter()
+
+    # Test Trigno format detection
+    with pytest.raises(ValueError) as exc_info:
+        importer.load(sample_trigno_csv)
+
+    # Check if the error message contains the trigno suggestion
+    error_msg = str(exc_info.value)
+    assert "Delsys Trigno CSV export" in error_msg
+    assert "emg = EMG.from_file(filepath, importer='trigno')" in error_msg
+    assert "force_generic=True" in error_msg
+
+    # Test with force_generic=True
+    emg = importer.load(sample_trigno_csv, force_generic=True)
+
+    # Basic checks to make sure it loaded something
+    assert emg.signals is not None
+    assert len(emg.channels) > 0
+
+
+def test_csv_file_not_found():
+    """Test error handling for non-existent file."""
+    importer = CSVImporter()
+    with pytest.raises(FileNotFoundError):
+        importer.load('nonexistent.csv')
+
+
+def test_csv_delimiter_detection(sample_generic_csv):
+    """Test delimiter auto-detection."""
+    importer = CSVImporter()
+
+    # First test with the default CSV
+    analyzed_params = importer._analyze_csv_structure(sample_generic_csv)
+    assert analyzed_params['delimiter'] == ','
+
+    # Create a different delimiter format (tab-separated)
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        f.write("0.1\t0.2\t0.3\t0.4\n0.2\t0.3\t0.4\t0.5")
+        tab_file = f.name
+
+    try:
+        # Test tab delimiter detection
+        analyzed_params = importer._analyze_csv_structure(tab_file)
+        assert analyzed_params['delimiter'] == '\t'
+
+        # Test loading with auto-detection
+        emg = importer.load(tab_file, sample_frequency=1000, has_header=False)
+
+        # Debug print
+        print("EMG channels:", list(emg.channels.keys()))
+        print("EMG signals columns:", list(emg.signals.columns))
+
+        assert len(emg.channels) == 4
+
+        # Clean up
+        os.unlink(tab_file)
+    except Exception as e:
+        # Clean up even on failure
+        os.unlink(tab_file)
+        raise e
 
 
 def test_otb_importer():

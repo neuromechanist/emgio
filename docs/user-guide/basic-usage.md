@@ -10,14 +10,42 @@ The main entry point for loading data is the `EMG.from_file()` method. This meth
 from emgio import EMG
 
 # Automatic importer selection based on file extension
-emg = EMG.from_file('data.csv')  # Will use Trigno importer for CSV files
+emg = EMG.from_file('data.csv')  # Will use CSV importer for CSV files
+emg = EMG.from_file('data.edf')  # Will use EDF importer for EDF files
+emg = EMG.from_file('data.set')  # Will use EEGLAB importer for SET files
+emg = EMG.from_file('data.otb')  # Will use OTB importer for OTB files
 
 # Explicit importer selection
 emg = EMG.from_file('data.csv', importer='trigno')
 emg = EMG.from_file('data.set', importer='eeglab')
 emg = EMG.from_file('data.otb+', importer='otb')
 emg = EMG.from_file('data.edf', importer='edf')
+emg = EMG.from_file('data.csv', importer='csv')  # Generic CSV importer
 ```
+
+### Automatic File Type Inference
+
+EMGIO automatically infers the appropriate importer based on file extension:
+
+| Extension | Default Importer |
+|-----------|------------------|
+| `.csv`, `.txt` | `csv` (Generic CSV importer) |
+| `.edf`, `.edf+`, `.bdf` | `edf` (EDF/BDF importer) |
+| `.set` | `eeglab` (EEGLAB importer) |
+| `.otb`, `.otb+` | `otb` (OTB importer) |
+
+Additionally, for CSV files, EMGIO includes specialized format detection that can identify formats like Trigno CSV exports and suggest the appropriate specialized importer.
+
+### Special Case: CSV Files
+
+For CSV files with specialized formats like Trigno, the generic CSV importer will detect this and suggest using the appropriate specialized importer. If you still want to use the generic CSV importer, you can use the `force_csv` parameter:
+
+```python
+# Force using the generic CSV importer even for specialized formats
+emg = EMG.from_file('trigno_data.csv', importer='csv', force_csv=True)
+```
+
+See the [Generic CSV Format](../formats/csv.md) documentation for more details on CSV import options.
 
 ## Accessing Data
 
@@ -30,14 +58,8 @@ signals = emg.signals
 # Get information about channels
 channels = emg.channels
 
-# Get sampling frequency
-fs = emg.get_sampling_frequency()
-
-# Get the number of samples
-n_samples = emg.get_n_samples()
-
-# Get the number of channels
-n_channels = emg.get_n_channels()
+# Get metadata
+device = emg.get_metadata('device')
 ```
 
 ## Plotting Signals

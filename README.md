@@ -18,10 +18,17 @@ The documentation including installation instructions, examples, and API referen
   - Delsys Trigno (supported)
   - OTB Systems (supported)
   - EDF (supported)
+  - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
   
+- Smart import:
+  - Automatic file format detection based on extension
+  - Specialized format detection for CSV files
+  - Custom importers for system-specific formats
+  
 - Export to standardized formats:
-  - EDF with channels.tsv metadata
+  - EDF/BDF with channels.tsv metadata (automatically selects format based on signal properties)
+  
 - Data manipulation:
   - Channel selection
   - Metadata handling
@@ -43,14 +50,27 @@ pip install .
 ```python
 from emgio import EMG
 
-# Load data from Trigno system
+# Load data with automatic format detection
+emg = EMG.from_file('data.csv')  # Format detected from file extension
+
+# Load data with explicit importer
 emg = EMG.from_file('data.csv', importer='trigno')
 
 # Plot specific channels
 emg.plot_signals(['EMG1', 'EMG2'])
 
-# Export to EDF
+# Export to EDF or BDF (format automatically determined)
 emg.to_edf('output.edf')
+```
+
+### Generic CSV Import
+
+```python
+# Import a generic CSV file
+emg = EMG.from_file('data.csv', importer='csv',
+                   sample_frequency=1000,  # Required if no time column
+                   has_header=True,        # Whether file has header row
+                   channel_names=['EMG_L', 'EMG_R', 'ACC_X'])
 ```
 
 ### Channel Selection
@@ -58,6 +78,9 @@ emg.to_edf('output.edf')
 ```python
 # Select specific channels
 subset_emg = emg.select_channels(['EMG1', 'EMG2', 'ACC1'])
+
+# Select all channels of a specific type
+emg_only = emg.select_channels(channel_type='EMG')
 
 # Plot selected channels
 subset_emg.plot_signals()

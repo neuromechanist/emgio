@@ -165,13 +165,13 @@ def mock_importers(monkeypatch):
     """Mock importers for testing from_file method."""
     class MockBaseImporter:
         """Base class for mock importers to ensure consistent interface."""
-        def load(self, filepath):
+        def load(self, filepath, **kwargs):
             if not os.path.exists(filepath):
                 raise FileNotFoundError(f"File not found: {filepath}")
-            return self._load(filepath)
+            return self._load(filepath, **kwargs)
 
     class MockTrignoImporter(MockBaseImporter):
-        def _load(self, filepath):
+        def _load(self, filepath, **kwargs):
             emg = EMG()
             emg.add_channel('TEST', np.array([1, 2, 3]), 1000, 'mV', channel_type='EMG')
             emg.set_metadata('device', 'Delsys Trigno')
@@ -179,20 +179,46 @@ def mock_importers(monkeypatch):
             return emg
 
     class MockOTBImporter(MockBaseImporter):
-        def _load(self, filepath):
+        def _load(self, filepath, **kwargs):
             emg = EMG()
             emg.add_channel('OTB', np.array([4, 5, 6]), 2000, 'mV', channel_type='EMG')
             emg.set_metadata('device', 'OT Bioelettronica')
             emg.set_metadata('source_file', filepath)
             return emg
 
+    class MockCSVImporter(MockBaseImporter):
+        def _detect_specialized_format(self, filepath):
+            # Mock format detection - anything with 'trigno' in the name is detected as Trigno
+            if 'trigno' in filepath.lower():
+                return 'trigno'
+            return None
+
+        def _load(self, filepath, force_generic=False, **kwargs):
+            if not force_generic:
+                detected_format = self._detect_specialized_format(filepath)
+                if detected_format == 'trigno':
+                    raise ValueError(
+                        "This file appears to be a Delsys Trigno CSV export. "
+                        "For better metadata extraction and channel detection, use:\n\n"
+                        "emg = EMG.from_file(filepath, importer='trigno')\n\n"
+                        "If you still want to use the generic CSV importer, set force_generic=True"
+                    )
+
+            emg = EMG()
+            emg.add_channel('CSV_CH1', np.array([7, 8, 9]), 1000, 'mV', channel_type='EMG')
+            emg.set_metadata('file_format', 'CSV')
+            emg.set_metadata('source_file', filepath)
+            return emg
+
     def mock_import(name, *args):
         # Only intercept our specific importer paths
-        if any(x in name for x in ['emgio.importers.trigno', 'emgio.importers.otb']):
+        if any(x in name for x in ['emgio.importers.trigno', 'emgio.importers.otb', 'emgio.importers.csv']):
             if 'trigno' in name:
                 return type('TrignoModule', (), {'TrignoImporter': MockTrignoImporter})
             elif 'otb' in name:
                 return type('OTBModule', (), {'OTBImporter': MockOTBImporter})
+            elif 'csv' in name:
+                return type('CSVModule', (), {'CSVImporter': MockCSVImporter})
         # Let all other imports pass through to the original __import__
         return original_import(name, *args)
 
@@ -210,18 +236,46 @@ def test_from_file(mock_importers, tmp_path):
     otb_file = tmp_path / "test.otb"
     otb_file.write_text("")
 
-    # Test Trigno importer (including failing auto-detection)
+    csv_file = tmp_path / "test.txt"
+    csv_file.write_text("")
+
+    trigno_named_file = tmp_path / "trigno_data.csv"
+    trigno_named_file.write_text("")
+
+    # Test Trigno importer
     emg_trigno = EMG.from_file(str(trigno_file), importer='trigno')
     assert 'TEST' in emg_trigno.signals.columns
     assert emg_trigno.channels['TEST']['sample_frequency'] == 1000
-    with pytest.raises(ValueError, match="not supported for automatic import"):
-        EMG.from_file(str(trigno_file), importer=None)
 
     # Test OTB importer (including auto-detection)
     for importer in ['otb', None]:
         emg_otb = EMG.from_file(str(otb_file), importer=importer)
         assert 'OTB' in emg_otb.signals.columns
         assert emg_otb.channels['OTB']['sample_frequency'] == 2000
+
+    # Test CSV importer
+    emg_csv = EMG.from_file(str(csv_file), importer='csv')
+    assert 'CSV_CH1' in emg_csv.signals.columns
+    assert emg_csv.get_metadata('file_format') == 'CSV'
+
+    # Test CSV importer with auto-detection for .txt files
+    emg_txt = EMG.from_file(str(csv_file), importer=None)
+    assert 'CSV_CH1' in emg_txt.signals.columns
+    assert emg_txt.get_metadata('file_format') == 'CSV'
+
+    # Test format detection and force_csv
+    # First, test that format detection raises an error for trigno file
+    with pytest.raises(ValueError, match="Delsys Trigno CSV export"):
+        EMG.from_file(str(trigno_named_file), importer='csv')
+
+    # Now test with force_csv=True to bypass detection
+    emg_forced = EMG.from_file(str(trigno_named_file), importer='csv', force_csv=True)
+    assert 'CSV_CH1' in emg_forced.signals.columns
+
+    # Test passing parameters to CSV importer
+    custom_kwargs = {'channel_types': {'CSV_CH1': 'ACC'}}
+    emg_with_params = EMG.from_file(str(csv_file), importer='csv', **custom_kwargs)
+    assert 'CSV_CH1' in emg_with_params.signals.columns
 
     # Test invalid importer
     with pytest.raises(ValueError, match="Unsupported importer"):

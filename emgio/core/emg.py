@@ -34,9 +34,8 @@ class EMG:
             return 'eeglab'
         elif extension in {'.otb', '.otb+'}:
             return 'otb'
-        elif extension in {'.csv'}:
-            raise ValueError("CSV files are not supported for automatic import. "
-                             "Please specify the importer explicitly.")
+        elif extension in {'.csv', '.txt'}:
+            return 'csv'
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -44,8 +43,10 @@ class EMG:
     def from_file(
             cls,
             filepath: str,
-            importer: Literal['trigno', 'otb', 'eeglab', 'edf'] | None = None,
-        ) -> 'EMG':
+            importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv'] | None = None,
+            force_csv: bool = False,
+            **kwargs
+    ) -> 'EMG':
         """
         Factory method to create EMG object from file.
 
@@ -56,8 +57,12 @@ class EMG:
                 - 'otb': OTB/OTB+ EMG system (OTB, OTB+)
                 - 'eeglab': EEGLAB .set files (SET)
                 - 'edf': EDF/EDF+/BDF format (EDF, EDF+, BDF)
+                - 'csv': Generic CSV files with columnar data
                 If None, the importer will be inferred from the file extension.
-                Automatic import is not supported for CSV files.
+                Automatic import is supported for CSV/TXT files.
+            force_csv: If True and importer is 'csv', forces using the generic CSV
+                      importer even if the file appears to match a specialized format.
+            **kwargs: Additional arguments passed to the importer
 
         Returns:
             EMG: New EMG object with loaded data
@@ -69,7 +74,8 @@ class EMG:
             'trigno': 'TrignoImporter',
             'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
             'edf': 'EDFImporter',  # EDF/EDF+/BDF format
-            'eeglab': 'EEGLABImporter'  # EEGLAB .set files
+            'eeglab': 'EEGLABImporter',  # EEGLAB .set files
+            'csv': 'CSVImporter'  # Generic CSV/Text files
         }
 
         if importer not in importers:
@@ -79,8 +85,13 @@ class EMG:
                 "- trigno: Delsys Trigno EMG system\n"
                 "- otb: OTB/OTB+ EMG system\n"
                 "- edf: EDF/EDF+/BDF format\n"
-                "- eeglab: EEGLAB .set files"
+                "- eeglab: EEGLAB .set files\n"
+                "- csv: Generic CSV/Text files"
             )
+
+        # If using CSV importer and force_csv is set, pass it as force_generic
+        if importer == 'csv':
+            kwargs['force_generic'] = force_csv
 
         # Import the appropriate importer class
         importer_module = __import__(
@@ -92,7 +103,7 @@ class EMG:
         importer_class = getattr(importer_module, importers[importer])
 
         # Create importer instance and load data
-        return importer_class().load(filepath)
+        return importer_class().load(filepath, **kwargs)
 
     def select_channels(
             self,
@@ -104,10 +115,10 @@ class EMG:
 
         Args:
             channels: Channel name or list of channel names to select. If None and
-                     channel_type is specified, selects all channels of that type.
+                    channel_type is specified, selects all channels of that type.
             channel_type: Type of channels to select ('EMG', 'ACC', 'GYRO', etc.).
-                         If specified with channels, filters the selection to only
-                         channels of this type.
+                        If specified with channels, filters the selection to only
+                        channels of this type.
 
         Returns:
             EMG: A new EMG object containing only the selected channels
@@ -304,7 +315,7 @@ class EMG:
             format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
                 based on signal characteristics. When specified, the system will still warn
                 if the chosen format is not optimal.
-            force_format: When True, bypasses all format suitability checks and uses the 
+            force_format: When True, bypasses all format suitability checks and uses the
                 specified format without warnings. Default is False.
             **kwargs: Additional arguments for the EDF exporter
 
@@ -323,7 +334,7 @@ class EMG:
             'svd_rank': svd_rank,
             'precision_threshold': precision_threshold
         }
-        
+
         # Add format parameters
         if format != 'auto':
             analysis_params['format'] = format

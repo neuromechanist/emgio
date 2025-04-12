@@ -315,7 +315,7 @@ class EDFExporter:
             format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
                 based on signal characteristics. When specified, the system will still warn
                 if the chosen format is not optimal.
-            force_format: When True, bypasses all format suitability checks and uses the 
+            force_format: When True, bypasses all format suitability checks and uses the
                 specified format without warnings. Default is False.
             **kwargs: Additional arguments for the exporter
         """
@@ -330,7 +330,7 @@ class EDFExporter:
         use_bdf = False
         bdf_reason = ""
         user_chose_bdf = None
-        
+
         # Check if user has specified a format
         if format.lower() != 'auto':
             if format.lower() == 'bdf':
@@ -363,7 +363,7 @@ class EDFExporter:
                                       fft_noise_range=fft_noise_range,
                                       svd_rank=svd_rank)
             recommend_bdf, reason, snr = determine_format_suitability(signal, analysis)
-            
+
             # If using automatic format determination or not forced
             if user_chose_bdf is None or not force_format:
                 # Perform quantization analysis for chosen format
@@ -374,7 +374,7 @@ class EDFExporter:
 
             # Calculate scaling factors
             phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
-                float(np.min(signal)), float(np.max(signal)), 
+                float(np.min(signal)), float(np.max(signal)),
                 use_bdf=recommend_bdf if user_chose_bdf is None else user_chose_bdf
             )
 
@@ -406,7 +406,7 @@ class EDFExporter:
                 print("\nUsing BDF format (24-bit) as requested by user, which matches the recommendation.")
             else:  # not user_format_choice and not use_bdf:
                 print("\nUsing EDF format (16-bit) as requested by user, which matches the recommendation.")
-        
+
         # Set file format and create writer
         if use_bdf:
             filepath = os.path.splitext(filepath)[0] + '.bdf'
