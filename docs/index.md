@@ -23,7 +23,13 @@ EMGIO simplifies this process by providing a standardized interface for loading,
   - Delsys Trigno (supported)
   - OTB Systems (supported)
   - EDF (supported)
+  - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
+  
+- **Intelligent import**:
+  - Automatic file format detection
+  - Format-specific metadata extraction
+  - Handling of specialized CSV formats
   
 - **Intelligent export**:
   - Automatic determination of EDF/BDF format based on signal quality
@@ -41,7 +47,10 @@ EMGIO simplifies this process by providing a standardized interface for loading,
 ```python
 from emgio import EMG
 
-# Load data from Trigno system
+# Load data with automatic format detection, will issue an error to indicate use of the `trigno` importer
+emg = EMG.from_file('data.csv')  # Format detected from file extension
+
+# Load data with explicit importer
 emg = EMG.from_file('data.csv', importer='trigno')
 
 # Plot specific channels
