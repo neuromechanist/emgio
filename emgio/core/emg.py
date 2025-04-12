@@ -48,16 +48,16 @@ class EMG:
             **kwargs
     ) -> 'EMG':
         """
-        Factory method to create EMG object from file.
+        The method to create EMG object from file.
 
         Args:
             filepath: Path to the input file
             importer: Name of the importer to use. Can be one of the following:
-                - 'trigno': Delsys Trigno EMG system (CSV, TXT, TRC)
+                - 'trigno': Delsys Trigno EMG system (CSV)
                 - 'otb': OTB/OTB+ EMG system (OTB, OTB+)
                 - 'eeglab': EEGLAB .set files (SET)
                 - 'edf': EDF/EDF+/BDF format (EDF, EDF+, BDF)
-                - 'csv': Generic CSV files with columnar data
+                - 'csv': Generic CSV (or TXT) files with columnar data
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -71,7 +71,7 @@ class EMG:
             importer = cls._infer_importer(filepath)
 
         importers = {
-            'trigno': 'TrignoImporter',
+            'trigno': 'TrignoImporter',  # CSV with Delsys Trigno Headers
             'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
             'edf': 'EDFImporter',  # EDF/EDF+/BDF format
             'eeglab': 'EEGLABImporter',  # EEGLAB .set files
