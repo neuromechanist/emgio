@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-from typing import List, Optional, Union, Any, Literal
+from typing import List, Optional, Union, Any, Literal, Dict
 import logging
 
 # Setup basic logging
@@ -304,7 +304,9 @@ class EMG:
                fft_noise_range: tuple = None, svd_rank: int = None,
                precision_threshold: float = 0.01, format: str = 'auto',
                force_format: bool = False, verify: bool = False,
-               verify_tolerance: float = 1e-6, **kwargs) -> Optional[dict]:
+               verify_tolerance: float = 1e-6,
+               verify_channel_map: Optional[Dict[str, str]] = None,
+               **kwargs) -> Optional[dict]:
         """
         Export data to EDF/BDF format with corresponding channels.tsv file.
 
@@ -325,6 +327,9 @@ class EMG:
             verify: If True, reload the exported file and compare signals with the original
                     to check for data integrity loss. Results are printed. (default: False)
             verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)
+            verify_channel_map: Optional dictionary mapping original channel names (keys)
+                                to reloaded channel names (values) for verification.
+                                Used if `verify` is True and channel names might differ.
             **kwargs: Additional arguments for the EDF exporter
 
         Returns:
@@ -369,29 +374,48 @@ class EMG:
                 reloaded_emg = EMG.from_file(filepath, importer='edf')
 
                 logging.info("Comparing original signals with reloaded signals...")
-                # Compare signals
-                verification_results = compare_signals(self, reloaded_emg, tolerance=verify_tolerance)
+                # Compare signals, passing the channel map if provided
+                verification_results = compare_signals(
+                    self,
+                    reloaded_emg,
+                    tolerance=verify_tolerance,
+                    channel_map=verify_channel_map
+                )
 
                 # Report results
+                summary = verification_results.get('channel_summary', {})
                 logging.info("--- Verification Report ---")
-                if verification_results.get('channel_diffs', {}).get('added'):
-                    logging.warning(f"Channels added during export/import: {verification_results['channel_diffs']['added']}")
-                if verification_results.get('channel_diffs', {}).get('removed'):
-                    logging.warning(f"Channels removed during export/import: {verification_results['channel_diffs']['removed']}")
+                logging.info(f"Comparison mode: {summary.get('comparison_mode', 'unknown')}")
+
+                if summary.get('unmatched_original'):
+                    logging.warning(f"Unmatched original channels: {summary['unmatched_original']}")
+                if summary.get('unmatched_reloaded'):
+                    logging.warning(f"Unmatched reloaded channels: {summary['unmatched_reloaded']}")
 
                 all_identical = True
-                for channel, metrics in verification_results.items():
-                    if channel == 'channel_diffs': continue # Skip metadata key
+                compared_count = 0
+                for orig_channel, metrics in verification_results.items():
+                    if orig_channel == 'channel_summary': continue # Skip metadata key
+                    compared_count += 1
+                    reloaded_channel = metrics['reloaded_channel']
+                    channel_label = f"'{orig_channel}' -> '{reloaded_channel}'" if orig_channel != reloaded_channel else f"'{orig_channel}'"
+
                     if not metrics['is_identical']:
                         all_identical = False
-                        logging.warning(f"Channel '{channel}': Signals differ (RMSE: {metrics['rmse']:.2e}, MaxDiff: {metrics['max_abs_diff']:.2e}, Corr: {metrics['correlation']:.6f}, SNR_Diff: {metrics['snr_diff_db']:.1f} dB)")
+                        logging.warning(f"Channel {channel_label}: Signals differ (RMSE: {metrics['rmse']:.2e}, MaxDiff: {metrics['max_abs_diff']:.2e}, Corr: {metrics['correlation']:.6f}, SNR_Diff: {metrics['snr_diff_db']:.1f} dB)")
                     else:
-                         logging.info(f"Channel '{channel}': Signals are identical (within tolerance {verify_tolerance:.1e}).")
+                        logging.info(f"Channel {channel_label}: Signals are identical (within tolerance {verify_tolerance:.1e}).")
+
+                if compared_count == 0:
+                     logging.warning("No channels were actually compared.")
+                     all_identical = False # Mark as not successful if nothing compared
 
                 if all_identical:
-                    logging.info("Verification successful: All common channel signals are identical within tolerance.")
+                    logging.info(f"Verification successful: All {compared_count} compared channel pairs are identical within tolerance.")
+                elif summary.get('comparison_mode') != 'failed':
+                    logging.warning(f"Verification finished: Differences found in {compared_count} compared pairs.")
                 else:
-                    logging.warning("Verification finished: Some differences found.")
+                    logging.error("Verification failed: Could not compare channels.")
                 logging.info("---------------------------")
 
             except Exception as e:
