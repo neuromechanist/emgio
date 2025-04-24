@@ -343,3 +343,86 @@ def quantization_analysis(signal: np.ndarray, bits: int) -> dict:
         'rmse': rmse,
         'snr': snr
     }
+
+
+# Verification functions
+def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG', tolerance: float = 1e-6) -> dict:
+    """
+    Compare signals between two EMG objects (original and reloaded).
+
+    Args:
+        emg_original: The original EMG object before export.
+        emg_reloaded: The EMG object reloaded from the exported file.
+        tolerance: Absolute tolerance for floating-point comparisons.
+
+    Returns:
+        dict: A dictionary containing comparison metrics for each common channel.
+              Metrics include 'rmse', 'max_abs_diff', 'correlation', 'snr_diff_db'.
+              Also includes 'channel_diffs' listing added/removed channels.
+    """
+    from emgio.core.emg import EMG  # Avoid circular import at module level
+
+    results = {}
+    original_channels = set(emg_original.signals.columns)
+    reloaded_channels = set(emg_reloaded.signals.columns)
+
+    common_channels = list(original_channels.intersection(reloaded_channels))
+    added_channels = list(reloaded_channels.difference(original_channels))
+    removed_channels = list(original_channels.difference(reloaded_channels))
+
+    results['channel_diffs'] = {
+        'added': added_channels,
+        'removed': removed_channels
+    }
+
+    if not common_channels:
+        print("Warning: No common channels found between original and reloaded EMG objects.")
+        return results
+
+    # Align signals based on common channels and ensure same length
+    # Note: This assumes the time index is comparable or represents the same duration
+    original_signals = emg_original.signals[common_channels]
+    reloaded_signals = emg_reloaded.signals[common_channels]
+
+    # Basic check for length mismatch (could be due to rounding in time index)
+    if len(original_signals) != len(reloaded_signals):
+        min_len = min(len(original_signals), len(reloaded_signals))
+        print(f"Warning: Signal lengths differ ({len(original_signals)} vs {len(reloaded_signals)}). Comparing first {min_len} samples.")
+        original_signals = original_signals.iloc[:min_len]
+        reloaded_signals = reloaded_signals.iloc[:min_len]
+
+    for channel in common_channels:
+        sig_orig = original_signals[channel].values
+        sig_reloaded = reloaded_signals[channel].values
+
+        # Calculate metrics
+        diff = sig_orig - sig_reloaded
+        rmse = np.sqrt(np.mean(diff**2))
+        max_abs_diff = np.max(np.abs(diff))
+
+        # Correlation
+        # Handle constant signals where correlation is undefined or NaN
+        if np.std(sig_orig) < tolerance or np.std(sig_reloaded) < tolerance:
+            correlation = 1.0 if np.allclose(sig_orig, sig_reloaded, atol=tolerance) else 0.0
+        else:
+            correlation = np.corrcoef(sig_orig, sig_reloaded)[0, 1]
+
+        # SNR of the difference
+        signal_power = np.mean(sig_orig**2)
+        noise_power = np.mean(diff**2)
+        if signal_power < tolerance or noise_power < tolerance:
+             # Avoid division by zero or log(0)
+             snr_diff_db = np.inf if signal_power > tolerance else -np.inf
+        else:
+            snr_diff_db = 10 * np.log10(signal_power / noise_power)
+
+
+        results[channel] = {
+            'rmse': rmse,
+            'max_abs_diff': max_abs_diff,
+            'correlation': correlation,
+            'snr_diff_db': snr_diff_db,
+            'is_identical': np.allclose(sig_orig, sig_reloaded, atol=tolerance)
+        }
+
+    return results

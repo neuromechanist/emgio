@@ -3,6 +3,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from typing import List, Optional, Union, Any, Literal
+import logging
+
+# Setup basic logging
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 
 class EMG:
@@ -299,7 +303,8 @@ class EMG:
     def to_edf(self, filepath: str, method: str = 'both',
                fft_noise_range: tuple = None, svd_rank: int = None,
                precision_threshold: float = 0.01, format: str = 'auto',
-               force_format: bool = False, **kwargs) -> None:
+               force_format: bool = False, verify: bool = False,
+               verify_tolerance: float = 1e-6, **kwargs) -> Optional[dict]:
         """
         Export data to EDF/BDF format with corresponding channels.tsv file.
 
@@ -317,7 +322,14 @@ class EMG:
                 if the chosen format is not optimal.
             force_format: When True, bypasses all format suitability checks and uses the
                 specified format without warnings. Default is False.
+            verify: If True, reload the exported file and compare signals with the original
+                    to check for data integrity loss. Results are printed. (default: False)
+            verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)
             **kwargs: Additional arguments for the EDF exporter
+
+        Returns:
+            Optional[dict]: If verify is True, returns a dictionary with verification results.
+                           Otherwise, returns None.
 
         Raises:
             ValueError: If no signals are loaded
@@ -326,6 +338,8 @@ class EMG:
             raise ValueError("No signals loaded")
 
         from ..exporters.edf import EDFExporter
+        from ..analysis.signal import compare_signals
+        from .emg import EMG
 
         # Pass analysis parameters to the exporter
         analysis_params = {
@@ -344,7 +358,47 @@ class EMG:
         # Combine with any other kwargs
         all_params = {**analysis_params, **kwargs}
 
+        # Perform export
         EDFExporter.export(self, filepath, **all_params)
+
+        verification_results = None
+        if verify:
+            logging.info(f"Verification requested. Reloading exported file: {filepath}")
+            try:
+                # Reload the exported file
+                reloaded_emg = EMG.from_file(filepath, importer='edf')
+
+                logging.info("Comparing original signals with reloaded signals...")
+                # Compare signals
+                verification_results = compare_signals(self, reloaded_emg, tolerance=verify_tolerance)
+
+                # Report results
+                logging.info("--- Verification Report ---")
+                if verification_results.get('channel_diffs', {}).get('added'):
+                    logging.warning(f"Channels added during export/import: {verification_results['channel_diffs']['added']}")
+                if verification_results.get('channel_diffs', {}).get('removed'):
+                    logging.warning(f"Channels removed during export/import: {verification_results['channel_diffs']['removed']}")
+
+                all_identical = True
+                for channel, metrics in verification_results.items():
+                    if channel == 'channel_diffs': continue # Skip metadata key
+                    if not metrics['is_identical']:
+                        all_identical = False
+                        logging.warning(f"Channel '{channel}': Signals differ (RMSE: {metrics['rmse']:.2e}, MaxDiff: {metrics['max_abs_diff']:.2e}, Corr: {metrics['correlation']:.6f}, SNR_Diff: {metrics['snr_diff_db']:.1f} dB)")
+                    else:
+                         logging.info(f"Channel '{channel}': Signals are identical (within tolerance {verify_tolerance:.1e}).")
+
+                if all_identical:
+                    logging.info("Verification successful: All common channel signals are identical within tolerance.")
+                else:
+                    logging.warning("Verification finished: Some differences found.")
+                logging.info("---------------------------")
+
+            except Exception as e:
+                logging.error(f"Verification failed during reload or comparison: {e}")
+                verification_results = {'error': str(e)}
+
+        return verification_results
 
     def set_metadata(self, key: str, value: any) -> None:
         """
