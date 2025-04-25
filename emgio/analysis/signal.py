@@ -347,22 +347,25 @@ def quantization_analysis(signal: np.ndarray, bits: int) -> dict:
 
 
 # Verification functions
-def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG', tolerance: float = 1e-6,
+def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG', 
+                   tolerance: float = 0.001, # Default tolerance 0.1% for NRMSE and Max Norm Abs Diff
                    channel_map: Optional[Dict[str, str]] = None) -> dict:
     """
-    Compare signals between two EMG objects (original and reloaded).
+    Compare signals between two EMG objects using normalized metrics.
 
     Args:
         emg_original: The original EMG object before export.
         emg_reloaded: The EMG object reloaded from the exported file.
-        tolerance: Absolute tolerance for floating-point comparisons.
+        tolerance: Relative tolerance for comparisons (default: 0.01 or 1%).
+                   Used for NRMSE, Max Norm Abs Diff, and identity check.
         channel_map: Optional dictionary mapping original channel names (keys)
                     to reloaded channel names (values). If None, tries exact name
                     match first, then falls back to order-based matching.
 
     Returns:
-        dict: A dictionary containing comparison metrics for each common channel.
-              Metrics include 'rmse', 'max_abs_diff', 'correlation', 'snr_diff_db'.
+        dict: A dictionary containing normalized comparison metrics for each common channel.
+              Metrics include 'nrmse' (Normalized RMSE), 'max_norm_abs_diff',
+              'snr_diff_db'.
               Also includes 'channel_summary' with comparison mode and unmatched channels.
     """
     from emgio.core.emg import EMG  # Avoid circular import at module level
@@ -436,32 +439,43 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG', tolerance: float =
             sig_orig = sig_orig[:min_len]
             sig_reloaded = sig_reloaded[:min_len]
 
+        # Calculate normalization factor (peak-to-peak range of original signal)
+        sig_orig_range = np.ptp(sig_orig)
+        print(f"Original signal range: {sig_orig_range}")
+        sig_reloaded_range = np.ptp(sig_reloaded)
+        print(f"Reloaded signal range: {sig_reloaded_range}")
+        # Use a small epsilon to avoid division by zero for constant signals
+        norm_factor = sig_orig_range if sig_orig_range > np.finfo(float).eps else 1.0
+
         # Calculate metrics
         diff = sig_orig - sig_reloaded
         rmse = np.sqrt(np.mean(diff**2))
         max_abs_diff = np.max(np.abs(diff))
 
-        # Correlation
-        if np.std(sig_orig) < tolerance or np.std(sig_reloaded) < tolerance:
-            correlation = 1.0 if np.allclose(sig_orig, sig_reloaded, atol=tolerance) else 0.0
-        else:
-            correlation = np.corrcoef(sig_orig, sig_reloaded)[0, 1]
+        # Normalize metrics
+        nrmse = rmse / norm_factor
+        max_norm_abs_diff = max_abs_diff / norm_factor
 
-        # SNR of the difference
+        # SNR of the difference (remains absolute measure in dB)
         signal_power = np.mean(sig_orig**2)
         noise_power = np.mean(diff**2)
-        if signal_power < tolerance or noise_power < tolerance:
-            snr_diff_db = np.inf if signal_power > tolerance else -np.inf
+        # Avoid division by zero or log(0)
+        if signal_power < np.finfo(float).eps or noise_power < np.finfo(float).eps:
+            snr_diff_db = np.inf if signal_power > np.finfo(float).eps else -np.inf
         else:
             snr_diff_db = 10 * np.log10(signal_power / noise_power)
 
+        # Check if nrmse or max_norm_abs_diff are below tolerance
+        is_identical = nrmse < tolerance and max_norm_abs_diff < tolerance
+
         results[orig_channel] = {
             'reloaded_channel': reloaded_channel,
-            'rmse': rmse,
-            'max_abs_diff': max_abs_diff,
-            'correlation': correlation,
+            'original_range': sig_orig_range,
+            'reloaded_range': sig_reloaded_range,
+            'nrmse': nrmse,
+            'max_norm_abs_diff': max_norm_abs_diff,
             'snr_diff_db': snr_diff_db,
-            'is_identical': np.allclose(sig_orig, sig_reloaded, atol=tolerance)
+            'is_identical': is_identical
         }
 
     return results

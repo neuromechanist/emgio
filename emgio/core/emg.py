@@ -5,8 +5,14 @@ import os
 from typing import List, Optional, Union, Any, Literal, Dict
 import logging
 
-# Setup basic logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+# --- Configuration ---
+enable_logging = False  # Set to False to disable most logging
+
+# Configure logging
+if enable_logging:
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+else:
+    logging.basicConfig(level=logging.CRITICAL)  # Effectively turns off most logging
 
 
 class EMG:
@@ -402,18 +408,18 @@ class EMG:
 
                     if not metrics['is_identical']:
                         all_identical = False
-                        logging.warning(f"Channel {channel_label}: Signals differ (RMSE: {metrics['rmse']:.2e}, MaxDiff: {metrics['max_abs_diff']:.2e}, Corr: {metrics['correlation']:.6f}, SNR_Diff: {metrics['snr_diff_db']:.1f} dB)")
+                        logging.critical(f"Channel {channel_label}: Signals differ (nRMSE: {metrics['nrmse']:.2e}, MaxNormDiff: {metrics['max_norm_abs_diff']:.2e}, SNR_Diff: {metrics['snr_diff_db']:.1f} dB)")
                     else:
                         logging.info(f"Channel {channel_label}: Signals are identical (within tolerance {verify_tolerance:.1e}).")
 
                 if compared_count == 0:
-                     logging.warning("No channels were actually compared.")
+                     logging.critical("No channels were actually compared.")
                      all_identical = False # Mark as not successful if nothing compared
 
                 if all_identical:
                     logging.info(f"Verification successful: All {compared_count} compared channel pairs are identical within tolerance.")
                 elif summary.get('comparison_mode') != 'failed':
-                    logging.warning(f"Verification finished: Differences found in {compared_count} compared pairs.")
+                    logging.critical(f"Verification finished: Differences found in {compared_count} compared pairs.")
                 else:
                     logging.error("Verification failed: Could not compare channels.")
                 logging.info("---------------------------")
