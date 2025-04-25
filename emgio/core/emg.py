@@ -309,9 +309,10 @@ class EMG:
     def to_edf(self, filepath: str, method: str = 'both',
                fft_noise_range: tuple = None, svd_rank: int = None,
                precision_threshold: float = 0.01, format: str = 'auto',
-               force_format: bool = False, verify: bool = False,
-               verify_tolerance: float = 1e-6,
+               force_format: bool = False,
+               verify: bool = False, verify_tolerance: float = 1e-6,
                verify_channel_map: Optional[Dict[str, str]] = None,
+               verify_plot: bool = False,
                **kwargs) -> Optional[dict]:
         """
         Export data to EDF/BDF format with corresponding channels.tsv file.
@@ -349,7 +350,7 @@ class EMG:
             raise ValueError("No signals loaded")
 
         from ..exporters.edf import EDFExporter
-        from ..analysis.signal import compare_signals
+        from ..analysis.signal import compare_signals, plot_comparison
         from .emg import EMG
 
         # Pass analysis parameters to the exporter
@@ -423,6 +424,10 @@ class EMG:
                 else:
                     logging.error("Verification failed: Could not compare channels.")
                 logging.info("---------------------------")
+                
+                # Plot comparison if requested, but check if comparison exists first
+                if verify_plot and compared_count is not 0:
+                    plot_comparison(self, reloaded_emg)
 
             except Exception as e:
                 logging.error(f"Verification failed during reload or comparison: {e}")

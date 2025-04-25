@@ -83,7 +83,8 @@ try:
         format='bdf',  # Force BDF for this example
         verify=verify_export,
         verify_tolerance=verification_tolerance,
-        verify_channel_map=explicit_map # Pass the explicit map
+        verify_channel_map=explicit_map, # Pass the explicit map
+        verify_plot=True # Plot comparison
     )
     logging.info(f"Successfully exported to {output_path_bdf}")
     if verify_export and verification_results_bdf:

@@ -6,7 +6,8 @@ dynamic range calculation, and format suitability determination.
 """
 
 import numpy as np
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Any
+import matplotlib.pyplot as plt
 
 
 # SVD-based analysis functions
@@ -479,3 +480,159 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
         }
 
     return results
+
+
+def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
+                    channels: Optional[List[str]] = None,
+                    time_range: Optional[tuple] = None,
+                    detrend: bool = False,
+                    grid: bool = True,
+                    suptitle: Optional[str] = "Signal Comparison",
+                    show: bool = True,
+                    channel_map: Optional[Dict[str, str]] = None,
+                    plt_module: Any = plt) -> None:
+    """
+    Plot original and reloaded signals overlayed for visual comparison.
+
+    Creates subplots for each channel pair.
+
+    Args:
+        emg_original: The original EMG object.
+        emg_reloaded: The reloaded EMG object.
+        channels: List of original channels to plot. If None, plot common/mapped channels.
+        time_range: Tuple of (start_time, end_time) to plot. If None, plot all data.
+        detrend: Whether to remove mean from signals before plotting.
+        grid: Whether to show grid lines on subplots.
+        suptitle: Optional main title for the figure.
+        show: Whether to display the plot.
+        channel_map: Optional dictionary mapping original channel names (keys)
+                    to reloaded channel names (values). If None, tries exact name
+                    match first, then falls back to order-based matching.
+        plt_module: Matplotlib pyplot module to use.
+    """
+    from emgio.core.emg import EMG  # Avoid circular import at module level
+
+    original_channel_names = set(emg_original.signals.columns)
+    reloaded_channel_names = set(emg_reloaded.signals.columns)
+
+    # --- Channel Matching Logic (adapted from compare_signals) ---
+    comparison_mode = 'unknown'
+    unmatched_original = []
+    unmatched_reloaded = []
+    channel_pairs = []
+
+    if channel_map is not None:
+        comparison_mode = 'mapped'
+        valid_mappings = {orig: mapped for orig, mapped in channel_map.items()
+                         if orig in original_channel_names and mapped in reloaded_channel_names}
+        
+        # Filter by user-specified channels if provided
+        if channels is not None:
+             valid_mappings = {orig: mapped for orig, mapped in valid_mappings.items() if orig in channels}
+
+        channel_pairs = list(valid_mappings.items())
+        
+        specified_orig_in_map = set(channel_map.keys())
+        specified_reloaded_in_map = set(channel_map.values())
+        
+        unmatched_original = list(original_channel_names - specified_orig_in_map)
+        unmatched_reloaded = list(reloaded_channel_names - specified_reloaded_in_map)
+        
+        if channels is not None: # Further filter unmatched if specific channels were requested
+            unmatched_original = [ch for ch in unmatched_original if ch in channels]
+
+
+    else:
+        # Try exact name matching first
+        common_channels = list(original_channel_names.intersection(reloaded_channel_names))
+        if channels is not None: # Filter by user-specified channels
+             common_channels = [ch for ch in common_channels if ch in channels]
+
+        if common_channels:
+            comparison_mode = 'exact_name'
+            channel_pairs = [(ch, ch) for ch in common_channels]
+            
+            specified_channels_set = set(channels) if channels else original_channel_names
+            common_channels_set = set(common_channels)
+            
+            unmatched_original = list(specified_channels_set - common_channels_set)
+            # Reloaded unmatched are those not in common from the full reloaded set
+            unmatched_reloaded = list(reloaded_channel_names - common_channels_set)
+        else:
+            # Fall back to order-based matching if no exact matches or map provided
+            comparison_mode = 'order_based'
+            original_list = sorted(list(original_channel_names))
+            reloaded_list = sorted(list(reloaded_channel_names))
+            
+            if channels is not None: # Filter original list by user-specified channels
+                 original_list = [ch for ch in original_list if ch in channels]
+
+            min_len = min(len(original_list), len(reloaded_list))
+            channel_pairs = list(zip(original_list[:min_len], reloaded_list[:min_len]))
+            unmatched_original = original_list[min_len:]
+            unmatched_reloaded = reloaded_list[min_len:]
+
+    if not channel_pairs:
+        print("Warning: No channel pairs found for plotting based on selection criteria.")
+        if unmatched_original:
+            print(f"  Unmatched original channels: {unmatched_original}")
+        if unmatched_reloaded:
+             print(f"  Unmatched reloaded channels: {unmatched_reloaded}")
+        return
+    
+    print(f"Plotting comparison using mode: {comparison_mode}")
+    if unmatched_original:
+        print(f"  Original channels not plotted: {unmatched_original}")
+    if unmatched_reloaded:
+         print(f"  Reloaded channels not plotted: {unmatched_reloaded}")
+
+
+    # --- Plotting ---
+    n_pairs = len(channel_pairs)
+    fig, axes = plt_module.subplots(n_pairs, 1, figsize=(15, 2.5 * n_pairs), sharex=True, squeeze=False)
+    axes = axes.flatten() # Ensure axes is always a 1D array
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize=16)
+
+    for i, (orig_ch, reloaded_ch) in enumerate(channel_pairs):
+        ax = axes[i]
+        sig_orig = emg_original.signals[orig_ch]
+        sig_reloaded = emg_reloaded.signals[reloaded_ch]
+
+        # Apply time range
+        if time_range:
+            start, end = time_range
+            # Be robust to time range slightly outside index
+            sig_orig = sig_orig.loc[sig_orig.index.searchsorted(start):sig_orig.index.searchsorted(end, side='right')]
+            sig_reloaded = sig_reloaded.loc[sig_reloaded.index.searchsorted(start):sig_reloaded.index.searchsorted(end, side='right')]
+
+        time_vector = sig_orig.index # Assuming time vectors are aligned after potential slicing/matching
+
+        # Detrend if requested
+        if detrend:
+            sig_orig = sig_orig - sig_orig.mean()
+            sig_reloaded = sig_reloaded - sig_reloaded.mean()
+
+        # Plot signals
+        ax.plot(time_vector, sig_orig, label='Original', color='blue', linewidth=1.0)
+        ax.plot(time_vector, sig_reloaded, label='Reloaded', color='red', linestyle='--', linewidth=1.0)
+        
+        ax.set_ylabel(f"{orig_ch} -> {reloaded_ch}", rotation=0, labelpad=30, ha='right', va='center')
+        ax.ticklabel_format(axis='y', style='sci', scilimits=(-3,3)) # Use scientific notation if needed
+
+        if grid:
+            ax.grid(True, linestyle=':', alpha=0.6)
+
+        # Add legend to the first subplot only for clarity
+        if i == 0:
+            ax.legend(loc='upper right')
+
+    # Set common x-label
+    axes[-1].set_xlabel("Time (s)")
+
+    # Adjust layout
+    plt_module.tight_layout(rect=[0, 0.03, 1, 0.97]) # Adjust rect to make space for suptitle
+
+    if show:
+        plt_module.show()
