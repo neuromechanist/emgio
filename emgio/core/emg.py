@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from typing import List, Optional, Union, Literal, Dict
 import logging
-from ..analysis.verification import compare_signals
+from ..analysis.verification import compare_signals, report_verification_results
 from ..visualization.static import plot_comparison
 
 # --- Configuration ---
@@ -274,81 +274,44 @@ class EMG:
         # Perform export
         EDFExporter.export(self, filepath, **all_params)
 
-        verification_results = None
+        verification_report_dict = None
         if verify:
             logging.info(f"Verification requested. Reloading exported file: {filepath}")
             try:
                 # Reload the exported file
-                # Need to use cls.from_file or EMG.from_file if calling from instance method
-                # Assuming EMG is defined in this file scope
                 reloaded_emg = EMG.from_file(filepath, importer='edf')
 
                 logging.info("Comparing original signals with reloaded signals...")
                 # Compare signals using the imported function
                 verification_results = compare_signals(
-                    self,  # Pass the current EMG instance
+                    self,
                     reloaded_emg,
                     tolerance=verify_tolerance,
                     channel_map=verify_channel_map
                 )
 
-                # Report results
-                summary = verification_results.get('channel_summary', {})
-                logging.info("--- Verification Report ---")
-                logging.info(f"Comparison mode: {summary.get('comparison_mode', 'unknown')}")
-
-                if summary.get('unmatched_original'):
-                    logging.warning(f"Unmatched original channels: {summary['unmatched_original']}")
-                if summary.get('unmatched_reloaded'):
-                    logging.warning(f"Unmatched reloaded channels: {summary['unmatched_reloaded']}")
-
-                all_identical = True
-                compared_count = 0
-                for orig_channel, metrics in verification_results.items():
-                    if orig_channel == 'channel_summary':
-                        continue
-                    compared_count += 1
-                    reloaded_channel = metrics['reloaded_channel']
-                    channel_label = (f"'{orig_channel}' -> '{reloaded_channel}'" 
-                                     if orig_channel != reloaded_channel else f"'{orig_channel}'")
-
-                    if not metrics['is_identical']:
-                        all_identical = False
-                        log_msg = (
-                            f"Channel {channel_label}: Signals differ "
-                            f"(nRMSE: {metrics['nrmse']:.2e}, "
-                            f"MaxNormDiff: {metrics['max_norm_abs_diff']:.2e}, "
-                            f"SNR_Diff: {metrics['snr_diff_db']:.1f} dB)"
-                        )
-                        logging.critical(log_msg)
-                    else:
-                        logging.info(f"Channel {channel_label}: Signals are identical (within tolerance {verify_tolerance:.1e}).")
-
-                if compared_count == 0:
-                    logging.critical("No channels were actually compared.")
-                    all_identical = False  # Mark as not successful if nothing compared
-
-                if all_identical:
-                    log_msg = (f"Verification successful: All {compared_count} compared "
-                               f"channel pairs are identical within tolerance.")
-                    logging.info(log_msg)
-                elif summary.get('comparison_mode') != 'failed':
-                    log_msg = (f"Verification finished: Differences found in "
-                               f"{compared_count} compared pairs.")
-                    logging.critical(log_msg)
-                else:
-                    logging.error("Verification failed: Could not compare channels.")
-                logging.info("---------------------------")
+                # Generate and log report using the imported function
+                report_verification_results(verification_results, verify_tolerance)
+                verification_report_dict = verification_results
 
                 # Plot comparison using imported function if requested
-                if verify_plot and compared_count > 0:  # Check compared_count
+                summary = verification_results.get('channel_summary', {})
+                comparison_mode = summary.get('comparison_mode', 'unknown')
+                compared_count = sum(1 for k in verification_results if k != 'channel_summary')
+
+                if verify_plot and compared_count > 0 and comparison_mode != 'failed':
                     plot_comparison(self, reloaded_emg, channel_map=verify_channel_map)
+                elif verify_plot:
+                    logging.warning("Skipping verification plot: No channels were successfully compared.")
 
             except Exception as e:
                 logging.error(f"Verification failed during reload or comparison: {e}")
-                verification_results = {'error': str(e)}
+                verification_report_dict = {
+                    'error': str(e),
+                    'channel_summary': {'comparison_mode': 'failed'}
+                }
 
-        return verification_results
+        return verification_report_dict
 
     def set_metadata(self, key: str, value: any) -> None:
         """

@@ -55,14 +55,14 @@ try:
         verify_tolerance=verification_tolerance,
         # Example: verify_channel_map={'Original Name 1': 'Reloaded Name A', 'Original Name 2': 'Reloaded Name B'}
         # If verify_channel_map is None (default), it tries exact name match, then order-based match.
-        verify_channel_map=None # Using automatic matching for this run
+        verify_channel_map=None  # Using automatic matching for this run
     )
 
     logging.info(f"Successfully exported to {output_path_edf}")
     if verify_export and verification_results_edf:
         # Basic print of results, you could process this dict further
         # print(verification_results_edf)
-        pass # Results are already printed by the logger in to_edf
+        pass  # Results are already printed by the logger in to_edf
 
 except Exception as e:
     logging.error(f"Error exporting to EDF: {e}")
@@ -83,13 +83,13 @@ try:
         format='bdf',  # Force BDF for this example
         verify=verify_export,
         verify_tolerance=verification_tolerance,
-        verify_channel_map=explicit_map, # Pass the explicit map
-        verify_plot=True # Plot comparison
+        verify_channel_map=explicit_map,  # Pass the explicit map
+        verify_plot=True  # Plot comparison
     )
     logging.info(f"Successfully exported to {output_path_bdf}")
     if verify_export and verification_results_bdf:
         # print(verification_results_bdf)
-        pass # Results are already printed by the logger in to_edf
+        pass  # Results are already printed by the logger in to_edf
 
 except Exception as e:
     logging.error(f"Error exporting to BDF: {e}")
@@ -109,4 +109,4 @@ except Exception as e:
 #     os.remove(output_path_bdf.replace('.bdf', '.tsv'))
 
 
-logging.info("\nExample finished.") 
+logging.info("\nExample finished.")
