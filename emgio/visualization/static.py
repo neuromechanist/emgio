@@ -94,7 +94,7 @@ def plot_signals(emg_object: 'EMG',  # Changed first arg to accept EMG object
         channel_range = data.max() - data.min()
 
         # Calculate offset and scaling
-        offset = (n_channels - 1 - i) * max_range # Offset based on max_range
+        offset = (n_channels - 1 - i) * max_range  # Offset based on max_range
 
         # Scale only if uniform_scale is False and channel_range > 0
         if not uniform_scale and channel_range > 0:
@@ -122,18 +122,17 @@ def plot_signals(emg_object: 'EMG',  # Changed first arg to accept EMG object
     all_scaled_max = -np.inf
     for i, channel in enumerate(channels):
         data = processed_data[channel]
-        offset = (n_channels - 1 - i) * max_range
+        offset = (n_channels - 1 - i) * max_range  # Offset based on max_range
         channel_range = data.max() - data.min()
         if not uniform_scale and channel_range > 0:
-             scaled_data = (data - data.min()) / channel_range * (max_range * offset_scale) + offset
+            scaled_data = (data - data.min()) / channel_range * (max_range * offset_scale) + offset
         else:
-             scaled_data = data + offset
+            scaled_data = data + offset
         all_scaled_min = min(all_scaled_min, scaled_data.min())
         all_scaled_max = max(all_scaled_max, scaled_data.max())
 
-    padding = max_range * 0.1 # 10% padding based on max range
+    padding = max_range * 0.1  # 10% padding based on max range
     ax.set_ylim(all_scaled_min - padding, all_scaled_max + padding)
-
 
     if grid:
         ax.grid(True, linestyle='--', alpha=0.7)
@@ -302,4 +301,4 @@ def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
     plt_module.tight_layout(rect=[0, 0.03, 1, 0.97])  # Adjust rect for suptitle
 
     if show:
-        plt_module.show() 
+        plt_module.show()

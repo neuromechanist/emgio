@@ -4,6 +4,7 @@ Functions for verifying signal integrity after operations like export/import.
 
 import numpy as np
 from typing import Optional, Dict, TYPE_CHECKING
+import logging
 
 # Use TYPE_CHECKING to avoid circular import at runtime
 if TYPE_CHECKING:
@@ -15,6 +16,8 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
                     channel_map: Optional[Dict[str, str]] = None) -> dict:
     """
     Compare signals between two EMG objects using normalized metrics.
+    Returns a dictionary with comparison results per channel and a summary.
+    Does NOT perform logging/printing.
 
     Args:
         emg_original: The original EMG object before export.
@@ -86,7 +89,6 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
     results['channel_summary'] = channel_summary
 
     if not channel_pairs:
-        print("Warning: No channel pairs found for comparison.")
         return results
 
     # Compare each channel pair
@@ -97,16 +99,11 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
         # Basic check for length mismatch
         if len(sig_orig) != len(sig_reloaded):
             min_len = min(len(sig_orig), len(sig_reloaded))
-            print(f"Warning: Signal lengths differ for {orig_channel} -> {reloaded_channel} "
-                  f"({len(sig_orig)} vs {len(sig_reloaded)}). Comparing first {min_len} samples.")
             sig_orig = sig_orig[:min_len]
             sig_reloaded = sig_reloaded[:min_len]
 
         # Calculate normalization factor (peak-to-peak range of original signal)
         sig_orig_range = np.ptp(sig_orig)
-        # print(f"Original signal range: {sig_orig_range}") # Optional: uncomment for debugging
-        # sig_reloaded_range = np.ptp(sig_reloaded)
-        # print(f"Reloaded signal range: {sig_reloaded_range}") # Optional: uncomment for debugging
         # Use a small epsilon to avoid division by zero for constant signals
         norm_factor = sig_orig_range if sig_orig_range > np.finfo(float).eps else 1.0
 
@@ -136,11 +133,71 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
         results[orig_channel] = {
             'reloaded_channel': reloaded_channel,
             'original_range': sig_orig_range,  # Store original range for context
-            # 'reloaded_range': sig_reloaded_range, # Reloaded range not strictly needed
             'nrmse': nrmse,
             'max_norm_abs_diff': max_norm_abs_diff,
             'snr_diff_db': snr_diff_db,
             'is_identical': is_identical
         }
 
-    return results 
+    return results
+
+
+def report_verification_results(verification_results: dict, verify_tolerance: float) -> bool:
+    """
+    Logs a detailed report based on the results from compare_signals.
+
+    Args:
+        verification_results: The dictionary output from compare_signals.
+        verify_tolerance: The tolerance used during comparison (for reporting).
+
+    Returns:
+        bool: True if all compared channels were identical within tolerance, False otherwise.
+    """
+    summary = verification_results.get('channel_summary', {})
+    logging.info("--- Verification Report ---")
+    logging.info(f"Comparison mode: {summary.get('comparison_mode', 'unknown')}")
+
+    if summary.get('unmatched_original'):
+        logging.warning(f"Unmatched original channels: {summary['unmatched_original']}")
+    if summary.get('unmatched_reloaded'):
+        logging.warning(f"Unmatched reloaded channels: {summary['unmatched_reloaded']}")
+
+    all_identical = True
+    compared_count = 0
+    for orig_channel, metrics in verification_results.items():
+        if orig_channel == 'channel_summary':
+            continue
+        compared_count += 1
+        reloaded_channel = metrics['reloaded_channel']
+        channel_label = (f"'{orig_channel}' -> '{reloaded_channel}'"
+                         if orig_channel != reloaded_channel else f"'{orig_channel}'")
+
+        if not metrics['is_identical']:
+            all_identical = False
+            log_msg = (
+                f"Channel {channel_label}: Signals differ "
+                f"(nRMSE: {metrics['nrmse']:.2e}, "
+                f"MaxNormDiff: {metrics['max_norm_abs_diff']:.2e}, "
+                f"SNR_Diff: {metrics['snr_diff_db']:.1f} dB)"
+            )
+            logging.critical(log_msg)
+        else:
+            logging.info(f"Channel {channel_label}: Signals are identical (within tolerance {verify_tolerance:.1e}).")
+
+    if compared_count == 0:
+        logging.critical("No channels were actually compared.")
+        all_identical = False  # Mark as not successful if nothing compared
+
+    if all_identical:
+        log_msg = (f"Verification successful: All {compared_count} compared "
+                   f"channel pairs are identical within tolerance.")
+        logging.info(log_msg)
+    elif summary.get('comparison_mode') != 'failed':
+        log_msg = (f"Verification finished: Differences found in "
+                   f"{compared_count} compared pairs.")
+        logging.critical(log_msg)
+    else:  # Comparison mode failed (e.g., no pairs found)
+        logging.error("Verification failed: Could not compare channels.")
+
+    logging.info("---------------------------")
+    return all_identical
