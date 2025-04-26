@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
-from typing import List, Optional, Union, Any, Literal, Dict
+from typing import List, Optional, Union, Literal, Dict
 import logging
+from ..analysis.verification import compare_signals
+from ..visualization.static import plot_comparison
 
 # --- Configuration ---
 enable_logging = False  # Set to False to disable most logging
@@ -208,104 +209,6 @@ class EMG:
         return [ch for ch, info in self.channels.items()
                 if info['channel_type'] == channel_type]
 
-    def plot_signals(
-            self, channels: Optional[List[str]] = None,
-            time_range: Optional[tuple] = None,
-            offset_scale: float = 0.8,
-            uniform_scale: bool = True,
-            detrend: bool = False,
-            grid: bool = True,
-            title: Optional[str] = None,
-            show: bool = True,
-            plt_module: Any = plt) -> None:
-        """
-        Plot EMG signals in a single plot with vertical offsets.
-
-        Args:
-            channels: List of channels to plot. If None, plot all channels
-            time_range: Tuple of (start_time, end_time) to plot. If None, plot all data
-            offset_scale: Portion of allocated space each signal can use (0.0 to 1.0)
-            uniform_scale: Whether to use the same scale for all signals
-            detrend: Whether to remove mean from signals before plotting
-            grid: Whether to show grid lines
-            title: Optional title for the figure
-            show: Whether to display the plot
-            plt_module: Matplotlib pyplot module to use
-        """
-        if self.signals is None:
-            raise ValueError("No signals loaded")
-
-        if channels is None:
-            channels = self.signals.columns
-        elif not all(ch in self.signals.columns for ch in channels):
-            missing = [ch for ch in channels if ch not in self.signals.columns]
-            raise ValueError(f"Channels not found: {missing}")
-
-        # Create figure
-        fig, ax = plt_module.subplots(figsize=(12, 8))
-
-        # Set figure title if provided
-        if title:
-            ax.set_title(title, fontsize=14, pad=20)
-
-        # Process signals
-        processed_data = {}
-        max_range = 0
-
-        for i, channel in enumerate(channels):
-            data = self.signals[channel]
-            if time_range:
-                start, end = time_range
-                data = data.loc[start:end]
-
-            # Detrend if requested
-            if detrend:
-                data = data - data.mean()
-
-            processed_data[channel] = data
-            max_range = max(max_range, data.max() - data.min())
-
-        # Plot each signal with offset
-        n_channels = len(channels)
-        yticks = []
-        yticklabels = []
-
-        for i, channel in enumerate(channels):
-            data = processed_data[channel]
-
-            # Calculate offset and scaling
-            offset = n_channels - i - 1  # Reverse order (top to bottom)
-            if uniform_scale:
-                scale = offset_scale / max_range
-            else:
-                scale = offset_scale / (data.max() - data.min())
-
-            # Scale and offset the signal
-            scaled_data = data * scale + offset
-
-            # Plot the signal
-            ax.plot(data.index, scaled_data, linewidth=1, label=channel)
-
-            # Store tick position and label
-            yticks.append(offset)
-            yticklabels.append(f"{channel}")
-
-        # Set axis labels and ticks
-        ax.set_xlabel("Time (s)")
-        ax.set_yticks(yticks)
-        ax.set_yticklabels(yticklabels)
-
-        # Set y-axis limits with some padding
-        ax.set_ylim(-0.5, n_channels - 0.5)
-
-        if grid:
-            ax.grid(True, linestyle='--', alpha=0.7)
-
-        # Adjust layout
-        plt_module.tight_layout()
-        if show:
-            plt_module.show()
-
     def to_edf(self, filepath: str, method: str = 'both',
                fft_noise_range: tuple = None, svd_rank: int = None,
                precision_threshold: float = 0.01, format: str = 'auto',
@@ -350,8 +253,6 @@ class EMG:
             raise ValueError("No signals loaded")
 
         from ..exporters.edf import EDFExporter
-        from ..analysis.signal import compare_signals, plot_comparison
-        from .emg import EMG
 
         # Pass analysis parameters to the exporter
         analysis_params = {
@@ -378,12 +279,14 @@ class EMG:
             logging.info(f"Verification requested. Reloading exported file: {filepath}")
             try:
                 # Reload the exported file
+                # Need to use cls.from_file or EMG.from_file if calling from instance method
+                # Assuming EMG is defined in this file scope
                 reloaded_emg = EMG.from_file(filepath, importer='edf')
 
                 logging.info("Comparing original signals with reloaded signals...")
-                # Compare signals, passing the channel map if provided
+                # Compare signals using the imported function
                 verification_results = compare_signals(
-                    self,
+                    self,  # Pass the current EMG instance
                     reloaded_emg,
                     tolerance=verify_tolerance,
                     channel_map=verify_channel_map
@@ -402,32 +305,44 @@ class EMG:
                 all_identical = True
                 compared_count = 0
                 for orig_channel, metrics in verification_results.items():
-                    if orig_channel == 'channel_summary': continue # Skip metadata key
+                    if orig_channel == 'channel_summary':
+                        continue
                     compared_count += 1
                     reloaded_channel = metrics['reloaded_channel']
-                    channel_label = f"'{orig_channel}' -> '{reloaded_channel}'" if orig_channel != reloaded_channel else f"'{orig_channel}'"
+                    channel_label = (f"'{orig_channel}' -> '{reloaded_channel}'" 
+                                     if orig_channel != reloaded_channel else f"'{orig_channel}'")
 
                     if not metrics['is_identical']:
                         all_identical = False
-                        logging.critical(f"Channel {channel_label}: Signals differ (nRMSE: {metrics['nrmse']:.2e}, MaxNormDiff: {metrics['max_norm_abs_diff']:.2e}, SNR_Diff: {metrics['snr_diff_db']:.1f} dB)")
+                        log_msg = (
+                            f"Channel {channel_label}: Signals differ "
+                            f"(nRMSE: {metrics['nrmse']:.2e}, "
+                            f"MaxNormDiff: {metrics['max_norm_abs_diff']:.2e}, "
+                            f"SNR_Diff: {metrics['snr_diff_db']:.1f} dB)"
+                        )
+                        logging.critical(log_msg)
                     else:
                         logging.info(f"Channel {channel_label}: Signals are identical (within tolerance {verify_tolerance:.1e}).")
 
                 if compared_count == 0:
-                     logging.critical("No channels were actually compared.")
-                     all_identical = False # Mark as not successful if nothing compared
+                    logging.critical("No channels were actually compared.")
+                    all_identical = False  # Mark as not successful if nothing compared
 
                 if all_identical:
-                    logging.info(f"Verification successful: All {compared_count} compared channel pairs are identical within tolerance.")
+                    log_msg = (f"Verification successful: All {compared_count} compared "
+                               f"channel pairs are identical within tolerance.")
+                    logging.info(log_msg)
                 elif summary.get('comparison_mode') != 'failed':
-                    logging.critical(f"Verification finished: Differences found in {compared_count} compared pairs.")
+                    log_msg = (f"Verification finished: Differences found in "
+                               f"{compared_count} compared pairs.")
+                    logging.critical(log_msg)
                 else:
                     logging.error("Verification failed: Could not compare channels.")
                 logging.info("---------------------------")
-                
-                # Plot comparison if requested, but check if comparison exists first
-                if verify_plot and compared_count is not 0:
-                    plot_comparison(self, reloaded_emg)
+
+                # Plot comparison using imported function if requested
+                if verify_plot and compared_count > 0:  # Check compared_count
+                    plot_comparison(self, reloaded_emg, channel_map=verify_channel_map)
 
             except Exception as e:
                 logging.error(f"Verification failed during reload or comparison: {e}")
