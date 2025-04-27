@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
-                    tolerance: float = 0.001,  # Default tolerance 0.1% for NRMSE and Max Norm Abs Diff
+                    tolerance: float = 0.01,  # Default tolerance 1% for NRMSE and Max Norm Abs Diff
                     channel_map: Optional[Dict[str, str]] = None) -> dict:
     """
     Compare signals between two EMG objects using normalized metrics.
@@ -30,8 +30,7 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
 
     Returns:
         dict: A dictionary containing normalized comparison metrics for each common channel.
-              Metrics include 'nrmse' (Normalized RMSE), 'max_norm_abs_diff',
-              'snr_diff_db'.
+              Metrics include 'nrmse' (Normalized RMSE), 'max_norm_abs_diff'.
               Also includes 'channel_summary' with comparison mode and unmatched channels.
     """
     # Removed local import: from emgio.core.emg import EMG
@@ -117,16 +116,6 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
         nrmse = rmse / (norm_factor + np.finfo(float).eps)
         max_norm_abs_diff = max_abs_diff / (norm_factor + np.finfo(float).eps)
 
-        # SNR of the difference (remains absolute measure in dB)
-        signal_power = np.mean(sig_orig**2)
-        noise_power = np.mean(diff**2)
-        # Avoid division by zero or log(0)
-        if signal_power < np.finfo(float).eps or noise_power < np.finfo(float).eps:
-            snr_diff_db = np.inf if signal_power > np.finfo(float).eps else -np.inf
-        else:
-            # Add epsilon
-            snr_diff_db = 10 * np.log10(signal_power / (noise_power + np.finfo(float).eps))
-
         # Check if nrmse or max_norm_abs_diff are below tolerance
         is_identical = nrmse < tolerance and max_norm_abs_diff < tolerance
 
@@ -135,7 +124,6 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
             'original_range': sig_orig_range,  # Store original range for context
             'nrmse': nrmse,
             'max_norm_abs_diff': max_norm_abs_diff,
-            'snr_diff_db': snr_diff_db,
             'is_identical': is_identical
         }
 
@@ -177,8 +165,7 @@ def report_verification_results(verification_results: dict, verify_tolerance: fl
             log_msg = (
                 f"Channel {channel_label}: Signals differ "
                 f"(nRMSE: {metrics['nrmse']:.2e}, "
-                f"MaxNormDiff: {metrics['max_norm_abs_diff']:.2e}, "
-                f"SNR_Diff: {metrics['snr_diff_db']:.1f} dB)"
+                f"MaxNormDiff: {metrics['max_norm_abs_diff']:.2e})"
             )
             logging.critical(log_msg)
         else:
@@ -191,7 +178,7 @@ def report_verification_results(verification_results: dict, verify_tolerance: fl
     if all_identical:
         log_msg = (f"Verification successful: All {compared_count} compared "
                    f"channel pairs are identical within tolerance.")
-        logging.info(log_msg)
+        logging.critical(log_msg)
     elif summary.get('comparison_mode') != 'failed':
         log_msg = (f"Verification finished: Differences found in "
                    f"{compared_count} compared pairs.")

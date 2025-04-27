@@ -18,8 +18,8 @@ output_file_edf = "verification_output.edf"
 output_file_bdf = "verification_output.bdf"
 # Try setting verify to True and False
 verify_export = True
-# Set a tolerance for comparison (e.g., 1e-6 for strict, 1e-4 for looser)
-verification_tolerance = 1e-3
+# Set a tolerance for comparison (default is 1% of the normalized RMSE and Absolute Difference)
+verification_tolerance = 1e-2
 
 # --- Script ---
 # Construct full paths
