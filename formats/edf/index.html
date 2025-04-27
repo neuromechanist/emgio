@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.11">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.4af4bdda.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.2afb09e1.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
@@ -1510,8 +1510,8 @@
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>  <span class="c1"># Will add .edf or .bdf extension automatically</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># Force a specific format</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output_edf&#39;</span><span class="p">,</span> <span class="n">force_format</span><span class="o">=</span><span class="s1">&#39;edf&#39;</span><span class="p">)</span>  <span class="c1"># Forces 16-bit EDF</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output_bdf&#39;</span><span class="p">,</span> <span class="n">force_format</span><span class="o">=</span><span class="s1">&#39;bdf&#39;</span><span class="p">)</span>  <span class="c1"># Forces 24-bit BDF</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output_edf&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;edf&#39;</span><span class="p">)</span>  <span class="c1"># Forces 16-bit EDF</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output_bdf&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;bdf&#39;</span><span class="p">)</span>  <span class="c1"># Forces 24-bit BDF</span>
 </code></pre></div>
 <h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1519,7 +1519,7 @@
 <li>Annotations in EDF files are preserved in EMGIO's metadata</li>
 <li>When importing from EDF, EMGIO attempts to identify channel types based on labels and signal characteristics</li>
 <li>When exporting to EDF/BDF, EMGIO automatically handles scaling to maximize precision</li>
-<li>EDF has limitations on channel naming (maximum 16 characters) </li>
+<li>EDF has limitations on channel naming (maximum 16 characters)</li>
 </ul>
 
 

@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.11">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.4af4bdda.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.2afb09e1.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
@@ -2200,11 +2200,7 @@
 <span class="normal"><a href="#__codelineno-0-389">389</a></span>
 <span class="normal"><a href="#__codelineno-0-390">390</a></span>
 <span class="normal"><a href="#__codelineno-0-391">391</a></span>
-<span class="normal"><a href="#__codelineno-0-392">392</a></span>
-<span class="normal"><a href="#__codelineno-0-393">393</a></span>
-<span class="normal"><a href="#__codelineno-0-394">394</a></span>
-<span class="normal"><a href="#__codelineno-0-395">395</a></span>
-<span class="normal"><a href="#__codelineno-0-396">396</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-8" name="__codelineno-0-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">EMG</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-392">392</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-8" name="__codelineno-0-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">EMG</span><span class="p">:</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10"></a><span class="sd">    Core EMG class for handling EMG data and metadata.</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11"></a>
@@ -2497,102 +2493,98 @@
 <a id="__codelineno-0-298" name="__codelineno-0-298"></a>
 <a id="__codelineno-0-299" name="__codelineno-0-299"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_edf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;both&#39;</span><span class="p">,</span>
 <a id="__codelineno-0-300" name="__codelineno-0-300"></a>               <span class="n">fft_noise_range</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>               <span class="n">precision_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span><span class="p">,</span>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>               <span class="n">force_format</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="sd">        Export data to EDF/BDF format with corresponding channels.tsv file.</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>
-<a id="__codelineno-0-306" name="__codelineno-0-306"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">            filepath: Path to save the EDF/BDF file</span>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">            method: Method for signal analysis (&#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;)</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a><span class="sd">                &#39;svd&#39;: Uses Singular Value Decomposition for noise floor estimation</span>
-<a id="__codelineno-0-310" name="__codelineno-0-310"></a><span class="sd">                &#39;fft&#39;: Uses Fast Fourier Transform for noise floor estimation</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a><span class="sd">                &#39;both&#39;: Uses both methods and takes the minimum noise floor (default)</span>
-<a id="__codelineno-0-312" name="__codelineno-0-312"></a><span class="sd">            fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method</span>
-<a id="__codelineno-0-313" name="__codelineno-0-313"></a><span class="sd">            svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method</span>
-<a id="__codelineno-0-314" name="__codelineno-0-314"></a><span class="sd">            precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)</span>
-<a id="__codelineno-0-315" name="__codelineno-0-315"></a><span class="sd">            format: Format to use (&#39;auto&#39;, &#39;edf&#39;, or &#39;bdf&#39;). Default is &#39;auto&#39; which selects</span>
-<a id="__codelineno-0-316" name="__codelineno-0-316"></a><span class="sd">                based on signal characteristics. When specified, the system will still warn</span>
-<a id="__codelineno-0-317" name="__codelineno-0-317"></a><span class="sd">                if the chosen format is not optimal.</span>
-<a id="__codelineno-0-318" name="__codelineno-0-318"></a><span class="sd">            force_format: When True, bypasses all format suitability checks and uses the</span>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a><span class="sd">                specified format without warnings. Default is False.</span>
-<a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="sd">            **kwargs: Additional arguments for the EDF exporter</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a>
-<a id="__codelineno-0-322" name="__codelineno-0-322"></a><span class="sd">        Raises:</span>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="sd">            ValueError: If no signals are loaded</span>
-<a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-325" name="__codelineno-0-325"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-326" name="__codelineno-0-326"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-327" name="__codelineno-0-327"></a>
-<a id="__codelineno-0-328" name="__codelineno-0-328"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.edf</span><span class="w"> </span><span class="kn">import</span> <span class="n">EDFExporter</span>
-<a id="__codelineno-0-329" name="__codelineno-0-329"></a>
-<a id="__codelineno-0-330" name="__codelineno-0-330"></a>        <span class="c1"># Pass analysis parameters to the exporter</span>
-<a id="__codelineno-0-331" name="__codelineno-0-331"></a>        <span class="n">analysis_params</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-332" name="__codelineno-0-332"></a>            <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a>            <span class="s1">&#39;fft_noise_range&#39;</span><span class="p">:</span> <span class="n">fft_noise_range</span><span class="p">,</span>
-<a id="__codelineno-0-334" name="__codelineno-0-334"></a>            <span class="s1">&#39;svd_rank&#39;</span><span class="p">:</span> <span class="n">svd_rank</span><span class="p">,</span>
-<a id="__codelineno-0-335" name="__codelineno-0-335"></a>            <span class="s1">&#39;precision_threshold&#39;</span><span class="p">:</span> <span class="n">precision_threshold</span>
-<a id="__codelineno-0-336" name="__codelineno-0-336"></a>        <span class="p">}</span>
-<a id="__codelineno-0-337" name="__codelineno-0-337"></a>
-<a id="__codelineno-0-338" name="__codelineno-0-338"></a>        <span class="c1"># Add format parameters</span>
-<a id="__codelineno-0-339" name="__codelineno-0-339"></a>        <span class="k">if</span> <span class="nb">format</span> <span class="o">!=</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>            <span class="n">analysis_params</span><span class="p">[</span><span class="s1">&#39;format&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">format</span>
-<a id="__codelineno-0-341" name="__codelineno-0-341"></a>        <span class="k">if</span> <span class="n">force_format</span><span class="p">:</span>
-<a id="__codelineno-0-342" name="__codelineno-0-342"></a>            <span class="n">analysis_params</span><span class="p">[</span><span class="s1">&#39;force_format&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">force_format</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>
-<a id="__codelineno-0-344" name="__codelineno-0-344"></a>        <span class="c1"># Combine with any other kwargs</span>
-<a id="__codelineno-0-345" name="__codelineno-0-345"></a>        <span class="n">all_params</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">analysis_params</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
-<a id="__codelineno-0-346" name="__codelineno-0-346"></a>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a>        <span class="n">EDFExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">all_params</span><span class="p">)</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a>               <span class="n">precision_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a>               <span class="nb">format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;edf&#39;</span><span class="p">,</span> <span class="s1">&#39;bdf&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>               <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a><span class="sd">        Export data to EDF/BDF format with corresponding channels.tsv file.</span>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">            filepath: Path to save the EDF/BDF file</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a><span class="sd">            method: Method for signal analysis (&#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;)</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a><span class="sd">                &#39;svd&#39;: Uses Singular Value Decomposition for noise floor estimation</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a><span class="sd">                &#39;fft&#39;: Uses Fast Fourier Transform for noise floor estimation</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a><span class="sd">                &#39;both&#39;: Uses both methods and takes the minimum noise floor (default)</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a><span class="sd">            fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a><span class="sd">            svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a><span class="sd">            precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a><span class="sd">            format: Format to use (&#39;auto&#39;, &#39;edf&#39;, or &#39;bdf&#39;). Default is &#39;auto&#39;.</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a><span class="sd">                    If &#39;edf&#39; or &#39;bdf&#39; is specified, that format will be used directly.</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a><span class="sd">                    If &#39;auto&#39;, the format (EDF/16-bit or BDF/24-bit) is chosen based</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a><span class="sd">                    on signal analysis to minimize precision loss while preferring EDF</span>
+<a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="sd">                    if sufficient.</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a><span class="sd">            **kwargs: Additional arguments for the EDF exporter</span>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="sd">        Raises:</span>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="sd">            ValueError: If no signals are loaded</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.edf</span><span class="w"> </span><span class="kn">import</span> <span class="n">EDFExporter</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>        <span class="c1"># Pass analysis parameters to the exporter</span>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>        <span class="n">export_params</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a>            <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
+<a id="__codelineno-0-334" name="__codelineno-0-334"></a>            <span class="s1">&#39;fft_noise_range&#39;</span><span class="p">:</span> <span class="n">fft_noise_range</span><span class="p">,</span>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a>            <span class="s1">&#39;svd_rank&#39;</span><span class="p">:</span> <span class="n">svd_rank</span><span class="p">,</span>
+<a id="__codelineno-0-336" name="__codelineno-0-336"></a>            <span class="s1">&#39;precision_threshold&#39;</span><span class="p">:</span> <span class="n">precision_threshold</span><span class="p">,</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>            <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="nb">format</span>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a>        <span class="p">}</span>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>        <span class="c1"># Combine with any other kwargs</span>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a>        <span class="n">all_params</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">export_params</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>        <span class="n">EDFExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">all_params</span><span class="p">)</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>
+<a id="__codelineno-0-345" name="__codelineno-0-345"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-346" name="__codelineno-0-346"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="sd">        Set metadata value.</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a>
-<a id="__codelineno-0-349" name="__codelineno-0-349"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="sd">        Set metadata value.</span>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">            key: Metadata key</span>
-<a id="__codelineno-0-355" name="__codelineno-0-355"></a><span class="sd">            value: Metadata value</span>
-<a id="__codelineno-0-356" name="__codelineno-0-356"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-357" name="__codelineno-0-357"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="sd">            key: Metadata key</span>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="sd">            value: Metadata value</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a>
+<a id="__codelineno-0-355" name="__codelineno-0-355"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">any</span><span class="p">:</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a><span class="sd">        Get metadata value.</span>
 <a id="__codelineno-0-358" name="__codelineno-0-358"></a>
-<a id="__codelineno-0-359" name="__codelineno-0-359"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">any</span><span class="p">:</span>
-<a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="sd">        Get metadata value.</span>
-<a id="__codelineno-0-362" name="__codelineno-0-362"></a>
-<a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">            key: Metadata key</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a>
-<a id="__codelineno-0-366" name="__codelineno-0-366"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-367" name="__codelineno-0-367"></a><span class="sd">            Value associated with the key</span>
-<a id="__codelineno-0-368" name="__codelineno-0-368"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-369" name="__codelineno-0-369"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-<a id="__codelineno-0-370" name="__codelineno-0-370"></a>
-<a id="__codelineno-0-371" name="__codelineno-0-371"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
-<a id="__codelineno-0-372" name="__codelineno-0-372"></a>            <span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<a id="__codelineno-0-373" name="__codelineno-0-373"></a>            <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-374" name="__codelineno-0-374"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-375" name="__codelineno-0-375"></a><span class="sd">        Add a new channel to the EMG data.</span>
-<a id="__codelineno-0-376" name="__codelineno-0-376"></a>
-<a id="__codelineno-0-377" name="__codelineno-0-377"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-378" name="__codelineno-0-378"></a><span class="sd">            label: Channel label or name (as per EDF specification)</span>
-<a id="__codelineno-0-379" name="__codelineno-0-379"></a><span class="sd">            data: Channel data</span>
-<a id="__codelineno-0-380" name="__codelineno-0-380"></a><span class="sd">            sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
-<a id="__codelineno-0-381" name="__codelineno-0-381"></a><span class="sd">            physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
-<a id="__codelineno-0-382" name="__codelineno-0-382"></a><span class="sd">            prefilter: Pre-filtering applied to the channel</span>
-<a id="__codelineno-0-383" name="__codelineno-0-383"></a><span class="sd">            channel_type: Channel type (&#39;EMG&#39;, &#39;ACC&#39;, &#39;GYRO&#39;, etc.)</span>
-<a id="__codelineno-0-384" name="__codelineno-0-384"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-385" name="__codelineno-0-385"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-386" name="__codelineno-0-386"></a>            <span class="c1"># Create DataFrame with time index</span>
-<a id="__codelineno-0-387" name="__codelineno-0-387"></a>            <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
-<a id="__codelineno-0-388" name="__codelineno-0-388"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
-<a id="__codelineno-0-389" name="__codelineno-0-389"></a>
-<a id="__codelineno-0-390" name="__codelineno-0-390"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
-<a id="__codelineno-0-391" name="__codelineno-0-391"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-392" name="__codelineno-0-392"></a>            <span class="s1">&#39;sample_frequency&#39;</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
-<a id="__codelineno-0-393" name="__codelineno-0-393"></a>            <span class="s1">&#39;physical_dimension&#39;</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
-<a id="__codelineno-0-394" name="__codelineno-0-394"></a>            <span class="s1">&#39;prefilter&#39;</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
-<a id="__codelineno-0-395" name="__codelineno-0-395"></a>            <span class="s1">&#39;channel_type&#39;</span><span class="p">:</span> <span class="n">channel_type</span>
-<a id="__codelineno-0-396" name="__codelineno-0-396"></a>        <span class="p">}</span>
+<a id="__codelineno-0-359" name="__codelineno-0-359"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="sd">            key: Metadata key</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a>
+<a id="__codelineno-0-362" name="__codelineno-0-362"></a><span class="sd">        Returns:</span>
+<a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">            Value associated with the key</span>
+<a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-365" name="__codelineno-0-365"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+<a id="__codelineno-0-366" name="__codelineno-0-366"></a>
+<a id="__codelineno-0-367" name="__codelineno-0-367"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
+<a id="__codelineno-0-368" name="__codelineno-0-368"></a>            <span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-369" name="__codelineno-0-369"></a>            <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="sd">        Add a new channel to the EMG data.</span>
+<a id="__codelineno-0-372" name="__codelineno-0-372"></a>
+<a id="__codelineno-0-373" name="__codelineno-0-373"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-374" name="__codelineno-0-374"></a><span class="sd">            label: Channel label or name (as per EDF specification)</span>
+<a id="__codelineno-0-375" name="__codelineno-0-375"></a><span class="sd">            data: Channel data</span>
+<a id="__codelineno-0-376" name="__codelineno-0-376"></a><span class="sd">            sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
+<a id="__codelineno-0-377" name="__codelineno-0-377"></a><span class="sd">            physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
+<a id="__codelineno-0-378" name="__codelineno-0-378"></a><span class="sd">            prefilter: Pre-filtering applied to the channel</span>
+<a id="__codelineno-0-379" name="__codelineno-0-379"></a><span class="sd">            channel_type: Channel type (&#39;EMG&#39;, &#39;ACC&#39;, &#39;GYRO&#39;, etc.)</span>
+<a id="__codelineno-0-380" name="__codelineno-0-380"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-381" name="__codelineno-0-381"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-382" name="__codelineno-0-382"></a>            <span class="c1"># Create DataFrame with time index</span>
+<a id="__codelineno-0-383" name="__codelineno-0-383"></a>            <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
+<a id="__codelineno-0-384" name="__codelineno-0-384"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
+<a id="__codelineno-0-385" name="__codelineno-0-385"></a>
+<a id="__codelineno-0-386" name="__codelineno-0-386"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+<a id="__codelineno-0-387" name="__codelineno-0-387"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-388" name="__codelineno-0-388"></a>            <span class="s1">&#39;sample_frequency&#39;</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
+<a id="__codelineno-0-389" name="__codelineno-0-389"></a>            <span class="s1">&#39;physical_dimension&#39;</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
+<a id="__codelineno-0-390" name="__codelineno-0-390"></a>            <span class="s1">&#39;prefilter&#39;</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
+<a id="__codelineno-0-391" name="__codelineno-0-391"></a>            <span class="s1">&#39;channel_type&#39;</span><span class="p">:</span> <span class="n">channel_type</span>
+<a id="__codelineno-0-392" name="__codelineno-0-392"></a>        <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -2662,7 +2654,11 @@
 
             <details class="quote">
               <summary>Source code in <code>emgio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-371">371</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-367">367</a></span>
+<span class="normal"><a href="#__codelineno-0-368">368</a></span>
+<span class="normal"><a href="#__codelineno-0-369">369</a></span>
+<span class="normal"><a href="#__codelineno-0-370">370</a></span>
+<span class="normal"><a href="#__codelineno-0-371">371</a></span>
 <span class="normal"><a href="#__codelineno-0-372">372</a></span>
 <span class="normal"><a href="#__codelineno-0-373">373</a></span>
 <span class="normal"><a href="#__codelineno-0-374">374</a></span>
@@ -2683,36 +2679,32 @@
 <span class="normal"><a href="#__codelineno-0-389">389</a></span>
 <span class="normal"><a href="#__codelineno-0-390">390</a></span>
 <span class="normal"><a href="#__codelineno-0-391">391</a></span>
-<span class="normal"><a href="#__codelineno-0-392">392</a></span>
-<span class="normal"><a href="#__codelineno-0-393">393</a></span>
-<span class="normal"><a href="#__codelineno-0-394">394</a></span>
-<span class="normal"><a href="#__codelineno-0-395">395</a></span>
-<span class="normal"><a href="#__codelineno-0-396">396</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
-<a id="__codelineno-0-372" name="__codelineno-0-372"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<a id="__codelineno-0-373" name="__codelineno-0-373"></a>        <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-374" name="__codelineno-0-374"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-375" name="__codelineno-0-375"></a><span class="sd">    Add a new channel to the EMG data.</span>
-<a id="__codelineno-0-376" name="__codelineno-0-376"></a>
-<a id="__codelineno-0-377" name="__codelineno-0-377"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-378" name="__codelineno-0-378"></a><span class="sd">        label: Channel label or name (as per EDF specification)</span>
-<a id="__codelineno-0-379" name="__codelineno-0-379"></a><span class="sd">        data: Channel data</span>
-<a id="__codelineno-0-380" name="__codelineno-0-380"></a><span class="sd">        sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
-<a id="__codelineno-0-381" name="__codelineno-0-381"></a><span class="sd">        physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
-<a id="__codelineno-0-382" name="__codelineno-0-382"></a><span class="sd">        prefilter: Pre-filtering applied to the channel</span>
-<a id="__codelineno-0-383" name="__codelineno-0-383"></a><span class="sd">        channel_type: Channel type (&#39;EMG&#39;, &#39;ACC&#39;, &#39;GYRO&#39;, etc.)</span>
-<a id="__codelineno-0-384" name="__codelineno-0-384"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-385" name="__codelineno-0-385"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-386" name="__codelineno-0-386"></a>        <span class="c1"># Create DataFrame with time index</span>
-<a id="__codelineno-0-387" name="__codelineno-0-387"></a>        <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
-<a id="__codelineno-0-388" name="__codelineno-0-388"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
-<a id="__codelineno-0-389" name="__codelineno-0-389"></a>
-<a id="__codelineno-0-390" name="__codelineno-0-390"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
-<a id="__codelineno-0-391" name="__codelineno-0-391"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-392" name="__codelineno-0-392"></a>        <span class="s1">&#39;sample_frequency&#39;</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
-<a id="__codelineno-0-393" name="__codelineno-0-393"></a>        <span class="s1">&#39;physical_dimension&#39;</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
-<a id="__codelineno-0-394" name="__codelineno-0-394"></a>        <span class="s1">&#39;prefilter&#39;</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
-<a id="__codelineno-0-395" name="__codelineno-0-395"></a>        <span class="s1">&#39;channel_type&#39;</span><span class="p">:</span> <span class="n">channel_type</span>
-<a id="__codelineno-0-396" name="__codelineno-0-396"></a>    <span class="p">}</span>
+<span class="normal"><a href="#__codelineno-0-392">392</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-367" name="__codelineno-0-367"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
+<a id="__codelineno-0-368" name="__codelineno-0-368"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-369" name="__codelineno-0-369"></a>        <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="sd">    Add a new channel to the EMG data.</span>
+<a id="__codelineno-0-372" name="__codelineno-0-372"></a>
+<a id="__codelineno-0-373" name="__codelineno-0-373"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-374" name="__codelineno-0-374"></a><span class="sd">        label: Channel label or name (as per EDF specification)</span>
+<a id="__codelineno-0-375" name="__codelineno-0-375"></a><span class="sd">        data: Channel data</span>
+<a id="__codelineno-0-376" name="__codelineno-0-376"></a><span class="sd">        sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
+<a id="__codelineno-0-377" name="__codelineno-0-377"></a><span class="sd">        physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
+<a id="__codelineno-0-378" name="__codelineno-0-378"></a><span class="sd">        prefilter: Pre-filtering applied to the channel</span>
+<a id="__codelineno-0-379" name="__codelineno-0-379"></a><span class="sd">        channel_type: Channel type (&#39;EMG&#39;, &#39;ACC&#39;, &#39;GYRO&#39;, etc.)</span>
+<a id="__codelineno-0-380" name="__codelineno-0-380"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-381" name="__codelineno-0-381"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-382" name="__codelineno-0-382"></a>        <span class="c1"># Create DataFrame with time index</span>
+<a id="__codelineno-0-383" name="__codelineno-0-383"></a>        <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
+<a id="__codelineno-0-384" name="__codelineno-0-384"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
+<a id="__codelineno-0-385" name="__codelineno-0-385"></a>
+<a id="__codelineno-0-386" name="__codelineno-0-386"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+<a id="__codelineno-0-387" name="__codelineno-0-387"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-388" name="__codelineno-0-388"></a>        <span class="s1">&#39;sample_frequency&#39;</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
+<a id="__codelineno-0-389" name="__codelineno-0-389"></a>        <span class="s1">&#39;physical_dimension&#39;</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
+<a id="__codelineno-0-390" name="__codelineno-0-390"></a>        <span class="s1">&#39;prefilter&#39;</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
+<a id="__codelineno-0-391" name="__codelineno-0-391"></a>        <span class="s1">&#39;channel_type&#39;</span><span class="p">:</span> <span class="n">channel_type</span>
+<a id="__codelineno-0-392" name="__codelineno-0-392"></a>    <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2997,27 +2989,27 @@
 
             <details class="quote">
               <summary>Source code in <code>emgio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-359">359</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-355">355</a></span>
+<span class="normal"><a href="#__codelineno-0-356">356</a></span>
+<span class="normal"><a href="#__codelineno-0-357">357</a></span>
+<span class="normal"><a href="#__codelineno-0-358">358</a></span>
+<span class="normal"><a href="#__codelineno-0-359">359</a></span>
 <span class="normal"><a href="#__codelineno-0-360">360</a></span>
 <span class="normal"><a href="#__codelineno-0-361">361</a></span>
 <span class="normal"><a href="#__codelineno-0-362">362</a></span>
 <span class="normal"><a href="#__codelineno-0-363">363</a></span>
 <span class="normal"><a href="#__codelineno-0-364">364</a></span>
-<span class="normal"><a href="#__codelineno-0-365">365</a></span>
-<span class="normal"><a href="#__codelineno-0-366">366</a></span>
-<span class="normal"><a href="#__codelineno-0-367">367</a></span>
-<span class="normal"><a href="#__codelineno-0-368">368</a></span>
-<span class="normal"><a href="#__codelineno-0-369">369</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-359" name="__codelineno-0-359"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">any</span><span class="p">:</span>
-<a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="sd">    Get metadata value.</span>
-<a id="__codelineno-0-362" name="__codelineno-0-362"></a>
-<a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">        key: Metadata key</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a>
-<a id="__codelineno-0-366" name="__codelineno-0-366"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-367" name="__codelineno-0-367"></a><span class="sd">        Value associated with the key</span>
-<a id="__codelineno-0-368" name="__codelineno-0-368"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-369" name="__codelineno-0-369"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-365">365</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-355" name="__codelineno-0-355"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">any</span><span class="p">:</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a><span class="sd">    Get metadata value.</span>
+<a id="__codelineno-0-358" name="__codelineno-0-358"></a>
+<a id="__codelineno-0-359" name="__codelineno-0-359"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="sd">        key: Metadata key</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a>
+<a id="__codelineno-0-362" name="__codelineno-0-362"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">        Value associated with the key</span>
+<a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-365" name="__codelineno-0-365"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3446,23 +3438,23 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 
             <details class="quote">
               <summary>Source code in <code>emgio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-349">349</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-345">345</a></span>
+<span class="normal"><a href="#__codelineno-0-346">346</a></span>
+<span class="normal"><a href="#__codelineno-0-347">347</a></span>
+<span class="normal"><a href="#__codelineno-0-348">348</a></span>
+<span class="normal"><a href="#__codelineno-0-349">349</a></span>
 <span class="normal"><a href="#__codelineno-0-350">350</a></span>
 <span class="normal"><a href="#__codelineno-0-351">351</a></span>
 <span class="normal"><a href="#__codelineno-0-352">352</a></span>
-<span class="normal"><a href="#__codelineno-0-353">353</a></span>
-<span class="normal"><a href="#__codelineno-0-354">354</a></span>
-<span class="normal"><a href="#__codelineno-0-355">355</a></span>
-<span class="normal"><a href="#__codelineno-0-356">356</a></span>
-<span class="normal"><a href="#__codelineno-0-357">357</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="sd">    Set metadata value.</span>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">        key: Metadata key</span>
-<a id="__codelineno-0-355" name="__codelineno-0-355"></a><span class="sd">        value: Metadata value</span>
-<a id="__codelineno-0-356" name="__codelineno-0-356"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-357" name="__codelineno-0-357"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="normal"><a href="#__codelineno-0-353">353</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-345" name="__codelineno-0-345"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-346" name="__codelineno-0-346"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="sd">    Set metadata value.</span>
+<a id="__codelineno-0-348" name="__codelineno-0-348"></a>
+<a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="sd">        key: Metadata key</span>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="sd">        value: Metadata value</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3473,7 +3465,7 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 
 
 <h4 id="emgio.importers.base.EMG.to_edf" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">to_edf</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precision_threshold</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">force_format</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">to_edf</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precision_threshold</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
 
 <a href="#emgio.importers.base.EMG.to_edf" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -3490,11 +3482,11 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
     fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method
     svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method
     precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
-    format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
-        based on signal characteristics. When specified, the system will still warn
-        if the chosen format is not optimal.
-    force_format: When True, bypasses all format suitability checks and uses the
-        specified format without warnings. Default is False.
+    format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto'.
+            If 'edf' or 'bdf' is specified, that format will be used directly.
+            If 'auto', the format (EDF/16-bit or BDF/24-bit) is chosen based
+            on signal analysis to minimize precision loss while preferring EDF
+            if sufficient.
     **kwargs: Additional arguments for the EDF exporter</p>
 <p>Raises:
     ValueError: If no signals are loaded</p>
@@ -3546,59 +3538,51 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <span class="normal"><a href="#__codelineno-0-340">340</a></span>
 <span class="normal"><a href="#__codelineno-0-341">341</a></span>
 <span class="normal"><a href="#__codelineno-0-342">342</a></span>
-<span class="normal"><a href="#__codelineno-0-343">343</a></span>
-<span class="normal"><a href="#__codelineno-0-344">344</a></span>
-<span class="normal"><a href="#__codelineno-0-345">345</a></span>
-<span class="normal"><a href="#__codelineno-0-346">346</a></span>
-<span class="normal"><a href="#__codelineno-0-347">347</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-299" name="__codelineno-0-299"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_edf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;both&#39;</span><span class="p">,</span>
+<span class="normal"><a href="#__codelineno-0-343">343</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-299" name="__codelineno-0-299"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_edf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;both&#39;</span><span class="p">,</span>
 <a id="__codelineno-0-300" name="__codelineno-0-300"></a>           <span class="n">fft_noise_range</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>           <span class="n">precision_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span><span class="p">,</span>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>           <span class="n">force_format</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="sd">    Export data to EDF/BDF format with corresponding channels.tsv file.</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>
-<a id="__codelineno-0-306" name="__codelineno-0-306"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">        filepath: Path to save the EDF/BDF file</span>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">        method: Method for signal analysis (&#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;)</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a><span class="sd">            &#39;svd&#39;: Uses Singular Value Decomposition for noise floor estimation</span>
-<a id="__codelineno-0-310" name="__codelineno-0-310"></a><span class="sd">            &#39;fft&#39;: Uses Fast Fourier Transform for noise floor estimation</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a><span class="sd">            &#39;both&#39;: Uses both methods and takes the minimum noise floor (default)</span>
-<a id="__codelineno-0-312" name="__codelineno-0-312"></a><span class="sd">        fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method</span>
-<a id="__codelineno-0-313" name="__codelineno-0-313"></a><span class="sd">        svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method</span>
-<a id="__codelineno-0-314" name="__codelineno-0-314"></a><span class="sd">        precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)</span>
-<a id="__codelineno-0-315" name="__codelineno-0-315"></a><span class="sd">        format: Format to use (&#39;auto&#39;, &#39;edf&#39;, or &#39;bdf&#39;). Default is &#39;auto&#39; which selects</span>
-<a id="__codelineno-0-316" name="__codelineno-0-316"></a><span class="sd">            based on signal characteristics. When specified, the system will still warn</span>
-<a id="__codelineno-0-317" name="__codelineno-0-317"></a><span class="sd">            if the chosen format is not optimal.</span>
-<a id="__codelineno-0-318" name="__codelineno-0-318"></a><span class="sd">        force_format: When True, bypasses all format suitability checks and uses the</span>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a><span class="sd">            specified format without warnings. Default is False.</span>
-<a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="sd">        **kwargs: Additional arguments for the EDF exporter</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a>
-<a id="__codelineno-0-322" name="__codelineno-0-322"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="sd">        ValueError: If no signals are loaded</span>
-<a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-325" name="__codelineno-0-325"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-326" name="__codelineno-0-326"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-327" name="__codelineno-0-327"></a>
-<a id="__codelineno-0-328" name="__codelineno-0-328"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.edf</span><span class="w"> </span><span class="kn">import</span> <span class="n">EDFExporter</span>
-<a id="__codelineno-0-329" name="__codelineno-0-329"></a>
-<a id="__codelineno-0-330" name="__codelineno-0-330"></a>    <span class="c1"># Pass analysis parameters to the exporter</span>
-<a id="__codelineno-0-331" name="__codelineno-0-331"></a>    <span class="n">analysis_params</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-332" name="__codelineno-0-332"></a>        <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a>        <span class="s1">&#39;fft_noise_range&#39;</span><span class="p">:</span> <span class="n">fft_noise_range</span><span class="p">,</span>
-<a id="__codelineno-0-334" name="__codelineno-0-334"></a>        <span class="s1">&#39;svd_rank&#39;</span><span class="p">:</span> <span class="n">svd_rank</span><span class="p">,</span>
-<a id="__codelineno-0-335" name="__codelineno-0-335"></a>        <span class="s1">&#39;precision_threshold&#39;</span><span class="p">:</span> <span class="n">precision_threshold</span>
-<a id="__codelineno-0-336" name="__codelineno-0-336"></a>    <span class="p">}</span>
-<a id="__codelineno-0-337" name="__codelineno-0-337"></a>
-<a id="__codelineno-0-338" name="__codelineno-0-338"></a>    <span class="c1"># Add format parameters</span>
-<a id="__codelineno-0-339" name="__codelineno-0-339"></a>    <span class="k">if</span> <span class="nb">format</span> <span class="o">!=</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>        <span class="n">analysis_params</span><span class="p">[</span><span class="s1">&#39;format&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">format</span>
-<a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="k">if</span> <span class="n">force_format</span><span class="p">:</span>
-<a id="__codelineno-0-342" name="__codelineno-0-342"></a>        <span class="n">analysis_params</span><span class="p">[</span><span class="s1">&#39;force_format&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">force_format</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>
-<a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="c1"># Combine with any other kwargs</span>
-<a id="__codelineno-0-345" name="__codelineno-0-345"></a>    <span class="n">all_params</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">analysis_params</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
-<a id="__codelineno-0-346" name="__codelineno-0-346"></a>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a>    <span class="n">EDFExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">all_params</span><span class="p">)</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a>           <span class="n">precision_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a>           <span class="nb">format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;edf&#39;</span><span class="p">,</span> <span class="s1">&#39;bdf&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>           <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a><span class="sd">    Export data to EDF/BDF format with corresponding channels.tsv file.</span>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">        filepath: Path to save the EDF/BDF file</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a><span class="sd">        method: Method for signal analysis (&#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;)</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a><span class="sd">            &#39;svd&#39;: Uses Singular Value Decomposition for noise floor estimation</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a><span class="sd">            &#39;fft&#39;: Uses Fast Fourier Transform for noise floor estimation</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a><span class="sd">            &#39;both&#39;: Uses both methods and takes the minimum noise floor (default)</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a><span class="sd">        fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a><span class="sd">        svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a><span class="sd">        precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a><span class="sd">        format: Format to use (&#39;auto&#39;, &#39;edf&#39;, or &#39;bdf&#39;). Default is &#39;auto&#39;.</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a><span class="sd">                If &#39;edf&#39; or &#39;bdf&#39; is specified, that format will be used directly.</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a><span class="sd">                If &#39;auto&#39;, the format (EDF/16-bit or BDF/24-bit) is chosen based</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a><span class="sd">                on signal analysis to minimize precision loss while preferring EDF</span>
+<a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="sd">                if sufficient.</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a><span class="sd">        **kwargs: Additional arguments for the EDF exporter</span>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="sd">        ValueError: If no signals are loaded</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.edf</span><span class="w"> </span><span class="kn">import</span> <span class="n">EDFExporter</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>    <span class="c1"># Pass analysis parameters to the exporter</span>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>    <span class="n">export_params</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a>        <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
+<a id="__codelineno-0-334" name="__codelineno-0-334"></a>        <span class="s1">&#39;fft_noise_range&#39;</span><span class="p">:</span> <span class="n">fft_noise_range</span><span class="p">,</span>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a>        <span class="s1">&#39;svd_rank&#39;</span><span class="p">:</span> <span class="n">svd_rank</span><span class="p">,</span>
+<a id="__codelineno-0-336" name="__codelineno-0-336"></a>        <span class="s1">&#39;precision_threshold&#39;</span><span class="p">:</span> <span class="n">precision_threshold</span><span class="p">,</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>        <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="nb">format</span>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a>    <span class="p">}</span>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="c1"># Combine with any other kwargs</span>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="n">all_params</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">export_params</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="n">EDFExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">all_params</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
