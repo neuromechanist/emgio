@@ -81,8 +81,8 @@ print(f"Recording duration: {emg.get_duration()} seconds")
 emg.to_edf('output')  # Will add .edf or .bdf extension automatically
 
 # Force a specific format
-emg.to_edf('output_edf', force_format='edf')  # Forces 16-bit EDF
-emg.to_edf('output_bdf', force_format='bdf')  # Forces 24-bit BDF
+emg.to_edf('output_edf', format='edf')  # Forces 16-bit EDF
+emg.to_edf('output_bdf', format='bdf')  # Forces 24-bit BDF
 ```
 
 ## Notes and Limitations
@@ -91,4 +91,4 @@ emg.to_edf('output_bdf', force_format='bdf')  # Forces 24-bit BDF
 - Annotations in EDF files are preserved in EMGIO's metadata
 - When importing from EDF, EMGIO attempts to identify channel types based on labels and signal characteristics
 - When exporting to EDF/BDF, EMGIO automatically handles scaling to maximize precision
-- EDF has limitations on channel naming (maximum 16 characters) 
+- EDF has limitations on channel naming (maximum 16 characters)
