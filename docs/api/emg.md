@@ -36,7 +36,12 @@ The `EMG` class is the main class in EMGIO for working with EMG data. It encapsu
 
 ### Visualization
 
-- `plot_signals()`: Plot EMG signals
+- `plot_signals()`: Plot EMG signals with customizable options
+- `plot_comparison()`: Plot comparison between two EMG signals (e.g., original and reloaded)
+
+### Verification
+
+- `verify_against()`: Verify signal integrity against another EMG object
 
 ### Export
 
@@ -127,9 +132,31 @@ emg.plot_signals(
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),
     title='EMG Signals',
-    figsize=(12, 6),
-    grid=True
+    grid=True,
+    detrend=False,
+    offset_scale=0.8
 )
+```
+
+### Verification
+
+```python
+# Export and reload data
+emg_original.to_edf('output')
+emg_reloaded = EMG.from_file('output.edf')
+
+# Verify signal integrity
+result = emg_original.verify_against(emg_reloaded)
+if result:
+    print("Verification passed")
+else:
+    print("Verification failed")
+
+# With custom tolerance
+result = emg_original.verify_against(emg_reloaded, tolerance=0.005)
+
+# Plot comparison for visual verification
+emg_original.plot_comparison(emg_reloaded, channels=['EMG1', 'EMG2'])
 ```
 
 ### Exporting

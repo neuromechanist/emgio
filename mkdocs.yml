@@ -75,6 +75,7 @@ nav:
     - Channel Selection: user-guide/channel-selection.md
     - EDF/BDF Format Selection: user-guide/edf-bdf-selection.md
     - Metadata Handling: user-guide/metadata.md
+    - Signal Verification: user-guide/verification.md
   - Data Formats:
     - Trigno: formats/trigno.md
     - EEGLAB: formats/eeglab.md
@@ -92,10 +93,15 @@ nav:
       - CSV Importer: api/importers/csv.md
     - Exporters:
       - EDF/BDF Exporter: api/exporters/edf.md
+    - Analysis:
+      - Verification: api/analysis/verification.md
+    - Visualization:
+      - Static Plots: api/visualization/static.md
   - Examples:
     - Trigno Examples: examples/trigno.md
     - EEGLAB Examples: examples/eeglab.md
     - OTB Examples: examples/otb.md
+    - Signal Verification: examples/verification.md
     - Converting Jupyter Notebooks: examples/notebooks.md
   - Contributing: contributing.md
 

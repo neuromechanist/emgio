@@ -1,8 +1,19 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
-from typing import List, Optional, Union, Any, Literal
+from typing import List, Optional, Union, Literal, Dict
+import logging
+from ..analysis.verification import compare_signals, report_verification_results
+from ..visualization.static import plot_signals as static_plot_signals, plot_comparison
+
+# --- Configuration ---
+enable_logging = False  # Set to False to disable most logging
+
+# Configure logging
+if enable_logging:
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+else:
+    logging.basicConfig(level=logging.CRITICAL)  # Effectively turns off most logging
 
 
 class EMG:
@@ -21,6 +32,37 @@ class EMG:
         self.signals = None
         self.metadata = {}
         self.channels = {}
+
+    def plot_signals(self, channels=None, time_range=None, offset_scale=0.8,
+                    uniform_scale=True, detrend=False, grid=True, title=None,
+                    show=True, plt_module=None):
+        """
+        Plot EMG signals in a single plot with vertical offsets.
+
+        Args:
+            channels: List of channels to plot. If None, plot all channels.
+            time_range: Tuple of (start_time, end_time) to plot. If None, plot all data.
+            offset_scale: Portion of allocated space each signal can use (0.0 to 1.0).
+            uniform_scale: Whether to use the same scale for all signals.
+            detrend: Whether to remove mean from signals before plotting.
+            grid: Whether to show grid lines.
+            title: Optional title for the figure.
+            show: Whether to display the plot.
+            plt_module: Matplotlib pyplot module to use.
+        """
+        # Delegate to the static plotting function in visualization module
+        static_plot_signals(
+            emg_object=self,
+            channels=channels,
+            time_range=time_range,
+            offset_scale=offset_scale,
+            uniform_scale=uniform_scale,
+            detrend=detrend,
+            grid=grid,
+            title=title,
+            show=show,
+            plt_module=plt_module
+        )
 
     @classmethod
     def _infer_importer(cls, filepath: str) -> str:
@@ -198,109 +240,15 @@ class EMG:
         return [ch for ch, info in self.channels.items()
                 if info['channel_type'] == channel_type]
 
-    def plot_signals(
-            self, channels: Optional[List[str]] = None,
-            time_range: Optional[tuple] = None,
-            offset_scale: float = 0.8,
-            uniform_scale: bool = True,
-            detrend: bool = False,
-            grid: bool = True,
-            title: Optional[str] = None,
-            show: bool = True,
-            plt_module: Any = plt) -> None:
-        """
-        Plot EMG signals in a single plot with vertical offsets.
-
-        Args:
-            channels: List of channels to plot. If None, plot all channels
-            time_range: Tuple of (start_time, end_time) to plot. If None, plot all data
-            offset_scale: Portion of allocated space each signal can use (0.0 to 1.0)
-            uniform_scale: Whether to use the same scale for all signals
-            detrend: Whether to remove mean from signals before plotting
-            grid: Whether to show grid lines
-            title: Optional title for the figure
-            show: Whether to display the plot
-            plt_module: Matplotlib pyplot module to use
-        """
-        if self.signals is None:
-            raise ValueError("No signals loaded")
-
-        if channels is None:
-            channels = self.signals.columns
-        elif not all(ch in self.signals.columns for ch in channels):
-            missing = [ch for ch in channels if ch not in self.signals.columns]
-            raise ValueError(f"Channels not found: {missing}")
-
-        # Create figure
-        fig, ax = plt_module.subplots(figsize=(12, 8))
-
-        # Set figure title if provided
-        if title:
-            ax.set_title(title, fontsize=14, pad=20)
-
-        # Process signals
-        processed_data = {}
-        max_range = 0
-
-        for i, channel in enumerate(channels):
-            data = self.signals[channel]
-            if time_range:
-                start, end = time_range
-                data = data.loc[start:end]
-
-            # Detrend if requested
-            if detrend:
-                data = data - data.mean()
-
-            processed_data[channel] = data
-            max_range = max(max_range, data.max() - data.min())
-
-        # Plot each signal with offset
-        n_channels = len(channels)
-        yticks = []
-        yticklabels = []
-
-        for i, channel in enumerate(channels):
-            data = processed_data[channel]
-
-            # Calculate offset and scaling
-            offset = n_channels - i - 1  # Reverse order (top to bottom)
-            if uniform_scale:
-                scale = offset_scale / max_range
-            else:
-                scale = offset_scale / (data.max() - data.min())
-
-            # Scale and offset the signal
-            scaled_data = data * scale + offset
-
-            # Plot the signal
-            ax.plot(data.index, scaled_data, linewidth=1, label=channel)
-
-            # Store tick position and label
-            yticks.append(offset)
-            yticklabels.append(f"{channel}")
-
-        # Set axis labels and ticks
-        ax.set_xlabel("Time (s)")
-        ax.set_yticks(yticks)
-        ax.set_yticklabels(yticklabels)
-
-        # Set y-axis limits with some padding
-        ax.set_ylim(-0.5, n_channels - 0.5)
-
-        if grid:
-            ax.grid(True, linestyle='--', alpha=0.7)
-
-        # Adjust layout
-        plt_module.tight_layout()
-        if show:
-            plt_module.show()
-
     def to_edf(self, filepath: str, method: str = 'both',
                fft_noise_range: tuple = None, svd_rank: int = None,
                precision_threshold: float = 0.01,
                format: Literal['auto', 'edf', 'bdf'] = 'auto',
-               **kwargs) -> None:
+
+               verify: bool = False, verify_tolerance: float = 1e-6,
+               verify_channel_map: Optional[Dict[str, str]] = None,
+               verify_plot: bool = False,
+               **kwargs) -> Optional[dict]:
         """
         Export data to EDF/BDF format with corresponding channels.tsv file.
 
@@ -318,7 +266,17 @@ class EMG:
                     If 'auto', the format (EDF/16-bit or BDF/24-bit) is chosen based
                     on signal analysis to minimize precision loss while preferring EDF
                     if sufficient.
+            verify: If True, reload the exported file and compare signals with the original
+                    to check for data integrity loss. Results are printed. (default: False)
+            verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)
+            verify_channel_map: Optional dictionary mapping original channel names (keys)
+                                to reloaded channel names (values) for verification.
+                                Used if `verify` is True and channel names might differ.
             **kwargs: Additional arguments for the EDF exporter
+
+        Returns:
+            Optional[dict]: If verify is True, returns a dictionary with verification results.
+                           Otherwise, returns None.
 
         Raises:
             ValueError: If no signals are loaded
@@ -340,7 +298,47 @@ class EMG:
         # Combine with any other kwargs
         all_params = {**export_params, **kwargs}
 
+        # Perform export
         EDFExporter.export(self, filepath, **all_params)
+
+        verification_report_dict = None
+        if verify:
+            logging.info(f"Verification requested. Reloading exported file: {filepath}")
+            try:
+                # Reload the exported file
+                reloaded_emg = EMG.from_file(filepath, importer='edf')
+
+                logging.info("Comparing original signals with reloaded signals...")
+                # Compare signals using the imported function
+                verification_results = compare_signals(
+                    self,
+                    reloaded_emg,
+                    tolerance=verify_tolerance,
+                    channel_map=verify_channel_map
+                )
+
+                # Generate and log report using the imported function
+                report_verification_results(verification_results, verify_tolerance)
+                verification_report_dict = verification_results
+
+                # Plot comparison using imported function if requested
+                summary = verification_results.get('channel_summary', {})
+                comparison_mode = summary.get('comparison_mode', 'unknown')
+                compared_count = sum(1 for k in verification_results if k != 'channel_summary')
+
+                if verify_plot and compared_count > 0 and comparison_mode != 'failed':
+                    plot_comparison(self, reloaded_emg, channel_map=verify_channel_map)
+                elif verify_plot:
+                    logging.warning("Skipping verification plot: No channels were successfully compared.")
+
+            except Exception as e:
+                logging.error(f"Verification failed during reload or comparison: {e}")
+                verification_report_dict = {
+                    'error': str(e),
+                    'channel_summary': {'comparison_mode': 'failed'}
+                }
+
+        return verification_report_dict
 
     def set_metadata(self, key: str, value: any) -> None:
         """

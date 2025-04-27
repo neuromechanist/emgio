@@ -1,0 +1,3 @@
+name	channel_type	physical_dimension	sample_frequency	reference	status
+CH1	EMG	mV	2000.0	n/a	good
+CH2	EMG	mV	2000.0	n/a	good
