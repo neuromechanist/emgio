@@ -110,10 +110,10 @@ def test_edf_export(sample_emg):
     with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
         edf_path = f.name
         bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
-    
+
     # Initialize channels_tsv_path here to avoid reference errors
     channels_tsv_path = os.path.splitext(edf_path)[0] + '_channels.tsv'
-    
+
     try:
         # Export using default ('auto') format - our test signals have high DR so expect BDF
         EDFExporter.export(sample_emg, edf_path, precision_threshold=1)
@@ -325,7 +325,7 @@ def test_format_selection():
             EDFExporter.export(emg_mixed, edf_path_mixed, format='auto')
             assert os.path.exists(bdf_path_mixed), "BDF file not created for mixed signal in auto mode"
             assert not os.path.exists(edf_path_mixed), "EDF file created unexpectedly"
-            assert any(("BDF format" in str(warn.message) or "format='bdf'" in str(warn.message)) 
+            assert any(("BDF format" in str(warn.message) or "format='bdf'" in str(warn.message))
                       for warn in w if "sample_rate" not in str(warn.message))
 
     finally:
@@ -534,7 +534,7 @@ def test_user_format_selection():
 
     all_paths = [edf_path_hdr, bdf_path_hdr, edf_path_lowdr, bdf_path_lowdr]
     all_tsv_paths = [os.path.splitext(p)[0] + '_channels.tsv' for p in all_paths]
-    
+
     try:
         # 1. Force EDF for HDR signal (no warning expected as format is explicit)
         with warnings.catch_warnings(record=True) as w:
@@ -544,7 +544,7 @@ def test_user_format_selection():
             assert not os.path.exists(bdf_path_hdr), "BDF file created unexpectedly when format='edf' specified"
             # Filter out pyedflib deprecation warnings about sample_rate
             format_warnings = [warn for warn in w if "sample_rate" not in str(warn.message) and
-                               "pyedflib" not in str(warn.message)] 
+                               "pyedflib" not in str(warn.message)]
             assert len(format_warnings) == 0, "Unexpected format warnings when format='edf' specified:" + \
                 f"{[str(warn.message) for warn in format_warnings]}"
 
@@ -591,18 +591,18 @@ def test_high_dynamic_range():
 
     tsv_path = os.path.splitext(edf_path)[0] + '_channels.tsv'
     all_paths = [edf_path, bdf_path, tsv_path]
-    
+
     try:
         # Export the EMG data using format='auto'
-        # When we mix a moderate DR signal with a high DR signal, 
+        # When we mix a moderate DR signal with a high DR signal,
         # the exporter should use BDF
         EDFExporter.export(emg, edf_path, format='auto')
-        
+
         # The regular signal has high DR so we expect BDF output
         assert os.path.exists(bdf_path), "BDF file not created even though REG_EMG has high DR"
-        # Note: The original empty EDF file created by tempfile.NamedTemporaryFile 
+        # Note: The original empty EDF file created by tempfile.NamedTemporaryFile
         # is not deleted by the exporter, so we don't check for its non-existence
-            
+
         # Verify the file content and scaling
         with pyedflib.EdfReader(bdf_path) as reader:
             headers = reader.getSignalHeaders()

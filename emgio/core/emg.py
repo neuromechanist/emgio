@@ -244,7 +244,7 @@ class EMG:
                fft_noise_range: tuple = None, svd_rank: int = None,
                precision_threshold: float = 0.01,
                format: Literal['auto', 'edf', 'bdf'] = 'auto',
-              
+
                verify: bool = False, verify_tolerance: float = 1e-6,
                verify_channel_map: Optional[Dict[str, str]] = None,
                verify_plot: bool = False,
