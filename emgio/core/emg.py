@@ -211,8 +211,9 @@ class EMG:
 
     def to_edf(self, filepath: str, method: str = 'both',
                fft_noise_range: tuple = None, svd_rank: int = None,
-               precision_threshold: float = 0.01, format: str = 'auto',
-               force_format: bool = False,
+               precision_threshold: float = 0.01,
+               format: Literal['auto', 'edf', 'bdf'] = 'auto',
+              
                verify: bool = False, verify_tolerance: float = 1e-6,
                verify_channel_map: Optional[Dict[str, str]] = None,
                verify_plot: bool = False,
@@ -229,11 +230,11 @@ class EMG:
             fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method
             svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method
             precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
-            format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
-                based on signal characteristics. When specified, the system will still warn
-                if the chosen format is not optimal.
-            force_format: When True, bypasses all format suitability checks and uses the
-                specified format without warnings. Default is False.
+            format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto'.
+                    If 'edf' or 'bdf' is specified, that format will be used directly.
+                    If 'auto', the format (EDF/16-bit or BDF/24-bit) is chosen based
+                    on signal analysis to minimize precision loss while preferring EDF
+                    if sufficient.
             verify: If True, reload the exported file and compare signals with the original
                     to check for data integrity loss. Results are printed. (default: False)
             verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)
@@ -255,21 +256,16 @@ class EMG:
         from ..exporters.edf import EDFExporter
 
         # Pass analysis parameters to the exporter
-        analysis_params = {
+        export_params = {
             'method': method,
             'fft_noise_range': fft_noise_range,
             'svd_rank': svd_rank,
-            'precision_threshold': precision_threshold
+            'precision_threshold': precision_threshold,
+            'format': format
         }
 
-        # Add format parameters
-        if format != 'auto':
-            analysis_params['format'] = format
-        if force_format:
-            analysis_params['force_format'] = force_format
-
         # Combine with any other kwargs
-        all_params = {**analysis_params, **kwargs}
+        all_params = {**export_params, **kwargs}
 
         # Perform export
         EDFExporter.export(self, filepath, **all_params)

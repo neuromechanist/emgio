@@ -95,10 +95,10 @@ EMGIO can export data to EDF/BDF formats:
 emg.to_edf('output')  # Extension (.edf/.bdf) will be added automatically
 
 # Force EDF format
-emg.to_edf('output', force_format='edf')
+emg.to_edf('output', format='edf')
 
 # Force BDF format
-emg.to_edf('output', force_format='bdf')
+emg.to_edf('output', format='bdf')
 
 # Control the analysis method for format selection
 emg.to_edf('output', method='svd')  # Use SVD analysis only
@@ -112,4 +112,4 @@ After mastering these basics, you might want to explore:
 
 - [Channel Selection](channel-selection.md) - Learn how to select and manipulate channels
 - [EDF/BDF Format Selection](edf-bdf-selection.md) - Understanding how EMGIO selects the appropriate format
-- [Metadata Handling](metadata.md) - Working with metadata in EMGIO 
+- [Metadata Handling](metadata.md) - Working with metadata in EMGIO

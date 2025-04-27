@@ -7,6 +7,7 @@ from ..core.emg import EMG
 from ..analysis.signal import (
     analyze_signal, determine_format_suitability
 )
+from typing import Literal
 
 
 def _format_physical_value(value: float, max_chars: int) -> tuple:
@@ -297,8 +298,8 @@ class EDFExporter:
     @staticmethod
     def export(emg: EMG, filepath: str, precision_threshold: float = 0.01,
                method: str = 'both', fft_noise_range: tuple = None,
-               svd_rank: int = None, format: str = 'auto',
-               force_format: bool = False, **kwargs) -> None:
+               svd_rank: int = None, format: Literal['auto', 'edf', 'bdf'] = 'auto',
+               **kwargs) -> None:
         """
         Export EMG data to EDF/BDF format with corresponding channels.tsv file.
 
@@ -312,143 +313,124 @@ class EDFExporter:
                 'both': Uses both methods and takes the minimum noise floor (default)
             fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method
             svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method
-            format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
-                based on signal characteristics. When specified, the system will still warn
-                if the chosen format is not optimal.
-            force_format: When True, bypasses all format suitability checks and uses the
-                specified format without warnings. Default is False.
+            format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto'.
+                    If 'edf' or 'bdf' is specified, that format will be used directly.
+                    If 'auto', the format (EDF/16-bit or BDF/24-bit) is chosen based
+                    on signal analysis to minimize precision loss while preferring EDF
+                    if sufficient.
             **kwargs: Additional arguments for the exporter
         """
         if emg.signals is None:
             raise ValueError("No signals to export")
 
-        # Analyze signals and determine format
         print("\nSignal Analysis:")
         print("--------------")
 
-        # Initialize format variables
+        # Initialize format decision variables
         use_bdf = False
         bdf_reason = ""
-        user_chose_bdf = None
+        format_decision_made = False
 
-        # Check if user has specified a format
-        if format.lower() != 'auto':
-            if format.lower() == 'bdf':
-                user_chose_bdf = True
-                if force_format:
-                    use_bdf = True
-                    print("\nUser requested BDF format (forced).")
-            elif format.lower() == 'edf':
-                user_chose_bdf = False
-                if force_format:
-                    use_bdf = False
-                    print("\nUser requested EDF format (forced).")
-            else:
-                warnings.warn(f"Unknown format: {format}. Valid options are 'auto', 'edf', or 'bdf'. Using 'auto'.")
-        signal_info = []
-        channel_info_list = []
-        channels_tsv_data = {
-            'name': [], 'channel_type': [], 'physical_dimension': [],
-            'sample_frequency': [], 'reference': [], 'status': []
-        }
+        # Direct format selection by user
+        if format.lower() == 'bdf':
+            use_bdf = True
+            format_decision_made = True
+            print("\nUser specified BDF format (24-bit).")
+        elif format.lower() == 'edf':
+            use_bdf = False
+            format_decision_made = True
+            print("\nUser specified EDF format (16-bit).")
+        elif format.lower() != 'auto':
+            warnings.warn(f"Unknown format: {format}. Valid options are 'auto', 'edf', or 'bdf'. Using 'auto'.")
+            format = 'auto'  # Default to auto if invalid format given
 
-        # First pass: analyze signals and determine recommended format
+        signal_analyses = {}
+        signal_info_strings = []
+
+        # Analyze signals (needed for summary and potentially for 'auto' format decision)
         for ch_name in emg.channels:
             signal = emg.signals[ch_name].values
             ch_info = emg.channels[ch_name]
 
-            # Analyze signal characteristics with the specified method
-            # Pass through the analysis parameters
+            # Analyze signal characteristics
             analysis = analyze_signal(signal, method=method,
                                       fft_noise_range=fft_noise_range,
                                       svd_rank=svd_rank)
             recommend_bdf, reason, snr = determine_format_suitability(signal, analysis)
+            analysis['snr'] = snr
+            analysis['recommend_bdf'] = recommend_bdf
+            analysis['reason'] = reason
+            signal_analyses[ch_name] = analysis  # Store analysis for later summary
 
-            # If using automatic format determination or not forced
-            if user_chose_bdf is None or not force_format:
-                # Perform quantization analysis for chosen format
-                if recommend_bdf:
-                    use_bdf = True
-                    if not bdf_reason:  # Only set reason for first channel requiring BDF
-                        bdf_reason = f"Channel {ch_name}: {reason}"
+            # If format is 'auto', check if any channel recommends BDF
+            if format == 'auto' and recommend_bdf:
+                use_bdf = True  # Switch to BDF if any channel needs it
+                if not bdf_reason:  # Capture the first reason
+                    bdf_reason = f"Channel '{ch_name}': {reason}"
 
-            # Calculate scaling factors
-            phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(
-                float(np.min(signal)), float(np.max(signal)),
-                use_bdf=recommend_bdf if user_chose_bdf is None else user_chose_bdf
-            )
-
-            signal_info.append(
+            # Prepare info string for printing later
+            signal_info_strings.append(
                 f"\n  {ch_name}:"
                 f"\n    Range: {analysis['range']:.8g} {ch_info['physical_dimension']}"
                 f"\n    Dynamic Range: {analysis['dynamic_range_db']:.1f} dB"
                 f"\n    Noise Floor: {analysis['noise_floor']:.2e} {ch_info['physical_dimension']}"
                 f"\n    SNR: {snr:.1f} dB"
                 f"\n    Method: {analysis.get('method', 'svd')}"
-                f"\n    Recommended Format: {'BDF' if recommend_bdf else 'EDF'}"
+                f"\n    Recommended Format: {'BDF' if recommend_bdf else 'EDF'} ({reason})"
             )
 
-        # Handle user format choice if specified
-        if user_chose_bdf is not None and not force_format:
-            # Warn if user choice conflicts with recommendation
-            if user_chose_bdf and not use_bdf:
-                warnings.warn("User requested BDF format, but analysis suggests EDF would be sufficient. "
-                              "Respecting user choice but be aware this may use more storage than necessary.")
-                use_bdf = True
-                print("\nUsing BDF format (24-bit) as requested by user, though EDF would be sufficient.")
-            elif not user_chose_bdf and use_bdf:
-                warnings.warn(f"User requested EDF format, but analysis suggests BDF is needed: {bdf_reason}. "
-                              "Respecting user choice but be aware this may result in precision loss.")
-                use_bdf = False
-                print("\nUsing EDF format (16-bit) as requested by user, despite recommendation for BDF.")
-                print(f"This may result in precision loss. Reason for BDF recommendation: {bdf_reason}")
-            elif user_chose_bdf and use_bdf:
-                print("\nUsing BDF format (24-bit) as requested by user, which matches the recommendation.")
-            else:  # not user_format_choice and not use_bdf:
-                print("\nUsing EDF format (16-bit) as requested by user, which matches the recommendation.")
+        # Print analysis details after deciding the format
+        for info_str in signal_info_strings:
+            print(info_str)
+
+        # Final format decision message for 'auto' mode
+        if format == 'auto':
+            if use_bdf:
+                print("\nUsing BDF format (24-bit) based on signal analysis to preserve precision.")
+                print(f"Reason: {bdf_reason}")
+                warnings.warn(f"Using BDF format based on signal analysis. Reason: {bdf_reason}")
+            else:
+                print("\nUsing EDF format (16-bit) based on signal analysis (precision within acceptable range).")
 
         # Set file format and create writer
+        channels_tsv_data = {
+            'name': [], 'channel_type': [], 'physical_dimension': [],
+            'sample_frequency': [], 'reference': [], 'status': []
+        }
+        channel_info_list = []
+
         if use_bdf:
             filepath = os.path.splitext(filepath)[0] + '.bdf'
-            if user_chose_bdf is None:  # Only show this message for automatic selection
-                print("\nUsing BDF format (24-bit) to preserve precision.")
-                print(f"Reason: {bdf_reason}")
-                warnings.warn(f"Using BDF format to preserve precision. Reason: {bdf_reason}")
-            writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=pyedflib.FILETYPE_BDFPLUS)
+            filetype = pyedflib.FILETYPE_BDFPLUS
         else:
             filepath = os.path.splitext(filepath)[0] + '.edf'
-            if user_chose_bdf is None:  # Only show this message for automatic selection
-                print("\nUsing EDF format (16-bit) as precision loss is within acceptable range.")
-            writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=pyedflib.FILETYPE_EDFPLUS)
+            filetype = pyedflib.FILETYPE_EDFPLUS
+
+        writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=filetype)
 
         try:
-            # Second pass: prepare channel information
-            signals = []
-            for ch_name in emg.channels:
+            # Prepare channel information and signals for writing
+            signals_to_write = []
+            for i, ch_name in enumerate(emg.channels):
                 signal = emg.signals[ch_name].values
                 ch_info = emg.channels[ch_name]
+                analysis = signal_analyses[ch_name] # Retrieve stored analysis
 
-                # Get signal min/max
+                # Get signal min/max for scaling factor calculation
                 signal_min = float(np.min(signal))
                 signal_max = float(np.max(signal))
 
-                # Calculate scaling factors for header and get scaling factor
+                # Calculate scaling factors for header based on the chosen format (use_bdf)
                 phys_min, phys_max, dig_min, dig_max, scale_factor = _determine_scaling_factors(
                     signal_min, signal_max, use_bdf=use_bdf
                 )
 
-                # Scale the signal to match the physical min/max scaling
-                scaled_signal = signal.copy()  # Make a copy to avoid modifying original
+                # Prepare the signal data (handle NaNs, but DO NOT pre-scale)
+                physical_signal = signal.copy()
+                physical_signal = np.nan_to_num(physical_signal, nan=0.0)
+                signals_to_write.append(physical_signal)
 
-                # Replace NaN values with zeros
-                scaled_signal = np.nan_to_num(scaled_signal, nan=0.0)
-
-                # Only scale if needed
-                if not np.isclose(scale_factor, 1.0):
-                    scaled_signal = scaled_signal / scale_factor
-                signals.append(scaled_signal)
-
-                # Prepare channel info
+                # Prepare channel header dictionary
                 ch_dict = {
                     'label': ch_name[:16],  # EDF+ limits label to 16 chars
                     'dimension': ch_info['physical_dimension'],
@@ -458,21 +440,21 @@ class EDFExporter:
                     'digital_max': dig_max,
                     'digital_min': dig_min,
                     'prefilter': ch_info['prefilter'],
-                    'transducer': f"{ch_info['channel_type']} sensor"
+                    'transducer': f"{ch_info.get('channel_type', 'Unknown')} sensor"  # Use get for safety
                 }
                 channel_info_list.append(ch_dict)
 
                 # Add to channels.tsv data
                 channels_tsv_data['name'].append(ch_name)
-                channels_tsv_data['channel_type'].append(ch_info['channel_type'])
+                channels_tsv_data['channel_type'].append(ch_info.get('channel_type', 'Unknown'))
                 channels_tsv_data['physical_dimension'].append(ch_info['physical_dimension'])
                 channels_tsv_data['sample_frequency'].append(ch_info['sample_frequency'])
-                channels_tsv_data['reference'].append('n/a')
-                channels_tsv_data['status'].append('good')
+                channels_tsv_data['reference'].append('n/a')  # Assuming no specific reference info
+                channels_tsv_data['status'].append('good')  # Assuming good status
 
-            # Set headers and write data
+            # Set headers and write data (pass physical signals)
             writer.setSignalHeaders(channel_info_list)
-            writer.writeSamples(signals)  # Pass physical signals directly
+            writer.writeSamples(signals_to_write)
 
             # Explicitly flush and close the writer to ensure all data is written
             writer.close()
@@ -489,37 +471,24 @@ class EDFExporter:
             if file_size == 0:
                 raise IOError(f"File {filepath} was created but is empty")
 
-            # Create a new writer for the channels.tsv file
-            # Store analyses for summary
-            analyses = {}
-            for ch_name in emg.channels:
-                signal = emg.signals[ch_name].values
-                analysis = analyze_signal(signal, method=method,
-                                          fft_noise_range=fft_noise_range,
-                                          svd_rank=svd_rank)
-                use_bdf_for_channel, reason, snr = determine_format_suitability(signal, analysis)
-                analysis['snr'] = snr
-                analysis['use_bdf'] = use_bdf_for_channel
-                analyses[ch_name] = analysis
-
-                # Only update use_bdf if we're in automatic mode
-                if user_chose_bdf is None:
-                    if use_bdf_for_channel:
-                        use_bdf = True
-                        if not bdf_reason:
-                            bdf_reason = f"Channel {ch_name}: {reason}"
-
-            # Print signal info
-            for info in signal_info:
-                print(info)
-
-            # Generate channels.tsv file
+            # Generate channels.tsv file using stored analyses
             channels_tsv_path = os.path.splitext(filepath)[0] + '_channels.tsv'
             pd.DataFrame(channels_tsv_data).to_csv(channels_tsv_path, sep='\t', index=False)
             print(f"\nChannels metadata saved to: {channels_tsv_path}")
 
-            # Print summary
-            summary = summarize_channels(emg.channels, emg.signals, analyses)
+            # Print summary using stored analyses
+            # We need to adapt summarize_channels call slightly or assume it uses the analyses dict
+            # Let's refine the analyses dict passed to summarize_channels
+            summary_analyses = {}
+            for ch_name, analysis in signal_analyses.items():
+                summary_analyses[ch_name] = {
+                    'range': analysis['range'],
+                    'dynamic_range_db': analysis['dynamic_range_db'],
+                    'snr_db': analysis['snr'],
+                    'use_bdf': use_bdf  # Use the final decision for the whole file
+                }
+
+            summary = summarize_channels(emg.channels, emg.signals, summary_analyses)
             print("\nSummary:")
             print(summary)
 
@@ -527,9 +496,11 @@ class EDFExporter:
             return filepath
         except Exception as e:
             # Clean up if there was an error
-            if hasattr(writer, 'close') and callable(writer.close):
+            if 'writer' in locals() and hasattr(writer, 'close') and callable(writer.close):
                 try:
-                    writer.close()
+                    # Check if file is open before closing
+                    if not writer.header['file_handle'].closed:
+                        writer.close()
                 except Exception:
                     pass  # Ignore errors during cleanup
 
@@ -537,10 +508,11 @@ class EDFExporter:
             import time
             time.sleep(0.1)
 
-            if os.path.exists(filepath):
+            if 'filepath' in locals() and os.path.exists(filepath):
                 try:
                     os.unlink(filepath)
-                except Exception:
-                    pass  # Ignore errors during cleanup
+                    print(f"Cleaned up partially written file: {filepath}")
+                except Exception as unlink_e:
+                    print(f"Error during cleanup of {filepath}: {unlink_e}")
 
             raise e

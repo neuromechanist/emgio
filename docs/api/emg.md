@@ -139,8 +139,8 @@ emg.plot_signals(
 emg.to_edf('output')
 
 # Force EDF format
-emg.to_edf('output', force_format='edf')
+emg.to_edf('output', format='edf')
 
 # Control format selection method
 emg.to_edf('output', method='svd')
-``` 
+```

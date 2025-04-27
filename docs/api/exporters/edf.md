@@ -22,8 +22,8 @@ emg = EMG.from_file('data.csv', importer='trigno')
 emg.to_edf('output')  # Will generate output.edf or output.bdf
 
 # Force specific format
-emg.to_edf('output_edf', force_format='edf')  # Forces 16-bit EDF
-emg.to_edf('output_bdf', force_format='bdf')  # Forces 24-bit BDF
+emg.to_edf('output_edf', format='edf')  # Forces 16-bit EDF
+emg.to_edf('output_bdf', format='bdf')  # Forces 24-bit BDF
 ```
 
 ## Automatic Format Selection
@@ -50,7 +50,7 @@ emg.to_edf('output',
 The `to_edf` method accepts the following parameters:
 
 - **output_path (str)**: Path for the output file (without extension)
-- **force_format (str, optional)**: Force a specific format ('edf' or 'bdf'). Default is None (automatic).
+- **format (str, optional)**: Specify the format to use ('auto', 'edf', or 'bdf'). Default is 'auto'.
 - **method (str, optional)**: Method for format selection ('svd', 'fft', or 'both'). Default is 'both'.
 - **svd_rank (int, optional)**: Rank cutoff for SVD analysis. Default is None (automatic).
 - **fft_noise_range (tuple, optional)**: Frequency range (min, max) for noise floor estimation in FFT. Default is None (automatic).
