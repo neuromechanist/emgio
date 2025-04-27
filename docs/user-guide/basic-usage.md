@@ -82,9 +82,30 @@ emg.plot_signals(
     time_range=(0, 5),
     title='EMG Signals',
     grid=True,
-    figsize=(12, 6)
+    detrend=False,
+    offset_scale=0.8,  # Controls vertical spacing between signals
+    uniform_scale=True  # Use same scale for all signals
 )
 ```
+
+## Verifying Signal Integrity
+
+When exporting and reimporting data, you might want to verify that the signals remain intact. EMGIO provides tools for signal verification:
+
+```python
+# Export to EDF and reload
+emg_original.to_edf('output')
+emg_reloaded = EMG.from_file('output.edf')
+
+# Basic verification
+result = emg_original.verify_against(emg_reloaded)
+print(f"Verification {'passed' if result else 'failed'}")
+
+# Visual verification
+emg_original.plot_comparison(emg_reloaded, channels=['EMG1', 'EMG2'])
+```
+
+For more detailed information about signal verification, see the [Signal Verification](verification.md) guide.
 
 ## Exporting Data
 
@@ -113,3 +134,4 @@ After mastering these basics, you might want to explore:
 - [Channel Selection](channel-selection.md) - Learn how to select and manipulate channels
 - [EDF/BDF Format Selection](edf-bdf-selection.md) - Understanding how EMGIO selects the appropriate format
 - [Metadata Handling](metadata.md) - Working with metadata in EMGIO
+- [Signal Verification](verification.md) - Verifying signal integrity after export/import operations
