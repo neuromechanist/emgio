@@ -321,7 +321,7 @@ class MockPlt:
 def mock_plt(monkeypatch):
     """Mock matplotlib.pyplot for testing plot functions."""
     mock = MockPlt()
-    monkeypatch.setattr('emgio.core.emg.plt', mock)
+    monkeypatch.setattr('emgio.visualization.static.plt', mock)
     return mock
 
 
