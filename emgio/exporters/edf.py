@@ -7,6 +7,7 @@ from ..core.emg import EMG
 from ..analysis.signal import (
     analyze_signal, determine_format_suitability
 )
+from typing import Literal
 
 
 def _format_physical_value(value: float, max_chars: int) -> tuple:
@@ -297,8 +298,8 @@ class EDFExporter:
     @staticmethod
     def export(emg: EMG, filepath: str, precision_threshold: float = 0.01,
                method: str = 'both', fft_noise_range: tuple = None,
-               svd_rank: int = None, format: str = 'auto',
-               force_format: bool = False, **kwargs) -> None:
+               svd_rank: int = None, format: Literal['auto', 'edf', 'bdf'] = 'auto',
+               **kwargs) -> None:
         """
         Export EMG data to EDF/BDF format with corresponding channels.tsv file.
 
@@ -312,65 +313,60 @@ class EDFExporter:
                 'both': Uses both methods and takes the minimum noise floor (default)
             fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method
             svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method
-            format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto' which selects
-                based on signal characteristics. When specified, the system will still warn
-                if the chosen format is not optimal.
-            force_format: When True, bypasses all format suitability checks and uses the
-                specified format without warnings. Default is False.
+            format: Format to use ('auto', 'edf', or 'bdf'). Default is 'auto'.
+                    If 'edf' or 'bdf' is specified, that format will be used directly.
+                    If 'auto', the format (EDF/16-bit or BDF/24-bit) is chosen based
+                    on signal analysis to minimize precision loss while preferring EDF
+                    if sufficient.
             **kwargs: Additional arguments for the exporter
         """
         if emg.signals is None:
             raise ValueError("No signals to export")
 
-        # Analyze signals and determine format
         print("\nSignal Analysis:")
         print("--------------")
 
-        # Initialize format variables
+        # Initialize format decision variables
         use_bdf = False
         bdf_reason = ""
-        user_chose_bdf = None
+        format_decision_made = False
 
-        # Check if user has specified a format
-        if format.lower() != 'auto':
-            if format.lower() == 'bdf':
-                user_chose_bdf = True
-                if force_format:
-                    use_bdf = True
-                    print("\nUser requested BDF format (forced).")
-            elif format.lower() == 'edf':
-                user_chose_bdf = False
-                if force_format:
-                    use_bdf = False
-                    print("\nUser requested EDF format (forced).")
-            else:
-                warnings.warn(f"Unknown format: {format}. Valid options are 'auto', 'edf', or 'bdf'. Using 'auto'.")
-        signal_info = []
-        channel_info_list = []
-        channels_tsv_data = {
-            'name': [], 'channel_type': [], 'physical_dimension': [],
-            'sample_frequency': [], 'reference': [], 'status': []
-        }
+        # Direct format selection by user
+        if format.lower() == 'bdf':
+            use_bdf = True
+            format_decision_made = True
+            print("\nUser specified BDF format (24-bit).")
+        elif format.lower() == 'edf':
+            use_bdf = False
+            format_decision_made = True
+            print("\nUser specified EDF format (16-bit).")
+        elif format.lower() != 'auto':
+             warnings.warn(f"Unknown format: {format}. Valid options are 'auto', 'edf', or 'bdf'. Using 'auto'.")
+             format = 'auto'  # Default to auto if invalid format given
 
-        # First pass: analyze signals and determine recommended format
+        signal_analyses = {}
+        signal_info_strings = []
+
+        # Analyze signals (needed for summary and potentially for 'auto' format decision)
         for ch_name in emg.channels:
             signal = emg.signals[ch_name].values
             ch_info = emg.channels[ch_name]
 
-            # Analyze signal characteristics with the specified method
-            # Pass through the analysis parameters
+            # Analyze signal characteristics
             analysis = analyze_signal(signal, method=method,
                                       fft_noise_range=fft_noise_range,
                                       svd_rank=svd_rank)
             recommend_bdf, reason, snr = determine_format_suitability(signal, analysis)
+            analysis['snr'] = snr
+            analysis['recommend_bdf'] = recommend_bdf
+            analysis['reason'] = reason
+            signal_analyses[ch_name] = analysis  # Store analysis for later summary
 
-            # If using automatic format determination or not forced
-            if user_chose_bdf is None or not force_format:
-                # Perform quantization analysis for chosen format
-                if recommend_bdf:
-                    use_bdf = True
-                    if not bdf_reason:  # Only set reason for first channel requiring BDF
-                        bdf_reason = f"Channel {ch_name}: {reason}"
+            # If format is 'auto', check if any channel recommends BDF
+            if format == 'auto' and recommend_bdf:
+                use_bdf = True  # Switch to BDF if any channel needs it
+                if not bdf_reason:  # Capture the first reason
+                    bdf_reason = f"Channel '{ch_name}': {reason}"
 
             # Calculate scaling factors
             phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(

@@ -15,6 +15,7 @@ from ..analysis.signal import (
     analyze_signal_fft as _analyze_signal_fft,
     find_elbow_point as _find_elbow_point
 )
+from typing import Literal # Added for type hints
 
 
 @pytest.fixture
