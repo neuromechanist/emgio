@@ -4,7 +4,7 @@ import os
 from typing import List, Optional, Union, Literal, Dict
 import logging
 from ..analysis.verification import compare_signals, report_verification_results
-from ..visualization.static import plot_comparison
+from ..visualization.static import plot_signals as static_plot_signals, plot_comparison
 
 # --- Configuration ---
 enable_logging = False  # Set to False to disable most logging
@@ -32,6 +32,37 @@ class EMG:
         self.signals = None
         self.metadata = {}
         self.channels = {}
+
+    def plot_signals(self, channels=None, time_range=None, offset_scale=0.8,
+                    uniform_scale=True, detrend=False, grid=True, title=None,
+                    show=True, plt_module=None):
+        """
+        Plot EMG signals in a single plot with vertical offsets.
+
+        Args:
+            channels: List of channels to plot. If None, plot all channels.
+            time_range: Tuple of (start_time, end_time) to plot. If None, plot all data.
+            offset_scale: Portion of allocated space each signal can use (0.0 to 1.0).
+            uniform_scale: Whether to use the same scale for all signals.
+            detrend: Whether to remove mean from signals before plotting.
+            grid: Whether to show grid lines.
+            title: Optional title for the figure.
+            show: Whether to display the plot.
+            plt_module: Matplotlib pyplot module to use.
+        """
+        # Delegate to the static plotting function in visualization module
+        static_plot_signals(
+            emg_object=self,
+            channels=channels,
+            time_range=time_range,
+            offset_scale=offset_scale,
+            uniform_scale=uniform_scale,
+            detrend=detrend,
+            grid=grid,
+            title=title,
+            show=show,
+            plt_module=plt_module
+        )
 
     @classmethod
     def _infer_importer(cls, filepath: str) -> str:
