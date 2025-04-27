@@ -15,7 +15,6 @@ from ..analysis.signal import (
     analyze_signal_fft as _analyze_signal_fft,
     find_elbow_point as _find_elbow_point
 )
-from typing import Literal # Added for type hints
 
 
 @pytest.fixture
@@ -200,7 +199,7 @@ def test_edf_export_file_permissions(sample_emg):
     # Expecting an OSError or similar depending on OS and filesystem
     with pytest.raises(Exception) as excinfo:
         EDFExporter.export(sample_emg, invalid_path)
-    print(f"Caught expected exception: {excinfo.type}") # For debugging
+    print(f"Caught expected exception: {excinfo.type}")  # For debugging
 
 
 def test_signal_analysis():
@@ -327,7 +326,7 @@ def test_format_selection():
             assert os.path.exists(bdf_path_mixed), "BDF file not created for mixed signal in auto mode"
             assert not os.path.exists(edf_path_mixed), "EDF file created unexpectedly"
             assert any(("BDF format" in str(warn.message) or "format='bdf'" in str(warn.message)) 
-                      for warn in w if not "sample_rate" in str(warn.message))
+                      for warn in w if "sample_rate" not in str(warn.message))
 
     finally:
         for p in all_paths:
@@ -544,8 +543,10 @@ def test_user_format_selection():
             assert os.path.exists(edf_path_hdr), "EDF file not created when format='edf' specified for HDR signal"
             assert not os.path.exists(bdf_path_hdr), "BDF file created unexpectedly when format='edf' specified"
             # Filter out pyedflib deprecation warnings about sample_rate
-            format_warnings = [warn for warn in w if not "sample_rate" in str(warn.message) and not "pyedflib" in str(warn.message)] 
-            assert len(format_warnings) == 0, f"Unexpected format warnings when format='edf' specified: {[str(warn.message) for warn in format_warnings]}"
+            format_warnings = [warn for warn in w if "sample_rate" not in str(warn.message) and
+                               "pyedflib" not in str(warn.message)] 
+            assert len(format_warnings) == 0, "Unexpected format warnings when format='edf' specified:" + \
+                f"{[str(warn.message) for warn in format_warnings]}"
 
         # 2. Force BDF for LowDR signal (no warning expected as format is explicit)
         with warnings.catch_warnings(record=True) as w:
@@ -554,7 +555,8 @@ def test_user_format_selection():
             assert os.path.exists(bdf_path_lowdr), "BDF file not created when format='bdf' specified for LowDR signal"
             assert not os.path.exists(edf_path_lowdr), "EDF file created unexpectedly when format='bdf' specified"
             # Filter out pyedflib deprecation warnings
-            format_warnings = [warn for warn in w if not "sample_rate" in str(warn.message) and not "pyedflib" in str(warn.message)]
+            format_warnings = [warn for warn in w if "sample_rate" not in str(warn.message) and
+                               "pyedflib" not in str(warn.message)]
             assert len(format_warnings) == 0, f"Unexpected format warnings when format='bdf' specified: {[str(warn.message) for warn in format_warnings]}"
 
     finally:
@@ -564,7 +566,7 @@ def test_user_format_selection():
                 os.unlink(p)
         for p in all_tsv_paths:
             if os.path.exists(p):
-                 os.unlink(p)
+                os.unlink(p)
 
 
 def test_high_dynamic_range():
@@ -609,12 +611,12 @@ def test_high_dynamic_range():
             # Verify HDR_EMG signal - increase tolerance from 0.2 to 0.5
             reconstructed_hdr = _reconstruct_physical_signal(reader, 0)
             assert np.allclose(hdr_signal, reconstructed_hdr, atol=0.5), \
-                   f"HDR scaling incorrect. Max diff: {np.max(np.abs(hdr_signal - reconstructed_hdr)):.2e}"
+                f"HDR scaling incorrect. Max diff: {np.max(np.abs(hdr_signal - reconstructed_hdr)):.2e}"
 
             # Verify REG_EMG signal
             reconstructed_reg = _reconstruct_physical_signal(reader, 1)
             assert np.allclose(regular_signal, reconstructed_reg, atol=0.2), \
-                  f"Regular signal scaling incorrect. Max diff: {np.max(np.abs(regular_signal - reconstructed_reg)):.2e}"
+                f"Regular signal scaling incorrect. Max diff: {np.max(np.abs(regular_signal - reconstructed_reg)):.2e}"
 
     finally:
         # Cleanup
