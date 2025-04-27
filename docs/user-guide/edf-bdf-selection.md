@@ -70,8 +70,8 @@ emg.to_edf('output', method='fft', fft_noise_range=None)    # Auto range
 emg.to_edf('output', method='fft', fft_noise_range=(0.1, 10))  # Manual range
 
 # Force a specific format
-emg.to_edf('output', force_format='edf')  # Force EDF (16-bit)
-emg.to_edf('output', force_format='bdf')  # Force BDF (24-bit)
+emg.to_edf('output', format='edf')  # Force EDF (16-bit)
+emg.to_edf('output', format='bdf')  # Force BDF (24-bit)
 ```
 
 ## Understanding the Output
@@ -95,4 +95,4 @@ Output file: output.bdf
 - Let EMGIO automatically determine the format when possible
 - When in doubt, visualize your data to see if it contains very small but important signal components
 - For critical applications, consider using the BDF format to ensure maximum precision
-- If file size is a concern and precision is adequate, force the EDF format 
+- If file size is a concern and precision is adequate, force the EDF format to save space
