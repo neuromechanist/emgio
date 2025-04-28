@@ -37,15 +37,10 @@ The `EMG` class is the main class in EMGIO for working with EMG data. It encapsu
 ### Visualization
 
 - `plot_signals()`: Plot EMG signals with customizable options
-- `plot_comparison()`: Plot comparison between two EMG signals (e.g., original and reloaded)
-
-### Verification
-
-- `verify_against()`: Verify signal integrity against another EMG object
 
 ### Export
 
-- `to_edf()`: Export data to EDF/BDF format
+- `to_edf()`: Export data to EDF/BDF format with optional verification
 
 ## Usage Examples
 
@@ -141,22 +136,31 @@ emg.plot_signals(
 ### Verification
 
 ```python
-# Export and reload data
+from emgio.analysis.verification import compare_signals, report_verification_results
+from emgio.visualization.static import plot_comparison
+import matplotlib.pyplot as plt
+
+# Export with built-in verification
+emg_original.to_edf('output', verify=True, verify_tolerance=0.001)
+
+# Export and verify with custom channel mapping
+channel_map = {'EMG1': 'CH1', 'EMG2': 'CH2'}
+emg_original.to_edf('output', verify=True, verify_channel_map=channel_map)
+
+# Export, verify, and generate verification plot
+emg_original.to_edf('output', verify=True, verify_plot=True)
+
+# Manual verification (alternative approach)
 emg_original.to_edf('output')
 emg_reloaded = EMG.from_file('output.edf')
 
-# Verify signal integrity
-result = emg_original.verify_against(emg_reloaded)
-if result:
-    print("Verification passed")
-else:
-    print("Verification failed")
-
-# With custom tolerance
-result = emg_original.verify_against(emg_reloaded, tolerance=0.005)
+# Compare signals
+results = compare_signals(emg_original, emg_reloaded, tolerance=0.001)
+is_identical = report_verification_results(results, verify_tolerance=0.001)
 
 # Plot comparison for visual verification
-emg_original.plot_comparison(emg_reloaded, channels=['EMG1', 'EMG2'])
+plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
+plt.show()
 ```
 
 ### Exporting

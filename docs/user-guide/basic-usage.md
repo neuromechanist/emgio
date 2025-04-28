@@ -90,19 +90,30 @@ emg.plot_signals(
 
 ## Verifying Signal Integrity
 
-When exporting and reimporting data, you might want to verify that the signals remain intact. EMGIO provides tools for signal verification:
+When exporting and reimporting data, you might want to verify that the signals remain intact. EMGIO provides two ways to verify signal integrity:
 
 ```python
+# Method 1: Integrated verification during export
+# Export to EDF with automatic verification
+verification_results = emg_original.to_edf('output', verify=True)
+
+# Method 2: Manual verification with more control
+from emgio.analysis.verification import compare_signals, report_verification_results
+from emgio.visualization.static import plot_comparison
+import matplotlib.pyplot as plt
+
 # Export to EDF and reload
 emg_original.to_edf('output')
 emg_reloaded = EMG.from_file('output.edf')
 
-# Basic verification
-result = emg_original.verify_against(emg_reloaded)
-print(f"Verification {'passed' if result else 'failed'}")
+# Compare signals
+results = compare_signals(emg_original, emg_reloaded)
+is_identical = report_verification_results(results, verify_tolerance=0.01)
+print(f"Verification {'passed' if is_identical else 'failed'}")
 
 # Visual verification
-emg_original.plot_comparison(emg_reloaded, channels=['EMG1', 'EMG2'])
+plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
+plt.show()
 ```
 
 For more detailed information about signal verification, see the [Signal Verification](verification.md) guide.

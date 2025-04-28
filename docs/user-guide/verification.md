@@ -7,12 +7,13 @@ EMGIO provides tools to verify signal integrity when transferring data between f
 - Creating archival copies of your data
 - Testing new importers or exporters
 
-## Basic Verification
+## Verification Workflow
 
-The simplest way to verify signal integrity is to use the `verify_against()` method of the EMG class:
+The standard way to verify signal integrity involves comparing an original EMG object with one that has been exported and then reloaded. This is done using the `compare_signals` and `report_verification_results` functions from the `emgio.analysis.verification` module.
 
 ```python
 from emgio import EMG
+from emgio.analysis.verification import compare_signals, report_verification_results
 
 # Load original data
 emg_original = EMG.from_file('raw_data.csv', importer='trigno')
@@ -21,30 +22,52 @@ emg_original = EMG.from_file('raw_data.csv', importer='trigno')
 emg_original.to_edf('exported_data')
 emg_reloaded = EMG.from_file('exported_data.edf')
 
-# Verify signals match
-result = emg_original.verify_against(emg_reloaded)
-print(f"Verification {'passed' if result else 'failed'}")
+# Compare signals with detailed metrics
+results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
+
+# Generate a detailed report (logs to the console)
+is_identical = report_verification_results(results, verify_tolerance=0.01)
+
+# Check the result
+if is_identical:
+    print("Verification passed: Signals are identical within tolerance")
+else:
+    print("Verification failed: Signal differences detected")
+
+# Inspect results for specific channels
+print("\nDetailed metrics per channel:")
+for channel, metrics in results.items():
+    if channel != 'channel_summary':
+        print(f"  Channel {channel} - NRMSE: {metrics['nrmse']:.4f}")
+
 ```
 
 ## Visual Verification
 
-You can visually compare original and reloaded signals using the `plot_comparison()` method:
+You can visually compare original and reloaded signals using the `plot_comparison()` function from the `emgio.visualization.static` module:
 
 ```python
+from emgio.visualization.static import plot_comparison
+import matplotlib.pyplot as plt
+
 # Plot comparison of original and reloaded signals
-emg_original.plot_comparison(emg_reloaded)
+plot_comparison(emg_original, emg_reloaded)
+plt.show()
 
 # Plot specific channels only
-emg_original.plot_comparison(emg_reloaded, channels=['EMG1', 'EMG2'])
+plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
+plt.show()
 
 # Customize the comparison
-emg_original.plot_comparison(
+plot_comparison(
+    emg_original,
     emg_reloaded,
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),  # First 5 seconds only
     detrend=True,       # Remove DC offset
     grid=True           # Add grid lines
 )
+plt.show()
 ```
 
 ## Advanced Verification
@@ -71,6 +94,8 @@ for channel, metrics in results.items():
 When channels might be renamed during the export/import process, you can provide a mapping:
 
 ```python
+from emgio.analysis.verification import compare_signals, report_verification_results
+
 # Define mapping from original channel names to reloaded channel names
 channel_map = {
     'EMG_biceps': 'CH1',
@@ -82,7 +107,10 @@ results = compare_signals(emg_original, emg_reloaded, channel_map=channel_map)
 report_verification_results(results, verify_tolerance=0.01)
 
 # Visual comparison with channel mapping
-emg_original.plot_comparison(emg_reloaded, channel_map=channel_map)
+from emgio.visualization.static import plot_comparison
+import matplotlib.pyplot as plt
+plot_comparison(emg_original, emg_reloaded, channel_map=channel_map)
+plt.show()
 ```
 
 ## Understanding Verification Metrics

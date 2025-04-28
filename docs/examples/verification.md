@@ -7,6 +7,7 @@ This page demonstrates how to use EMGIO's verification capabilities to ensure si
 ```python
 from emgio import EMG
 import matplotlib.pyplot as plt
+from emgio.analysis.verification import compare_signals, report_verification_results
 
 # Load original data from a device-specific format
 emg_original = EMG.from_file('sample_data.csv', importer='trigno')
@@ -20,22 +21,27 @@ emg_original.to_edf('exported_data')
 # Reload the exported data
 emg_reloaded = EMG.from_file('exported_data.edf')
 
-# Verify signals match within tolerance
-result = emg_original.verify_against(emg_reloaded)
-print(f"Verification result: {'Passed' if result else 'Failed'}")
+# Verify signals using the verification module
+results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
+is_identical = report_verification_results(results, verify_tolerance=0.01)
+
+print(f"Verification result: {'Passed' if is_identical else 'Failed'}")
 ```
 
 ## Visual Comparison
 
-The `plot_comparison()` method provides a visual way to compare signals:
+The `plot_comparison()` function provides a visual way to compare signals:
 
 ```python
+from emgio.visualization.static import plot_comparison
+
 # Visual comparison of original and reloaded signals
-emg_original.plot_comparison(emg_reloaded, channels=['EMG1', 'EMG2'])
+plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
 plt.show()
 
 # Customize the comparison
-emg_original.plot_comparison(
+plot_comparison(
+    emg_original,
     emg_reloaded,
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),  # Only show first 5 seconds
@@ -78,6 +84,8 @@ for channel, metrics in results.items():
 When channels are renamed during export/import:
 
 ```python
+from emgio.visualization.static import plot_comparison
+
 # Define explicit channel mapping
 channel_map = {
     'EMG_biceps': 'CH1',
@@ -97,7 +105,8 @@ results = compare_signals(
 is_identical = report_verification_results(results, verify_tolerance=0.01)
 
 # Visual comparison with channel mapping
-emg_original.plot_comparison(
+plot_comparison(
+    emg_original,
     emg_reloaded,
     channel_map=channel_map,
     time_range=(0, 5)
@@ -111,6 +120,7 @@ plt.show()
 from emgio import EMG
 import matplotlib.pyplot as plt
 from emgio.analysis.verification import compare_signals, report_verification_results
+from emgio.visualization.static import plot_comparison
 
 # 1. Load original Trigno CSV data
 emg_trigno = EMG.from_file('trigno_data.csv', importer='trigno')
@@ -125,17 +135,15 @@ emg_edf = EMG.from_file('converted_data.edf')
 print(f"Data reloaded. Duration: {emg_edf.get_duration():.2f}s, "
       f"Channels: {emg_edf.get_n_channels()}")
 
-# 4. Basic verification
-result = emg_trigno.verify_against(emg_edf)
-print(f"Verification result: {'Passed' if result else 'Failed'}")
-
-# 5. Detailed verification
+# 4. Verification using the analysis module
 results = compare_signals(emg_trigno, emg_edf, tolerance=0.01)
-report_verification_results(results, verify_tolerance=0.01)
+is_identical = report_verification_results(results, verify_tolerance=0.01)
+print(f"Verification result: {'Passed' if is_identical else 'Failed'}")
 
-# 6. Visual verification of a few channels
+# 5. Visual verification of a few channels
 plt.figure(figsize=(14, 8))
-emg_trigno.plot_comparison(
+plot_comparison(
+    emg_trigno,
     emg_edf,
     channels=list(emg_trigno.signals.columns)[:3],  # First 3 channels
     time_range=(0, 2),  # First 2 seconds

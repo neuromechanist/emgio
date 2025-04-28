@@ -83,7 +83,36 @@ emg.to_edf('output')  # Will add .edf or .bdf extension automatically
 # Force a specific format
 emg.to_edf('output_edf', format='edf')  # Forces 16-bit EDF
 emg.to_edf('output_bdf', format='bdf')  # Forces 24-bit BDF
+
+# Export with verification to ensure data integrity 
+emg.to_edf('output_verified', verify=True)
 ```
+
+## Signal Verification
+
+When exporting EMG data to EDF/BDF format, you can optionally verify the integrity of the exported data by setting the `verify` parameter to `True`:
+
+```python
+# Export with verification
+verification_results = emg.to_edf('output', verify=True)
+
+# Export with custom verification settings
+verification_results = emg.to_edf(
+    'output',
+    verify=True,
+    verify_tolerance=0.001,  # 0.1% tolerance
+    verify_channel_map={'EMG1': 'CH1'},  # Custom channel mapping
+    verify_plot=True  # Generate visualization of comparison
+)
+```
+
+The verification process:
+1. Exports the data to the specified file
+2. Immediately reloads the file using the EDF importer
+3. Compares the original and reloaded signals using normalization-based metrics
+4. Logs a detailed verification report
+5. Optionally generates a visual comparison if `verify_plot=True`
+6. Returns the verification results as a dictionary
 
 ## Notes and Limitations
 
