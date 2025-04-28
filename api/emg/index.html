@@ -981,15 +981,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#verification" class="md-nav__link">
-    <span class="md-ellipsis">
-      Verification
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#export" class="md-nav__link">
     <span class="md-ellipsis">
       Export
@@ -1059,7 +1050,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#verification_1" class="md-nav__link">
+  <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       Verification
     </span>
@@ -1941,15 +1932,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#verification" class="md-nav__link">
-    <span class="md-ellipsis">
-      Verification
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#export" class="md-nav__link">
     <span class="md-ellipsis">
       Export
@@ -2019,7 +2001,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#verification_1" class="md-nav__link">
+  <a href="#verification" class="md-nav__link">
     <span class="md-ellipsis">
       Verification
     </span>
@@ -3972,15 +3954,10 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <h3 id="visualization">Visualization<a class="headerlink" href="#visualization" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>plot_signals()</code>: Plot EMG signals with customizable options</li>
-<li><code>plot_comparison()</code>: Plot comparison between two EMG signals (e.g., original and reloaded)</li>
-</ul>
-<h3 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>verify_against()</code>: Verify signal integrity against another EMG object</li>
 </ul>
 <h3 id="export">Export<a class="headerlink" href="#export" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>to_edf()</code>: Export data to EDF/BDF format</li>
+<li><code>to_edf()</code>: Export data to EDF/BDF format with optional verification</li>
 </ul>
 <h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
 <h3 id="loading-data">Loading Data<a class="headerlink" href="#loading-data" title="Permanent link">&para;</a></h3>
@@ -4057,23 +4034,32 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="n">offset_scale</span><span class="o">=</span><span class="mf">0.8</span>
 <a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">)</span>
 </code></pre></div>
-<h3 id="verification_1">Verification<a class="headerlink" href="#verification_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Export and reload data</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">emg_original</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">emg_reloaded</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;output.edf&#39;</span><span class="p">)</span>
+<h3 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio.analysis.verification</span><span class="w"> </span><span class="kn">import</span> <span class="n">compare_signals</span><span class="p">,</span> <span class="n">report_verification_results</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio.visualization.static</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_comparison</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Verify signal integrity</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">result</span> <span class="o">=</span> <span class="n">emg_original</span><span class="o">.</span><span class="n">verify_against</span><span class="p">(</span><span class="n">emg_reloaded</span><span class="p">)</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">if</span> <span class="n">result</span><span class="p">:</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Verification passed&quot;</span><span class="p">)</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Verification failed&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Export with built-in verification</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">emg_original</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1"># Export and verify with custom channel mapping</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">channel_map</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EMG1&#39;</span><span class="p">:</span> <span class="s1">&#39;CH1&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG2&#39;</span><span class="p">:</span> <span class="s1">&#39;CH2&#39;</span><span class="p">}</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">emg_original</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verify_channel_map</span><span class="o">=</span><span class="n">channel_map</span><span class="p">)</span>
 <a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1"># With custom tolerance</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">result</span> <span class="o">=</span> <span class="n">emg_original</span><span class="o">.</span><span class="n">verify_against</span><span class="p">(</span><span class="n">emg_reloaded</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">0.005</span><span class="p">)</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1"># Export, verify, and generate verification plot</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">emg_original</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verify_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="c1"># Plot comparison for visual verification</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="n">emg_original</span><span class="o">.</span><span class="n">plot_comparison</span><span class="p">(</span><span class="n">emg_reloaded</span><span class="p">,</span> <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EMG1&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG2&#39;</span><span class="p">])</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="c1"># Manual verification (alternative approach)</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="n">emg_original</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="n">emg_reloaded</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;output.edf&#39;</span><span class="p">)</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="c1"># Compare signals</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="n">results</span> <span class="o">=</span> <span class="n">compare_signals</span><span class="p">(</span><span class="n">emg_original</span><span class="p">,</span> <span class="n">emg_reloaded</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="n">is_identical</span> <span class="o">=</span> <span class="n">report_verification_results</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="c1"># Plot comparison for visual verification</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="n">plot_comparison</span><span class="p">(</span><span class="n">emg_original</span><span class="p">,</span> <span class="n">emg_reloaded</span><span class="p">,</span> <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EMG1&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG2&#39;</span><span class="p">])</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </code></pre></div>
 <h3 id="exporting">Exporting<a class="headerlink" href="#exporting" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Export with automatic format selection</span>

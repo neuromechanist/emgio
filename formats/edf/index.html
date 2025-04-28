@@ -758,6 +758,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#signal-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      Signal Verification
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#notes-and-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       Notes and Limitations
@@ -1613,6 +1622,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#signal-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      Signal Verification
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#notes-and-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       Notes and Limitations
@@ -1716,7 +1734,31 @@
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># Force a specific format</span>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output_edf&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;edf&#39;</span><span class="p">)</span>  <span class="c1"># Forces 16-bit EDF</span>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output_bdf&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;bdf&#39;</span><span class="p">)</span>  <span class="c1"># Forces 24-bit BDF</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="c1"># Export with verification to ensure data integrity </span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output_verified&#39;</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
+<h2 id="signal-verification">Signal Verification<a class="headerlink" href="#signal-verification" title="Permanent link">&para;</a></h2>
+<p>When exporting EMG data to EDF/BDF format, you can optionally verify the integrity of the exported data by setting the <code>verify</code> parameter to <code>True</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Export with verification</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">verification_results</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Export with custom verification settings</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">verification_results</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s1">&#39;output&#39;</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">verify_tolerance</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>  <span class="c1"># 0.1% tolerance</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">verify_channel_map</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;EMG1&#39;</span><span class="p">:</span> <span class="s1">&#39;CH1&#39;</span><span class="p">},</span>  <span class="c1"># Custom channel mapping</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">verify_plot</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># Generate visualization of comparison</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">)</span>
+</code></pre></div>
+<p>The verification process:
+1. Exports the data to the specified file
+2. Immediately reloads the file using the EDF importer
+3. Compares the original and reloaded signals using normalization-based metrics
+4. Logs a detailed verification report
+5. Optionally generates a visual comparison if <code>verify_plot=True</code>
+6. Returns the verification results as a dictionary</p>
 <h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
 <ul>
 <li>The BIDS-compatible channels.tsv sidecar file includes detailed channel information</li>
