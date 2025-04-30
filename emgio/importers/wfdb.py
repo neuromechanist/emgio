@@ -110,4 +110,4 @@ class WFDBImporter(BaseImporter):
         except FileNotFoundError:
             raise FileNotFoundError(f"WFDB record not found: {record_name}. Ensure .hea and data files exist.")
         except Exception as e:
-            raise ValueError(f"Error reading WFDB file '{filepath}': {str(e)}") 
+            raise ValueError(f"Error reading WFDB file '{filepath}': {str(e)}")
