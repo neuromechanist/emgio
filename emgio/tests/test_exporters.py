@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 import pyedflib
 import pandas as pd
+from unittest.mock import patch
 from ..core.emg import EMG
 from ..exporters.edf import (
     EDFExporter, _determine_scaling_factors, _calculate_precision_loss
@@ -56,6 +57,84 @@ def _reconstruct_physical_signal(reader: pyedflib.EdfReader, signal_index: int) 
     scale = (phys_max - phys_min) / digital_range
     physical_signal = (digital_signal - dig_min) * scale + phys_min
     return physical_signal
+
+
+def generate_high_dynamic_range_signal(seconds=1.0, fs=1000, base_freq=10,
+                                       dynamic_range_db=95, seed=42):
+    """
+    Generate a test signal with specified dynamic range.
+
+    Args:
+        seconds: Length of signal in seconds
+        fs: Sampling frequency in Hz
+        base_freq: Frequency of the base sinusoidal signal in Hz
+        dynamic_range_db: Target dynamic range in dB
+        seed: Random seed for reproducibility
+
+    Returns:
+        np.ndarray: Signal with specified dynamic range
+        float: Actual dynamic range in dB
+    """
+    # Set random seed for reproducibility
+    np.random.seed(seed)
+
+    # Create time array
+    num_samples = int(seconds * fs)
+    t = np.linspace(0, seconds, num_samples)
+
+    # Create base signal - use multiple frequency components for a more realistic signal
+    base_signal = np.sin(2 * np.pi * base_freq * t)
+
+    # Add some harmonics to make it more complex
+    base_signal += 0.5 * np.sin(2 * np.pi * base_freq * 2 * t)
+    base_signal += 0.25 * np.sin(2 * np.pi * base_freq * 3 * t)
+
+    # Normalize the base signal to [-1, 1] range
+    base_signal = base_signal / np.max(np.abs(base_signal))
+
+    # For a 90+ dB dynamic range, we need a very low noise floor compared to signal
+    # 90 dB = 10^(90/20) = 31,622.78 ratio between peak and noise floor
+    peak_to_noise_ratio = 10 ** (dynamic_range_db / 20)
+
+    # Scale the signal to a large amplitude to ensure high dynamic range
+    # This helps ensure the dynamic range is preserved in the exported file
+    signal_peak = 1e4  # Increased from 1.0 to 1e4 for better dynamic range preservation
+    scaled_signal = base_signal * signal_peak
+
+    # Calculate the required noise standard deviation
+    # For Gaussian noise, peak values are typically ~3-4 sigma away
+    # Use 4 sigma to ensure noise floor is well below signal
+    noise_sigma = signal_peak / peak_to_noise_ratio
+
+    # Generate extremely low amplitude noise
+    noise = np.random.normal(0, noise_sigma, num_samples)
+
+    # Create the final signal
+    final_signal = scaled_signal + noise
+
+    # Force the dynamic range by directly setting the noise floor
+    # This ensures we get the expected dynamic range regardless of the analysis method
+    signal_range = np.max(final_signal) - np.min(final_signal)
+    target_noise_floor = signal_range / (10 ** (dynamic_range_db / 20))
+
+    # Verify actual dynamic range using both methods for better accuracy
+    analysis = analyze_signal(final_signal, method='both')
+    actual_dynamic_range = analysis['dynamic_range_db']
+
+    print("Generated signal with {:.2f} dB dynamic range".format(actual_dynamic_range))
+    print("Signal peak: {:.2e}".format(np.max(np.abs(scaled_signal))))
+    print("Noise sigma: {:.2e}".format(noise_sigma))
+    print("Signal range: {:.2e}".format(analysis['range']))
+    print("Noise floor: {:.2e}".format(analysis['noise_floor']))
+    print("Target noise floor: {:.2e}".format(target_noise_floor))
+
+    # If we need to force the dynamic range for testing purposes
+    if actual_dynamic_range < dynamic_range_db - 5:  # Allow some margin
+        print(f"Warning: Generated dynamic range {actual_dynamic_range:.1f} dB "
+              f"is lower than target {dynamic_range_db} dB.")
+        # Consider adjusting generation or analysis if this happens often
+
+    return final_signal, actual_dynamic_range
 
 
 def test_determine_scaling_factors():
@@ -409,7 +488,8 @@ def test_bdf_format_selection():
             # Both files might exist since we create one then rename, just check BDF was created
             assert os.path.exists(bdf_path), "BDF file was not created in auto mode for high precision signal"
             # Check warning about using BDF (filtered for pyedflib deprecation warnings)
-            bdf_warnings = [warn for warn in w if "BDF format" in str(warn.message) and not "sample_rate" in str(warn.message)]
+            bdf_warnings = [warn for warn in w if "BDF format" in str(warn.message) and
+                            "sample_rate" not in str(warn.message)]
             assert len(bdf_warnings) > 0, "Warning about using BDF format not found"
 
         # Verify BDF content and scaling
@@ -429,87 +509,9 @@ def test_bdf_format_selection():
                 os.unlink(p)
 
 
-def generate_high_dynamic_range_signal(seconds=1.0, fs=1000, base_freq=10,
-                                       dynamic_range_db=95, seed=42):
-    """
-    Generate a test signal with specified dynamic range.
-
-    Args:
-        seconds: Length of signal in seconds
-        fs: Sampling frequency in Hz
-        base_freq: Frequency of the base sinusoidal signal in Hz
-        dynamic_range_db: Target dynamic range in dB
-        seed: Random seed for reproducibility
-
-    Returns:
-        np.ndarray: Signal with specified dynamic range
-        float: Actual dynamic range in dB
-    """
-    # Set random seed for reproducibility
-    np.random.seed(seed)
-
-    # Create time array
-    num_samples = int(seconds * fs)
-    t = np.linspace(0, seconds, num_samples)
-
-    # Create base signal - use multiple frequency components for a more realistic signal
-    base_signal = np.sin(2 * np.pi * base_freq * t)
-
-    # Add some harmonics to make it more complex
-    base_signal += 0.5 * np.sin(2 * np.pi * base_freq * 2 * t)
-    base_signal += 0.25 * np.sin(2 * np.pi * base_freq * 3 * t)
-
-    # Normalize the base signal to [-1, 1] range
-    base_signal = base_signal / np.max(np.abs(base_signal))
-
-    # For a 90+ dB dynamic range, we need a very low noise floor compared to signal
-    # 90 dB = 10^(90/20) = 31,622.78 ratio between peak and noise floor
-    peak_to_noise_ratio = 10 ** (dynamic_range_db / 20)
-
-    # Scale the signal to a large amplitude to ensure high dynamic range
-    # This helps ensure the dynamic range is preserved in the exported file
-    signal_peak = 1e4  # Increased from 1.0 to 1e4 for better dynamic range preservation
-    scaled_signal = base_signal * signal_peak
-
-    # Calculate the required noise standard deviation
-    # For Gaussian noise, peak values are typically ~3-4 sigma away
-    # Use 4 sigma to ensure noise floor is well below signal
-    noise_sigma = signal_peak / peak_to_noise_ratio
-
-    # Generate extremely low amplitude noise
-    noise = np.random.normal(0, noise_sigma, num_samples)
-
-    # Create the final signal
-    final_signal = scaled_signal + noise
-
-    # Force the dynamic range by directly setting the noise floor
-    # This ensures we get the expected dynamic range regardless of the analysis method
-    signal_range = np.max(final_signal) - np.min(final_signal)
-    target_noise_floor = signal_range / (10 ** (dynamic_range_db / 20))
-
-    # Verify actual dynamic range using both methods for better accuracy
-    analysis = analyze_signal(final_signal, method='both')
-    actual_dynamic_range = analysis['dynamic_range_db']
-
-    print("Generated signal with {:.2f} dB dynamic range".format(actual_dynamic_range))
-    print("Signal peak: {:.2e}".format(np.max(np.abs(scaled_signal))))
-    print("Noise sigma: {:.2e}".format(noise_sigma))
-    print("Signal range: {:.2e}".format(analysis['range']))
-    print("Noise floor: {:.2e}".format(analysis['noise_floor']))
-    print("Target noise floor: {:.2e}".format(target_noise_floor))
-
-    # If we need to force the dynamic range for testing purposes
-    if actual_dynamic_range < dynamic_range_db - 5: # Allow some margin
-        print(f"Warning: Generated dynamic range {actual_dynamic_range:.1f} dB is lower than target {dynamic_range_db} dB.")
-        # Consider adjusting generation or analysis if this happens often
-
-    return final_signal, actual_dynamic_range
-
-
 def test_user_format_selection():
     """Test explicit format selection by user (format='edf' or 'bdf')."""
-    # Create EMG object
-    emg = EMG()
+    # Create necessary EMG objects inside the test where needed
     time = np.linspace(0, 1, 1000)
 
     # Signal that would normally trigger BDF (High Dynamic Range)
@@ -546,7 +548,7 @@ def test_user_format_selection():
             format_warnings = [warn for warn in w if "sample_rate" not in str(warn.message) and
                                "pyedflib" not in str(warn.message)]
             assert len(format_warnings) == 0, "Unexpected format warnings when format='edf' specified:" + \
-                f"{[str(warn.message) for warn in format_warnings]}"
+                f"{ [str(warn.message) for warn in format_warnings] }"
 
         # 2. Force BDF for LowDR signal (no warning expected as format is explicit)
         with warnings.catch_warnings(record=True) as w:
@@ -557,7 +559,9 @@ def test_user_format_selection():
             # Filter out pyedflib deprecation warnings
             format_warnings = [warn for warn in w if "sample_rate" not in str(warn.message) and
                                "pyedflib" not in str(warn.message)]
-            assert len(format_warnings) == 0, f"Unexpected format warnings when format='bdf' specified: {[str(warn.message) for warn in format_warnings]}"
+            msg = (f"Unexpected format warnings when format='bdf' specified: "
+                   f"{[str(warn.message) for warn in format_warnings]}")
+            assert len(format_warnings) == 0, msg
 
     finally:
         # Cleanup
@@ -655,3 +659,143 @@ def test_dynamic_range_calculation():
     assert abs(analysis['dynamic_range_db'] - theoretical_dr) < 30, \
         "Dynamic range calculation error: got {:.1f}dB, expected ~{:.1f}dB".format(
             analysis['dynamic_range_db'], theoretical_dr)
+
+
+# --- Bypass Analysis Tests ---
+
+@patch('emgio.exporters.edf.analyze_signal')
+@patch('emgio.exporters.edf.determine_format_suitability')
+def test_edf_export_bypass_analysis(mock_determine_suitability, mock_analyze_signal, sample_emg, capsys):
+    """Test EDF/BDF export with bypass_analysis=True."""
+    with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
+        edf_path = f.name
+        bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
+
+    edf_channels_tsv_path = os.path.splitext(edf_path)[0] + '_channels.tsv'
+    bdf_channels_tsv_path = os.path.splitext(bdf_path)[0] + '_channels.tsv'
+    all_paths = [edf_path, bdf_path, edf_channels_tsv_path, bdf_channels_tsv_path]
+
+    try:
+        # --- Test bypassing with format='edf' ---
+        EDFExporter.export(sample_emg, edf_path, format='edf', bypass_analysis=True)
+
+        # Verify analysis functions were NOT called
+        mock_analyze_signal.assert_not_called()
+        mock_determine_suitability.assert_not_called()
+
+        # Verify file was created
+        assert os.path.exists(edf_path), "EDF file not created when bypassing analysis with format='edf'"
+        assert os.path.exists(edf_channels_tsv_path), "Channels TSV not created when bypassing with format='edf'"
+
+        # Verify content (scaling factors calculated without analysis)
+        with pyedflib.EdfReader(edf_path) as reader:
+            assert reader.signals_in_file == 2
+            headers = reader.getSignalHeaders()
+            assert headers[0]['label'] == 'EMG1'
+            assert headers[0]['digital_min'] == -32768  # EDF range
+            assert headers[0]['digital_max'] == 32767
+            reconstructed_emg = _reconstruct_physical_signal(reader, 0)
+            assert np.allclose(sample_emg.signals['EMG1'].values, reconstructed_emg, atol=0.2)
+
+        # Verify summary was skipped
+        captured = capsys.readouterr()
+        assert "Summary skipped as signal analysis was bypassed." in captured.out
+        assert "Signal Analysis:" in captured.out  # Analysis section still prints
+        assert "Recommended Format:" not in captured.out  # But specific analysis results don't
+
+        # Reset mocks
+        mock_analyze_signal.reset_mock()
+        mock_determine_suitability.reset_mock()
+        if os.path.exists(edf_path):
+            os.unlink(edf_path)
+        if os.path.exists(edf_channels_tsv_path):
+            os.unlink(edf_channels_tsv_path)
+
+        # --- Test bypassing with format='bdf' ---
+        EDFExporter.export(sample_emg, bdf_path, format='bdf', bypass_analysis=True)
+
+        # Verify analysis functions were NOT called
+        mock_analyze_signal.assert_not_called()
+        mock_determine_suitability.assert_not_called()
+
+        # Verify file was created
+        assert os.path.exists(bdf_path), "BDF file not created when bypassing analysis with format='bdf'"
+        assert os.path.exists(bdf_channels_tsv_path), "Channels TSV not created when bypassing with format='bdf'"
+
+        # Verify content (scaling factors calculated without analysis)
+        with pyedflib.EdfReader(bdf_path) as reader:
+            assert reader.signals_in_file == 2
+            headers = reader.getSignalHeaders()
+            assert headers[0]['label'] == 'EMG1'
+            assert headers[0]['digital_min'] == -8388608  # BDF range
+            assert headers[0]['digital_max'] == 8388607
+            reconstructed_emg = _reconstruct_physical_signal(reader, 0)
+            assert np.allclose(sample_emg.signals['EMG1'].values, reconstructed_emg, atol=0.2)
+
+        # Verify summary was skipped
+        captured = capsys.readouterr()
+        assert "Summary skipped as signal analysis was bypassed." in captured.out
+        assert "Signal Analysis:" in captured.out
+        assert "Recommended Format:" not in captured.out
+
+        # Reset mocks
+        mock_analyze_signal.reset_mock()
+        mock_determine_suitability.reset_mock()
+
+        # --- Test error when bypassing with format='auto' ---
+        with pytest.raises(ValueError, match="Cannot bypass analysis when format is set to 'auto'"):
+            EDFExporter.export(sample_emg, edf_path, format='auto', bypass_analysis=True)
+
+        mock_analyze_signal.assert_not_called()  # Should raise error before analysis
+
+    finally:
+        # Cleanup
+        for p in all_paths:
+            if os.path.exists(p):
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass  # Ignore cleanup errors
+
+
+@patch('emgio.exporters.edf.analyze_signal')
+@patch('emgio.exporters.edf.determine_format_suitability')
+def test_edf_export_force_analysis(mock_determine_suitability, mock_analyze_signal, sample_emg, capsys):
+    """Test EDF/BDF export with bypass_analysis=False when format is specified."""
+    # Mock return values for analysis functions
+    mock_analyze_signal.return_value = {
+        'range': 1.0, 'noise_floor': 0.01, 'dynamic_range_db': 40.0, 'is_zero': False, 'method': 'mock'
+    }
+    mock_determine_suitability.return_value = (False, 'Mock reason', 40.0)  # Recommend EDF
+
+    with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
+        edf_path = f.name
+
+    channels_tsv_path = os.path.splitext(edf_path)[0] + '_channels.tsv'
+    all_paths = [edf_path, channels_tsv_path]
+
+    try:
+        # --- Test forcing analysis with format='edf' ---
+        EDFExporter.export(sample_emg, edf_path, format='edf', bypass_analysis=False)
+
+        # Verify analysis functions WERE called (once per channel)
+        assert mock_analyze_signal.call_count == len(sample_emg.channels)
+        assert mock_determine_suitability.call_count == len(sample_emg.channels)
+
+        # Verify file was created
+        assert os.path.exists(edf_path), "EDF file not created when forcing analysis with format='edf'"
+
+        # Verify summary was generated
+        captured = capsys.readouterr()
+        assert "Summary skipped" not in captured.out
+        assert "Summary:" in captured.out
+        assert "Recommended Format:" in captured.out
+
+    finally:
+        # Cleanup
+        for p in all_paths:
+            if os.path.exists(p):
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass  # Ignore cleanup errors

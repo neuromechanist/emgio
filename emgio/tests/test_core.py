@@ -437,6 +437,7 @@ def mock_edf_exporter(monkeypatch):
         def export(emg_obj, filepath, method='both', fft_noise_range=None,
                    svd_rank=None, precision_threshold=0.01,
                    format='auto',
+                   bypass_analysis=False,
                    **kwargs):
             if not filepath.endswith('.edf') and not filepath.endswith('.bdf'):
                 raise ValueError("File must have .edf or .bdf extension")
@@ -445,6 +446,7 @@ def mock_edf_exporter(monkeypatch):
                 'filepath': filepath,
                 'channels': list(emg_obj.channels.keys()),
                 'format': format,
+                'bypass_analysis': bypass_analysis,
                 'kwargs': kwargs  # Only store the custom kwargs, not the default ones
             }
             return filepath
@@ -469,18 +471,66 @@ def test_to_edf_export(sample_emg, mock_edf_exporter):
     assert mock_edf_exporter.last_export['filepath'] == filepath
     assert set(mock_edf_exporter.last_export['channels']) == {'EMG1', 'ACC1'}
     assert mock_edf_exporter.last_export['format'] == 'auto'
+    assert mock_edf_exporter.last_export['bypass_analysis'] is False
     assert mock_edf_exporter.last_export['kwargs'] == {}
+
+    # Test with specific format and additional kwargs (format=bdf should bypass analysis by default)
+    custom_kwargs = {'patient_id': 'TEST001'}
+    sample_emg.to_edf(filepath, format='bdf', **custom_kwargs)
+    assert mock_edf_exporter.last_export['filepath'] == filepath
+    assert mock_edf_exporter.last_export['format'] == 'bdf'
+    assert mock_edf_exporter.last_export['bypass_analysis'] is True
+    assert mock_edf_exporter.last_export['kwargs'] == custom_kwargs
+
+    # Test invalid file extension (This check might be within the actual exporter now, but keeping mock check)
+    # with pytest.raises(ValueError):
+    #     sample_emg.to_edf('test.txt') # This check depends on whether the mock or real exporter raises
+
+    # --- Test bypass_analysis logic --- 
+
+    # Format forced, bypass=None (default) -> should bypass (True)
+    sample_emg.to_edf(filepath, format='edf', bypass_analysis=None)
+    assert mock_edf_exporter.last_export['format'] == 'edf'
+    assert mock_edf_exporter.last_export['bypass_analysis'] is True
+
+    sample_emg.to_edf(filepath, format='bdf', bypass_analysis=None)
+    assert mock_edf_exporter.last_export['format'] == 'bdf'
+    assert mock_edf_exporter.last_export['bypass_analysis'] is True
+
+    # Format forced, bypass=True -> should bypass (True)
+    sample_emg.to_edf(filepath, format='edf', bypass_analysis=True)
+    assert mock_edf_exporter.last_export['bypass_analysis'] is True
+    sample_emg.to_edf(filepath, format='bdf', bypass_analysis=True)
+    assert mock_edf_exporter.last_export['bypass_analysis'] is True
+
+    # Format forced, bypass=False -> should NOT bypass (False)
+    sample_emg.to_edf(filepath, format='edf', bypass_analysis=False)
+    assert mock_edf_exporter.last_export['bypass_analysis'] is False
+    sample_emg.to_edf(filepath, format='bdf', bypass_analysis=False)
+    assert mock_edf_exporter.last_export['bypass_analysis'] is False
+
+    # Format auto, bypass=None -> should NOT bypass (False)
+    sample_emg.to_edf(filepath, format='auto', bypass_analysis=None)
+    assert mock_edf_exporter.last_export['format'] == 'auto'
+    assert mock_edf_exporter.last_export['bypass_analysis'] is False
+
+    # Format auto, bypass=True -> should NOT bypass (False)
+    sample_emg.to_edf(filepath, format='auto', bypass_analysis=True)
+    assert mock_edf_exporter.last_export['bypass_analysis'] is False
+
+    # Format auto, bypass=False -> should NOT bypass (False)
+    sample_emg.to_edf(filepath, format='auto', bypass_analysis=False)
+    assert mock_edf_exporter.last_export['bypass_analysis'] is False
+
+    # --- End bypass_analysis tests ---
 
     # Test with specific format and additional kwargs
     custom_kwargs = {'patient_id': 'TEST001'}
     sample_emg.to_edf(filepath, format='bdf', **custom_kwargs)
     assert mock_edf_exporter.last_export['filepath'] == filepath
     assert mock_edf_exporter.last_export['format'] == 'bdf'
+    assert mock_edf_exporter.last_export['bypass_analysis'] is True
     assert mock_edf_exporter.last_export['kwargs'] == custom_kwargs
-
-    # Test invalid file extension (This check might be within the actual exporter now, but keeping mock check)
-    # with pytest.raises(ValueError):
-    #     sample_emg.to_edf('test.txt') # This check depends on whether the mock or real exporter raises
 
 
 def test_to_edf_empty(empty_emg, mock_edf_exporter):

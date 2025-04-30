@@ -1,5 +1,6 @@
 import os
 import warnings
+# import logging  # Add logging import - Removed as unused in this file
 import numpy as np
 import pandas as pd
 import pyedflib
@@ -299,6 +300,7 @@ class EDFExporter:
     def export(emg: EMG, filepath: str, precision_threshold: float = 0.01,
                method: str = 'both', fft_noise_range: tuple = None,
                svd_rank: int = None, format: Literal['auto', 'edf', 'bdf'] = 'auto',
+               bypass_analysis: bool = False,  # Add bypass_analysis flag
                **kwargs) -> None:
         """
         Export EMG data to EDF/BDF format with corresponding channels.tsv file.
@@ -318,6 +320,8 @@ class EDFExporter:
                     If 'auto', the format (EDF/16-bit or BDF/24-bit) is chosen based
                     on signal analysis to minimize precision loss while preferring EDF
                     if sufficient.
+            bypass_analysis: If True, skip the signal analysis step. Requires format
+                             to be explicitly set to 'edf' or 'bdf'. (default: False)
             **kwargs: Additional arguments for the exporter
         """
         if emg.signals is None:
@@ -331,66 +335,82 @@ class EDFExporter:
         bdf_reason = ""
         format_decision_made = False
 
-        # Direct format selection by user
+        # --- Format Decision and Bypass Check ---
+        if bypass_analysis and format.lower() == 'auto':
+            raise ValueError("Cannot bypass analysis when format is set to 'auto'.")
+
         if format.lower() == 'bdf':
             use_bdf = True
             format_decision_made = True
-            print("\nUser specified BDF format (24-bit).")
+            if not bypass_analysis:
+                print("\nUser specified BDF format (24-bit).")
+            else:
+                # Log critical only if bypassing, already logged in EMG.to_edf
+                pass  # logging.log(logging.CRITICAL, "Skipping analysis, using specified BDF format.")
         elif format.lower() == 'edf':
             use_bdf = False
             format_decision_made = True
-            print("\nUser specified EDF format (16-bit).")
+            if not bypass_analysis:
+                print("\nUser specified EDF format (16-bit).")
+            else:
+                # Log critical only if bypassing, already logged in EMG.to_edf
+                pass  # logging.log(logging.CRITICAL, "Skipping analysis, using specified EDF format.")
         elif format.lower() != 'auto':
             warnings.warn(f"Unknown format: {format}. Valid options are 'auto', 'edf', or 'bdf'. Using 'auto'.")
             format = 'auto'  # Default to auto if invalid format given
+            bypass_analysis = False  # Cannot bypass if format is auto
 
         signal_analyses = {}
         signal_info_strings = []
 
-        # Analyze signals (needed for summary and potentially for 'auto' format decision)
-        for ch_name in emg.channels:
-            signal = emg.signals[ch_name].values
-            ch_info = emg.channels[ch_name]
+        # --- Conditional Signal Analysis ---
+        if not bypass_analysis:
+            # Analyze signals (needed for summary and potentially for 'auto' format decision)
+            for ch_name in emg.channels:
+                signal = emg.signals[ch_name].values
+                ch_info = emg.channels[ch_name]
 
-            # Analyze signal characteristics
-            analysis = analyze_signal(signal, method=method,
-                                      fft_noise_range=fft_noise_range,
-                                      svd_rank=svd_rank)
-            recommend_bdf, reason, snr = determine_format_suitability(signal, analysis)
-            analysis['snr'] = snr
-            analysis['recommend_bdf'] = recommend_bdf
-            analysis['reason'] = reason
-            signal_analyses[ch_name] = analysis  # Store analysis for later summary
+                # Analyze signal characteristics
+                analysis = analyze_signal(signal, method=method,
+                                          fft_noise_range=fft_noise_range,
+                                          svd_rank=svd_rank)
+                recommend_bdf, reason, snr = determine_format_suitability(signal, analysis)
+                analysis['snr'] = snr
+                analysis['recommend_bdf'] = recommend_bdf
+                analysis['reason'] = reason
+                signal_analyses[ch_name] = analysis  # Store analysis for later summary
 
-            # If format is 'auto', check if any channel recommends BDF
-            if format == 'auto' and recommend_bdf:
-                use_bdf = True  # Switch to BDF if any channel needs it
-                if not bdf_reason:  # Capture the first reason
-                    bdf_reason = f"Channel '{ch_name}': {reason}"
+                # If format is 'auto', check if any channel recommends BDF
+                if format == 'auto' and recommend_bdf:
+                    use_bdf = True  # Switch to BDF if any channel needs it
+                    if not bdf_reason:  # Capture the first reason
+                        bdf_reason = f"Channel '{ch_name}': {reason}"
 
-            # Prepare info string for printing later
-            signal_info_strings.append(
-                f"\n  {ch_name}:"
-                f"\n    Range: {analysis['range']:.8g} {ch_info['physical_dimension']}"
-                f"\n    Dynamic Range: {analysis['dynamic_range_db']:.1f} dB"
-                f"\n    Noise Floor: {analysis['noise_floor']:.2e} {ch_info['physical_dimension']}"
-                f"\n    SNR: {snr:.1f} dB"
-                f"\n    Method: {analysis.get('method', 'svd')}"
-                f"\n    Recommended Format: {'BDF' if recommend_bdf else 'EDF'} ({reason})"
-            )
+                # Prepare info string for printing later
+                signal_info_strings.append(
+                    f"\n  {ch_name}:"
+                    f"\n    Range: {analysis['range']:.8g} {ch_info['physical_dimension']}"
+                    f"\n    Dynamic Range: {analysis['dynamic_range_db']:.1f} dB"
+                    f"\n    Noise Floor: {analysis['noise_floor']:.2e} {ch_info['physical_dimension']}"
+                    f"\n    SNR: {snr:.1f} dB"
+                    f"\n    Method: {analysis.get('method', 'svd')}"
+                    f"\n    Recommended Format: {'BDF' if recommend_bdf else 'EDF'} ({reason})"
+                )
 
-        # Print analysis details after deciding the format
-        for info_str in signal_info_strings:
-            print(info_str)
+            # Print analysis details after deciding the format
+            for info_str in signal_info_strings:
+                print(info_str)
 
-        # Final format decision message for 'auto' mode
-        if format == 'auto':
-            if use_bdf:
-                print("\nUsing BDF format (24-bit) based on signal analysis to preserve precision.")
-                print(f"Reason: {bdf_reason}")
-                warnings.warn(f"Using BDF format based on signal analysis. Reason: {bdf_reason}")
-            else:
-                print("\nUsing EDF format (16-bit) based on signal analysis (precision within acceptable range).")
+            # Final format decision message for 'auto' mode
+            if format == 'auto':
+                if use_bdf:
+                    print("\nUsing BDF format (24-bit) based on signal analysis to preserve precision.")
+                    print(f"Reason: {bdf_reason}")
+                    warnings.warn(f"Using BDF format based on signal analysis. Reason: {bdf_reason}")
+                else:
+                    print("\nUsing EDF format (16-bit) based on signal analysis (precision within acceptable range).")
+        # else: # bypass_analysis is True - logging handled in EMG.to_edf
+        #     pass # logging.log(logging.CRITICAL, "Signal analysis bypassed.")
 
         # Set file format and create writer
         channels_tsv_data = {
@@ -414,7 +434,7 @@ class EDFExporter:
             for i, ch_name in enumerate(emg.channels):
                 signal = emg.signals[ch_name].values
                 ch_info = emg.channels[ch_name]
-                analysis = signal_analyses[ch_name] # Retrieve stored analysis
+                # No need for full analysis result for scaling factors anymore
 
                 # Get signal min/max for scaling factor calculation
                 signal_min = float(np.min(signal))
@@ -476,21 +496,24 @@ class EDFExporter:
             pd.DataFrame(channels_tsv_data).to_csv(channels_tsv_path, sep='\t', index=False)
             print(f"\nChannels metadata saved to: {channels_tsv_path}")
 
-            # Print summary using stored analyses
-            # We need to adapt summarize_channels call slightly or assume it uses the analyses dict
-            # Let's refine the analyses dict passed to summarize_channels
-            summary_analyses = {}
-            for ch_name, analysis in signal_analyses.items():
-                summary_analyses[ch_name] = {
-                    'range': analysis['range'],
-                    'dynamic_range_db': analysis['dynamic_range_db'],
-                    'snr_db': analysis['snr'],
-                    'use_bdf': use_bdf  # Use the final decision for the whole file
-                }
+            # Print summary using stored analyses, only if analysis was performed
+            if not bypass_analysis:
+                # We need to adapt summarize_channels call slightly or assume it uses the analyses dict
+                # Let's refine the analyses dict passed to summarize_channels
+                summary_analyses = {}
+                for ch_name, analysis in signal_analyses.items():
+                    summary_analyses[ch_name] = {
+                        'range': analysis['range'],
+                        'dynamic_range_db': analysis['dynamic_range_db'],
+                        'snr_db': analysis['snr'],
+                        'use_bdf': use_bdf  # Use the final decision for the whole file
+                    }
 
-            summary = summarize_channels(emg.channels, emg.signals, summary_analyses)
-            print("\nSummary:")
-            print(summary)
+                summary = summarize_channels(emg.channels, emg.signals, summary_analyses)
+                print("\nSummary:")
+                print(summary)
+            else:
+                print("\nSummary skipped as signal analysis was bypassed.")
 
             print(f"\nEMG data exported to: {filepath}")
             return filepath

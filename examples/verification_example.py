@@ -34,7 +34,7 @@ try:
     logging.info("EMG data loaded successfully.")
     logging.info(f"Channels found: {list(emg_data.signals.columns)}")
     logging.info(f"Duration: {emg_data.signals.index[-1]:.2f} seconds")
-    emg_channels = [ch for ch, info in emg_data.channels.items() if info['channel_type'] == 'EMG']
+    emg_channels = emg_data.get_channels_by_type('EMG')
     emg_only = emg_data.select_channels(emg_channels[:2])  # Creates a new EMG object with only EMG channels
 
 
@@ -51,6 +51,7 @@ try:
     verification_results_edf = emg_only.to_edf(
         output_path_edf,
         format='edf',  # Force EDF for this example
+        bypass_analysis=True,
         verify=verify_export,
         verify_tolerance=verification_tolerance,
         # Example: verify_channel_map={'Original Name 1': 'Reloaded Name A', 'Original Name 2': 'Reloaded Name B'}
@@ -81,6 +82,7 @@ try:
     verification_results_bdf = emg_only.to_edf(
         output_path_bdf,
         format='bdf',  # Force BDF for this example
+        bypass_analysis=True,
         verify=verify_export,
         verify_tolerance=verification_tolerance,
         verify_channel_map=explicit_map,  # Pass the explicit map
