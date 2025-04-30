@@ -23,8 +23,20 @@ class WFDBImporter(BaseImporter):
             EMG: EMG object containing the loaded data and annotations.
         """
         record_name = os.path.splitext(filepath)[0]
-        # directory = os.path.dirname(filepath) # Removed as unused for now
 
+        # Check if header file exists first
+        header_filepath = record_name + '.hea'
+        if not os.path.exists(header_filepath):
+            # Try checking the original filepath in case it was passed without extension
+            if not os.path.exists(filepath) and not os.path.exists(filepath + '.hea'):
+                raise FileNotFoundError(f"WFDB header file not found for record: {record_name}")
+            # If original filepath exists, maybe it *was* the header path
+            elif os.path.exists(filepath) and filepath.endswith('.hea'):
+                header_filepath = filepath  # Use the provided path
+            elif os.path.exists(filepath + '.hea'):
+                header_filepath = filepath + '.hea'  # Use the constructed path
+            else:  # Fallback if logic is confusing
+                raise FileNotFoundError(f"WFDB header file not found for record: {record_name}")
         try:
             # Read record data and header
             # physical=True ensures data is in physical units
@@ -99,15 +111,18 @@ class WFDBImporter(BaseImporter):
                     })
 
             except FileNotFoundError:
-                # Annotation file not found, proceed without annotations
+                # This specific FileNotFoundError means the .atr file is missing, which is okay.
                 emg.set_metadata('annotation_status', 'Annotation file (.atr) not found.')
-            except Exception as e:
-                # Handle other potential errors during annotation reading
-                emg.set_metadata('annotation_error', f"Error reading annotations: {str(e)}")
+            except Exception as ann_e:
+                # Other errors during annotation reading are warnings/metadata entries
+                emg.set_metadata('annotation_error', f"Error reading annotations: {str(ann_e)}")
 
             return emg
 
-        except FileNotFoundError:
-            raise FileNotFoundError(f"WFDB record not found: {record_name}. Ensure .hea and data files exist.")
+        except FileNotFoundError as fnf_e:
+            # This might occur if rdrecord itself can't find the .dat file
+            # Re-raise as a ValueError indicating a read problem, not just missing header
+            raise ValueError(f"Error reading WFDB record '{record_name}': Data file missing or unreadable ({fnf_e})")
         except Exception as e:
+            # Catch any other exceptions during record/annotation reading
             raise ValueError(f"Error reading WFDB file '{filepath}': {str(e)}")
