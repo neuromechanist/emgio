@@ -73,7 +73,7 @@ class EMG:
         Infer the importer to use based on the file extension.
         """
         extension = os.path.splitext(filepath)[1].lower()
-        if extension in {'.edf', '.edf+', '.bdf'}:
+        if extension in {'.edf', '.bdf'}:
             return 'edf'
         elif extension in {'.set'}:
             return 'eeglab'
@@ -81,6 +81,8 @@ class EMG:
             return 'otb'
         elif extension in {'.csv', '.txt'}:
             return 'csv'
+        elif extension in {'.hea', '.dat', '.atr'}:
+            return 'wfdb'
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -88,7 +90,7 @@ class EMG:
     def from_file(
             cls,
             filepath: str,
-            importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv'] | None = None,
+            importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv', 'wfdb'] | None = None,
             force_csv: bool = False,
             **kwargs
     ) -> 'EMG':
@@ -101,8 +103,9 @@ class EMG:
                 - 'trigno': Delsys Trigno EMG system (CSV)
                 - 'otb': OTB/OTB+ EMG system (OTB, OTB+)
                 - 'eeglab': EEGLAB .set files (SET)
-                - 'edf': EDF/EDF+/BDF format (EDF, EDF+, BDF)
+                - 'edf': EDF/EDF+/BDF/BDF+ format (EDF, BDF)
                 - 'csv': Generic CSV (or TXT) files with columnar data
+                - 'wfdb': Waveform Database (WFDB)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -120,7 +123,8 @@ class EMG:
             'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
             'edf': 'EDFImporter',  # EDF/EDF+/BDF format
             'eeglab': 'EEGLABImporter',  # EEGLAB .set files
-            'csv': 'CSVImporter'  # Generic CSV/Text files
+            'csv': 'CSVImporter',  # Generic CSV/Text files
+            'wfdb': 'WFDBImporter'  # Waveform Database format
         }
 
         if importer not in importers:
@@ -131,7 +135,8 @@ class EMG:
                 "- otb: OTB/OTB+ EMG system\n"
                 "- edf: EDF/EDF+/BDF format\n"
                 "- eeglab: EEGLAB .set files\n"
-                "- csv: Generic CSV/Text files"
+                "- csv: Generic CSV/Text files\n"
+                "- wfdb: Waveform Database"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
