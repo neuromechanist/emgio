@@ -515,6 +515,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#channel-specific-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Channel-Specific Information
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#annotations-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      Annotations / Events
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#setting-metadata" class="md-nav__link">
     <span class="md-ellipsis">
       Setting Metadata
@@ -606,6 +624,8 @@
   
     
     
+      
+        
       
         
       
@@ -765,6 +785,29 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../formats/wfdb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    WFDB
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -855,6 +898,8 @@
   
     
     
+      
+        
       
         
       
@@ -1029,6 +1074,29 @@
   
   <span class="md-ellipsis">
     CSV Importer
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/importers/wfdb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    WFDB Importer
     
   </span>
   
@@ -1298,6 +1366,8 @@
       
         
       
+        
+      
     
     
     
@@ -1446,6 +1516,29 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/wfdb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    WFDB Example
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1505,6 +1598,24 @@
   <a href="#accessing-metadata" class="md-nav__link">
     <span class="md-ellipsis">
       Accessing Metadata
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channel-specific-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Channel-Specific Information
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#annotations-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      Annotations / Events
     </span>
   </a>
   
@@ -1576,6 +1687,7 @@
 
 <h1 id="metadata-handling">Metadata Handling<a class="headerlink" href="#metadata-handling" title="Permanent link">&para;</a></h1>
 <p>EMGIO provides comprehensive metadata management capabilities, allowing you to work with recording session information, subject details, and other contextual data. Proper metadata handling is particularly important when working with research data that needs to be shared or archived.</p>
+<p>The <code>EMG</code> object stores various pieces of metadata loaded from the source file or added manually.</p>
 <h2 id="accessing-metadata">Accessing Metadata<a class="headerlink" href="#accessing-metadata" title="Permanent link">&para;</a></h2>
 <p>When you load data into EMGIO, any available metadata from the source file is automatically imported:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Load data</span>
@@ -1594,18 +1706,83 @@
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">condition</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">&#39;condition&#39;</span><span class="p">)</span>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Condition: </span><span class="si">{</span><span class="n">condition</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>
+<p>You can access the general metadata dictionary directly or use helper methods:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Access the entire metadata dictionary</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">all_metadata</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">metadata</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">all_metadata</span><span class="p">)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Get a specific metadata value</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">subject_id</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">&#39;subject&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">fs</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">&#39;sampling_frequency&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Subject: </span><span class="si">{</span><span class="n">subject_id</span><span class="si">}</span><span class="s2">, Fs: </span><span class="si">{</span><span class="n">fs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Set or update a metadata value</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s1">&#39;task&#39;</span><span class="p">,</span> <span class="s1">&#39;Isometric Contraction&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p>The specific keys available in <code>emg.metadata</code> depend on the data format and the information present in the source file header. Common keys might include <code>sampling_frequency</code>, <code>subject_id</code>, <code>recording_date</code>, device information, etc.</p>
+<h2 id="channel-specific-information">Channel-Specific Information<a class="headerlink" href="#channel-specific-information" title="Permanent link">&para;</a></h2>
+<p>Information specific to each channel (like its type, physical dimension/unit, or prefiltering details) is stored within the <code>emg.channels</code> dictionary, keyed by the channel label:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">for</span> <span class="n">channel_name</span><span class="p">,</span> <span class="n">channel_info</span> <span class="ow">in</span> <span class="n">emg</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Channel: </span><span class="si">{</span><span class="n">channel_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Type: </span><span class="si">{</span><span class="n">channel_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;channel_type&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;N/A&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Unit: </span><span class="si">{</span><span class="n">channel_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;physical_dimension&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;N/A&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Sampling Freq: </span><span class="si">{</span><span class="n">channel_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sample_frequency&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;N/A&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Prefilter: </span><span class="si">{</span><span class="n">channel_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prefilter&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;N/A&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># Access info for a specific channel</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">emg1_info</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="s1">&#39;EMG1&#39;</span><span class="p">]</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;EMG1 Unit: </span><span class="si">{</span><span class="n">emg1_info</span><span class="p">[</span><span class="s1">&#39;physical_dimension&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="annotations-events">Annotations / Events<a class="headerlink" href="#annotations-events" title="Permanent link">&para;</a></h2>
+<p>Time-stamped annotations or events associated with the recording are stored in the <code>emg.events</code> attribute as a pandas DataFrame.</p>
+<p>This DataFrame has the following standard columns:</p>
+<ul>
+<li><code>onset</code>: The start time of the event in seconds, relative to the beginning of the recording.</li>
+<li><code>duration</code>: The duration of the event in seconds.</li>
+<li><code>description</code>: A string describing the event.</li>
+</ul>
+<p><strong>Loading Annotations:</strong></p>
+<ul>
+<li><strong>EDF/BDF:</strong> Annotations stored in the EDF+/BDF+ annotation channel are automatically loaded into <code>emg.events</code> by the <code>EDFImporter</code>.</li>
+<li><strong>WFDB:</strong> Annotations stored in a corresponding <code>.atr</code> (or similar) file are automatically loaded into <code>emg.events</code> by the <code>WFDBImporter</code> when loading the <code>.hea</code> file.</li>
+<li><strong>Other Formats:</strong> For formats that don't have standardized annotation support within the file (like CSV, Trigno, OTB, EEGLAB <code>.set</code>), annotations are typically not loaded automatically. You may need to load them from a separate file and add them manually.</li>
+</ul>
+<p><strong>Accessing Annotations:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Check if any events were loaded</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">if</span> <span class="n">emg</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">emg</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">emg</span><span class="o">.</span><span class="n">events</span><span class="p">)</span><span class="si">}</span><span class="s2"> events.&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;First 5 events:&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">emg</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="c1"># Filter events by description</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">marker_events</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">events</span><span class="p">[</span><span class="n">emg</span><span class="o">.</span><span class="n">events</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;Marker&#39;</span><span class="p">)]</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Marker Events:&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">marker_events</span><span class="p">)</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No events/annotations loaded.&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Adding Annotations Manually:</strong></p>
+<p>You can add events programmatically using the <code>emg.add_event()</code> method:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">emg</span><span class="o">.</span><span class="n">add_event</span><span class="p">(</span><span class="n">onset</span><span class="o">=</span><span class="mf">10.5</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Rest Period&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">emg</span><span class="o">.</span><span class="n">add_event</span><span class="p">(</span><span class="n">onset</span><span class="o">=</span><span class="mf">15.5</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Stimulus Onset&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Events after adding manually:&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">emg</span><span class="o">.</span><span class="n">events</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Exporting Annotations:</strong></p>
+<p>When exporting data using <code>emg.to_edf()</code>, the events stored in <code>emg.events</code> are automatically written to the EDF+/BDF+ annotation channel.</p>
 <h2 id="setting-metadata">Setting Metadata<a class="headerlink" href="#setting-metadata" title="Permanent link">&para;</a></h2>
 <p>You can add or modify metadata fields:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Set a single metadata field</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s1">&#39;subject&#39;</span><span class="p">,</span> <span class="s1">&#39;S001&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Set multiple metadata fields at once</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">emg</span><span class="o">.</span><span class="n">set_metadata_dict</span><span class="p">({</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s1">&#39;subject&#39;</span><span class="p">:</span> <span class="s1">&#39;S001&#39;</span><span class="p">,</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="s1">&#39;condition&#39;</span><span class="p">:</span> <span class="s1">&#39;resting&#39;</span><span class="p">,</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="s1">&#39;experimenter&#39;</span><span class="p">:</span> <span class="s1">&#39;John Doe&#39;</span><span class="p">,</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="s1">&#39;recording_date&#39;</span><span class="p">:</span> <span class="s1">&#39;2023-01-15&#39;</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Set a single metadata field</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s1">&#39;subject&#39;</span><span class="p">,</span> <span class="s1">&#39;S001&#39;</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Set multiple metadata fields at once</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">emg</span><span class="o">.</span><span class="n">set_metadata_dict</span><span class="p">({</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="s1">&#39;subject&#39;</span><span class="p">:</span> <span class="s1">&#39;S001&#39;</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="s1">&#39;condition&#39;</span><span class="p">:</span> <span class="s1">&#39;resting&#39;</span><span class="p">,</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="s1">&#39;experimenter&#39;</span><span class="p">:</span> <span class="s1">&#39;John Doe&#39;</span><span class="p">,</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="s1">&#39;recording_date&#39;</span><span class="p">:</span> <span class="s1">&#39;2023-01-15&#39;</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">})</span>
 </code></pre></div>
 <h2 id="common-metadata-fields">Common Metadata Fields<a class="headerlink" href="#common-metadata-fields" title="Permanent link">&para;</a></h2>
 <p>While EMGIO is flexible about what metadata you can store, some common fields include:</p>
@@ -1652,29 +1829,29 @@
 </table>
 <h2 id="metadata-in-exported-files">Metadata in Exported Files<a class="headerlink" href="#metadata-in-exported-files" title="Permanent link">&para;</a></h2>
 <p>When exporting to EDF/BDF, EMGIO automatically includes metadata in the file header and generates a sidecar channels.tsv file with channel-specific metadata following BIDS conventions:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Export to EDF with metadata</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># This will create:</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># - output.edf or output.bdf (depending on format selection)</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># - output.channels.tsv (channel metadata in tab-separated format)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Export to EDF with metadata</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">emg</span><span class="o">.</span><span class="n">to_edf</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># This will create:</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># - output.edf or output.bdf (depending on format selection)</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># - output.channels.tsv (channel metadata in tab-separated format)</span>
 </code></pre></div>
 <p>The channels.tsv file will include information like:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>name    type    units   sampling_frequency    ...
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>EMG1    EMG     µV      2000                  ...
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>EMG2    EMG     µV      2000                  ...
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>ACC1    ACC     g       2000                  ...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>name    type    units   sampling_frequency    ...
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>EMG1    EMG     µV      2000                  ...
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>EMG2    EMG     µV      2000                  ...
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>ACC1    ACC     g       2000                  ...
 </code></pre></div>
 <h2 id="copying-metadata-between-emg-objects">Copying Metadata Between EMG Objects<a class="headerlink" href="#copying-metadata-between-emg-objects" title="Permanent link">&para;</a></h2>
 <p>When working with multiple EMG objects, you can copy metadata between them:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Create a subset with only EMG channels</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">emg_only</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">select_channels</span><span class="p">(</span><span class="n">channel_type</span><span class="o">=</span><span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Copy all metadata from original to subset</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">emg_only</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Or selectively copy metadata</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">emg_only</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s1">&#39;subject&#39;</span><span class="p">,</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">&#39;subject&#39;</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Create a subset with only EMG channels</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">emg_only</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">select_channels</span><span class="p">(</span><span class="n">channel_type</span><span class="o">=</span><span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Copy all metadata from original to subset</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">emg_only</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># Or selectively copy metadata</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">emg_only</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s1">&#39;subject&#39;</span><span class="p">,</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">&#39;subject&#39;</span><span class="p">))</span>
 </code></pre></div>
 <h2 id="best-practices-for-metadata">Best Practices for Metadata<a class="headerlink" href="#best-practices-for-metadata" title="Permanent link">&para;</a></h2>
 <ol>
