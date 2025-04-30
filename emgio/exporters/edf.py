@@ -434,7 +434,6 @@ class EDFExporter:
             for i, ch_name in enumerate(emg.channels):
                 signal = emg.signals[ch_name].values
                 ch_info = emg.channels[ch_name]
-                # analysis = signal_analyses[ch_name] # Retrieve stored analysis only if available
                 # No need for full analysis result for scaling factors anymore
 
                 # Get signal min/max for scaling factor calculation
