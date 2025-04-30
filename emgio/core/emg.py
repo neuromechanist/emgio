@@ -244,7 +244,7 @@ class EMG:
                fft_noise_range: tuple = None, svd_rank: int = None,
                precision_threshold: float = 0.01,
                format: Literal['auto', 'edf', 'bdf'] = 'auto',
-
+               bypass_analysis: bool | None = None,
                verify: bool = False, verify_tolerance: float = 1e-6,
                verify_channel_map: Optional[Dict[str, str]] = None,
                verify_plot: bool = False,
@@ -266,12 +266,17 @@ class EMG:
                     If 'auto', the format (EDF/16-bit or BDF/24-bit) is chosen based
                     on signal analysis to minimize precision loss while preferring EDF
                     if sufficient.
+            bypass_analysis: If True, skip signal analysis step when format is explicitly
+                             set to 'edf' or 'bdf'. If None (default), analysis is skipped
+                             automatically when format is forced. Set to False to force
+                             analysis even with a specified format. Ignored if format='auto'.
             verify: If True, reload the exported file and compare signals with the original
                     to check for data integrity loss. Results are printed. (default: False)
             verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)
             verify_channel_map: Optional dictionary mapping original channel names (keys)
                                 to reloaded channel names (values) for verification.
                                 Used if `verify` is True and channel names might differ.
+            verify_plot: If True and verify is True, plots a comparison of original vs reloaded signals.
             **kwargs: Additional arguments for the EDF exporter
 
         Returns:
@@ -286,13 +291,40 @@ class EMG:
 
         from ..exporters.edf import EDFExporter
 
-        # Pass analysis parameters to the exporter
+        # --- Determine if analysis should be bypassed ---
+        final_bypass_analysis = False
+        if format.lower() == 'auto':
+            if bypass_analysis is True:
+                logging.warning("bypass_analysis=True ignored because format='auto'. Analysis is required.")
+            # Analysis is always needed for 'auto' format
+            final_bypass_analysis = False
+        elif format.lower() in ['edf', 'bdf']:
+            if bypass_analysis is None:
+                # Default behaviour: skip analysis if format is forced
+                final_bypass_analysis = True
+                msg = (f"Format forced to '{format}'. Skipping signal analysis for faster export. "
+                       "Set bypass_analysis=False to force analysis.")
+                logging.log(logging.CRITICAL, msg)
+            elif bypass_analysis is True:
+                final_bypass_analysis = True
+                logging.log(logging.CRITICAL, "bypass_analysis=True set. Skipping signal analysis.")
+            else:  # bypass_analysis is False
+                final_bypass_analysis = False
+                logging.info(f"Format forced to '{format}' but bypass_analysis=False. Performing signal analysis.")
+        else:
+            # Should not happen if Literal type hint works, but good practice
+            logging.warning(f"Unknown format '{format}'. Defaulting to 'auto' behavior (analysis enabled).")
+            format = 'auto'
+            final_bypass_analysis = False
+
+        # Pass analysis parameters and bypass flag to the exporter
         export_params = {
             'method': method,
             'fft_noise_range': fft_noise_range,
             'svd_rank': svd_rank,
             'precision_threshold': precision_threshold,
-            'format': format
+            'format': format,
+            'bypass_analysis': final_bypass_analysis  # Pass the determined value
         }
 
         # Combine with any other kwargs
