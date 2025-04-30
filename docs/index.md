@@ -22,7 +22,8 @@ EMGIO simplifies this process by providing a standardized interface for loading,
   - EEGLAB set files (supported)
   - Delsys Trigno (supported)
   - OTB Systems (supported)
-  - EDF (supported)
+  - EDF/BDF(+) (supported, including annotations)
+  - WFDB (supported, including annotations)
   - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
   
@@ -30,15 +31,18 @@ EMGIO simplifies this process by providing a standardized interface for loading,
   - Automatic file format detection
   - Format-specific metadata extraction
   - Handling of specialized CSV formats
+  - Automatic annotation loading (WFDB, planned for EDF+/BDF+ and EEGLAB's .set files)
   
 - **Intelligent export**:
   - Automatic determination of EDF/BDF format based on signal quality
   - Smart handling of precision requirements
   - BIDS-compatible metadata formatting
+  - Annotation export (EDF+/BDF+)
   
 - **Data manipulation**:
   - Channel selection
   - Metadata handling
+  - Event/Annotation handling (access, add)
   - Basic signal visualization
   - Raw data access and modification
 

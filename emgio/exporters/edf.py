@@ -8,7 +8,7 @@ from ..core.emg import EMG
 from ..analysis.signal import (
     analyze_signal, determine_format_suitability
 )
-from typing import Literal
+from typing import Literal, Optional
 
 
 def _format_physical_value(value: float, max_chars: int) -> tuple:
@@ -300,7 +300,8 @@ class EDFExporter:
     def export(emg: EMG, filepath: str, precision_threshold: float = 0.01,
                method: str = 'both', fft_noise_range: tuple = None,
                svd_rank: int = None, format: Literal['auto', 'edf', 'bdf'] = 'auto',
-               bypass_analysis: bool = False,  # Add bypass_analysis flag
+               bypass_analysis: bool = False,
+               events_df: Optional[pd.DataFrame] = None,
                **kwargs) -> None:
         """
         Export EMG data to EDF/BDF format with corresponding channels.tsv file.
@@ -322,6 +323,9 @@ class EDFExporter:
                     if sufficient.
             bypass_analysis: If True, skip the signal analysis step. Requires format
                              to be explicitly set to 'edf' or 'bdf'. (default: False)
+            events_df: Optional DataFrame containing events/annotations to write.
+                     Columns should include 'onset', 'duration', 'description'.
+                     If None or empty, no annotations are written.
             **kwargs: Additional arguments for the exporter
         """
         if emg.signals is None:
@@ -474,7 +478,22 @@ class EDFExporter:
 
             # Set headers and write data (pass physical signals)
             writer.setSignalHeaders(channel_info_list)
-            writer.writeSamples(signals_to_write)
+            writer.writeSamples(np.array(signals_to_write))
+
+            # Write annotations if provided
+            if events_df is not None and not events_df.empty:
+                for index, row in events_df.iterrows():
+                    try:
+                        # pyedflib uses onset, duration, description
+                        onset = float(row['onset'])
+                        duration = float(row['duration'])
+                        description = str(row['description'])
+                        # Write annotation for all channels (-1)
+                        writer.writeAnnotation(onset, duration, description)
+                    except KeyError as e:
+                        warnings.warn(f"Skipping event due to missing column: {e}. Event data: {row}")
+                    except (TypeError, ValueError) as e:
+                        warnings.warn(f"Skipping event due to invalid data type: {e}. Event data: {row}")
 
             # Explicitly flush and close the writer to ensure all data is written
             writer.close()
@@ -539,3 +558,6 @@ class EDFExporter:
                     print(f"Error during cleanup of {filepath}: {unlink_e}")
 
             raise e
+        finally:
+            if writer is not None:
+                writer.close()  # Ensure writer is closed

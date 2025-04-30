@@ -22,7 +22,8 @@ dependencies = [
     "pandas",
     "scipy",
     "matplotlib",
-    "pyedflib"
+    "pyedflib",
+    "wfdb"
 ]
 
 [project.urls]

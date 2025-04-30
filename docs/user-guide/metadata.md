@@ -2,6 +2,8 @@
 
 EMGIO provides comprehensive metadata management capabilities, allowing you to work with recording session information, subject details, and other contextual data. Proper metadata handling is particularly important when working with research data that needs to be shared or archived.
 
+The `EMG` object stores various pieces of metadata loaded from the source file or added manually.
+
 ## Accessing Metadata
 
 When you load data into EMGIO, any available metadata from the source file is automatically imported:
@@ -23,6 +25,90 @@ if emg.has_metadata('condition'):
     condition = emg.get_metadata('condition')
     print(f"Condition: {condition}")
 ```
+
+You can access the general metadata dictionary directly or use helper methods:
+
+```python
+# Access the entire metadata dictionary
+all_metadata = emg.metadata
+print(all_metadata)
+
+# Get a specific metadata value
+subject_id = emg.get_metadata('subject')
+fs = emg.get_metadata('sampling_frequency')
+print(f"Subject: {subject_id}, Fs: {fs}")
+
+# Set or update a metadata value
+emg.set_metadata('task', 'Isometric Contraction')
+```
+
+The specific keys available in `emg.metadata` depend on the data format and the information present in the source file header. Common keys might include `sampling_frequency`, `subject_id`, `recording_date`, device information, etc.
+
+## Channel-Specific Information
+
+Information specific to each channel (like its type, physical dimension/unit, or prefiltering details) is stored within the `emg.channels` dictionary, keyed by the channel label:
+
+```python
+for channel_name, channel_info in emg.channels.items():
+    print(f"Channel: {channel_name}")
+    print(f"  Type: {channel_info.get('channel_type', 'N/A')}")
+    print(f"  Unit: {channel_info.get('physical_dimension', 'N/A')}")
+    print(f"  Sampling Freq: {channel_info.get('sample_frequency', 'N/A')}")
+    print(f"  Prefilter: {channel_info.get('prefilter', 'N/A')}")
+
+# Access info for a specific channel
+emg1_info = emg.channels['EMG1']
+print(f"EMG1 Unit: {emg1_info['physical_dimension']}")
+```
+
+## Annotations / Events
+
+Time-stamped annotations or events associated with the recording are stored in the `emg.events` attribute as a pandas DataFrame.
+
+This DataFrame has the following standard columns:
+
+*   `onset`: The start time of the event in seconds, relative to the beginning of the recording.
+*   `duration`: The duration of the event in seconds.
+*   `description`: A string describing the event.
+
+**Loading Annotations:**
+
+*   **EDF/BDF:** Annotations stored in the EDF+/BDF+ annotation channel are automatically loaded into `emg.events` by the `EDFImporter`.
+*   **WFDB:** Annotations stored in a corresponding `.atr` (or similar) file are automatically loaded into `emg.events` by the `WFDBImporter` when loading the `.hea` file.
+*   **Other Formats:** For formats that don't have standardized annotation support within the file (like CSV, Trigno, OTB, EEGLAB `.set`), annotations are typically not loaded automatically. You may need to load them from a separate file and add them manually.
+
+**Accessing Annotations:**
+
+```python
+# Check if any events were loaded
+if emg.events is not None and not emg.events.empty:
+    print(f"Loaded {len(emg.events)} events.")
+    print("First 5 events:")
+    print(emg.events.head())
+
+    # Filter events by description
+    marker_events = emg.events[emg.events['description'].str.contains('Marker')]
+    print("\nMarker Events:")
+    print(marker_events)
+else:
+    print("No events/annotations loaded.")
+```
+
+**Adding Annotations Manually:**
+
+You can add events programmatically using the `emg.add_event()` method:
+
+```python
+emg.add_event(onset=10.5, duration=5.0, description="Rest Period")
+emg.add_event(onset=15.5, duration=0.0, description="Stimulus Onset")
+
+print("\nEvents after adding manually:")
+print(emg.events)
+```
+
+**Exporting Annotations:**
+
+When exporting data using `emg.to_edf()`, the events stored in `emg.events` are automatically written to the EDF+/BDF+ annotation channel.
 
 ## Setting Metadata
 

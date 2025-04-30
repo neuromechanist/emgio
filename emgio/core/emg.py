@@ -21,10 +21,11 @@ class EMG:
     Core EMG class for handling EMG data and metadata.
 
     Attributes:
-        signals (pd.DataFrame): Raw signal data with time as index, for now, all channels are stored
-        in the same DataFrame, so they require the same sampling frequency
-        metadata (dict): Metadata dictionary containing recording information
-        channels (dict): Channel information including type, unit, sampling frequency
+        signals (pd.DataFrame): Raw signal data with time as index.
+        metadata (dict): Metadata dictionary containing recording information.
+        channels (dict): Channel information including type, unit, sampling frequency.
+        events (pd.DataFrame): Annotations or events associated with the signals,
+                               with columns 'onset', 'duration', 'description'.
     """
 
     def __init__(self):
@@ -32,6 +33,8 @@ class EMG:
         self.signals = None
         self.metadata = {}
         self.channels = {}
+        # Initialize events as an empty DataFrame with specified columns
+        self.events = pd.DataFrame(columns=['onset', 'duration', 'description'])
 
     def plot_signals(self, channels=None, time_range=None, offset_scale=0.8,
                     uniform_scale=True, detrend=False, grid=True, title=None,
@@ -70,7 +73,7 @@ class EMG:
         Infer the importer to use based on the file extension.
         """
         extension = os.path.splitext(filepath)[1].lower()
-        if extension in {'.edf', '.edf+', '.bdf'}:
+        if extension in {'.edf', '.bdf'}:
             return 'edf'
         elif extension in {'.set'}:
             return 'eeglab'
@@ -78,6 +81,8 @@ class EMG:
             return 'otb'
         elif extension in {'.csv', '.txt'}:
             return 'csv'
+        elif extension in {'.hea', '.dat', '.atr'}:
+            return 'wfdb'
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -85,7 +90,7 @@ class EMG:
     def from_file(
             cls,
             filepath: str,
-            importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv'] | None = None,
+            importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv', 'wfdb'] | None = None,
             force_csv: bool = False,
             **kwargs
     ) -> 'EMG':
@@ -98,8 +103,9 @@ class EMG:
                 - 'trigno': Delsys Trigno EMG system (CSV)
                 - 'otb': OTB/OTB+ EMG system (OTB, OTB+)
                 - 'eeglab': EEGLAB .set files (SET)
-                - 'edf': EDF/EDF+/BDF format (EDF, EDF+, BDF)
+                - 'edf': EDF/EDF+/BDF/BDF+ format (EDF, BDF)
                 - 'csv': Generic CSV (or TXT) files with columnar data
+                - 'wfdb': Waveform Database (WFDB)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -117,7 +123,8 @@ class EMG:
             'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
             'edf': 'EDFImporter',  # EDF/EDF+/BDF format
             'eeglab': 'EEGLABImporter',  # EEGLAB .set files
-            'csv': 'CSVImporter'  # Generic CSV/Text files
+            'csv': 'CSVImporter',  # Generic CSV/Text files
+            'wfdb': 'WFDBImporter'  # Waveform Database format
         }
 
         if importer not in importers:
@@ -128,7 +135,8 @@ class EMG:
                 "- otb: OTB/OTB+ EMG system\n"
                 "- edf: EDF/EDF+/BDF format\n"
                 "- eeglab: EEGLAB .set files\n"
-                "- csv: Generic CSV/Text files"
+                "- csv: Generic CSV/Text files\n"
+                "- wfdb: Waveform Database"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
@@ -248,9 +256,11 @@ class EMG:
                verify: bool = False, verify_tolerance: float = 1e-6,
                verify_channel_map: Optional[Dict[str, str]] = None,
                verify_plot: bool = False,
-               **kwargs) -> Optional[dict]:
+               events_df: Optional[pd.DataFrame] = None,
+               **kwargs
+               ) -> Union[str, None]:
         """
-        Export data to EDF/BDF format with corresponding channels.tsv file.
+        Export EMG data to EDF/BDF format, optionally including events.
 
         Args:
             filepath: Path to save the EDF/BDF file
@@ -277,19 +287,21 @@ class EMG:
                                 to reloaded channel names (values) for verification.
                                 Used if `verify` is True and channel names might differ.
             verify_plot: If True and verify is True, plots a comparison of original vs reloaded signals.
+            events_df: Optional DataFrame with events ('onset', 'duration', 'description').
+                      If None, uses self.events. (This provides flexibility)
             **kwargs: Additional arguments for the EDF exporter
 
         Returns:
-            Optional[dict]: If verify is True, returns a dictionary with verification results.
-                           Otherwise, returns None.
+            Union[str, None]: If verify is True, returns a string with verification results.
+                             Otherwise, returns None.
 
         Raises:
             ValueError: If no signals are loaded
         """
+        from ..exporters.edf import EDFExporter  # Local import
+
         if self.signals is None:
             raise ValueError("No signals loaded")
-
-        from ..exporters.edf import EDFExporter
 
         # --- Determine if analysis should be bypassed ---
         final_bypass_analysis = False
@@ -317,20 +329,24 @@ class EMG:
             format = 'auto'
             final_bypass_analysis = False
 
-        # Pass analysis parameters and bypass flag to the exporter
-        export_params = {
+        # Determine which events DataFrame to use
+        if events_df is None:
+            events_to_export = self.events
+        else:
+            events_to_export = events_df
+
+        # Combine parameters
+        all_params = {
+            'precision_threshold': precision_threshold,
             'method': method,
             'fft_noise_range': fft_noise_range,
             'svd_rank': svd_rank,
-            'precision_threshold': precision_threshold,
             'format': format,
-            'bypass_analysis': final_bypass_analysis  # Pass the determined value
+            'bypass_analysis': final_bypass_analysis,
+            'events_df': events_to_export,  # Pass the events dataframe
+            **kwargs
         }
 
-        # Combine with any other kwargs
-        all_params = {**export_params, **kwargs}
-
-        # Perform export
         EDFExporter.export(self, filepath, **all_params)
 
         verification_report_dict = None
@@ -420,3 +436,19 @@ class EMG:
             'prefilter': prefilter,
             'channel_type': channel_type
         }
+
+    def add_event(self, onset: float, duration: float, description: str) -> None:
+        """
+        Add an event/annotation to the EMG object.
+
+        Args:
+            onset: Event onset time in seconds.
+            duration: Event duration in seconds.
+            description: Event description string.
+        """
+        new_event = pd.DataFrame([{'onset': onset, 'duration': duration, 'description': description}])
+        # Use pd.concat for appending, ignore_index=True resets the index
+        self.events = pd.concat([self.events, new_event], ignore_index=True)
+        # Sort events by onset time for consistency
+        self.events.sort_values(by='onset', inplace=True)
+        self.events.reset_index(drop=True, inplace=True)

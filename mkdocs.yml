@@ -82,6 +82,7 @@ nav:
     - OTB: formats/otb.md
     - EDF: formats/edf.md
     - CSV: formats/csv.md
+    - WFDB: formats/wfdb.md
   - API Reference: 
     - EMG Class: api/emg.md
     - Importers:
@@ -91,6 +92,7 @@ nav:
       - OTB Importer: api/importers/otb.md
       - EDF Importer: api/importers/edf.md
       - CSV Importer: api/importers/csv.md
+      - WFDB Importer: api/importers/wfdb.md
     - Exporters:
       - EDF/BDF Exporter: api/exporters/edf.md
     - Analysis:
@@ -103,6 +105,7 @@ nav:
     - OTB Examples: examples/otb.md
     - Signal Verification: examples/verification.md
     - Converting Jupyter Notebooks: examples/notebooks.md
+    - WFDB Example: examples/wfdb.md
   - Contributing: contributing.md
 
 extra:

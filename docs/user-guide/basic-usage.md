@@ -14,6 +14,7 @@ emg = EMG.from_file('data.csv')  # Will use CSV importer for CSV files
 emg = EMG.from_file('data.edf')  # Will use EDF importer for EDF files
 emg = EMG.from_file('data.set')  # Will use EEGLAB importer for SET files
 emg = EMG.from_file('data.otb')  # Will use OTB importer for OTB files
+emg = EMG.from_file('data.hea')  # Will use WFDB importer for WFDB files
 
 # Explicit importer selection
 emg = EMG.from_file('data.csv', importer='trigno')
@@ -21,6 +22,7 @@ emg = EMG.from_file('data.set', importer='eeglab')
 emg = EMG.from_file('data.otb+', importer='otb')
 emg = EMG.from_file('data.edf', importer='edf')
 emg = EMG.from_file('data.csv', importer='csv')  # Generic CSV importer
+emg = EMG.from_file('data.hea', importer='wfdb')  # WFDB importer
 ```
 
 ### Automatic File Type Inference
@@ -33,6 +35,7 @@ EMGIO automatically infers the appropriate importer based on file extension:
 | `.edf`, `.edf+`, `.bdf` | `edf` (EDF/BDF importer) |
 | `.set` | `eeglab` (EEGLAB importer) |
 | `.otb`, `.otb+` | `otb` (OTB importer) |
+| `.hea` | `wfdb` (WFDB importer) |
 
 Additionally, for CSV files, EMGIO includes specialized format detection that can identify formats like Trigno CSV exports and suggest the appropriate specialized importer.
 

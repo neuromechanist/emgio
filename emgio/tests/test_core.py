@@ -2,6 +2,7 @@ import os
 import builtins
 import pytest
 import numpy as np
+import pandas as pd
 from unittest.mock import MagicMock
 from ..core.emg import EMG
 
@@ -462,8 +463,44 @@ def mock_edf_exporter(monkeypatch):
     monkeypatch.setattr(edf, 'EDFExporter', original_exporter)
 
 
+def test_emg_add_event(empty_emg):
+    """Test adding events to the EMG object."""
+    assert empty_emg.events.empty
+
+    # Add first event
+    empty_emg.add_event(onset=1.0, duration=0.5, description="Event A")
+    assert len(empty_emg.events) == 1
+    pd.testing.assert_frame_equal(
+        empty_emg.events,
+        pd.DataFrame([{'onset': 1.0, 'duration': 0.5, 'description': "Event A"}])
+    )
+
+    # Add second event (should be sorted)
+    empty_emg.add_event(onset=0.5, duration=0.1, description="Event B")
+    assert len(empty_emg.events) == 2
+    expected_df = pd.DataFrame([
+        {'onset': 0.5, 'duration': 0.1, 'description': "Event B"},
+        {'onset': 1.0, 'duration': 0.5, 'description': "Event A"}
+    ])
+    pd.testing.assert_frame_equal(empty_emg.events, expected_df)
+
+    # Add third event
+    empty_emg.add_event(onset=1.5, duration=0.0, description="Event C")
+    assert len(empty_emg.events) == 3
+    expected_df = pd.DataFrame([
+        {'onset': 0.5, 'duration': 0.1, 'description': "Event B"},
+        {'onset': 1.0, 'duration': 0.5, 'description': "Event A"},
+        {'onset': 1.5, 'duration': 0.0, 'description': "Event C"}
+    ])
+    pd.testing.assert_frame_equal(empty_emg.events, expected_df)
+
+
 def test_to_edf_export(sample_emg, mock_edf_exporter):
-    """Test EDF export functionality."""
+    """Test EDF export functionality, including event passing."""
+    # Add some events to the sample emg object
+    sample_emg.add_event(onset=0.1, duration=0, description="Marker 1")
+    sample_emg.add_event(onset=0.5, duration=0.2, description="Activity Period")
+
     # Test basic export (default format='auto')
     filepath = 'test.edf'
     sample_emg.to_edf(filepath)
@@ -472,7 +509,11 @@ def test_to_edf_export(sample_emg, mock_edf_exporter):
     assert set(mock_edf_exporter.last_export['channels']) == {'EMG1', 'ACC1'}
     assert mock_edf_exporter.last_export['format'] == 'auto'
     assert mock_edf_exporter.last_export['bypass_analysis'] is False
-    assert mock_edf_exporter.last_export['kwargs'] == {}
+    # Check that events_df kwarg is present and contains the added events
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
+    pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], sample_emg.events)
+    assert len(mock_edf_exporter.last_export['kwargs']['events_df']) == 2
+    assert len(mock_edf_exporter.last_export['kwargs']) == 1 # Only events_df expected here
 
     # Test with specific format and additional kwargs (format=bdf should bypass analysis by default)
     custom_kwargs = {'patient_id': 'TEST001'}
@@ -480,57 +521,91 @@ def test_to_edf_export(sample_emg, mock_edf_exporter):
     assert mock_edf_exporter.last_export['filepath'] == filepath
     assert mock_edf_exporter.last_export['format'] == 'bdf'
     assert mock_edf_exporter.last_export['bypass_analysis'] is True
-    assert mock_edf_exporter.last_export['kwargs'] == custom_kwargs
+    # Check that events_df is still passed along with custom kwargs
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
+    pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], sample_emg.events)
+    assert len(mock_edf_exporter.last_export['kwargs']['events_df']) == 2
+    assert mock_edf_exporter.last_export['kwargs']['patient_id'] == 'TEST001'
+    assert len(mock_edf_exporter.last_export['kwargs']) == 2  # events_df + patient_id
 
-    # Test invalid file extension (This check might be within the actual exporter now, but keeping mock check)
-    # with pytest.raises(ValueError):
-    #     sample_emg.to_edf('test.txt') # This check depends on whether the mock or real exporter raises
+    # Test passing an external events DataFrame
+    external_events = pd.DataFrame([
+        {'onset': 0.3, 'duration': 0.1, 'description': "External Event"}
+    ])
+    sample_emg.to_edf(filepath, format='edf', events_df=external_events)
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
+    pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], external_events)
+    # Ensure the EMG object's internal events were not modified
+    assert len(sample_emg.events) == 2
 
-    # --- Test bypass_analysis logic --- 
+    # Test exporting with no events in the EMG object
+    empty_event_emg = EMG()
+    empty_event_emg.add_channel('CH1', np.array([1, 2, 3]), 100, 'V')
+    empty_event_emg.to_edf(filepath, format='edf')
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
+    assert mock_edf_exporter.last_export['kwargs']['events_df'].empty
+    pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], empty_event_emg.events)
+
+
+    # --- Test bypass_analysis logic (Ensure events are still passed) ---
 
     # Format forced, bypass=None (default) -> should bypass (True)
     sample_emg.to_edf(filepath, format='edf', bypass_analysis=None)
     assert mock_edf_exporter.last_export['format'] == 'edf'
     assert mock_edf_exporter.last_export['bypass_analysis'] is True
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']  # Ensure events_df is still passed
+    pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], sample_emg.events)
 
     sample_emg.to_edf(filepath, format='bdf', bypass_analysis=None)
     assert mock_edf_exporter.last_export['format'] == 'bdf'
     assert mock_edf_exporter.last_export['bypass_analysis'] is True
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
+    pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], sample_emg.events)
 
     # Format forced, bypass=True -> should bypass (True)
     sample_emg.to_edf(filepath, format='edf', bypass_analysis=True)
     assert mock_edf_exporter.last_export['bypass_analysis'] is True
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
     sample_emg.to_edf(filepath, format='bdf', bypass_analysis=True)
     assert mock_edf_exporter.last_export['bypass_analysis'] is True
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
 
     # Format forced, bypass=False -> should NOT bypass (False)
     sample_emg.to_edf(filepath, format='edf', bypass_analysis=False)
     assert mock_edf_exporter.last_export['bypass_analysis'] is False
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
     sample_emg.to_edf(filepath, format='bdf', bypass_analysis=False)
     assert mock_edf_exporter.last_export['bypass_analysis'] is False
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
 
     # Format auto, bypass=None -> should NOT bypass (False)
     sample_emg.to_edf(filepath, format='auto', bypass_analysis=None)
     assert mock_edf_exporter.last_export['format'] == 'auto'
     assert mock_edf_exporter.last_export['bypass_analysis'] is False
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
 
     # Format auto, bypass=True -> should NOT bypass (False)
     sample_emg.to_edf(filepath, format='auto', bypass_analysis=True)
     assert mock_edf_exporter.last_export['bypass_analysis'] is False
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
 
     # Format auto, bypass=False -> should NOT bypass (False)
     sample_emg.to_edf(filepath, format='auto', bypass_analysis=False)
     assert mock_edf_exporter.last_export['bypass_analysis'] is False
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
 
     # --- End bypass_analysis tests ---
 
-    # Test with specific format and additional kwargs
+    # Rerun test with specific format and additional kwargs to ensure final state is correct
     custom_kwargs = {'patient_id': 'TEST001'}
     sample_emg.to_edf(filepath, format='bdf', **custom_kwargs)
     assert mock_edf_exporter.last_export['filepath'] == filepath
     assert mock_edf_exporter.last_export['format'] == 'bdf'
     assert mock_edf_exporter.last_export['bypass_analysis'] is True
-    assert mock_edf_exporter.last_export['kwargs'] == custom_kwargs
+    assert 'events_df' in mock_edf_exporter.last_export['kwargs']
+    pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], sample_emg.events)
+    assert mock_edf_exporter.last_export['kwargs']['patient_id'] == 'TEST001'
+    assert len(mock_edf_exporter.last_export['kwargs']) == 2  # events_df + patient_id
 
 
 def test_to_edf_empty(empty_emg, mock_edf_exporter):

@@ -5,11 +5,50 @@ The `EMG` class is the main class in EMGIO for working with EMG data. It encapsu
 ## Class Documentation
 
 ::: emgio.core.emg.EMG
+    handler: python
     options:
       show_root_heading: true
-      show_source: true
-      members: true
-      show_submodules: true
+      show_source: false
+      members:
+        - __init__
+        - from_file
+        - add_channel
+        - add_event
+        - select_channels
+        - get_channel_types
+        - get_channels_by_type
+        - set_metadata
+        - get_metadata
+        - to_edf
+        - plot_signals
+      attributes_section_style: list
+      members_order: source
+      show_object_full_path: false
+      heading_level: 2
+      separate_instance_attributes: true
+      show_bases: false
+      docstring_options:
+        ignore_init_summary: true
+
+## Attributes
+
+Details about the main attributes:
+
+### `signals`
+
+`pandas.DataFrame`: Contains the raw signal data. The index is typically time in seconds (if available from the source file or calculated), and columns represent the different channels.
+
+### `metadata`
+
+`dict`: A dictionary holding metadata about the recording session (e.g., subject ID, recording date, device info). Keys and values depend on the source file.
+
+### `channels`
+
+`dict`: A dictionary where keys are channel labels (strings) and values are dictionaries containing channel-specific information (e.g., `sample_frequency`, `physical_dimension`, `channel_type`, `prefilter`).
+
+### `events`
+
+`pandas.DataFrame`: Contains time-stamped annotations or events loaded from the file (e.g., from EDF+ or WFDB annotations) or added manually. It has the columns `onset`, `duration`, and `description`.
 
 ## Key Methods Summary
 

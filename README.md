@@ -17,7 +17,8 @@ The documentation including installation instructions, examples, and API referen
   - EEGLAB set files (supported)
   - Delsys Trigno (supported)
   - OTB Systems (supported)
-  - EDF (supported)
+  - EDF/BDF(+) (supported, including annotations)
+  - WFDB (supported, including annotations)
   - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
   
@@ -25,13 +26,15 @@ The documentation including installation instructions, examples, and API referen
   - Automatic file format detection based on extension
   - Specialized format detection for CSV files
   - Custom importers for system-specific formats
+  - Automatic annotation loading (WFDB, planned for EDF+/BDF+ and EEGLAB's .set files)
   
 - Export to standardized formats:
-  - EDF/BDF with channels.tsv metadata (automatically selects format based on signal properties)
+  - EDF/BDF(+) with channels.tsv metadata (automatically selects format based on signal properties, preserves annotations)
   
 - Data manipulation:
   - Channel selection
   - Metadata handling
+  - Event/Annotation handling (access, add)
   - Basic signal visualization
   - Raw data access and modification
 
