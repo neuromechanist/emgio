@@ -241,13 +241,13 @@ def test_edf_export(sample_emg):
             assert np.allclose(original_acc_data, reconstructed_acc_data, atol=1e-3), \
                    f"ACC1 scaling incorrect. Max diff: {np.max(np.abs(original_acc_data - reconstructed_acc_data)):.2e}"
 
-        # Verify channels.tsv content
+        # Verify BIDS-compliant channels.tsv content
         channels_df = pd.read_csv(channels_tsv_path, sep='\t')
         assert len(channels_df) == 2
         assert list(channels_df['name']) == ['EMG1', 'ACC1']
-        assert list(channels_df['channel_type']) == ['EMG', 'ACC']
-        assert list(channels_df['physical_dimension']) == ['mV', 'g']
-        assert list(channels_df['sample_frequency']) == [1000, 1000]
+        assert list(channels_df['type']) == ['EMG', 'MISC']  # ACC mapped to MISC in BIDS
+        assert list(channels_df['units']) == ['mV', 'g']
+        assert list(channels_df['sampling_frequency']) == [1000, 1000]
 
     finally:
         # Cleanup
@@ -257,6 +257,32 @@ def test_edf_export(sample_emg):
             os.unlink(bdf_path)
         if os.path.exists(channels_tsv_path):
             os.unlink(channels_tsv_path)
+
+
+def test_edf_export_no_channels_tsv(sample_emg):
+    """Test that channels.tsv is not created when create_channels_tsv=False."""
+    with tempfile.NamedTemporaryFile(suffix='.edf', delete=False) as f:
+        edf_path = f.name
+        bdf_path = os.path.splitext(edf_path)[0] + '.bdf'
+    
+    try:
+        # Export with create_channels_tsv=False
+        EDFExporter.export(sample_emg, edf_path, create_channels_tsv=False, precision_threshold=1)
+        
+        # Check if either EDF or BDF file was created
+        actual_path = bdf_path if os.path.exists(bdf_path) else edf_path
+        assert os.path.exists(actual_path), f"Neither {edf_path} nor {bdf_path} was created"
+        
+        # Check that channels.tsv was NOT created
+        channels_tsv_path = os.path.splitext(actual_path)[0] + '_channels.tsv'
+        assert not os.path.exists(channels_tsv_path), "channels.tsv should not be created when create_channels_tsv=False"
+        
+    finally:
+        # Cleanup
+        if os.path.exists(edf_path):
+            os.unlink(edf_path)
+        if os.path.exists(bdf_path):
+            os.unlink(bdf_path)
 
 
 def test_edf_export_no_signals():
