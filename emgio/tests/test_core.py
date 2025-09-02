@@ -513,7 +513,9 @@ def test_to_edf_export(sample_emg, mock_edf_exporter):
     assert 'events_df' in mock_edf_exporter.last_export['kwargs']
     pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], sample_emg.events)
     assert len(mock_edf_exporter.last_export['kwargs']['events_df']) == 2
-    assert len(mock_edf_exporter.last_export['kwargs']) == 1 # Only events_df expected here
+    assert 'create_channels_tsv' in mock_edf_exporter.last_export['kwargs']
+    assert mock_edf_exporter.last_export['kwargs']['create_channels_tsv'] is True  # Default value
+    assert len(mock_edf_exporter.last_export['kwargs']) == 2  # events_df + create_channels_tsv
 
     # Test with specific format and additional kwargs (format=bdf should bypass analysis by default)
     custom_kwargs = {'patient_id': 'TEST001'}
@@ -526,7 +528,8 @@ def test_to_edf_export(sample_emg, mock_edf_exporter):
     pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], sample_emg.events)
     assert len(mock_edf_exporter.last_export['kwargs']['events_df']) == 2
     assert mock_edf_exporter.last_export['kwargs']['patient_id'] == 'TEST001'
-    assert len(mock_edf_exporter.last_export['kwargs']) == 2  # events_df + patient_id
+    assert 'create_channels_tsv' in mock_edf_exporter.last_export['kwargs']
+    assert len(mock_edf_exporter.last_export['kwargs']) == 3  # events_df + create_channels_tsv + patient_id
 
     # Test passing an external events DataFrame
     external_events = pd.DataFrame([
@@ -605,7 +608,8 @@ def test_to_edf_export(sample_emg, mock_edf_exporter):
     assert 'events_df' in mock_edf_exporter.last_export['kwargs']
     pd.testing.assert_frame_equal(mock_edf_exporter.last_export['kwargs']['events_df'], sample_emg.events)
     assert mock_edf_exporter.last_export['kwargs']['patient_id'] == 'TEST001'
-    assert len(mock_edf_exporter.last_export['kwargs']) == 2  # events_df + patient_id
+    assert 'create_channels_tsv' in mock_edf_exporter.last_export['kwargs']
+    assert len(mock_edf_exporter.last_export['kwargs']) == 3  # events_df + create_channels_tsv + patient_id
 
 
 def test_to_edf_empty(empty_emg, mock_edf_exporter):

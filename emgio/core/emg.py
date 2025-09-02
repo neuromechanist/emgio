@@ -257,6 +257,7 @@ class EMG:
                verify_channel_map: Optional[Dict[str, str]] = None,
                verify_plot: bool = False,
                events_df: Optional[pd.DataFrame] = None,
+               create_channels_tsv: bool = True,
                **kwargs
                ) -> Union[str, None]:
         """
@@ -289,6 +290,7 @@ class EMG:
             verify_plot: If True and verify is True, plots a comparison of original vs reloaded signals.
             events_df: Optional DataFrame with events ('onset', 'duration', 'description').
                       If None, uses self.events. (This provides flexibility)
+            create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)
             **kwargs: Additional arguments for the EDF exporter
 
         Returns:
@@ -344,6 +346,7 @@ class EMG:
             'format': format,
             'bypass_analysis': final_bypass_analysis,
             'events_df': events_to_export,  # Pass the events dataframe
+            'create_channels_tsv': create_channels_tsv,
             **kwargs
         }
 

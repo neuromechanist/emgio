@@ -302,9 +302,10 @@ class EDFExporter:
                svd_rank: int = None, format: Literal['auto', 'edf', 'bdf'] = 'auto',
                bypass_analysis: bool = False,
                events_df: Optional[pd.DataFrame] = None,
+               create_channels_tsv: bool = True,
                **kwargs) -> None:
         """
-        Export EMG data to EDF/BDF format with corresponding channels.tsv file.
+        Export EMG data to EDF/BDF format with optional BIDS-compliant channels.tsv file.
 
         Args:
             emg: EMG object containing the data
@@ -326,6 +327,7 @@ class EDFExporter:
             events_df: Optional DataFrame containing events/annotations to write.
                      Columns should include 'onset', 'duration', 'description'.
                      If None or empty, no annotations are written.
+            create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)
             **kwargs: Additional arguments for the exporter
         """
         if emg.signals is None:
@@ -417,9 +419,15 @@ class EDFExporter:
         #     pass # logging.log(logging.CRITICAL, "Signal analysis bypassed.")
 
         # Set file format and create writer
+        # Initialize BIDS-compliant channels.tsv data structure
+        # Required columns in BIDS order: name, type, units
         channels_tsv_data = {
-            'name': [], 'channel_type': [], 'physical_dimension': [],
-            'sample_frequency': [], 'reference': [], 'status': []
+            'name': [],
+            'type': [],
+            'units': [],
+            'sampling_frequency': [],
+            'reference': [],
+            'status': []
         }
         channel_info_list = []
 
@@ -468,13 +476,28 @@ class EDFExporter:
                 }
                 channel_info_list.append(ch_dict)
 
-                # Add to channels.tsv data
+                # Add to BIDS-compliant channels.tsv data
                 channels_tsv_data['name'].append(ch_name)
-                channels_tsv_data['channel_type'].append(ch_info.get('channel_type', 'Unknown'))
-                channels_tsv_data['physical_dimension'].append(ch_info['physical_dimension'])
-                channels_tsv_data['sample_frequency'].append(ch_info['sample_frequency'])
-                channels_tsv_data['reference'].append('n/a')  # Assuming no specific reference info
-                channels_tsv_data['status'].append('good')  # Assuming good status
+                
+                # Map channel type to BIDS-compliant uppercase values
+                ch_type = ch_info.get('channel_type', 'Unknown').upper()
+                # Map common channel types to BIDS standard values
+                if ch_type in ['EMG', 'EEG', 'MEG','ECG', 'EOG', 'VEOG', 'HEOG', 'REF', 'TRIG', 'MISC']:
+                    bids_type = ch_type
+                elif 'EMG' in ch_type:
+                    bids_type = 'EMG'
+                elif 'ACC' in ch_type or 'ACCEL' in ch_type:
+                    bids_type = 'MISC'
+                elif 'GYRO' in ch_type:
+                    bids_type = 'MISC'
+                else:
+                    bids_type = 'MISC'
+                
+                channels_tsv_data['type'].append(bids_type)
+                channels_tsv_data['units'].append(ch_info['physical_dimension'])
+                channels_tsv_data['sampling_frequency'].append(ch_info['sample_frequency'])
+                channels_tsv_data['reference'].append('n/a')  # Can be updated if reference info is available
+                channels_tsv_data['status'].append('good')  # Default to good, can be updated based on signal quality
 
             # Set headers and write data (pass physical signals)
             writer.setSignalHeaders(channel_info_list)
@@ -510,10 +533,20 @@ class EDFExporter:
             if file_size == 0:
                 raise IOError(f"File {filepath} was created but is empty")
 
-            # Generate channels.tsv file using stored analyses
-            channels_tsv_path = os.path.splitext(filepath)[0] + '_channels.tsv'
-            pd.DataFrame(channels_tsv_data).to_csv(channels_tsv_path, sep='\t', index=False)
-            print(f"\nChannels metadata saved to: {channels_tsv_path}")
+            # Generate BIDS-compliant channels.tsv file if requested
+            if create_channels_tsv:
+                channels_tsv_path = os.path.splitext(filepath)[0] + '_channels.tsv'
+                # Create DataFrame with columns in BIDS-specified order
+                # Required columns first: name, type, units
+                # Then optional columns in the order they appear in data
+                ordered_columns = ['name', 'type', 'units']
+                optional_columns = [col for col in channels_tsv_data.keys() if col not in ordered_columns]
+                column_order = ordered_columns + optional_columns
+                
+                channels_df = pd.DataFrame(channels_tsv_data)
+                channels_df = channels_df[column_order]
+                channels_df.to_csv(channels_tsv_path, sep='\t', index=False, na_rep='n/a')
+                print(f"\nBIDS-compliant channels metadata saved to: {channels_tsv_path}")
 
             # Print summary using stored analyses, only if analysis was performed
             if not bypass_analysis:
