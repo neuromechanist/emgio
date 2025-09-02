@@ -2459,7 +2459,10 @@
 <span class="normal"><a href="#__codelineno-0-451">451</a></span>
 <span class="normal"><a href="#__codelineno-0-452">452</a></span>
 <span class="normal"><a href="#__codelineno-0-453">453</a></span>
-<span class="normal"><a href="#__codelineno-0-454">454</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-19" name="__codelineno-0-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">EMG</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-454">454</a></span>
+<span class="normal"><a href="#__codelineno-0-455">455</a></span>
+<span class="normal"><a href="#__codelineno-0-456">456</a></span>
+<span class="normal"><a href="#__codelineno-0-457">457</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-19" name="__codelineno-0-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">EMG</span><span class="p">:</span>
 <a id="__codelineno-0-20" name="__codelineno-0-20"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <a id="__codelineno-0-21" name="__codelineno-0-21"></a><span class="sd">    Core EMG class for handling EMG data and metadata.</span>
 <a id="__codelineno-0-22" name="__codelineno-0-22"></a>
@@ -2700,201 +2703,204 @@
 <a id="__codelineno-0-257" name="__codelineno-0-257"></a>               <span class="n">verify_channel_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-258" name="__codelineno-0-258"></a>               <span class="n">verify_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-259" name="__codelineno-0-259"></a>               <span class="n">events_df</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-260" name="__codelineno-0-260"></a>               <span class="o">**</span><span class="n">kwargs</span>
-<a id="__codelineno-0-261" name="__codelineno-0-261"></a>               <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">        Export EMG data to EDF/BDF format, optionally including events.</span>
-<a id="__codelineno-0-264" name="__codelineno-0-264"></a>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">            filepath: Path to save the EDF/BDF file</span>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">            method: Method for signal analysis (&#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;)</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">                &#39;svd&#39;: Uses Singular Value Decomposition for noise floor estimation</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">                &#39;fft&#39;: Uses Fast Fourier Transform for noise floor estimation</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">                &#39;both&#39;: Uses both methods and takes the minimum noise floor (default)</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="sd">            fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">            svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">            precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">            format: Format to use (&#39;auto&#39;, &#39;edf&#39;, or &#39;bdf&#39;). Default is &#39;auto&#39;.</span>
-<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">                    If &#39;edf&#39; or &#39;bdf&#39; is specified, that format will be used directly.</span>
-<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">                    If &#39;auto&#39;, the format (EDF/16-bit or BDF/24-bit) is chosen based</span>
-<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">                    on signal analysis to minimize precision loss while preferring EDF</span>
-<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="sd">                    if sufficient.</span>
-<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">            bypass_analysis: If True, skip signal analysis step when format is explicitly</span>
-<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">                             set to &#39;edf&#39; or &#39;bdf&#39;. If None (default), analysis is skipped</span>
-<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">                             automatically when format is forced. Set to False to force</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">                             analysis even with a specified format. Ignored if format=&#39;auto&#39;.</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">            verify: If True, reload the exported file and compare signals with the original</span>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">                    to check for data integrity loss. Results are printed. (default: False)</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">            verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)</span>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">            verify_channel_map: Optional dictionary mapping original channel names (keys)</span>
-<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">                                to reloaded channel names (values) for verification.</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">                                Used if `verify` is True and channel names might differ.</span>
-<a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">            verify_plot: If True and verify is True, plots a comparison of original vs reloaded signals.</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">            events_df: Optional DataFrame with events (&#39;onset&#39;, &#39;duration&#39;, &#39;description&#39;).</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a><span class="sd">                      If None, uses self.events. (This provides flexibility)</span>
-<a id="__codelineno-0-292" name="__codelineno-0-292"></a><span class="sd">            **kwargs: Additional arguments for the EDF exporter</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a>
-<a id="__codelineno-0-294" name="__codelineno-0-294"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-295" name="__codelineno-0-295"></a><span class="sd">            Union[str, None]: If verify is True, returns a string with verification results.</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a><span class="sd">                             Otherwise, returns None.</span>
-<a id="__codelineno-0-297" name="__codelineno-0-297"></a>
-<a id="__codelineno-0-298" name="__codelineno-0-298"></a><span class="sd">        Raises:</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a><span class="sd">            ValueError: If no signals are loaded</span>
-<a id="__codelineno-0-300" name="__codelineno-0-300"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.edf</span><span class="w"> </span><span class="kn">import</span> <span class="n">EDFExporter</span>  <span class="c1"># Local import</span>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>
-<a id="__codelineno-0-306" name="__codelineno-0-306"></a>        <span class="c1"># --- Determine if analysis should be bypassed ---</span>
-<a id="__codelineno-0-307" name="__codelineno-0-307"></a>        <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a>        <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a>            <span class="k">if</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-<a id="__codelineno-0-310" name="__codelineno-0-310"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;bypass_analysis=True ignored because format=&#39;auto&#39;. Analysis is required.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a>            <span class="c1"># Analysis is always needed for &#39;auto&#39; format</span>
-<a id="__codelineno-0-312" name="__codelineno-0-312"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-313" name="__codelineno-0-313"></a>        <span class="k">elif</span> <span class="nb">format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;edf&#39;</span><span class="p">,</span> <span class="s1">&#39;bdf&#39;</span><span class="p">]:</span>
-<a id="__codelineno-0-314" name="__codelineno-0-314"></a>            <span class="k">if</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-315" name="__codelineno-0-315"></a>                <span class="c1"># Default behaviour: skip analysis if format is forced</span>
-<a id="__codelineno-0-316" name="__codelineno-0-316"></a>                <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-317" name="__codelineno-0-317"></a>                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Format forced to &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Skipping signal analysis for faster export. &quot;</span>
-<a id="__codelineno-0-318" name="__codelineno-0-318"></a>                       <span class="s2">&quot;Set bypass_analysis=False to force analysis.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
-<a id="__codelineno-0-320" name="__codelineno-0-320"></a>            <span class="k">elif</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a>                <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-322" name="__codelineno-0-322"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="s2">&quot;bypass_analysis=True set. Skipping signal analysis.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a>            <span class="k">else</span><span class="p">:</span>  <span class="c1"># bypass_analysis is False</span>
-<a id="__codelineno-0-324" name="__codelineno-0-324"></a>                <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-325" name="__codelineno-0-325"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Format forced to &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39; but bypass_analysis=False. Performing signal analysis.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-326" name="__codelineno-0-326"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-327" name="__codelineno-0-327"></a>            <span class="c1"># Should not happen if Literal type hint works, but good practice</span>
-<a id="__codelineno-0-328" name="__codelineno-0-328"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown format &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Defaulting to &#39;auto&#39; behavior (analysis enabled).&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-329" name="__codelineno-0-329"></a>            <span class="nb">format</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span>
-<a id="__codelineno-0-330" name="__codelineno-0-330"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-331" name="__codelineno-0-331"></a>
-<a id="__codelineno-0-332" name="__codelineno-0-332"></a>        <span class="c1"># Determine which events DataFrame to use</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a>        <span class="k">if</span> <span class="n">events_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-334" name="__codelineno-0-334"></a>            <span class="n">events_to_export</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span>
-<a id="__codelineno-0-335" name="__codelineno-0-335"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-336" name="__codelineno-0-336"></a>            <span class="n">events_to_export</span> <span class="o">=</span> <span class="n">events_df</span>
-<a id="__codelineno-0-337" name="__codelineno-0-337"></a>
-<a id="__codelineno-0-338" name="__codelineno-0-338"></a>        <span class="c1"># Combine parameters</span>
-<a id="__codelineno-0-339" name="__codelineno-0-339"></a>        <span class="n">all_params</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>            <span class="s1">&#39;precision_threshold&#39;</span><span class="p">:</span> <span class="n">precision_threshold</span><span class="p">,</span>
-<a id="__codelineno-0-341" name="__codelineno-0-341"></a>            <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
-<a id="__codelineno-0-342" name="__codelineno-0-342"></a>            <span class="s1">&#39;fft_noise_range&#39;</span><span class="p">:</span> <span class="n">fft_noise_range</span><span class="p">,</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>            <span class="s1">&#39;svd_rank&#39;</span><span class="p">:</span> <span class="n">svd_rank</span><span class="p">,</span>
-<a id="__codelineno-0-344" name="__codelineno-0-344"></a>            <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">,</span>
-<a id="__codelineno-0-345" name="__codelineno-0-345"></a>            <span class="s1">&#39;bypass_analysis&#39;</span><span class="p">:</span> <span class="n">final_bypass_analysis</span><span class="p">,</span>
-<a id="__codelineno-0-346" name="__codelineno-0-346"></a>            <span class="s1">&#39;events_df&#39;</span><span class="p">:</span> <span class="n">events_to_export</span><span class="p">,</span>  <span class="c1"># Pass the events dataframe</span>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a>            <span class="o">**</span><span class="n">kwargs</span>
-<a id="__codelineno-0-348" name="__codelineno-0-348"></a>        <span class="p">}</span>
-<a id="__codelineno-0-349" name="__codelineno-0-349"></a>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a>        <span class="n">EDFExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">all_params</span><span class="p">)</span>
-<a id="__codelineno-0-351" name="__codelineno-0-351"></a>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a>        <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="kc">None</span>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a>        <span class="k">if</span> <span class="n">verify</span><span class="p">:</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification requested. Reloading exported file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-355" name="__codelineno-0-355"></a>            <span class="k">try</span><span class="p">:</span>
-<a id="__codelineno-0-356" name="__codelineno-0-356"></a>                <span class="c1"># Reload the exported file</span>
-<a id="__codelineno-0-357" name="__codelineno-0-357"></a>                <span class="n">reloaded_emg</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;edf&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-358" name="__codelineno-0-358"></a>
-<a id="__codelineno-0-359" name="__codelineno-0-359"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Comparing original signals with reloaded signals...&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-360" name="__codelineno-0-360"></a>                <span class="c1"># Compare signals using the imported function</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a>                <span class="n">verification_results</span> <span class="o">=</span> <span class="n">compare_signals</span><span class="p">(</span>
-<a id="__codelineno-0-362" name="__codelineno-0-362"></a>                    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-363" name="__codelineno-0-363"></a>                    <span class="n">reloaded_emg</span><span class="p">,</span>
-<a id="__codelineno-0-364" name="__codelineno-0-364"></a>                    <span class="n">tolerance</span><span class="o">=</span><span class="n">verify_tolerance</span><span class="p">,</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a>                    <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span>
-<a id="__codelineno-0-366" name="__codelineno-0-366"></a>                <span class="p">)</span>
-<a id="__codelineno-0-367" name="__codelineno-0-367"></a>
-<a id="__codelineno-0-368" name="__codelineno-0-368"></a>                <span class="c1"># Generate and log report using the imported function</span>
-<a id="__codelineno-0-369" name="__codelineno-0-369"></a>                <span class="n">report_verification_results</span><span class="p">(</span><span class="n">verification_results</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="p">)</span>
-<a id="__codelineno-0-370" name="__codelineno-0-370"></a>                <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="n">verification_results</span>
-<a id="__codelineno-0-371" name="__codelineno-0-371"></a>
-<a id="__codelineno-0-372" name="__codelineno-0-372"></a>                <span class="c1"># Plot comparison using imported function if requested</span>
-<a id="__codelineno-0-373" name="__codelineno-0-373"></a>                <span class="n">summary</span> <span class="o">=</span> <span class="n">verification_results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;channel_summary&#39;</span><span class="p">,</span> <span class="p">{})</span>
-<a id="__codelineno-0-374" name="__codelineno-0-374"></a>                <span class="n">comparison_mode</span> <span class="o">=</span> <span class="n">summary</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comparison_mode&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-375" name="__codelineno-0-375"></a>                <span class="n">compared_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">verification_results</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;channel_summary&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-376" name="__codelineno-0-376"></a>
-<a id="__codelineno-0-377" name="__codelineno-0-377"></a>                <span class="k">if</span> <span class="n">verify_plot</span> <span class="ow">and</span> <span class="n">compared_count</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">comparison_mode</span> <span class="o">!=</span> <span class="s1">&#39;failed&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-378" name="__codelineno-0-378"></a>                    <span class="n">plot_comparison</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_emg</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span><span class="p">)</span>
-<a id="__codelineno-0-379" name="__codelineno-0-379"></a>                <span class="k">elif</span> <span class="n">verify_plot</span><span class="p">:</span>
-<a id="__codelineno-0-380" name="__codelineno-0-380"></a>                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Skipping verification plot: No channels were successfully compared.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-381" name="__codelineno-0-381"></a>
-<a id="__codelineno-0-382" name="__codelineno-0-382"></a>            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-<a id="__codelineno-0-383" name="__codelineno-0-383"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification failed during reload or comparison: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-384" name="__codelineno-0-384"></a>                <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-385" name="__codelineno-0-385"></a>                    <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
-<a id="__codelineno-0-386" name="__codelineno-0-386"></a>                    <span class="s1">&#39;channel_summary&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;comparison_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;failed&#39;</span><span class="p">}</span>
-<a id="__codelineno-0-387" name="__codelineno-0-387"></a>                <span class="p">}</span>
-<a id="__codelineno-0-388" name="__codelineno-0-388"></a>
-<a id="__codelineno-0-389" name="__codelineno-0-389"></a>        <span class="k">return</span> <span class="n">verification_report_dict</span>
-<a id="__codelineno-0-390" name="__codelineno-0-390"></a>
-<a id="__codelineno-0-391" name="__codelineno-0-391"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-392" name="__codelineno-0-392"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-393" name="__codelineno-0-393"></a><span class="sd">        Set metadata value.</span>
-<a id="__codelineno-0-394" name="__codelineno-0-394"></a>
-<a id="__codelineno-0-395" name="__codelineno-0-395"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-396" name="__codelineno-0-396"></a><span class="sd">            key: Metadata key</span>
-<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="sd">            value: Metadata value</span>
-<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-399" name="__codelineno-0-399"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-<a id="__codelineno-0-400" name="__codelineno-0-400"></a>
-<a id="__codelineno-0-401" name="__codelineno-0-401"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">any</span><span class="p">:</span>
-<a id="__codelineno-0-402" name="__codelineno-0-402"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-403" name="__codelineno-0-403"></a><span class="sd">        Get metadata value.</span>
-<a id="__codelineno-0-404" name="__codelineno-0-404"></a>
-<a id="__codelineno-0-405" name="__codelineno-0-405"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-406" name="__codelineno-0-406"></a><span class="sd">            key: Metadata key</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a>               <span class="n">create_channels_tsv</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a>               <span class="o">**</span><span class="n">kwargs</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a>               <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">        Export EMG data to EDF/BDF format, optionally including events.</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">            filepath: Path to save the EDF/BDF file</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">            method: Method for signal analysis (&#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;)</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">                &#39;svd&#39;: Uses Singular Value Decomposition for noise floor estimation</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">                &#39;fft&#39;: Uses Fast Fourier Transform for noise floor estimation</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="sd">                &#39;both&#39;: Uses both methods and takes the minimum noise floor (default)</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">            fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">            svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">            precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">            format: Format to use (&#39;auto&#39;, &#39;edf&#39;, or &#39;bdf&#39;). Default is &#39;auto&#39;.</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">                    If &#39;edf&#39; or &#39;bdf&#39; is specified, that format will be used directly.</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">                    If &#39;auto&#39;, the format (EDF/16-bit or BDF/24-bit) is chosen based</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="sd">                    on signal analysis to minimize precision loss while preferring EDF</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">                    if sufficient.</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">            bypass_analysis: If True, skip signal analysis step when format is explicitly</span>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">                             set to &#39;edf&#39; or &#39;bdf&#39;. If None (default), analysis is skipped</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">                             automatically when format is forced. Set to False to force</span>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">                             analysis even with a specified format. Ignored if format=&#39;auto&#39;.</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">            verify: If True, reload the exported file and compare signals with the original</span>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">                    to check for data integrity loss. Results are printed. (default: False)</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">            verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">            verify_channel_map: Optional dictionary mapping original channel names (keys)</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">                                to reloaded channel names (values) for verification.</span>
+<a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">                                Used if `verify` is True and channel names might differ.</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">            verify_plot: If True and verify is True, plots a comparison of original vs reloaded signals.</span>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a><span class="sd">            events_df: Optional DataFrame with events (&#39;onset&#39;, &#39;duration&#39;, &#39;description&#39;).</span>
+<a id="__codelineno-0-292" name="__codelineno-0-292"></a><span class="sd">                      If None, uses self.events. (This provides flexibility)</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a><span class="sd">            create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)</span>
+<a id="__codelineno-0-294" name="__codelineno-0-294"></a><span class="sd">            **kwargs: Additional arguments for the EDF exporter</span>
+<a id="__codelineno-0-295" name="__codelineno-0-295"></a>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a><span class="sd">        Returns:</span>
+<a id="__codelineno-0-297" name="__codelineno-0-297"></a><span class="sd">            Union[str, None]: If verify is True, returns a string with verification results.</span>
+<a id="__codelineno-0-298" name="__codelineno-0-298"></a><span class="sd">                             Otherwise, returns None.</span>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a>
+<a id="__codelineno-0-300" name="__codelineno-0-300"></a><span class="sd">        Raises:</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a><span class="sd">            ValueError: If no signals are loaded</span>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.edf</span><span class="w"> </span><span class="kn">import</span> <span class="n">EDFExporter</span>  <span class="c1"># Local import</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a>        <span class="c1"># --- Determine if analysis should be bypassed ---</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a>        <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a>        <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a>            <span class="k">if</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;bypass_analysis=True ignored because format=&#39;auto&#39;. Analysis is required.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a>            <span class="c1"># Analysis is always needed for &#39;auto&#39; format</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>        <span class="k">elif</span> <span class="nb">format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;edf&#39;</span><span class="p">,</span> <span class="s1">&#39;bdf&#39;</span><span class="p">]:</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a>            <span class="k">if</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a>                <span class="c1"># Default behaviour: skip analysis if format is forced</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a>                <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a>                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Format forced to &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Skipping signal analysis for faster export. &quot;</span>
+<a id="__codelineno-0-320" name="__codelineno-0-320"></a>                       <span class="s2">&quot;Set bypass_analysis=False to force analysis.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a>            <span class="k">elif</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a>                <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="s2">&quot;bypass_analysis=True set. Skipping signal analysis.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a>            <span class="k">else</span><span class="p">:</span>  <span class="c1"># bypass_analysis is False</span>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>                <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Format forced to &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39; but bypass_analysis=False. Performing signal analysis.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a>            <span class="c1"># Should not happen if Literal type hint works, but good practice</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown format &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Defaulting to &#39;auto&#39; behavior (analysis enabled).&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>            <span class="nb">format</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a>
+<a id="__codelineno-0-334" name="__codelineno-0-334"></a>        <span class="c1"># Determine which events DataFrame to use</span>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a>        <span class="k">if</span> <span class="n">events_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-336" name="__codelineno-0-336"></a>            <span class="n">events_to_export</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a>            <span class="n">events_to_export</span> <span class="o">=</span> <span class="n">events_df</span>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>        <span class="c1"># Combine parameters</span>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a>        <span class="n">all_params</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a>            <span class="s1">&#39;precision_threshold&#39;</span><span class="p">:</span> <span class="n">precision_threshold</span><span class="p">,</span>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>            <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>            <span class="s1">&#39;fft_noise_range&#39;</span><span class="p">:</span> <span class="n">fft_noise_range</span><span class="p">,</span>
+<a id="__codelineno-0-345" name="__codelineno-0-345"></a>            <span class="s1">&#39;svd_rank&#39;</span><span class="p">:</span> <span class="n">svd_rank</span><span class="p">,</span>
+<a id="__codelineno-0-346" name="__codelineno-0-346"></a>            <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">,</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a>            <span class="s1">&#39;bypass_analysis&#39;</span><span class="p">:</span> <span class="n">final_bypass_analysis</span><span class="p">,</span>
+<a id="__codelineno-0-348" name="__codelineno-0-348"></a>            <span class="s1">&#39;events_df&#39;</span><span class="p">:</span> <span class="n">events_to_export</span><span class="p">,</span>  <span class="c1"># Pass the events dataframe</span>
+<a id="__codelineno-0-349" name="__codelineno-0-349"></a>            <span class="s1">&#39;create_channels_tsv&#39;</span><span class="p">:</span> <span class="n">create_channels_tsv</span><span class="p">,</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a>            <span class="o">**</span><span class="n">kwargs</span>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a>        <span class="p">}</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>        <span class="n">EDFExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">all_params</span><span class="p">)</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a>
+<a id="__codelineno-0-355" name="__codelineno-0-355"></a>        <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a>        <span class="k">if</span> <span class="n">verify</span><span class="p">:</span>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification requested. Reloading exported file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-358" name="__codelineno-0-358"></a>            <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-0-359" name="__codelineno-0-359"></a>                <span class="c1"># Reload the exported file</span>
+<a id="__codelineno-0-360" name="__codelineno-0-360"></a>                <span class="n">reloaded_emg</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;edf&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a>
+<a id="__codelineno-0-362" name="__codelineno-0-362"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Comparing original signals with reloaded signals...&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-363" name="__codelineno-0-363"></a>                <span class="c1"># Compare signals using the imported function</span>
+<a id="__codelineno-0-364" name="__codelineno-0-364"></a>                <span class="n">verification_results</span> <span class="o">=</span> <span class="n">compare_signals</span><span class="p">(</span>
+<a id="__codelineno-0-365" name="__codelineno-0-365"></a>                    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-366" name="__codelineno-0-366"></a>                    <span class="n">reloaded_emg</span><span class="p">,</span>
+<a id="__codelineno-0-367" name="__codelineno-0-367"></a>                    <span class="n">tolerance</span><span class="o">=</span><span class="n">verify_tolerance</span><span class="p">,</span>
+<a id="__codelineno-0-368" name="__codelineno-0-368"></a>                    <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span>
+<a id="__codelineno-0-369" name="__codelineno-0-369"></a>                <span class="p">)</span>
+<a id="__codelineno-0-370" name="__codelineno-0-370"></a>
+<a id="__codelineno-0-371" name="__codelineno-0-371"></a>                <span class="c1"># Generate and log report using the imported function</span>
+<a id="__codelineno-0-372" name="__codelineno-0-372"></a>                <span class="n">report_verification_results</span><span class="p">(</span><span class="n">verification_results</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="p">)</span>
+<a id="__codelineno-0-373" name="__codelineno-0-373"></a>                <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="n">verification_results</span>
+<a id="__codelineno-0-374" name="__codelineno-0-374"></a>
+<a id="__codelineno-0-375" name="__codelineno-0-375"></a>                <span class="c1"># Plot comparison using imported function if requested</span>
+<a id="__codelineno-0-376" name="__codelineno-0-376"></a>                <span class="n">summary</span> <span class="o">=</span> <span class="n">verification_results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;channel_summary&#39;</span><span class="p">,</span> <span class="p">{})</span>
+<a id="__codelineno-0-377" name="__codelineno-0-377"></a>                <span class="n">comparison_mode</span> <span class="o">=</span> <span class="n">summary</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comparison_mode&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-378" name="__codelineno-0-378"></a>                <span class="n">compared_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">verification_results</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;channel_summary&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-379" name="__codelineno-0-379"></a>
+<a id="__codelineno-0-380" name="__codelineno-0-380"></a>                <span class="k">if</span> <span class="n">verify_plot</span> <span class="ow">and</span> <span class="n">compared_count</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">comparison_mode</span> <span class="o">!=</span> <span class="s1">&#39;failed&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-381" name="__codelineno-0-381"></a>                    <span class="n">plot_comparison</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_emg</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span><span class="p">)</span>
+<a id="__codelineno-0-382" name="__codelineno-0-382"></a>                <span class="k">elif</span> <span class="n">verify_plot</span><span class="p">:</span>
+<a id="__codelineno-0-383" name="__codelineno-0-383"></a>                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Skipping verification plot: No channels were successfully compared.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-384" name="__codelineno-0-384"></a>
+<a id="__codelineno-0-385" name="__codelineno-0-385"></a>            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<a id="__codelineno-0-386" name="__codelineno-0-386"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification failed during reload or comparison: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-387" name="__codelineno-0-387"></a>                <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-388" name="__codelineno-0-388"></a>                    <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+<a id="__codelineno-0-389" name="__codelineno-0-389"></a>                    <span class="s1">&#39;channel_summary&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;comparison_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;failed&#39;</span><span class="p">}</span>
+<a id="__codelineno-0-390" name="__codelineno-0-390"></a>                <span class="p">}</span>
+<a id="__codelineno-0-391" name="__codelineno-0-391"></a>
+<a id="__codelineno-0-392" name="__codelineno-0-392"></a>        <span class="k">return</span> <span class="n">verification_report_dict</span>
+<a id="__codelineno-0-393" name="__codelineno-0-393"></a>
+<a id="__codelineno-0-394" name="__codelineno-0-394"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-395" name="__codelineno-0-395"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-396" name="__codelineno-0-396"></a><span class="sd">        Set metadata value.</span>
+<a id="__codelineno-0-397" name="__codelineno-0-397"></a>
+<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-399" name="__codelineno-0-399"></a><span class="sd">            key: Metadata key</span>
+<a id="__codelineno-0-400" name="__codelineno-0-400"></a><span class="sd">            value: Metadata value</span>
+<a id="__codelineno-0-401" name="__codelineno-0-401"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-402" name="__codelineno-0-402"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<a id="__codelineno-0-403" name="__codelineno-0-403"></a>
+<a id="__codelineno-0-404" name="__codelineno-0-404"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">any</span><span class="p">:</span>
+<a id="__codelineno-0-405" name="__codelineno-0-405"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-406" name="__codelineno-0-406"></a><span class="sd">        Get metadata value.</span>
 <a id="__codelineno-0-407" name="__codelineno-0-407"></a>
-<a id="__codelineno-0-408" name="__codelineno-0-408"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-409" name="__codelineno-0-409"></a><span class="sd">            Value associated with the key</span>
-<a id="__codelineno-0-410" name="__codelineno-0-410"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-411" name="__codelineno-0-411"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-<a id="__codelineno-0-412" name="__codelineno-0-412"></a>
-<a id="__codelineno-0-413" name="__codelineno-0-413"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
-<a id="__codelineno-0-414" name="__codelineno-0-414"></a>            <span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<a id="__codelineno-0-415" name="__codelineno-0-415"></a>            <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-416" name="__codelineno-0-416"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-417" name="__codelineno-0-417"></a><span class="sd">        Add a new channel to the EMG data.</span>
-<a id="__codelineno-0-418" name="__codelineno-0-418"></a>
-<a id="__codelineno-0-419" name="__codelineno-0-419"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="sd">            label: Channel label or name (as per EDF specification)</span>
-<a id="__codelineno-0-421" name="__codelineno-0-421"></a><span class="sd">            data: Channel data</span>
-<a id="__codelineno-0-422" name="__codelineno-0-422"></a><span class="sd">            sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
-<a id="__codelineno-0-423" name="__codelineno-0-423"></a><span class="sd">            physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
-<a id="__codelineno-0-424" name="__codelineno-0-424"></a><span class="sd">            prefilter: Pre-filtering applied to the channel</span>
-<a id="__codelineno-0-425" name="__codelineno-0-425"></a><span class="sd">            channel_type: Channel type (&#39;EMG&#39;, &#39;ACC&#39;, &#39;GYRO&#39;, etc.)</span>
-<a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-427" name="__codelineno-0-427"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-428" name="__codelineno-0-428"></a>            <span class="c1"># Create DataFrame with time index</span>
-<a id="__codelineno-0-429" name="__codelineno-0-429"></a>            <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
-<a id="__codelineno-0-430" name="__codelineno-0-430"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
-<a id="__codelineno-0-431" name="__codelineno-0-431"></a>
-<a id="__codelineno-0-432" name="__codelineno-0-432"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
-<a id="__codelineno-0-433" name="__codelineno-0-433"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-434" name="__codelineno-0-434"></a>            <span class="s1">&#39;sample_frequency&#39;</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
-<a id="__codelineno-0-435" name="__codelineno-0-435"></a>            <span class="s1">&#39;physical_dimension&#39;</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
-<a id="__codelineno-0-436" name="__codelineno-0-436"></a>            <span class="s1">&#39;prefilter&#39;</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
-<a id="__codelineno-0-437" name="__codelineno-0-437"></a>            <span class="s1">&#39;channel_type&#39;</span><span class="p">:</span> <span class="n">channel_type</span>
-<a id="__codelineno-0-438" name="__codelineno-0-438"></a>        <span class="p">}</span>
-<a id="__codelineno-0-439" name="__codelineno-0-439"></a>
-<a id="__codelineno-0-440" name="__codelineno-0-440"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">onset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-441" name="__codelineno-0-441"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-442" name="__codelineno-0-442"></a><span class="sd">        Add an event/annotation to the EMG object.</span>
-<a id="__codelineno-0-443" name="__codelineno-0-443"></a>
-<a id="__codelineno-0-444" name="__codelineno-0-444"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-445" name="__codelineno-0-445"></a><span class="sd">            onset: Event onset time in seconds.</span>
-<a id="__codelineno-0-446" name="__codelineno-0-446"></a><span class="sd">            duration: Event duration in seconds.</span>
-<a id="__codelineno-0-447" name="__codelineno-0-447"></a><span class="sd">            description: Event description string.</span>
-<a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-449" name="__codelineno-0-449"></a>        <span class="n">new_event</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([{</span><span class="s1">&#39;onset&#39;</span><span class="p">:</span> <span class="n">onset</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="n">duration</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">}])</span>
-<a id="__codelineno-0-450" name="__codelineno-0-450"></a>        <span class="c1"># Use pd.concat for appending, ignore_index=True resets the index</span>
-<a id="__codelineno-0-451" name="__codelineno-0-451"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">new_event</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-452" name="__codelineno-0-452"></a>        <span class="c1"># Sort events by onset time for consistency</span>
-<a id="__codelineno-0-453" name="__codelineno-0-453"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;onset&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-454" name="__codelineno-0-454"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-408" name="__codelineno-0-408"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-409" name="__codelineno-0-409"></a><span class="sd">            key: Metadata key</span>
+<a id="__codelineno-0-410" name="__codelineno-0-410"></a>
+<a id="__codelineno-0-411" name="__codelineno-0-411"></a><span class="sd">        Returns:</span>
+<a id="__codelineno-0-412" name="__codelineno-0-412"></a><span class="sd">            Value associated with the key</span>
+<a id="__codelineno-0-413" name="__codelineno-0-413"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-414" name="__codelineno-0-414"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+<a id="__codelineno-0-415" name="__codelineno-0-415"></a>
+<a id="__codelineno-0-416" name="__codelineno-0-416"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
+<a id="__codelineno-0-417" name="__codelineno-0-417"></a>            <span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-418" name="__codelineno-0-418"></a>            <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-419" name="__codelineno-0-419"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="sd">        Add a new channel to the EMG data.</span>
+<a id="__codelineno-0-421" name="__codelineno-0-421"></a>
+<a id="__codelineno-0-422" name="__codelineno-0-422"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-423" name="__codelineno-0-423"></a><span class="sd">            label: Channel label or name (as per EDF specification)</span>
+<a id="__codelineno-0-424" name="__codelineno-0-424"></a><span class="sd">            data: Channel data</span>
+<a id="__codelineno-0-425" name="__codelineno-0-425"></a><span class="sd">            sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
+<a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="sd">            physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
+<a id="__codelineno-0-427" name="__codelineno-0-427"></a><span class="sd">            prefilter: Pre-filtering applied to the channel</span>
+<a id="__codelineno-0-428" name="__codelineno-0-428"></a><span class="sd">            channel_type: Channel type (&#39;EMG&#39;, &#39;ACC&#39;, &#39;GYRO&#39;, etc.)</span>
+<a id="__codelineno-0-429" name="__codelineno-0-429"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-430" name="__codelineno-0-430"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-431" name="__codelineno-0-431"></a>            <span class="c1"># Create DataFrame with time index</span>
+<a id="__codelineno-0-432" name="__codelineno-0-432"></a>            <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
+<a id="__codelineno-0-433" name="__codelineno-0-433"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
+<a id="__codelineno-0-434" name="__codelineno-0-434"></a>
+<a id="__codelineno-0-435" name="__codelineno-0-435"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+<a id="__codelineno-0-436" name="__codelineno-0-436"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-437" name="__codelineno-0-437"></a>            <span class="s1">&#39;sample_frequency&#39;</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
+<a id="__codelineno-0-438" name="__codelineno-0-438"></a>            <span class="s1">&#39;physical_dimension&#39;</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
+<a id="__codelineno-0-439" name="__codelineno-0-439"></a>            <span class="s1">&#39;prefilter&#39;</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
+<a id="__codelineno-0-440" name="__codelineno-0-440"></a>            <span class="s1">&#39;channel_type&#39;</span><span class="p">:</span> <span class="n">channel_type</span>
+<a id="__codelineno-0-441" name="__codelineno-0-441"></a>        <span class="p">}</span>
+<a id="__codelineno-0-442" name="__codelineno-0-442"></a>
+<a id="__codelineno-0-443" name="__codelineno-0-443"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">onset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-444" name="__codelineno-0-444"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-445" name="__codelineno-0-445"></a><span class="sd">        Add an event/annotation to the EMG object.</span>
+<a id="__codelineno-0-446" name="__codelineno-0-446"></a>
+<a id="__codelineno-0-447" name="__codelineno-0-447"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="sd">            onset: Event onset time in seconds.</span>
+<a id="__codelineno-0-449" name="__codelineno-0-449"></a><span class="sd">            duration: Event duration in seconds.</span>
+<a id="__codelineno-0-450" name="__codelineno-0-450"></a><span class="sd">            description: Event description string.</span>
+<a id="__codelineno-0-451" name="__codelineno-0-451"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-452" name="__codelineno-0-452"></a>        <span class="n">new_event</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([{</span><span class="s1">&#39;onset&#39;</span><span class="p">:</span> <span class="n">onset</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="n">duration</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">}])</span>
+<a id="__codelineno-0-453" name="__codelineno-0-453"></a>        <span class="c1"># Use pd.concat for appending, ignore_index=True resets the index</span>
+<a id="__codelineno-0-454" name="__codelineno-0-454"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">new_event</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-455" name="__codelineno-0-455"></a>        <span class="c1"># Sort events by onset time for consistency</span>
+<a id="__codelineno-0-456" name="__codelineno-0-456"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;onset&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-457" name="__codelineno-0-457"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -2967,10 +2973,7 @@
 
             <details class="quote">
               <summary>Source code in <code>emgio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-413">413</a></span>
-<span class="normal"><a href="#__codelineno-0-414">414</a></span>
-<span class="normal"><a href="#__codelineno-0-415">415</a></span>
-<span class="normal"><a href="#__codelineno-0-416">416</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-416">416</a></span>
 <span class="normal"><a href="#__codelineno-0-417">417</a></span>
 <span class="normal"><a href="#__codelineno-0-418">418</a></span>
 <span class="normal"><a href="#__codelineno-0-419">419</a></span>
@@ -2992,32 +2995,35 @@
 <span class="normal"><a href="#__codelineno-0-435">435</a></span>
 <span class="normal"><a href="#__codelineno-0-436">436</a></span>
 <span class="normal"><a href="#__codelineno-0-437">437</a></span>
-<span class="normal"><a href="#__codelineno-0-438">438</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-413" name="__codelineno-0-413"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
-<a id="__codelineno-0-414" name="__codelineno-0-414"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<a id="__codelineno-0-415" name="__codelineno-0-415"></a>        <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-416" name="__codelineno-0-416"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-417" name="__codelineno-0-417"></a><span class="sd">    Add a new channel to the EMG data.</span>
-<a id="__codelineno-0-418" name="__codelineno-0-418"></a>
-<a id="__codelineno-0-419" name="__codelineno-0-419"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="sd">        label: Channel label or name (as per EDF specification)</span>
-<a id="__codelineno-0-421" name="__codelineno-0-421"></a><span class="sd">        data: Channel data</span>
-<a id="__codelineno-0-422" name="__codelineno-0-422"></a><span class="sd">        sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
-<a id="__codelineno-0-423" name="__codelineno-0-423"></a><span class="sd">        physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
-<a id="__codelineno-0-424" name="__codelineno-0-424"></a><span class="sd">        prefilter: Pre-filtering applied to the channel</span>
-<a id="__codelineno-0-425" name="__codelineno-0-425"></a><span class="sd">        channel_type: Channel type (&#39;EMG&#39;, &#39;ACC&#39;, &#39;GYRO&#39;, etc.)</span>
-<a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-427" name="__codelineno-0-427"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-428" name="__codelineno-0-428"></a>        <span class="c1"># Create DataFrame with time index</span>
-<a id="__codelineno-0-429" name="__codelineno-0-429"></a>        <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
-<a id="__codelineno-0-430" name="__codelineno-0-430"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
-<a id="__codelineno-0-431" name="__codelineno-0-431"></a>
-<a id="__codelineno-0-432" name="__codelineno-0-432"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
-<a id="__codelineno-0-433" name="__codelineno-0-433"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-434" name="__codelineno-0-434"></a>        <span class="s1">&#39;sample_frequency&#39;</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
-<a id="__codelineno-0-435" name="__codelineno-0-435"></a>        <span class="s1">&#39;physical_dimension&#39;</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
-<a id="__codelineno-0-436" name="__codelineno-0-436"></a>        <span class="s1">&#39;prefilter&#39;</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
-<a id="__codelineno-0-437" name="__codelineno-0-437"></a>        <span class="s1">&#39;channel_type&#39;</span><span class="p">:</span> <span class="n">channel_type</span>
-<a id="__codelineno-0-438" name="__codelineno-0-438"></a>    <span class="p">}</span>
+<span class="normal"><a href="#__codelineno-0-438">438</a></span>
+<span class="normal"><a href="#__codelineno-0-439">439</a></span>
+<span class="normal"><a href="#__codelineno-0-440">440</a></span>
+<span class="normal"><a href="#__codelineno-0-441">441</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-416" name="__codelineno-0-416"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
+<a id="__codelineno-0-417" name="__codelineno-0-417"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-418" name="__codelineno-0-418"></a>        <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-419" name="__codelineno-0-419"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="sd">    Add a new channel to the EMG data.</span>
+<a id="__codelineno-0-421" name="__codelineno-0-421"></a>
+<a id="__codelineno-0-422" name="__codelineno-0-422"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-423" name="__codelineno-0-423"></a><span class="sd">        label: Channel label or name (as per EDF specification)</span>
+<a id="__codelineno-0-424" name="__codelineno-0-424"></a><span class="sd">        data: Channel data</span>
+<a id="__codelineno-0-425" name="__codelineno-0-425"></a><span class="sd">        sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
+<a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="sd">        physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
+<a id="__codelineno-0-427" name="__codelineno-0-427"></a><span class="sd">        prefilter: Pre-filtering applied to the channel</span>
+<a id="__codelineno-0-428" name="__codelineno-0-428"></a><span class="sd">        channel_type: Channel type (&#39;EMG&#39;, &#39;ACC&#39;, &#39;GYRO&#39;, etc.)</span>
+<a id="__codelineno-0-429" name="__codelineno-0-429"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-430" name="__codelineno-0-430"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-431" name="__codelineno-0-431"></a>        <span class="c1"># Create DataFrame with time index</span>
+<a id="__codelineno-0-432" name="__codelineno-0-432"></a>        <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
+<a id="__codelineno-0-433" name="__codelineno-0-433"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
+<a id="__codelineno-0-434" name="__codelineno-0-434"></a>
+<a id="__codelineno-0-435" name="__codelineno-0-435"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+<a id="__codelineno-0-436" name="__codelineno-0-436"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-437" name="__codelineno-0-437"></a>        <span class="s1">&#39;sample_frequency&#39;</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
+<a id="__codelineno-0-438" name="__codelineno-0-438"></a>        <span class="s1">&#39;physical_dimension&#39;</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
+<a id="__codelineno-0-439" name="__codelineno-0-439"></a>        <span class="s1">&#39;prefilter&#39;</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
+<a id="__codelineno-0-440" name="__codelineno-0-440"></a>        <span class="s1">&#39;channel_type&#39;</span><span class="p">:</span> <span class="n">channel_type</span>
+<a id="__codelineno-0-441" name="__codelineno-0-441"></a>    <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3044,10 +3050,7 @@
 
             <details class="quote">
               <summary>Source code in <code>emgio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-440">440</a></span>
-<span class="normal"><a href="#__codelineno-0-441">441</a></span>
-<span class="normal"><a href="#__codelineno-0-442">442</a></span>
-<span class="normal"><a href="#__codelineno-0-443">443</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-443">443</a></span>
 <span class="normal"><a href="#__codelineno-0-444">444</a></span>
 <span class="normal"><a href="#__codelineno-0-445">445</a></span>
 <span class="normal"><a href="#__codelineno-0-446">446</a></span>
@@ -3058,21 +3061,24 @@
 <span class="normal"><a href="#__codelineno-0-451">451</a></span>
 <span class="normal"><a href="#__codelineno-0-452">452</a></span>
 <span class="normal"><a href="#__codelineno-0-453">453</a></span>
-<span class="normal"><a href="#__codelineno-0-454">454</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-440" name="__codelineno-0-440"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">onset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-441" name="__codelineno-0-441"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-442" name="__codelineno-0-442"></a><span class="sd">    Add an event/annotation to the EMG object.</span>
-<a id="__codelineno-0-443" name="__codelineno-0-443"></a>
-<a id="__codelineno-0-444" name="__codelineno-0-444"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-445" name="__codelineno-0-445"></a><span class="sd">        onset: Event onset time in seconds.</span>
-<a id="__codelineno-0-446" name="__codelineno-0-446"></a><span class="sd">        duration: Event duration in seconds.</span>
-<a id="__codelineno-0-447" name="__codelineno-0-447"></a><span class="sd">        description: Event description string.</span>
-<a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-449" name="__codelineno-0-449"></a>    <span class="n">new_event</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([{</span><span class="s1">&#39;onset&#39;</span><span class="p">:</span> <span class="n">onset</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="n">duration</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">}])</span>
-<a id="__codelineno-0-450" name="__codelineno-0-450"></a>    <span class="c1"># Use pd.concat for appending, ignore_index=True resets the index</span>
-<a id="__codelineno-0-451" name="__codelineno-0-451"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">new_event</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-452" name="__codelineno-0-452"></a>    <span class="c1"># Sort events by onset time for consistency</span>
-<a id="__codelineno-0-453" name="__codelineno-0-453"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;onset&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-454" name="__codelineno-0-454"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-454">454</a></span>
+<span class="normal"><a href="#__codelineno-0-455">455</a></span>
+<span class="normal"><a href="#__codelineno-0-456">456</a></span>
+<span class="normal"><a href="#__codelineno-0-457">457</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-443" name="__codelineno-0-443"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">onset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-444" name="__codelineno-0-444"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-445" name="__codelineno-0-445"></a><span class="sd">    Add an event/annotation to the EMG object.</span>
+<a id="__codelineno-0-446" name="__codelineno-0-446"></a>
+<a id="__codelineno-0-447" name="__codelineno-0-447"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="sd">        onset: Event onset time in seconds.</span>
+<a id="__codelineno-0-449" name="__codelineno-0-449"></a><span class="sd">        duration: Event duration in seconds.</span>
+<a id="__codelineno-0-450" name="__codelineno-0-450"></a><span class="sd">        description: Event description string.</span>
+<a id="__codelineno-0-451" name="__codelineno-0-451"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-452" name="__codelineno-0-452"></a>    <span class="n">new_event</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([{</span><span class="s1">&#39;onset&#39;</span><span class="p">:</span> <span class="n">onset</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="n">duration</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">}])</span>
+<a id="__codelineno-0-453" name="__codelineno-0-453"></a>    <span class="c1"># Use pd.concat for appending, ignore_index=True resets the index</span>
+<a id="__codelineno-0-454" name="__codelineno-0-454"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">new_event</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-455" name="__codelineno-0-455"></a>    <span class="c1"># Sort events by onset time for consistency</span>
+<a id="__codelineno-0-456" name="__codelineno-0-456"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;onset&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-457" name="__codelineno-0-457"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3364,27 +3370,27 @@
 
             <details class="quote">
               <summary>Source code in <code>emgio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-401">401</a></span>
-<span class="normal"><a href="#__codelineno-0-402">402</a></span>
-<span class="normal"><a href="#__codelineno-0-403">403</a></span>
-<span class="normal"><a href="#__codelineno-0-404">404</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-404">404</a></span>
 <span class="normal"><a href="#__codelineno-0-405">405</a></span>
 <span class="normal"><a href="#__codelineno-0-406">406</a></span>
 <span class="normal"><a href="#__codelineno-0-407">407</a></span>
 <span class="normal"><a href="#__codelineno-0-408">408</a></span>
 <span class="normal"><a href="#__codelineno-0-409">409</a></span>
 <span class="normal"><a href="#__codelineno-0-410">410</a></span>
-<span class="normal"><a href="#__codelineno-0-411">411</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-401" name="__codelineno-0-401"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">any</span><span class="p">:</span>
-<a id="__codelineno-0-402" name="__codelineno-0-402"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-403" name="__codelineno-0-403"></a><span class="sd">    Get metadata value.</span>
-<a id="__codelineno-0-404" name="__codelineno-0-404"></a>
-<a id="__codelineno-0-405" name="__codelineno-0-405"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-406" name="__codelineno-0-406"></a><span class="sd">        key: Metadata key</span>
+<span class="normal"><a href="#__codelineno-0-411">411</a></span>
+<span class="normal"><a href="#__codelineno-0-412">412</a></span>
+<span class="normal"><a href="#__codelineno-0-413">413</a></span>
+<span class="normal"><a href="#__codelineno-0-414">414</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-404" name="__codelineno-0-404"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">any</span><span class="p">:</span>
+<a id="__codelineno-0-405" name="__codelineno-0-405"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-406" name="__codelineno-0-406"></a><span class="sd">    Get metadata value.</span>
 <a id="__codelineno-0-407" name="__codelineno-0-407"></a>
-<a id="__codelineno-0-408" name="__codelineno-0-408"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-409" name="__codelineno-0-409"></a><span class="sd">        Value associated with the key</span>
-<a id="__codelineno-0-410" name="__codelineno-0-410"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-411" name="__codelineno-0-411"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+<a id="__codelineno-0-408" name="__codelineno-0-408"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-409" name="__codelineno-0-409"></a><span class="sd">        key: Metadata key</span>
+<a id="__codelineno-0-410" name="__codelineno-0-410"></a>
+<a id="__codelineno-0-411" name="__codelineno-0-411"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-412" name="__codelineno-0-412"></a><span class="sd">        Value associated with the key</span>
+<a id="__codelineno-0-413" name="__codelineno-0-413"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-414" name="__codelineno-0-414"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3679,23 +3685,23 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 
             <details class="quote">
               <summary>Source code in <code>emgio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-391">391</a></span>
-<span class="normal"><a href="#__codelineno-0-392">392</a></span>
-<span class="normal"><a href="#__codelineno-0-393">393</a></span>
-<span class="normal"><a href="#__codelineno-0-394">394</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-394">394</a></span>
 <span class="normal"><a href="#__codelineno-0-395">395</a></span>
 <span class="normal"><a href="#__codelineno-0-396">396</a></span>
 <span class="normal"><a href="#__codelineno-0-397">397</a></span>
 <span class="normal"><a href="#__codelineno-0-398">398</a></span>
-<span class="normal"><a href="#__codelineno-0-399">399</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-391" name="__codelineno-0-391"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-392" name="__codelineno-0-392"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-393" name="__codelineno-0-393"></a><span class="sd">    Set metadata value.</span>
-<a id="__codelineno-0-394" name="__codelineno-0-394"></a>
-<a id="__codelineno-0-395" name="__codelineno-0-395"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-396" name="__codelineno-0-396"></a><span class="sd">        key: Metadata key</span>
-<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="sd">        value: Metadata value</span>
-<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-399" name="__codelineno-0-399"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="normal"><a href="#__codelineno-0-399">399</a></span>
+<span class="normal"><a href="#__codelineno-0-400">400</a></span>
+<span class="normal"><a href="#__codelineno-0-401">401</a></span>
+<span class="normal"><a href="#__codelineno-0-402">402</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-394" name="__codelineno-0-394"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-395" name="__codelineno-0-395"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-396" name="__codelineno-0-396"></a><span class="sd">    Set metadata value.</span>
+<a id="__codelineno-0-397" name="__codelineno-0-397"></a>
+<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-399" name="__codelineno-0-399"></a><span class="sd">        key: Metadata key</span>
+<a id="__codelineno-0-400" name="__codelineno-0-400"></a><span class="sd">        value: Metadata value</span>
+<a id="__codelineno-0-401" name="__codelineno-0-401"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-402" name="__codelineno-0-402"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3706,7 +3712,7 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 
 
 <h4 id="emgio.visualization.static.EMG.to_edf" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">to_edf</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precision_threshold</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">bypass_analysis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="o">=</span><span class="mf">1e-06</span><span class="p">,</span> <span class="n">verify_channel_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">events_df</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">to_edf</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precision_threshold</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">bypass_analysis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="o">=</span><span class="mf">1e-06</span><span class="p">,</span> <span class="n">verify_channel_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">events_df</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">create_channels_tsv</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
 
 <a href="#emgio.visualization.static.EMG.to_edf" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -3741,6 +3747,7 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
     verify_plot: If True and verify is True, plots a comparison of original vs reloaded signals.
     events_df: Optional DataFrame with events ('onset', 'duration', 'description').
               If None, uses self.events. (This provides flexibility)
+    create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)
     **kwargs: Additional arguments for the EDF exporter</p>
 <p>Returns:
     Union[str, None]: If verify is True, returns a string with verification results.
@@ -3889,7 +3896,10 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <span class="normal"><a href="#__codelineno-0-386">386</a></span>
 <span class="normal"><a href="#__codelineno-0-387">387</a></span>
 <span class="normal"><a href="#__codelineno-0-388">388</a></span>
-<span class="normal"><a href="#__codelineno-0-389">389</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-251" name="__codelineno-0-251"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_edf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;both&#39;</span><span class="p">,</span>
+<span class="normal"><a href="#__codelineno-0-389">389</a></span>
+<span class="normal"><a href="#__codelineno-0-390">390</a></span>
+<span class="normal"><a href="#__codelineno-0-391">391</a></span>
+<span class="normal"><a href="#__codelineno-0-392">392</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-251" name="__codelineno-0-251"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_edf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;both&#39;</span><span class="p">,</span>
 <a id="__codelineno-0-252" name="__codelineno-0-252"></a>           <span class="n">fft_noise_range</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-253" name="__codelineno-0-253"></a>           <span class="n">precision_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
 <a id="__codelineno-0-254" name="__codelineno-0-254"></a>           <span class="nb">format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="s1">&#39;edf&#39;</span><span class="p">,</span> <span class="s1">&#39;bdf&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span><span class="p">,</span>
@@ -3898,136 +3908,139 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <a id="__codelineno-0-257" name="__codelineno-0-257"></a>           <span class="n">verify_channel_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-258" name="__codelineno-0-258"></a>           <span class="n">verify_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-259" name="__codelineno-0-259"></a>           <span class="n">events_df</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-260" name="__codelineno-0-260"></a>           <span class="o">**</span><span class="n">kwargs</span>
-<a id="__codelineno-0-261" name="__codelineno-0-261"></a>           <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">    Export EMG data to EDF/BDF format, optionally including events.</span>
-<a id="__codelineno-0-264" name="__codelineno-0-264"></a>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">        filepath: Path to save the EDF/BDF file</span>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">        method: Method for signal analysis (&#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;)</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">            &#39;svd&#39;: Uses Singular Value Decomposition for noise floor estimation</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">            &#39;fft&#39;: Uses Fast Fourier Transform for noise floor estimation</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">            &#39;both&#39;: Uses both methods and takes the minimum noise floor (default)</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="sd">        fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">        svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">        precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">        format: Format to use (&#39;auto&#39;, &#39;edf&#39;, or &#39;bdf&#39;). Default is &#39;auto&#39;.</span>
-<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">                If &#39;edf&#39; or &#39;bdf&#39; is specified, that format will be used directly.</span>
-<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">                If &#39;auto&#39;, the format (EDF/16-bit or BDF/24-bit) is chosen based</span>
-<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">                on signal analysis to minimize precision loss while preferring EDF</span>
-<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="sd">                if sufficient.</span>
-<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">        bypass_analysis: If True, skip signal analysis step when format is explicitly</span>
-<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">                         set to &#39;edf&#39; or &#39;bdf&#39;. If None (default), analysis is skipped</span>
-<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">                         automatically when format is forced. Set to False to force</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">                         analysis even with a specified format. Ignored if format=&#39;auto&#39;.</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">        verify: If True, reload the exported file and compare signals with the original</span>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">                to check for data integrity loss. Results are printed. (default: False)</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">        verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)</span>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">        verify_channel_map: Optional dictionary mapping original channel names (keys)</span>
-<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">                            to reloaded channel names (values) for verification.</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">                            Used if `verify` is True and channel names might differ.</span>
-<a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">        verify_plot: If True and verify is True, plots a comparison of original vs reloaded signals.</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">        events_df: Optional DataFrame with events (&#39;onset&#39;, &#39;duration&#39;, &#39;description&#39;).</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a><span class="sd">                  If None, uses self.events. (This provides flexibility)</span>
-<a id="__codelineno-0-292" name="__codelineno-0-292"></a><span class="sd">        **kwargs: Additional arguments for the EDF exporter</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a>
-<a id="__codelineno-0-294" name="__codelineno-0-294"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-295" name="__codelineno-0-295"></a><span class="sd">        Union[str, None]: If verify is True, returns a string with verification results.</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a><span class="sd">                         Otherwise, returns None.</span>
-<a id="__codelineno-0-297" name="__codelineno-0-297"></a>
-<a id="__codelineno-0-298" name="__codelineno-0-298"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a><span class="sd">        ValueError: If no signals are loaded</span>
-<a id="__codelineno-0-300" name="__codelineno-0-300"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.edf</span><span class="w"> </span><span class="kn">import</span> <span class="n">EDFExporter</span>  <span class="c1"># Local import</span>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>
-<a id="__codelineno-0-306" name="__codelineno-0-306"></a>    <span class="c1"># --- Determine if analysis should be bypassed ---</span>
-<a id="__codelineno-0-307" name="__codelineno-0-307"></a>    <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a>    <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a>        <span class="k">if</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-<a id="__codelineno-0-310" name="__codelineno-0-310"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;bypass_analysis=True ignored because format=&#39;auto&#39;. Analysis is required.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="c1"># Analysis is always needed for &#39;auto&#39; format</span>
-<a id="__codelineno-0-312" name="__codelineno-0-312"></a>        <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-313" name="__codelineno-0-313"></a>    <span class="k">elif</span> <span class="nb">format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;edf&#39;</span><span class="p">,</span> <span class="s1">&#39;bdf&#39;</span><span class="p">]:</span>
-<a id="__codelineno-0-314" name="__codelineno-0-314"></a>        <span class="k">if</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-315" name="__codelineno-0-315"></a>            <span class="c1"># Default behaviour: skip analysis if format is forced</span>
-<a id="__codelineno-0-316" name="__codelineno-0-316"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-317" name="__codelineno-0-317"></a>            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Format forced to &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Skipping signal analysis for faster export. &quot;</span>
-<a id="__codelineno-0-318" name="__codelineno-0-318"></a>                   <span class="s2">&quot;Set bypass_analysis=False to force analysis.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
-<a id="__codelineno-0-320" name="__codelineno-0-320"></a>        <span class="k">elif</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-322" name="__codelineno-0-322"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="s2">&quot;bypass_analysis=True set. Skipping signal analysis.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a>        <span class="k">else</span><span class="p">:</span>  <span class="c1"># bypass_analysis is False</span>
-<a id="__codelineno-0-324" name="__codelineno-0-324"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-325" name="__codelineno-0-325"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Format forced to &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39; but bypass_analysis=False. Performing signal analysis.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-327" name="__codelineno-0-327"></a>        <span class="c1"># Should not happen if Literal type hint works, but good practice</span>
-<a id="__codelineno-0-328" name="__codelineno-0-328"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown format &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Defaulting to &#39;auto&#39; behavior (analysis enabled).&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-329" name="__codelineno-0-329"></a>        <span class="nb">format</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span>
-<a id="__codelineno-0-330" name="__codelineno-0-330"></a>        <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-331" name="__codelineno-0-331"></a>
-<a id="__codelineno-0-332" name="__codelineno-0-332"></a>    <span class="c1"># Determine which events DataFrame to use</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a>    <span class="k">if</span> <span class="n">events_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-334" name="__codelineno-0-334"></a>        <span class="n">events_to_export</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span>
-<a id="__codelineno-0-335" name="__codelineno-0-335"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-336" name="__codelineno-0-336"></a>        <span class="n">events_to_export</span> <span class="o">=</span> <span class="n">events_df</span>
-<a id="__codelineno-0-337" name="__codelineno-0-337"></a>
-<a id="__codelineno-0-338" name="__codelineno-0-338"></a>    <span class="c1"># Combine parameters</span>
-<a id="__codelineno-0-339" name="__codelineno-0-339"></a>    <span class="n">all_params</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>        <span class="s1">&#39;precision_threshold&#39;</span><span class="p">:</span> <span class="n">precision_threshold</span><span class="p">,</span>
-<a id="__codelineno-0-341" name="__codelineno-0-341"></a>        <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
-<a id="__codelineno-0-342" name="__codelineno-0-342"></a>        <span class="s1">&#39;fft_noise_range&#39;</span><span class="p">:</span> <span class="n">fft_noise_range</span><span class="p">,</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>        <span class="s1">&#39;svd_rank&#39;</span><span class="p">:</span> <span class="n">svd_rank</span><span class="p">,</span>
-<a id="__codelineno-0-344" name="__codelineno-0-344"></a>        <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">,</span>
-<a id="__codelineno-0-345" name="__codelineno-0-345"></a>        <span class="s1">&#39;bypass_analysis&#39;</span><span class="p">:</span> <span class="n">final_bypass_analysis</span><span class="p">,</span>
-<a id="__codelineno-0-346" name="__codelineno-0-346"></a>        <span class="s1">&#39;events_df&#39;</span><span class="p">:</span> <span class="n">events_to_export</span><span class="p">,</span>  <span class="c1"># Pass the events dataframe</span>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a>        <span class="o">**</span><span class="n">kwargs</span>
-<a id="__codelineno-0-348" name="__codelineno-0-348"></a>    <span class="p">}</span>
-<a id="__codelineno-0-349" name="__codelineno-0-349"></a>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a>    <span class="n">EDFExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">all_params</span><span class="p">)</span>
-<a id="__codelineno-0-351" name="__codelineno-0-351"></a>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a>    <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="kc">None</span>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a>    <span class="k">if</span> <span class="n">verify</span><span class="p">:</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification requested. Reloading exported file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-355" name="__codelineno-0-355"></a>        <span class="k">try</span><span class="p">:</span>
-<a id="__codelineno-0-356" name="__codelineno-0-356"></a>            <span class="c1"># Reload the exported file</span>
-<a id="__codelineno-0-357" name="__codelineno-0-357"></a>            <span class="n">reloaded_emg</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;edf&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-358" name="__codelineno-0-358"></a>
-<a id="__codelineno-0-359" name="__codelineno-0-359"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Comparing original signals with reloaded signals...&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-360" name="__codelineno-0-360"></a>            <span class="c1"># Compare signals using the imported function</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a>            <span class="n">verification_results</span> <span class="o">=</span> <span class="n">compare_signals</span><span class="p">(</span>
-<a id="__codelineno-0-362" name="__codelineno-0-362"></a>                <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-363" name="__codelineno-0-363"></a>                <span class="n">reloaded_emg</span><span class="p">,</span>
-<a id="__codelineno-0-364" name="__codelineno-0-364"></a>                <span class="n">tolerance</span><span class="o">=</span><span class="n">verify_tolerance</span><span class="p">,</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a>                <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span>
-<a id="__codelineno-0-366" name="__codelineno-0-366"></a>            <span class="p">)</span>
-<a id="__codelineno-0-367" name="__codelineno-0-367"></a>
-<a id="__codelineno-0-368" name="__codelineno-0-368"></a>            <span class="c1"># Generate and log report using the imported function</span>
-<a id="__codelineno-0-369" name="__codelineno-0-369"></a>            <span class="n">report_verification_results</span><span class="p">(</span><span class="n">verification_results</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="p">)</span>
-<a id="__codelineno-0-370" name="__codelineno-0-370"></a>            <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="n">verification_results</span>
-<a id="__codelineno-0-371" name="__codelineno-0-371"></a>
-<a id="__codelineno-0-372" name="__codelineno-0-372"></a>            <span class="c1"># Plot comparison using imported function if requested</span>
-<a id="__codelineno-0-373" name="__codelineno-0-373"></a>            <span class="n">summary</span> <span class="o">=</span> <span class="n">verification_results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;channel_summary&#39;</span><span class="p">,</span> <span class="p">{})</span>
-<a id="__codelineno-0-374" name="__codelineno-0-374"></a>            <span class="n">comparison_mode</span> <span class="o">=</span> <span class="n">summary</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comparison_mode&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-375" name="__codelineno-0-375"></a>            <span class="n">compared_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">verification_results</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;channel_summary&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-376" name="__codelineno-0-376"></a>
-<a id="__codelineno-0-377" name="__codelineno-0-377"></a>            <span class="k">if</span> <span class="n">verify_plot</span> <span class="ow">and</span> <span class="n">compared_count</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">comparison_mode</span> <span class="o">!=</span> <span class="s1">&#39;failed&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-378" name="__codelineno-0-378"></a>                <span class="n">plot_comparison</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_emg</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span><span class="p">)</span>
-<a id="__codelineno-0-379" name="__codelineno-0-379"></a>            <span class="k">elif</span> <span class="n">verify_plot</span><span class="p">:</span>
-<a id="__codelineno-0-380" name="__codelineno-0-380"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Skipping verification plot: No channels were successfully compared.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-381" name="__codelineno-0-381"></a>
-<a id="__codelineno-0-382" name="__codelineno-0-382"></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-<a id="__codelineno-0-383" name="__codelineno-0-383"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification failed during reload or comparison: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-384" name="__codelineno-0-384"></a>            <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-385" name="__codelineno-0-385"></a>                <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
-<a id="__codelineno-0-386" name="__codelineno-0-386"></a>                <span class="s1">&#39;channel_summary&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;comparison_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;failed&#39;</span><span class="p">}</span>
-<a id="__codelineno-0-387" name="__codelineno-0-387"></a>            <span class="p">}</span>
-<a id="__codelineno-0-388" name="__codelineno-0-388"></a>
-<a id="__codelineno-0-389" name="__codelineno-0-389"></a>    <span class="k">return</span> <span class="n">verification_report_dict</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a>           <span class="n">create_channels_tsv</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a>           <span class="o">**</span><span class="n">kwargs</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a>           <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">    Export EMG data to EDF/BDF format, optionally including events.</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">        filepath: Path to save the EDF/BDF file</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">        method: Method for signal analysis (&#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;)</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">            &#39;svd&#39;: Uses Singular Value Decomposition for noise floor estimation</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">            &#39;fft&#39;: Uses Fast Fourier Transform for noise floor estimation</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="sd">            &#39;both&#39;: Uses both methods and takes the minimum noise floor (default)</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">        fft_noise_range: Optional tuple (min_freq, max_freq) specifying frequency range for noise in FFT method</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">        svd_rank: Optional manual rank cutoff for signal/noise separation in SVD method</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">        precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">        format: Format to use (&#39;auto&#39;, &#39;edf&#39;, or &#39;bdf&#39;). Default is &#39;auto&#39;.</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">                If &#39;edf&#39; or &#39;bdf&#39; is specified, that format will be used directly.</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">                If &#39;auto&#39;, the format (EDF/16-bit or BDF/24-bit) is chosen based</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="sd">                on signal analysis to minimize precision loss while preferring EDF</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">                if sufficient.</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">        bypass_analysis: If True, skip signal analysis step when format is explicitly</span>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">                         set to &#39;edf&#39; or &#39;bdf&#39;. If None (default), analysis is skipped</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">                         automatically when format is forced. Set to False to force</span>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">                         analysis even with a specified format. Ignored if format=&#39;auto&#39;.</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">        verify: If True, reload the exported file and compare signals with the original</span>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">                to check for data integrity loss. Results are printed. (default: False)</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">        verify_tolerance: Absolute tolerance used when comparing signals during verification. (default: 1e-6)</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">        verify_channel_map: Optional dictionary mapping original channel names (keys)</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">                            to reloaded channel names (values) for verification.</span>
+<a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">                            Used if `verify` is True and channel names might differ.</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">        verify_plot: If True and verify is True, plots a comparison of original vs reloaded signals.</span>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a><span class="sd">        events_df: Optional DataFrame with events (&#39;onset&#39;, &#39;duration&#39;, &#39;description&#39;).</span>
+<a id="__codelineno-0-292" name="__codelineno-0-292"></a><span class="sd">                  If None, uses self.events. (This provides flexibility)</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a><span class="sd">        create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)</span>
+<a id="__codelineno-0-294" name="__codelineno-0-294"></a><span class="sd">        **kwargs: Additional arguments for the EDF exporter</span>
+<a id="__codelineno-0-295" name="__codelineno-0-295"></a>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-297" name="__codelineno-0-297"></a><span class="sd">        Union[str, None]: If verify is True, returns a string with verification results.</span>
+<a id="__codelineno-0-298" name="__codelineno-0-298"></a><span class="sd">                         Otherwise, returns None.</span>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a>
+<a id="__codelineno-0-300" name="__codelineno-0-300"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a><span class="sd">        ValueError: If no signals are loaded</span>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.edf</span><span class="w"> </span><span class="kn">import</span> <span class="n">EDFExporter</span>  <span class="c1"># Local import</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a>    <span class="c1"># --- Determine if analysis should be bypassed ---</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a>    <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a>    <span class="k">if</span> <span class="nb">format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="k">if</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;bypass_analysis=True ignored because format=&#39;auto&#39;. Analysis is required.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a>        <span class="c1"># Analysis is always needed for &#39;auto&#39; format</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a>        <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>    <span class="k">elif</span> <span class="nb">format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;edf&#39;</span><span class="p">,</span> <span class="s1">&#39;bdf&#39;</span><span class="p">]:</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a>        <span class="k">if</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a>            <span class="c1"># Default behaviour: skip analysis if format is forced</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a>            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Format forced to &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Skipping signal analysis for faster export. &quot;</span>
+<a id="__codelineno-0-320" name="__codelineno-0-320"></a>                   <span class="s2">&quot;Set bypass_analysis=False to force analysis.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a>        <span class="k">elif</span> <span class="n">bypass_analysis</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="s2">&quot;bypass_analysis=True set. Skipping signal analysis.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a>        <span class="k">else</span><span class="p">:</span>  <span class="c1"># bypass_analysis is False</span>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>            <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Format forced to &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39; but bypass_analysis=False. Performing signal analysis.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a>        <span class="c1"># Should not happen if Literal type hint works, but good practice</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown format &#39;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&#39;. Defaulting to &#39;auto&#39; behavior (analysis enabled).&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>        <span class="nb">format</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>        <span class="n">final_bypass_analysis</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a>
+<a id="__codelineno-0-334" name="__codelineno-0-334"></a>    <span class="c1"># Determine which events DataFrame to use</span>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a>    <span class="k">if</span> <span class="n">events_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-336" name="__codelineno-0-336"></a>        <span class="n">events_to_export</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a>        <span class="n">events_to_export</span> <span class="o">=</span> <span class="n">events_df</span>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="c1"># Combine parameters</span>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="n">all_params</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a>        <span class="s1">&#39;precision_threshold&#39;</span><span class="p">:</span> <span class="n">precision_threshold</span><span class="p">,</span>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>        <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>        <span class="s1">&#39;fft_noise_range&#39;</span><span class="p">:</span> <span class="n">fft_noise_range</span><span class="p">,</span>
+<a id="__codelineno-0-345" name="__codelineno-0-345"></a>        <span class="s1">&#39;svd_rank&#39;</span><span class="p">:</span> <span class="n">svd_rank</span><span class="p">,</span>
+<a id="__codelineno-0-346" name="__codelineno-0-346"></a>        <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="nb">format</span><span class="p">,</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a>        <span class="s1">&#39;bypass_analysis&#39;</span><span class="p">:</span> <span class="n">final_bypass_analysis</span><span class="p">,</span>
+<a id="__codelineno-0-348" name="__codelineno-0-348"></a>        <span class="s1">&#39;events_df&#39;</span><span class="p">:</span> <span class="n">events_to_export</span><span class="p">,</span>  <span class="c1"># Pass the events dataframe</span>
+<a id="__codelineno-0-349" name="__codelineno-0-349"></a>        <span class="s1">&#39;create_channels_tsv&#39;</span><span class="p">:</span> <span class="n">create_channels_tsv</span><span class="p">,</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a>        <span class="o">**</span><span class="n">kwargs</span>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a>    <span class="p">}</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>    <span class="n">EDFExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">all_params</span><span class="p">)</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a>
+<a id="__codelineno-0-355" name="__codelineno-0-355"></a>    <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a>    <span class="k">if</span> <span class="n">verify</span><span class="p">:</span>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification requested. Reloading exported file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-358" name="__codelineno-0-358"></a>        <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-0-359" name="__codelineno-0-359"></a>            <span class="c1"># Reload the exported file</span>
+<a id="__codelineno-0-360" name="__codelineno-0-360"></a>            <span class="n">reloaded_emg</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;edf&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a>
+<a id="__codelineno-0-362" name="__codelineno-0-362"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Comparing original signals with reloaded signals...&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-363" name="__codelineno-0-363"></a>            <span class="c1"># Compare signals using the imported function</span>
+<a id="__codelineno-0-364" name="__codelineno-0-364"></a>            <span class="n">verification_results</span> <span class="o">=</span> <span class="n">compare_signals</span><span class="p">(</span>
+<a id="__codelineno-0-365" name="__codelineno-0-365"></a>                <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-366" name="__codelineno-0-366"></a>                <span class="n">reloaded_emg</span><span class="p">,</span>
+<a id="__codelineno-0-367" name="__codelineno-0-367"></a>                <span class="n">tolerance</span><span class="o">=</span><span class="n">verify_tolerance</span><span class="p">,</span>
+<a id="__codelineno-0-368" name="__codelineno-0-368"></a>                <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span>
+<a id="__codelineno-0-369" name="__codelineno-0-369"></a>            <span class="p">)</span>
+<a id="__codelineno-0-370" name="__codelineno-0-370"></a>
+<a id="__codelineno-0-371" name="__codelineno-0-371"></a>            <span class="c1"># Generate and log report using the imported function</span>
+<a id="__codelineno-0-372" name="__codelineno-0-372"></a>            <span class="n">report_verification_results</span><span class="p">(</span><span class="n">verification_results</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="p">)</span>
+<a id="__codelineno-0-373" name="__codelineno-0-373"></a>            <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="n">verification_results</span>
+<a id="__codelineno-0-374" name="__codelineno-0-374"></a>
+<a id="__codelineno-0-375" name="__codelineno-0-375"></a>            <span class="c1"># Plot comparison using imported function if requested</span>
+<a id="__codelineno-0-376" name="__codelineno-0-376"></a>            <span class="n">summary</span> <span class="o">=</span> <span class="n">verification_results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;channel_summary&#39;</span><span class="p">,</span> <span class="p">{})</span>
+<a id="__codelineno-0-377" name="__codelineno-0-377"></a>            <span class="n">comparison_mode</span> <span class="o">=</span> <span class="n">summary</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comparison_mode&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-378" name="__codelineno-0-378"></a>            <span class="n">compared_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">verification_results</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;channel_summary&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-379" name="__codelineno-0-379"></a>
+<a id="__codelineno-0-380" name="__codelineno-0-380"></a>            <span class="k">if</span> <span class="n">verify_plot</span> <span class="ow">and</span> <span class="n">compared_count</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">comparison_mode</span> <span class="o">!=</span> <span class="s1">&#39;failed&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-381" name="__codelineno-0-381"></a>                <span class="n">plot_comparison</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_emg</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span><span class="p">)</span>
+<a id="__codelineno-0-382" name="__codelineno-0-382"></a>            <span class="k">elif</span> <span class="n">verify_plot</span><span class="p">:</span>
+<a id="__codelineno-0-383" name="__codelineno-0-383"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Skipping verification plot: No channels were successfully compared.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-384" name="__codelineno-0-384"></a>
+<a id="__codelineno-0-385" name="__codelineno-0-385"></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<a id="__codelineno-0-386" name="__codelineno-0-386"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification failed during reload or comparison: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-387" name="__codelineno-0-387"></a>            <span class="n">verification_report_dict</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-388" name="__codelineno-0-388"></a>                <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+<a id="__codelineno-0-389" name="__codelineno-0-389"></a>                <span class="s1">&#39;channel_summary&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;comparison_mode&#39;</span><span class="p">:</span> <span class="s1">&#39;failed&#39;</span><span class="p">}</span>
+<a id="__codelineno-0-390" name="__codelineno-0-390"></a>            <span class="p">}</span>
+<a id="__codelineno-0-391" name="__codelineno-0-391"></a>
+<a id="__codelineno-0-392" name="__codelineno-0-392"></a>    <span class="k">return</span> <span class="n">verification_report_dict</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
