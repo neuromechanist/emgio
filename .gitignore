@@ -34,3 +34,8 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Context and planning files
+.context/
+CLAUDE.md
+.rules/
