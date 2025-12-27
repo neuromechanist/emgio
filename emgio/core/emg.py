@@ -1,17 +1,20 @@
+import logging
+import os
+from typing import Dict, List, Literal, Optional, Union
+
 import numpy as np
 import pandas as pd
-import os
-from typing import List, Optional, Union, Literal, Dict
-import logging
+
 from ..analysis.verification import compare_signals, report_verification_results
-from ..visualization.static import plot_signals as static_plot_signals, plot_comparison
+from ..visualization.static import plot_comparison
+from ..visualization.static import plot_signals as static_plot_signals
 
 # --- Configuration ---
 enable_logging = False  # Set to False to disable most logging
 
 # Configure logging
 if enable_logging:
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 else:
     logging.basicConfig(level=logging.CRITICAL)  # Effectively turns off most logging
 
@@ -34,11 +37,20 @@ class EMG:
         self.metadata = {}
         self.channels = {}
         # Initialize events as an empty DataFrame with specified columns
-        self.events = pd.DataFrame(columns=['onset', 'duration', 'description'])
+        self.events = pd.DataFrame(columns=["onset", "duration", "description"])
 
-    def plot_signals(self, channels=None, time_range=None, offset_scale=0.8,
-                    uniform_scale=True, detrend=False, grid=True, title=None,
-                    show=True, plt_module=None):
+    def plot_signals(
+        self,
+        channels=None,
+        time_range=None,
+        offset_scale=0.8,
+        uniform_scale=True,
+        detrend=False,
+        grid=True,
+        title=None,
+        show=True,
+        plt_module=None,
+    ):
         """
         Plot EMG signals in a single plot with vertical offsets.
 
@@ -64,7 +76,7 @@ class EMG:
             grid=grid,
             title=title,
             show=show,
-            plt_module=plt_module
+            plt_module=plt_module,
         )
 
     @classmethod
@@ -73,27 +85,27 @@ class EMG:
         Infer the importer to use based on the file extension.
         """
         extension = os.path.splitext(filepath)[1].lower()
-        if extension in {'.edf', '.bdf'}:
-            return 'edf'
-        elif extension in {'.set'}:
-            return 'eeglab'
-        elif extension in {'.otb', '.otb+'}:
-            return 'otb'
-        elif extension in {'.csv', '.txt'}:
-            return 'csv'
-        elif extension in {'.hea', '.dat', '.atr'}:
-            return 'wfdb'
+        if extension in {".edf", ".bdf"}:
+            return "edf"
+        elif extension in {".set"}:
+            return "eeglab"
+        elif extension in {".otb", ".otb+"}:
+            return "otb"
+        elif extension in {".csv", ".txt"}:
+            return "csv"
+        elif extension in {".hea", ".dat", ".atr"}:
+            return "wfdb"
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
     @classmethod
     def from_file(
-            cls,
-            filepath: str,
-            importer: Literal['trigno', 'otb', 'eeglab', 'edf', 'csv', 'wfdb'] | None = None,
-            force_csv: bool = False,
-            **kwargs
-    ) -> 'EMG':
+        cls,
+        filepath: str,
+        importer: Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb"] | None = None,
+        force_csv: bool = False,
+        **kwargs,
+    ) -> "EMG":
         """
         The method to create EMG object from file.
 
@@ -119,12 +131,12 @@ class EMG:
             importer = cls._infer_importer(filepath)
 
         importers = {
-            'trigno': 'TrignoImporter',  # CSV with Delsys Trigno Headers
-            'otb': 'OTBImporter',  # OTB/OTB+ EMG system data
-            'edf': 'EDFImporter',  # EDF/EDF+/BDF format
-            'eeglab': 'EEGLABImporter',  # EEGLAB .set files
-            'csv': 'CSVImporter',  # Generic CSV/Text files
-            'wfdb': 'WFDBImporter'  # Waveform Database format
+            "trigno": "TrignoImporter",  # CSV with Delsys Trigno Headers
+            "otb": "OTBImporter",  # OTB/OTB+ EMG system data
+            "edf": "EDFImporter",  # EDF/EDF+/BDF format
+            "eeglab": "EEGLABImporter",  # EEGLAB .set files
+            "csv": "CSVImporter",  # Generic CSV/Text files
+            "wfdb": "WFDBImporter",  # Waveform Database format
         }
 
         if importer not in importers:
@@ -140,15 +152,12 @@ class EMG:
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
-        if importer == 'csv':
-            kwargs['force_generic'] = force_csv
+        if importer == "csv":
+            kwargs["force_generic"] = force_csv
 
         # Import the appropriate importer class
         importer_module = __import__(
-            f'emgio.importers.{importer}',
-            globals(),
-            locals(),
-            [importers[importer]]
+            f"emgio.importers.{importer}", globals(), locals(), [importers[importer]]
         )
         importer_class = getattr(importer_module, importers[importer])
 
@@ -156,10 +165,11 @@ class EMG:
         return importer_class().load(filepath, **kwargs)
 
     def select_channels(
-            self,
-            channels: Union[str, List[str], None] = None,
-            channel_type: Optional[str] = None,
-            inplace: bool = False) -> 'EMG':
+        self,
+        channels: Union[str, List[str], None] = None,
+        channel_type: Optional[str] = None,
+        inplace: bool = False,
+    ) -> "EMG":
         """
         Select specific channels from the data and return a new EMG object.
 
@@ -188,8 +198,9 @@ class EMG:
 
         # If channel_type specified but no channels, select all of that type
         if channels is None and channel_type is not None:
-            channels = [ch for ch, info in self.channels.items()
-                        if info['channel_type'] == channel_type]
+            channels = [
+                ch for ch, info in self.channels.items() if info["channel_type"] == channel_type
+            ]
             if not channels:
                 raise ValueError(f"No channels found of type: {channel_type}")
         elif isinstance(channels, str):
@@ -202,11 +213,9 @@ class EMG:
 
         # Filter by type if specified
         if channel_type is not None:
-            channels = [ch for ch in channels
-                        if self.channels[ch]['channel_type'] == channel_type]
+            channels = [ch for ch in channels if self.channels[ch]["channel_type"] == channel_type]
             if not channels:
-                raise ValueError(
-                    f"None of the selected channels are of type: {channel_type}")
+                raise ValueError(f"None of the selected channels are of type: {channel_type}")
 
         # Create new EMG object
         new_emg = EMG()
@@ -233,7 +242,7 @@ class EMG:
         Returns:
             List of channel types (e.g., ['EMG', 'ACC', 'GYRO'])
         """
-        return list(set(info['channel_type'] for info in self.channels.values()))
+        return list({info["channel_type"] for info in self.channels.values()})
 
     def get_channels_by_type(self, channel_type: str) -> List[str]:
         """
@@ -245,21 +254,25 @@ class EMG:
         Returns:
             List of channel names of the specified type
         """
-        return [ch for ch, info in self.channels.items()
-                if info['channel_type'] == channel_type]
+        return [ch for ch, info in self.channels.items() if info["channel_type"] == channel_type]
 
-    def to_edf(self, filepath: str, method: str = 'both',
-               fft_noise_range: tuple = None, svd_rank: int = None,
-               precision_threshold: float = 0.01,
-               format: Literal['auto', 'edf', 'bdf'] = 'auto',
-               bypass_analysis: bool | None = None,
-               verify: bool = False, verify_tolerance: float = 1e-6,
-               verify_channel_map: Optional[Dict[str, str]] = None,
-               verify_plot: bool = False,
-               events_df: Optional[pd.DataFrame] = None,
-               create_channels_tsv: bool = True,
-               **kwargs
-               ) -> Union[str, None]:
+    def to_edf(
+        self,
+        filepath: str,
+        method: str = "both",
+        fft_noise_range: tuple = None,
+        svd_rank: int = None,
+        precision_threshold: float = 0.01,
+        format: Literal["auto", "edf", "bdf"] = "auto",
+        bypass_analysis: bool | None = None,
+        verify: bool = False,
+        verify_tolerance: float = 1e-6,
+        verify_channel_map: Optional[Dict[str, str]] = None,
+        verify_plot: bool = False,
+        events_df: Optional[pd.DataFrame] = None,
+        create_channels_tsv: bool = True,
+        **kwargs,
+    ) -> Union[str, None]:
         """
         Export EMG data to EDF/BDF format, optionally including events.
 
@@ -307,28 +320,36 @@ class EMG:
 
         # --- Determine if analysis should be bypassed ---
         final_bypass_analysis = False
-        if format.lower() == 'auto':
+        if format.lower() == "auto":
             if bypass_analysis is True:
-                logging.warning("bypass_analysis=True ignored because format='auto'. Analysis is required.")
+                logging.warning(
+                    "bypass_analysis=True ignored because format='auto'. Analysis is required."
+                )
             # Analysis is always needed for 'auto' format
             final_bypass_analysis = False
-        elif format.lower() in ['edf', 'bdf']:
+        elif format.lower() in ["edf", "bdf"]:
             if bypass_analysis is None:
                 # Default behaviour: skip analysis if format is forced
                 final_bypass_analysis = True
-                msg = (f"Format forced to '{format}'. Skipping signal analysis for faster export. "
-                       "Set bypass_analysis=False to force analysis.")
+                msg = (
+                    f"Format forced to '{format}'. Skipping signal analysis for faster export. "
+                    "Set bypass_analysis=False to force analysis."
+                )
                 logging.log(logging.CRITICAL, msg)
             elif bypass_analysis is True:
                 final_bypass_analysis = True
                 logging.log(logging.CRITICAL, "bypass_analysis=True set. Skipping signal analysis.")
             else:  # bypass_analysis is False
                 final_bypass_analysis = False
-                logging.info(f"Format forced to '{format}' but bypass_analysis=False. Performing signal analysis.")
+                logging.info(
+                    f"Format forced to '{format}' but bypass_analysis=False. Performing signal analysis."
+                )
         else:
             # Should not happen if Literal type hint works, but good practice
-            logging.warning(f"Unknown format '{format}'. Defaulting to 'auto' behavior (analysis enabled).")
-            format = 'auto'
+            logging.warning(
+                f"Unknown format '{format}'. Defaulting to 'auto' behavior (analysis enabled)."
+            )
+            format = "auto"
             final_bypass_analysis = False
 
         # Determine which events DataFrame to use
@@ -339,15 +360,15 @@ class EMG:
 
         # Combine parameters
         all_params = {
-            'precision_threshold': precision_threshold,
-            'method': method,
-            'fft_noise_range': fft_noise_range,
-            'svd_rank': svd_rank,
-            'format': format,
-            'bypass_analysis': final_bypass_analysis,
-            'events_df': events_to_export,  # Pass the events dataframe
-            'create_channels_tsv': create_channels_tsv,
-            **kwargs
+            "precision_threshold": precision_threshold,
+            "method": method,
+            "fft_noise_range": fft_noise_range,
+            "svd_rank": svd_rank,
+            "format": format,
+            "bypass_analysis": final_bypass_analysis,
+            "events_df": events_to_export,  # Pass the events dataframe
+            "create_channels_tsv": create_channels_tsv,
+            **kwargs,
         }
 
         EDFExporter.export(self, filepath, **all_params)
@@ -357,15 +378,12 @@ class EMG:
             logging.info(f"Verification requested. Reloading exported file: {filepath}")
             try:
                 # Reload the exported file
-                reloaded_emg = EMG.from_file(filepath, importer='edf')
+                reloaded_emg = EMG.from_file(filepath, importer="edf")
 
                 logging.info("Comparing original signals with reloaded signals...")
                 # Compare signals using the imported function
                 verification_results = compare_signals(
-                    self,
-                    reloaded_emg,
-                    tolerance=verify_tolerance,
-                    channel_map=verify_channel_map
+                    self, reloaded_emg, tolerance=verify_tolerance, channel_map=verify_channel_map
                 )
 
                 # Generate and log report using the imported function
@@ -373,20 +391,22 @@ class EMG:
                 verification_report_dict = verification_results
 
                 # Plot comparison using imported function if requested
-                summary = verification_results.get('channel_summary', {})
-                comparison_mode = summary.get('comparison_mode', 'unknown')
-                compared_count = sum(1 for k in verification_results if k != 'channel_summary')
+                summary = verification_results.get("channel_summary", {})
+                comparison_mode = summary.get("comparison_mode", "unknown")
+                compared_count = sum(1 for k in verification_results if k != "channel_summary")
 
-                if verify_plot and compared_count > 0 and comparison_mode != 'failed':
+                if verify_plot and compared_count > 0 and comparison_mode != "failed":
                     plot_comparison(self, reloaded_emg, channel_map=verify_channel_map)
                 elif verify_plot:
-                    logging.warning("Skipping verification plot: No channels were successfully compared.")
+                    logging.warning(
+                        "Skipping verification plot: No channels were successfully compared."
+                    )
 
             except Exception as e:
                 logging.error(f"Verification failed during reload or comparison: {e}")
                 verification_report_dict = {
-                    'error': str(e),
-                    'channel_summary': {'comparison_mode': 'failed'}
+                    "error": str(e),
+                    "channel_summary": {"comparison_mode": "failed"},
                 }
 
         return verification_report_dict
@@ -414,8 +434,14 @@ class EMG:
         return self.metadata.get(key)
 
     def add_channel(
-            self, label: str, data: np.ndarray, sample_frequency: float,
-            physical_dimension: str, prefilter: str = 'n/a', channel_type: str = 'EMG') -> None:
+        self,
+        label: str,
+        data: np.ndarray,
+        sample_frequency: float,
+        physical_dimension: str,
+        prefilter: str = "n/a",
+        channel_type: str = "EMG",
+    ) -> None:
         """
         Add a new channel to the EMG data.
 
@@ -434,10 +460,10 @@ class EMG:
 
         self.signals[label] = data
         self.channels[label] = {
-            'sample_frequency': sample_frequency,
-            'physical_dimension': physical_dimension,
-            'prefilter': prefilter,
-            'channel_type': channel_type
+            "sample_frequency": sample_frequency,
+            "physical_dimension": physical_dimension,
+            "prefilter": prefilter,
+            "channel_type": channel_type,
         }
 
     def add_event(self, onset: float, duration: float, description: str) -> None:
@@ -449,9 +475,11 @@ class EMG:
             duration: Event duration in seconds.
             description: Event description string.
         """
-        new_event = pd.DataFrame([{'onset': onset, 'duration': duration, 'description': description}])
+        new_event = pd.DataFrame(
+            [{"onset": onset, "duration": duration, "description": description}]
+        )
         # Use pd.concat for appending, ignore_index=True resets the index
         self.events = pd.concat([self.events, new_event], ignore_index=True)
         # Sort events by onset time for consistency
-        self.events.sort_values(by='onset', inplace=True)
+        self.events.sort_values(by="onset", inplace=True)
         self.events.reset_index(drop=True, inplace=True)

@@ -1,5 +1,6 @@
 # EMGIO
 
+[![PyPI version](https://badge.fury.io/py/emgio.svg)](https://badge.fury.io/py/emgio)
 [![Tests](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/neuromechanist/emgio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/emgio)
 
@@ -39,6 +40,14 @@ The documentation including installation instructions, examples, and API referen
   - Raw data access and modification
 
 ## Installation
+
+### From PyPI (recommended)
+
+```bash
+pip install emgio
+```
+
+### From source
 
 ```bash
 git clone https://github.com/neuromechanist/emgio.git

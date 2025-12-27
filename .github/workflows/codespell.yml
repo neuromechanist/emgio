@@ -1,0 +1,19 @@
+name: Codespell
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  codespell:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install codespell
+      run: pip install codespell
+
+    - name: Run codespell
+      run: codespell --skip='.git*,.venv,*.svg,*.ipynb,*.dat,*.edf,*.bdf,tests/data,examples' --ignore-words-list='OT' --check-hidden

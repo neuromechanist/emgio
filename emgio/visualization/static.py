@@ -2,25 +2,28 @@
 Static plotting functions for EMG data.
 """
 
-import numpy as np
+from typing import TYPE_CHECKING, Any
+
 import matplotlib.pyplot as plt
-from typing import Optional, List, Tuple, Dict, Any, TYPE_CHECKING
+import numpy as np
 
 # Use TYPE_CHECKING to avoid circular import at runtime
 if TYPE_CHECKING:
     from ..core.emg import EMG  # Assuming EMG class is in core.emg
 
 
-def plot_signals(emg_object: 'EMG',  # Changed first arg to accept EMG object
-                 channels: Optional[List[str]] = None,
-                 time_range: Optional[Tuple[float, float]] = None,
-                 offset_scale: float = 0.8,
-                 uniform_scale: bool = True,
-                 detrend: bool = False,
-                 grid: bool = True,
-                 title: Optional[str] = None,
-                 show: bool = True,
-                 plt_module: Any = plt) -> None:
+def plot_signals(
+    emg_object: "EMG",  # Changed first arg to accept EMG object
+    channels: list[str] | None = None,
+    time_range: tuple[float, float] | None = None,
+    offset_scale: float = 0.8,
+    uniform_scale: bool = True,
+    detrend: bool = False,
+    grid: bool = True,
+    title: str | None = None,
+    show: bool = True,
+    plt_module: Any = plt,
+) -> None:
     """
     Plot EMG signals in a single plot with vertical offsets.
 
@@ -60,13 +63,13 @@ def plot_signals(emg_object: 'EMG',  # Changed first arg to accept EMG object
     min_val = np.inf
     max_val = -np.inf
 
-    for i, channel in enumerate(channels):
+    for _i, channel in enumerate(channels):
         data = signals_df[channel]
         if time_range:
             start, end = time_range
             # Use searchsorted for robustness if index isn't perfectly aligned
             start_idx = data.index.searchsorted(start)
-            end_idx = data.index.searchsorted(end, side='right')
+            end_idx = data.index.searchsorted(end, side="right")
             data = data.iloc[start_idx:end_idx]
 
         # Detrend if requested
@@ -135,7 +138,7 @@ def plot_signals(emg_object: 'EMG',  # Changed first arg to accept EMG object
     ax.set_ylim(all_scaled_min - padding, all_scaled_max + padding)
 
     if grid:
-        ax.grid(True, linestyle='--', alpha=0.7)
+        ax.grid(True, linestyle="--", alpha=0.7)
 
     # Adjust layout
     plt_module.tight_layout()
@@ -143,17 +146,20 @@ def plot_signals(emg_object: 'EMG',  # Changed first arg to accept EMG object
         plt_module.show()
 
 
-def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
-                    channels: Optional[List[str]] = None,
-                    time_range: Optional[Tuple[float, float]] = None,
-                    detrend: bool = False,
-                    grid: bool = True,
-                    suptitle: Optional[str] = "Signal Comparison",
-                    show: bool = True,
-                    channel_map: Optional[Dict[str, str]] = None,
-                    plt_module: Any = plt) -> None:
+def plot_comparison(
+    emg_original: "EMG",
+    emg_reloaded: "EMG",
+    channels: list[str] | None = None,
+    time_range: tuple[float, float] | None = None,
+    detrend: bool = False,
+    grid: bool = True,
+    suptitle: str | None = "Signal Comparison",
+    show: bool = True,
+    channel_map: dict[str, str] | None = None,
+    plt_module: Any = plt,
+) -> None:
     """
-    Plot original and reloaded signals overlayed for visual comparison.
+    Plot original and reloaded signals overlaid for visual comparison.
 
     Creates subplots for each channel pair.
 
@@ -177,19 +183,24 @@ def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
     reloaded_channel_names = set(emg_reloaded.signals.columns)
 
     # --- Channel Matching Logic (adapted from compare_signals) ---
-    comparison_mode = 'unknown'
+    comparison_mode = "unknown"
     unmatched_original = []
     unmatched_reloaded = []
     channel_pairs = []
 
     if channel_map is not None:
-        comparison_mode = 'mapped'
-        valid_mappings = {orig: mapped for orig, mapped in channel_map.items()
-                          if orig in original_channel_names and mapped in reloaded_channel_names}
+        comparison_mode = "mapped"
+        valid_mappings = {
+            orig: mapped
+            for orig, mapped in channel_map.items()
+            if orig in original_channel_names and mapped in reloaded_channel_names
+        }
 
         # Filter by user-specified channels if provided
         if channels is not None:
-            valid_mappings = {orig: mapped for orig, mapped in valid_mappings.items() if orig in channels}
+            valid_mappings = {
+                orig: mapped for orig, mapped in valid_mappings.items() if orig in channels
+            }
 
         channel_pairs = list(valid_mappings.items())
 
@@ -209,7 +220,7 @@ def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
             common_channels = [ch for ch in common_channels if ch in channels]
 
         if common_channels:
-            comparison_mode = 'exact_name'
+            comparison_mode = "exact_name"
             channel_pairs = [(ch, ch) for ch in common_channels]
 
             specified_channels_set = set(channels) if channels else original_channel_names
@@ -220,15 +231,17 @@ def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
             unmatched_reloaded = list(reloaded_channel_names - common_channels_set)
         else:
             # Fall back to order-based matching if no exact matches or map provided
-            comparison_mode = 'order_based'
-            original_list = sorted(list(original_channel_names))
-            reloaded_list = sorted(list(reloaded_channel_names))
+            comparison_mode = "order_based"
+            original_list = sorted(original_channel_names)
+            reloaded_list = sorted(reloaded_channel_names)
 
             if channels is not None:  # Filter original list by user-specified channels
                 original_list = [ch for ch in original_list if ch in channels]
 
             min_len = min(len(original_list), len(reloaded_list))
-            channel_pairs = list(zip(original_list[:min_len], reloaded_list[:min_len]))
+            channel_pairs = list(
+                zip(original_list[:min_len], reloaded_list[:min_len], strict=False)
+            )
             unmatched_original = original_list[min_len:]
             unmatched_reloaded = reloaded_list[min_len:]
 
@@ -248,7 +261,9 @@ def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
 
     # --- Plotting ---
     n_pairs = len(channel_pairs)
-    fig, axes = plt_module.subplots(n_pairs, 1, figsize=(15, 2.5 * n_pairs), sharex=True, squeeze=False)
+    fig, axes = plt_module.subplots(
+        n_pairs, 1, figsize=(15, 2.5 * n_pairs), sharex=True, squeeze=False
+    )
     axes = axes.flatten()  # Ensure axes is always a 1D array
 
     if suptitle:
@@ -265,11 +280,11 @@ def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
             # Be robust to time range slightly outside index
             # Break long line 608
             sig_orig_idx_start = sig_orig.index.searchsorted(start)
-            sig_orig_idx_end = sig_orig.index.searchsorted(end, side='right')
+            sig_orig_idx_end = sig_orig.index.searchsorted(end, side="right")
             sig_orig = sig_orig.loc[sig_orig_idx_start:sig_orig_idx_end]
 
             sig_reloaded_idx_start = sig_reloaded.index.searchsorted(start)
-            sig_reloaded_idx_end = sig_reloaded.index.searchsorted(end, side='right')
+            sig_reloaded_idx_end = sig_reloaded.index.searchsorted(end, side="right")
             sig_reloaded = sig_reloaded.loc[sig_reloaded_idx_start:sig_reloaded_idx_end]
 
         time_vector = sig_orig.index  # Assuming time vectors are aligned
@@ -280,19 +295,21 @@ def plot_comparison(emg_original: 'EMG', emg_reloaded: 'EMG',
             sig_reloaded = sig_reloaded - sig_reloaded.mean()
 
         # Plot signals
-        ax.plot(time_vector, sig_orig, label='Original', color='blue', linewidth=1.0)
-        ax.plot(time_vector, sig_reloaded, label='Reloaded', color='red', linestyle='--', linewidth=1.0)
+        ax.plot(time_vector, sig_orig, label="Original", color="blue", linewidth=1.0)
+        ax.plot(
+            time_vector, sig_reloaded, label="Reloaded", color="red", linestyle="--", linewidth=1.0
+        )
 
         title_str = f"{orig_ch} -> {reloaded_ch}" if orig_ch != reloaded_ch else orig_ch
-        ax.set_ylabel(title_str, rotation=0, labelpad=30, ha='right', va='center')
-        ax.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3))  # Use scientific notation
+        ax.set_ylabel(title_str, rotation=0, labelpad=30, ha="right", va="center")
+        ax.ticklabel_format(axis="y", style="sci", scilimits=(-3, 3))  # Use scientific notation
 
         if grid:
-            ax.grid(True, linestyle=':', alpha=0.6)
+            ax.grid(True, linestyle=":", alpha=0.6)
 
         # Add legend to the first subplot only for clarity
         if i == 0:
-            ax.legend(loc='upper right')
+            ax.legend(loc="upper right")
 
     # Set common x-label
     axes[-1].set_xlabel("Time (s)")

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+
 from ..core.emg import EMG
+
 
 class BaseImporter(ABC):
     """Base class for EMG data importers."""

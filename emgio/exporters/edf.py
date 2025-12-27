@@ -1,14 +1,14 @@
 import os
 import warnings
+from typing import Literal, Optional
+
 # import logging  # Add logging import - Removed as unused in this file
 import numpy as np
 import pandas as pd
 import pyedflib
+
+from ..analysis.signal import analyze_signal, determine_format_suitability
 from ..core.emg import EMG
-from ..analysis.signal import (
-    analyze_signal, determine_format_suitability
-)
-from typing import Literal, Optional
 
 
 def _format_physical_value(value: float, max_chars: int) -> tuple:
@@ -76,7 +76,9 @@ def _format_physical_value(value: float, max_chars: int) -> tuple:
                 return float(f"{value:.1e}"), f"{value:.1e}"
 
 
-def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bool = False) -> tuple:
+def _determine_scaling_factors(
+    signal_min: float, signal_max: float, use_bdf: bool = False
+) -> tuple:
     """
     Calculate optimal scaling factors for EDF/BDF signal conversion.
     Automatically scales values to fit format character limits.
@@ -152,7 +154,12 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
 
     # Only normalize extreme values that would cause problems with EDF/BDF format
     # This preserves the original scaling for most signals while handling extreme cases
-    if abs(signal_min) > 1e6 or abs(signal_max) > 1e6 or abs(signal_min) < 1e-6 or abs(signal_max) < 1e-6:
+    if (
+        abs(signal_min) > 1e6
+        or abs(signal_max) > 1e6
+        or abs(signal_min) < 1e-6
+        or abs(signal_max) < 1e-6
+    ):
         # For extreme values, normalize to a reasonable range
         # But preserve the original ratio between min and max
         ratio = abs(signal_max / signal_min) if signal_min != 0 else 1.0
@@ -184,7 +191,9 @@ def _determine_scaling_factors(signal_min: float, signal_max: float, use_bdf: bo
     return signal_min, signal_max, digital_min, digital_max, scaling_factor
 
 
-def _calculate_precision_loss(signal: np.ndarray, scaling_factor: float, digital_min: int, digital_max: int) -> float:
+def _calculate_precision_loss(
+    signal: np.ndarray, scaling_factor: float, digital_min: int, digital_max: int
+) -> float:
     """
     Calculate precision loss when scaling signal to digital values.
 
@@ -216,9 +225,7 @@ def _calculate_precision_loss(signal: np.ndarray, scaling_factor: float, digital
     nonzero_mask[-5:] = False
 
     relative_errors = np.zeros_like(signal)
-    relative_errors[nonzero_mask] = (
-        abs_diff[nonzero_mask] / abs_signal[nonzero_mask]
-    )
+    relative_errors[nonzero_mask] = abs_diff[nonzero_mask] / abs_signal[nonzero_mask]
 
     # Convert to percentage and ensure we detect small losses
     max_loss = float(np.max(relative_errors) * 100)
@@ -244,48 +251,54 @@ def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
     # Group channels by type
     type_groups = {}
     for ch_name, ch_info in channels.items():
-        ch_type = ch_info.get('channel_type', 'Unknown')
+        ch_type = ch_info.get("channel_type", "Unknown")
         if ch_type not in type_groups:
             type_groups[ch_type] = {
-                'channels': [],
-                'ranges': [],
-                'dynamic_ranges': [],
-                'snrs': [],
-                'formats': [],
-                'unit': ch_info.get('physical_dimension', 'Unknown')
+                "channels": [],
+                "ranges": [],
+                "dynamic_ranges": [],
+                "snrs": [],
+                "formats": [],
+                "unit": ch_info.get("physical_dimension", "Unknown"),
             }
-        type_groups[ch_type]['channels'].append(ch_name)
+        type_groups[ch_type]["channels"].append(ch_name)
 
         analysis = analyses.get(ch_name, {})
-        if not analysis.get('is_zero', False):
-            type_groups[ch_type]['ranges'].append(analysis.get('range', 0))
-            type_groups[ch_type]['dynamic_ranges'].append(analysis.get('dynamic_range_db', 0))
-            type_groups[ch_type]['snrs'].append(analysis.get('snr_db', 0))
-            type_groups[ch_type]['formats'].append('BDF' if analysis.get('use_bdf', False) else 'EDF')
+        if not analysis.get("is_zero", False):
+            type_groups[ch_type]["ranges"].append(analysis.get("range", 0))
+            type_groups[ch_type]["dynamic_ranges"].append(analysis.get("dynamic_range_db", 0))
+            type_groups[ch_type]["snrs"].append(analysis.get("snr_db", 0))
+            type_groups[ch_type]["formats"].append(
+                "BDF" if analysis.get("use_bdf", False) else "EDF"
+            )
 
     # Generate summary
     summary = []
     for ch_type, data in type_groups.items():
-        ranges = np.array(data['ranges'])
-        dynamic_ranges = np.array(data['dynamic_ranges'])
-        snrs = np.array(data['snrs'])
-        formats = data['formats']
+        ranges = np.array(data["ranges"])
+        dynamic_ranges = np.array(data["dynamic_ranges"])
+        snrs = np.array(data["snrs"])
+        formats = data["formats"]
 
         if len(ranges) > 0:
             summary.append(f"\nChannel Type: {ch_type} ({len(data['channels'])} channels)")
             summary.append(
                 f"Range: {np.min(ranges):.2f} to {np.max(ranges):.2f} "
-                f"(mean: {np.mean(ranges):.2f}) {data['unit']}")
+                f"(mean: {np.mean(ranges):.2f}) {data['unit']}"
+            )
             summary.append(
                 f"Dynamic Range: {np.min(dynamic_ranges):.1f} to "
-                f"{np.max(dynamic_ranges):.1f} (mean: {np.mean(dynamic_ranges):.1f}) dB")
+                f"{np.max(dynamic_ranges):.1f} (mean: {np.mean(dynamic_ranges):.1f}) dB"
+            )
             summary.append(
-                f"SNR: {np.min(snrs):.1f} to {np.max(snrs):.1f} "
-                f"(mean: {np.mean(snrs):.1f}) dB")
+                f"SNR: {np.min(snrs):.1f} to {np.max(snrs):.1f} (mean: {np.mean(snrs):.1f}) dB"
+            )
 
-            edf_count = formats.count('EDF')
-            bdf_count = formats.count('BDF')
-            summary.append(f"Format: {edf_count} channels using EDF, {bdf_count} channels using BDF")
+            edf_count = formats.count("EDF")
+            bdf_count = formats.count("BDF")
+            summary.append(
+                f"Format: {edf_count} channels using EDF, {bdf_count} channels using BDF"
+            )
         else:
             summary.append(f"\nChannel Type: {ch_type} ({len(data['channels'])} channels)")
             summary.append("All channels contain zero signal")
@@ -297,13 +310,19 @@ class EDFExporter:
     """Exporter for EDF format with channels.tsv generation."""
 
     @staticmethod
-    def export(emg: EMG, filepath: str, precision_threshold: float = 0.01,
-               method: str = 'both', fft_noise_range: tuple = None,
-               svd_rank: int = None, format: Literal['auto', 'edf', 'bdf'] = 'auto',
-               bypass_analysis: bool = False,
-               events_df: Optional[pd.DataFrame] = None,
-               create_channels_tsv: bool = True,
-               **kwargs) -> None:
+    def export(
+        emg: EMG,
+        filepath: str,
+        precision_threshold: float = 0.01,
+        method: str = "both",
+        fft_noise_range: tuple = None,
+        svd_rank: int = None,
+        format: Literal["auto", "edf", "bdf"] = "auto",
+        bypass_analysis: bool = False,
+        events_df: Optional[pd.DataFrame] = None,
+        create_channels_tsv: bool = True,
+        **kwargs,
+    ) -> None:
         """
         Export EMG data to EDF/BDF format with optional BIDS-compliant channels.tsv file.
 
@@ -342,10 +361,10 @@ class EDFExporter:
         format_decision_made = False
 
         # --- Format Decision and Bypass Check ---
-        if bypass_analysis and format.lower() == 'auto':
+        if bypass_analysis and format.lower() == "auto":
             raise ValueError("Cannot bypass analysis when format is set to 'auto'.")
 
-        if format.lower() == 'bdf':
+        if format.lower() == "bdf":
             use_bdf = True
             format_decision_made = True
             if not bypass_analysis:
@@ -353,7 +372,7 @@ class EDFExporter:
             else:
                 # Log critical only if bypassing, already logged in EMG.to_edf
                 pass  # logging.log(logging.CRITICAL, "Skipping analysis, using specified BDF format.")
-        elif format.lower() == 'edf':
+        elif format.lower() == "edf":
             use_bdf = False
             format_decision_made = True
             if not bypass_analysis:
@@ -361,9 +380,12 @@ class EDFExporter:
             else:
                 # Log critical only if bypassing, already logged in EMG.to_edf
                 pass  # logging.log(logging.CRITICAL, "Skipping analysis, using specified EDF format.")
-        elif format.lower() != 'auto':
-            warnings.warn(f"Unknown format: {format}. Valid options are 'auto', 'edf', or 'bdf'. Using 'auto'.")
-            format = 'auto'  # Default to auto if invalid format given
+        elif format.lower() != "auto":
+            warnings.warn(
+                f"Unknown format: {format}. Valid options are 'auto', 'edf', or 'bdf'. Using 'auto'.",
+                stacklevel=2,
+            )
+            format = "auto"  # Default to auto if invalid format given
             bypass_analysis = False  # Cannot bypass if format is auto
 
         signal_analyses = {}
@@ -377,17 +399,17 @@ class EDFExporter:
                 ch_info = emg.channels[ch_name]
 
                 # Analyze signal characteristics
-                analysis = analyze_signal(signal, method=method,
-                                          fft_noise_range=fft_noise_range,
-                                          svd_rank=svd_rank)
+                analysis = analyze_signal(
+                    signal, method=method, fft_noise_range=fft_noise_range, svd_rank=svd_rank
+                )
                 recommend_bdf, reason, snr = determine_format_suitability(signal, analysis)
-                analysis['snr'] = snr
-                analysis['recommend_bdf'] = recommend_bdf
-                analysis['reason'] = reason
+                analysis["snr"] = snr
+                analysis["recommend_bdf"] = recommend_bdf
+                analysis["reason"] = reason
                 signal_analyses[ch_name] = analysis  # Store analysis for later summary
 
                 # If format is 'auto', check if any channel recommends BDF
-                if format == 'auto' and recommend_bdf:
+                if format == "auto" and recommend_bdf:
                     use_bdf = True  # Switch to BDF if any channel needs it
                     if not bdf_reason:  # Capture the first reason
                         bdf_reason = f"Channel '{ch_name}': {reason}"
@@ -408,13 +430,20 @@ class EDFExporter:
                 print(info_str)
 
             # Final format decision message for 'auto' mode
-            if format == 'auto':
+            if format == "auto":
                 if use_bdf:
-                    print("\nUsing BDF format (24-bit) based on signal analysis to preserve precision.")
+                    print(
+                        "\nUsing BDF format (24-bit) based on signal analysis to preserve precision."
+                    )
                     print(f"Reason: {bdf_reason}")
-                    warnings.warn(f"Using BDF format based on signal analysis. Reason: {bdf_reason}")
+                    warnings.warn(
+                        f"Using BDF format based on signal analysis. Reason: {bdf_reason}",
+                        stacklevel=2,
+                    )
                 else:
-                    print("\nUsing EDF format (16-bit) based on signal analysis (precision within acceptable range).")
+                    print(
+                        "\nUsing EDF format (16-bit) based on signal analysis (precision within acceptable range)."
+                    )
         # else: # bypass_analysis is True - logging handled in EMG.to_edf
         #     pass # logging.log(logging.CRITICAL, "Signal analysis bypassed.")
 
@@ -422,20 +451,20 @@ class EDFExporter:
         # Initialize BIDS-compliant channels.tsv data structure
         # Required columns in BIDS order: name, type, units
         channels_tsv_data = {
-            'name': [],
-            'type': [],
-            'units': [],
-            'sampling_frequency': [],
-            'reference': [],
-            'status': []
+            "name": [],
+            "type": [],
+            "units": [],
+            "sampling_frequency": [],
+            "reference": [],
+            "status": [],
         }
         channel_info_list = []
 
         if use_bdf:
-            filepath = os.path.splitext(filepath)[0] + '.bdf'
+            filepath = os.path.splitext(filepath)[0] + ".bdf"
             filetype = pyedflib.FILETYPE_BDFPLUS
         else:
-            filepath = os.path.splitext(filepath)[0] + '.edf'
+            filepath = os.path.splitext(filepath)[0] + ".edf"
             filetype = pyedflib.FILETYPE_EDFPLUS
 
         writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=filetype)
@@ -443,7 +472,7 @@ class EDFExporter:
         try:
             # Prepare channel information and signals for writing
             signals_to_write = []
-            for i, ch_name in enumerate(emg.channels):
+            for _i, ch_name in enumerate(emg.channels):
                 signal = emg.signals[ch_name].values
                 ch_info = emg.channels[ch_name]
                 # No need for full analysis result for scaling factors anymore
@@ -464,40 +493,55 @@ class EDFExporter:
 
                 # Prepare channel header dictionary
                 ch_dict = {
-                    'label': ch_name[:16],  # EDF+ limits label to 16 chars
-                    'dimension': ch_info['physical_dimension'],
-                    'sample_frequency': int(ch_info['sample_frequency']),
-                    'physical_max': phys_max,
-                    'physical_min': phys_min,
-                    'digital_max': dig_max,
-                    'digital_min': dig_min,
-                    'prefilter': ch_info['prefilter'],
-                    'transducer': f"{ch_info.get('channel_type', 'Unknown')} sensor"  # Use get for safety
+                    "label": ch_name[:16],  # EDF+ limits label to 16 chars
+                    "dimension": ch_info["physical_dimension"],
+                    "sample_frequency": int(ch_info["sample_frequency"]),
+                    "physical_max": phys_max,
+                    "physical_min": phys_min,
+                    "digital_max": dig_max,
+                    "digital_min": dig_min,
+                    "prefilter": ch_info["prefilter"],
+                    "transducer": f"{ch_info.get('channel_type', 'Unknown')} sensor",  # Use get for safety
                 }
                 channel_info_list.append(ch_dict)
 
                 # Add to BIDS-compliant channels.tsv data
-                channels_tsv_data['name'].append(ch_name)
-                
+                channels_tsv_data["name"].append(ch_name)
+
                 # Map channel type to BIDS-compliant uppercase values
-                ch_type = ch_info.get('channel_type', 'Unknown').upper()
+                ch_type = ch_info.get("channel_type", "Unknown").upper()
                 # Map common channel types to BIDS standard values
-                if ch_type in ['EMG', 'EEG', 'MEG','ECG', 'EOG', 'VEOG', 'HEOG', 'REF', 'TRIG', 'MISC']:
+                if ch_type in [
+                    "EMG",
+                    "EEG",
+                    "MEG",
+                    "ECG",
+                    "EOG",
+                    "VEOG",
+                    "HEOG",
+                    "REF",
+                    "TRIG",
+                    "MISC",
+                ]:
                     bids_type = ch_type
-                elif 'EMG' in ch_type:
-                    bids_type = 'EMG'
-                elif 'ACC' in ch_type or 'ACCEL' in ch_type:
-                    bids_type = 'MISC'
-                elif 'GYRO' in ch_type:
-                    bids_type = 'MISC'
+                elif "EMG" in ch_type:
+                    bids_type = "EMG"
+                elif "ACC" in ch_type or "ACCEL" in ch_type:
+                    bids_type = "MISC"
+                elif "GYRO" in ch_type:
+                    bids_type = "MISC"
                 else:
-                    bids_type = 'MISC'
-                
-                channels_tsv_data['type'].append(bids_type)
-                channels_tsv_data['units'].append(ch_info['physical_dimension'])
-                channels_tsv_data['sampling_frequency'].append(ch_info['sample_frequency'])
-                channels_tsv_data['reference'].append('n/a')  # Can be updated if reference info is available
-                channels_tsv_data['status'].append('good')  # Default to good, can be updated based on signal quality
+                    bids_type = "MISC"
+
+                channels_tsv_data["type"].append(bids_type)
+                channels_tsv_data["units"].append(ch_info["physical_dimension"])
+                channels_tsv_data["sampling_frequency"].append(ch_info["sample_frequency"])
+                channels_tsv_data["reference"].append(
+                    "n/a"
+                )  # Can be updated if reference info is available
+                channels_tsv_data["status"].append(
+                    "good"
+                )  # Default to good, can be updated based on signal quality
 
             # Set headers and write data (pass physical signals)
             writer.setSignalHeaders(channel_info_list)
@@ -505,47 +549,56 @@ class EDFExporter:
 
             # Write annotations if provided
             if events_df is not None and not events_df.empty:
-                for index, row in events_df.iterrows():
+                for _index, row in events_df.iterrows():
                     try:
                         # pyedflib uses onset, duration, description
-                        onset = float(row['onset'])
-                        duration = float(row['duration'])
-                        description = str(row['description'])
+                        onset = float(row["onset"])
+                        duration = float(row["duration"])
+                        description = str(row["description"])
                         # Write annotation for all channels (-1)
                         writer.writeAnnotation(onset, duration, description)
                     except KeyError as e:
-                        warnings.warn(f"Skipping event due to missing column: {e}. Event data: {row}")
+                        warnings.warn(
+                            f"Skipping event due to missing column: {e}. Event data: {row}",
+                            stacklevel=2,
+                        )
                     except (TypeError, ValueError) as e:
-                        warnings.warn(f"Skipping event due to invalid data type: {e}. Event data: {row}")
+                        warnings.warn(
+                            f"Skipping event due to invalid data type: {e}. Event data: {row}",
+                            stacklevel=2,
+                        )
 
             # Explicitly flush and close the writer to ensure all data is written
             writer.close()
 
             # Wait a moment to ensure file system operations are complete
             import time
+
             time.sleep(0.1)
 
             # Verify the file exists and has the correct size
             if not os.path.exists(filepath):
-                raise IOError(f"File {filepath} was not created")
+                raise OSError(f"File {filepath} was not created")
 
             file_size = os.path.getsize(filepath)
             if file_size == 0:
-                raise IOError(f"File {filepath} was created but is empty")
+                raise OSError(f"File {filepath} was created but is empty")
 
             # Generate BIDS-compliant channels.tsv file if requested
             if create_channels_tsv:
-                channels_tsv_path = os.path.splitext(filepath)[0] + '_channels.tsv'
+                channels_tsv_path = os.path.splitext(filepath)[0] + "_channels.tsv"
                 # Create DataFrame with columns in BIDS-specified order
                 # Required columns first: name, type, units
                 # Then optional columns in the order they appear in data
-                ordered_columns = ['name', 'type', 'units']
-                optional_columns = [col for col in channels_tsv_data.keys() if col not in ordered_columns]
+                ordered_columns = ["name", "type", "units"]
+                optional_columns = [
+                    col for col in channels_tsv_data.keys() if col not in ordered_columns
+                ]
                 column_order = ordered_columns + optional_columns
-                
+
                 channels_df = pd.DataFrame(channels_tsv_data)
                 channels_df = channels_df[column_order]
-                channels_df.to_csv(channels_tsv_path, sep='\t', index=False, na_rep='n/a')
+                channels_df.to_csv(channels_tsv_path, sep="\t", index=False, na_rep="n/a")
                 print(f"\nBIDS-compliant channels metadata saved to: {channels_tsv_path}")
 
             # Print summary using stored analyses, only if analysis was performed
@@ -555,10 +608,10 @@ class EDFExporter:
                 summary_analyses = {}
                 for ch_name, analysis in signal_analyses.items():
                     summary_analyses[ch_name] = {
-                        'range': analysis['range'],
-                        'dynamic_range_db': analysis['dynamic_range_db'],
-                        'snr_db': analysis['snr'],
-                        'use_bdf': use_bdf  # Use the final decision for the whole file
+                        "range": analysis["range"],
+                        "dynamic_range_db": analysis["dynamic_range_db"],
+                        "snr_db": analysis["snr"],
+                        "use_bdf": use_bdf,  # Use the final decision for the whole file
                     }
 
                 summary = summarize_channels(emg.channels, emg.signals, summary_analyses)
@@ -571,19 +624,20 @@ class EDFExporter:
             return filepath
         except Exception as e:
             # Clean up if there was an error
-            if 'writer' in locals() and hasattr(writer, 'close') and callable(writer.close):
+            if "writer" in locals() and hasattr(writer, "close") and callable(writer.close):
                 try:
                     # Check if file is open before closing
-                    if not writer.header['file_handle'].closed:
+                    if not writer.header["file_handle"].closed:
                         writer.close()
                 except Exception:
                     pass  # Ignore errors during cleanup
 
             # Wait a moment before trying to delete the file
             import time
+
             time.sleep(0.1)
 
-            if 'filepath' in locals() and os.path.exists(filepath):
+            if "filepath" in locals() and os.path.exists(filepath):
                 try:
                     os.unlink(filepath)
                     print(f"Cleaned up partially written file: {filepath}")
