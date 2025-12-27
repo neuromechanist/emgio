@@ -327,8 +327,9 @@ def create_multistream_test_xdf(output_path: str, duration: float = 5.0):
 
 
 if __name__ == "__main__":
-    # Create the test file
-    output_path = Path("/Users/yahya/Documents/git/emgio/examples/multi_stream_test.xdf")
+    # Create the test file in examples directory (relative to script location)
+    script_dir = Path(__file__).parent
+    output_path = script_dir.parent / "examples" / "multi_stream_test.xdf"
     create_multistream_test_xdf(output_path, duration=5.0)
 
     # Verify with pyxdf

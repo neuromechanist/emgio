@@ -430,7 +430,13 @@ class XDFImporter(BaseImporter):
         if all_timestamps is not None and len(all_timestamps) > 0:
             time_index = all_timestamps - all_timestamps[0]
         else:
-            time_index = np.arange(len(next(iter(all_data.values()))["data"])) / base_srate
+            # Fallback: create time index from sample count and rate
+            n_samples = len(next(iter(all_data.values()))["data"])
+            if base_srate and base_srate > 0:
+                time_index = np.arange(n_samples) / base_srate
+            else:
+                # If no valid sample rate, use sample indices as time
+                time_index = np.arange(n_samples, dtype=float)
 
         # Create DataFrame
         df = pd.DataFrame(index=time_index)
@@ -513,6 +519,9 @@ class XDFImporter(BaseImporter):
                             channel_labels.append(
                                 label if label else f"{stream_name}_Ch{len(channel_labels) + 1}"
                             )
+                            # Infer type from label if not explicitly provided
+                            if not ch_type and label:
+                                ch_type = _determine_channel_type_from_label(label)
                             channel_types.append(ch_type)
                             channel_units.append(unit if unit else "uV")
 

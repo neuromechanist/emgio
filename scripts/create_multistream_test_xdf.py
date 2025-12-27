@@ -14,26 +14,62 @@ Requirements:
 - LabRecorderCLI (built from App-LabRecorder)
 """
 
+import os
 import subprocess
 import time
 from pathlib import Path
 
 import numpy as np
 
-# Paths
-SOURCE_XDF = Path(
-    "/Users/yahya/Library/CloudStorage/Nextcloud-yahya@skynas.tail75926.ts.net/projects/bimanual_control/data/1430/2380_BMC_1430.xdf"
+# Get script directory for relative paths
+SCRIPT_DIR = Path(__file__).parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+
+# Paths - configured via environment variables or defaults
+# SOURCE_XDF: Path to a large multi-stream XDF file to extract from
+SOURCE_XDF = Path(os.environ.get("EMGIO_SOURCE_XDF", ""))
+# OUTPUT_XDF: Where to save the test file (default: examples/multi_stream_test.xdf)
+OUTPUT_XDF = Path(
+    os.environ.get("EMGIO_OUTPUT_XDF", str(PROJECT_ROOT / "examples" / "multi_stream_test.xdf"))
 )
-OUTPUT_XDF = Path("/Users/yahya/Documents/git/emgio/examples/multi_stream_test.xdf")
-LABRECORDER_CLI = Path(
-    "/Users/yahya/Documents/git/App-LabRecorder/build/LabRecorderCLI.app/Contents/MacOS/LabRecorderCLI"
-)
+# LABRECORDER_CLI: Path to LabRecorderCLI executable
+LABRECORDER_CLI = Path(os.environ.get("EMGIO_LABRECORDER_CLI", ""))
 
 # Duration to extract (seconds)
 EXTRACT_DURATION = 5.0
 
 
+def _validate_paths():
+    """Validate required paths are configured and exist."""
+    errors = []
+
+    if not SOURCE_XDF or not SOURCE_XDF.exists():
+        errors.append(
+            "SOURCE_XDF not found. Set EMGIO_SOURCE_XDF environment variable to a valid XDF file path."
+        )
+
+    if not LABRECORDER_CLI or not LABRECORDER_CLI.exists():
+        errors.append(
+            "LABRECORDER_CLI not found. Set EMGIO_LABRECORDER_CLI environment variable to LabRecorderCLI path."
+        )
+
+    if errors:
+        print("Configuration errors:")
+        for err in errors:
+            print(f"  - {err}")
+        print("\nExample:")
+        print("  export EMGIO_SOURCE_XDF=/path/to/source.xdf")
+        print("  export EMGIO_LABRECORDER_CLI=/path/to/LabRecorderCLI")
+        return False
+
+    return True
+
+
 def main():
+    # Validate paths before proceeding
+    if not _validate_paths():
+        return
+
     import pyxdf
     from pylsl import StreamInfo, StreamOutlet, local_clock
 
