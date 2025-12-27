@@ -19,14 +19,16 @@ jobs:
     - name: Set up Python
       run: uv python install 3.12
 
-    - name: Install build dependencies
-      run: uv pip install --system build twine
+    - name: Create venv and install build dependencies
+      run: |
+        uv venv --python 3.12
+        uv pip install build twine
 
     - name: Build package
-      run: python -m build
+      run: uv run python -m build
 
     - name: Check package
-      run: twine check dist/*
+      run: uv run twine check dist/*
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -55,13 +57,15 @@ jobs:
         name: dist
         path: dist/
 
-    - name: Install from wheel
-      run: uv pip install --system dist/*.whl
+    - name: Create venv and install from wheel
+      run: |
+        uv venv --python ${{ matrix.python-version }}
+        uv pip install dist/*.whl
 
     - name: Test import
       run: |
-        python -c "import emgio; print(f'EMGIO version: {emgio.__version__}')"
-        python -c "from emgio import EMG; print('EMG class imported successfully')"
+        uv run python -c "import emgio; print(f'EMGIO version: {emgio.__version__}')"
+        uv run python -c "from emgio import EMG; print('EMG class imported successfully')"
 
   publish-testpypi:
     needs: [build, test-install]

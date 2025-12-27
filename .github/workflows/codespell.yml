@@ -16,4 +16,4 @@ jobs:
       run: pip install codespell
 
     - name: Run codespell
-      run: codespell --skip='.git*,.venv,*.svg,*.ipynb,tests/data' --check-hidden
+      run: codespell --skip='.git*,.venv,*.svg,*.ipynb,*.dat,*.edf,*.bdf,tests/data,examples' --ignore-words-list='OT' --check-hidden

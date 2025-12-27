@@ -25,12 +25,13 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
-      - name: Install dependencies
+      - name: Create venv and install dependencies
         run: |
-          uv pip install --system -e ".[docs]"
+          uv venv --python 3.12
+          uv pip install -e ".[docs]"
 
       - name: Build documentation
-        run: mkdocs build
+        run: uv run mkdocs build
 
       - name: Deploy documentation
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

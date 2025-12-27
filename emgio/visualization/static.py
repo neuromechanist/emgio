@@ -2,7 +2,7 @@
 Static plotting functions for EMG data.
 """
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,13 +14,13 @@ if TYPE_CHECKING:
 
 def plot_signals(
     emg_object: "EMG",  # Changed first arg to accept EMG object
-    channels: Optional[List[str]] = None,
-    time_range: Optional[Tuple[float, float]] = None,
+    channels: list[str] | None = None,
+    time_range: tuple[float, float] | None = None,
     offset_scale: float = 0.8,
     uniform_scale: bool = True,
     detrend: bool = False,
     grid: bool = True,
-    title: Optional[str] = None,
+    title: str | None = None,
     show: bool = True,
     plt_module: Any = plt,
 ) -> None:
@@ -149,17 +149,17 @@ def plot_signals(
 def plot_comparison(
     emg_original: "EMG",
     emg_reloaded: "EMG",
-    channels: Optional[List[str]] = None,
-    time_range: Optional[Tuple[float, float]] = None,
+    channels: list[str] | None = None,
+    time_range: tuple[float, float] | None = None,
     detrend: bool = False,
     grid: bool = True,
-    suptitle: Optional[str] = "Signal Comparison",
+    suptitle: str | None = "Signal Comparison",
     show: bool = True,
-    channel_map: Optional[Dict[str, str]] = None,
+    channel_map: dict[str, str] | None = None,
     plt_module: Any = plt,
 ) -> None:
     """
-    Plot original and reloaded signals overlayed for visual comparison.
+    Plot original and reloaded signals overlaid for visual comparison.
 
     Creates subplots for each channel pair.
 
@@ -239,7 +239,9 @@ def plot_comparison(
                 original_list = [ch for ch in original_list if ch in channels]
 
             min_len = min(len(original_list), len(reloaded_list))
-            channel_pairs = list(zip(original_list[:min_len], reloaded_list[:min_len]))
+            channel_pairs = list(
+                zip(original_list[:min_len], reloaded_list[:min_len], strict=False)
+            )
             unmatched_original = original_list[min_len:]
             unmatched_reloaded = reloaded_list[min_len:]
 
