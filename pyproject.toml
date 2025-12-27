@@ -49,6 +49,7 @@ dependencies = [
     "matplotlib>=3.4.0",
     "pyedflib>=0.1.30",
     "wfdb>=4.0.0",
+    "pyxdf>=1.16.0",
 ]
 
 [project.optional-dependencies]

@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict, List, Literal, Optional, Union
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -95,6 +95,8 @@ class EMG:
             return "csv"
         elif extension in {".hea", ".dat", ".atr"}:
             return "wfdb"
+        elif extension in {".xdf", ".xdfz"}:
+            return "xdf"
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -102,7 +104,7 @@ class EMG:
     def from_file(
         cls,
         filepath: str,
-        importer: Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb"] | None = None,
+        importer: Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf"] | None = None,
         force_csv: bool = False,
         **kwargs,
     ) -> "EMG":
@@ -118,11 +120,16 @@ class EMG:
                 - 'edf': EDF/EDF+/BDF/BDF+ format (EDF, BDF)
                 - 'csv': Generic CSV (or TXT) files with columnar data
                 - 'wfdb': Waveform Database (WFDB)
+                - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
                       importer even if the file appears to match a specialized format.
-            **kwargs: Additional arguments passed to the importer
+            **kwargs: Additional arguments passed to the importer.
+                For XDF files, useful kwargs include:
+                - stream_names: List of stream names to import
+                - stream_types: List of stream types to import (e.g., ["EMG", "EXG"])
+                - stream_ids: List of stream IDs to import
 
         Returns:
             EMG: New EMG object with loaded data
@@ -137,6 +144,7 @@ class EMG:
             "eeglab": "EEGLABImporter",  # EEGLAB .set files
             "csv": "CSVImporter",  # Generic CSV/Text files
             "wfdb": "WFDBImporter",  # Waveform Database format
+            "xdf": "XDFImporter",  # XDF multi-stream format
         }
 
         if importer not in importers:
@@ -148,7 +156,8 @@ class EMG:
                 "- edf: EDF/EDF+/BDF format\n"
                 "- eeglab: EEGLAB .set files\n"
                 "- csv: Generic CSV/Text files\n"
-                "- wfdb: Waveform Database"
+                "- wfdb: Waveform Database\n"
+                "- xdf: XDF multi-stream format"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
@@ -166,8 +175,8 @@ class EMG:
 
     def select_channels(
         self,
-        channels: Union[str, List[str], None] = None,
-        channel_type: Optional[str] = None,
+        channels: str | list[str] | None = None,
+        channel_type: str | None = None,
         inplace: bool = False,
     ) -> "EMG":
         """
@@ -235,7 +244,7 @@ class EMG:
             self.metadata = new_emg.metadata
             return self
 
-    def get_channel_types(self) -> List[str]:
+    def get_channel_types(self) -> list[str]:
         """
         Get list of unique channel types in the data.
 
@@ -244,7 +253,7 @@ class EMG:
         """
         return list({info["channel_type"] for info in self.channels.values()})
 
-    def get_channels_by_type(self, channel_type: str) -> List[str]:
+    def get_channels_by_type(self, channel_type: str) -> list[str]:
         """
         Get list of channels of a specific type.
 
@@ -267,12 +276,12 @@ class EMG:
         bypass_analysis: bool | None = None,
         verify: bool = False,
         verify_tolerance: float = 1e-6,
-        verify_channel_map: Optional[Dict[str, str]] = None,
+        verify_channel_map: dict[str, str] | None = None,
         verify_plot: bool = False,
-        events_df: Optional[pd.DataFrame] = None,
+        events_df: pd.DataFrame | None = None,
         create_channels_tsv: bool = True,
         **kwargs,
-    ) -> Union[str, None]:
+    ) -> str | None:
         """
         Export EMG data to EDF/BDF format, optionally including events.
 
