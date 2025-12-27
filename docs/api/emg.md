@@ -21,11 +21,9 @@ The `EMG` class is the main class in EMGIO for working with EMG data. It encapsu
         - get_metadata
         - to_edf
         - plot_signals
-      attributes_section_style: list
       members_order: source
       show_object_full_path: false
       heading_level: 2
-      separate_instance_attributes: true
       show_bases: false
       docstring_options:
         ignore_init_summary: true
