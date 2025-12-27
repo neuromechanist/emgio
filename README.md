@@ -29,6 +29,7 @@ The documentation including installation instructions, examples, and API referen
   - Specialized format detection for CSV files
   - Custom importers for system-specific formats
   - Automatic annotation loading (WFDB, planned for EDF+/BDF+ and EEGLAB's .set files)
+  - LSL timestamp preservation for XDF files (for synchronization)
   
 - Export to standardized formats:
   - EDF/BDF(+) with channels.tsv metadata (automatically selects format based on signal properties, preserves annotations)

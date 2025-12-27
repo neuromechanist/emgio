@@ -98,15 +98,37 @@ first_channel = list(combined.channels.keys())[0]
 print(f"Sample rate: {combined.channels[first_channel]['sample_frequency']} Hz")
 ```
 
+## Preserving LSL Timestamps
+
+XDF files contain per-sample LSL timestamps. To preserve these for synchronization:
+
+```python
+# Load with timestamp channels
+emg = EMG.from_file('examples/multi_stream_test.xdf',
+                    stream_types=['EMG'],
+                    include_timestamps=True)
+
+# Each stream gets a timestamp channel
+print(list(emg.channels.keys()))
+# ['EMG_L', 'EMG_R', 'TestEMG_LSL_timestamps']
+
+# Access the original LSL timestamps
+ts = emg.signals['TestEMG_LSL_timestamps']
+print(f"First timestamp: {ts.iloc[0]:.6f}s")
+print(f"Last timestamp: {ts.iloc[-1]:.6f}s")
+```
+
 ## Exporting to EDF
 
 After loading, export to EDF/BDF format:
 
 ```python
-# Load EMG streams
-emg = EMG.from_file('examples/multi_stream_test.xdf', stream_types=['EMG'])
+# Load EMG streams with timestamps for synchronization
+emg = EMG.from_file('examples/multi_stream_test.xdf',
+                    stream_types=['EMG'],
+                    include_timestamps=True)
 
-# Export to EDF
+# Export to EDF (timestamps are preserved as a channel)
 emg.to_edf('output_emg.edf')
 
 # Verify the export

@@ -132,6 +132,34 @@ print(emg.get_metadata('stream_names'))
 print(emg.get_metadata('stream_types'))
 ```
 
+## Preserving LSL Timestamps
+
+XDF files store per-sample timestamps from the Lab Streaming Layer clock. When exporting to formats like EDF that require regular sampling, these timestamps are normally lost during resampling.
+
+To preserve the original LSL timestamps, use the `include_timestamps` option:
+
+```python
+# Load with timestamp preservation
+emg = EMG.from_file('recording.xdf', include_timestamps=True)
+
+# Each stream gets a timestamp channel named "{stream_name}_LSL_timestamps"
+print(list(emg.channels.keys()))
+# ['MyEMG_Ch1', 'MyEMG_Ch2', 'MyEMG_LSL_timestamps']
+```
+
+Timestamp channels:
+
+- Contain the original LSL timestamps in seconds
+- Are marked with `channel_type='MISC'` and `physical_dimension='s'`
+- Are resampled along with the data when multiple streams have different rates
+- Survive export to EDF/BDF for later synchronization analysis
+
+This is useful for:
+
+- Synchronizing with other data sources recorded with LSL
+- Analyzing timing jitter in the original recording
+- Post-hoc alignment with marker streams
+
 ## Marker Streams
 
 Marker/event streams contain string data and are not loaded as signal channels. Use `summarize_xdf()` to inspect marker streams:

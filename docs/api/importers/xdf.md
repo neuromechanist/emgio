@@ -73,6 +73,16 @@ emg = EMG.from_file('recording.xdf', stream_ids=[2])
 emg = EMG.from_file('recording.xdf', default_channel_type='EMG')
 ```
 
+### Preserving LSL Timestamps
+
+```python
+# Include original LSL timestamps as additional channels
+emg = EMG.from_file('recording.xdf', include_timestamps=True)
+
+# Each stream gets a "{stream_name}_LSL_timestamps" channel
+# Useful for synchronization with other LSL-recorded data
+```
+
 ## File Format Support
 
 The XDF importer supports:
@@ -91,6 +101,7 @@ The XDF importer supports:
 | `stream_types` | `list[str]` | Filter by stream types (e.g., "EMG", "EEG") |
 | `stream_ids` | `list[int]` | Filter by stream IDs |
 | `default_channel_type` | `str` | Default type for channels without explicit type |
+| `include_timestamps` | `bool` | If True, add LSL timestamp channels for each stream |
 
 ## Return Values
 
