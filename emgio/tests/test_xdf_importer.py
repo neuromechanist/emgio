@@ -314,3 +314,111 @@ def test_multistream_channel_labels():
     emg_stream = summary.get_stream_by_name("TestEMG")
     assert "EMG_L" in emg_stream.channel_labels
     assert "EMG_R" in emg_stream.channel_labels
+
+
+# ============================================================================
+# Timestamp channel tests
+# ============================================================================
+
+
+def test_include_timestamps_single_stream():
+    """Test include_timestamps option with single stream."""
+    importer = XDFImporter()
+    emg = importer.load(SAMPLE_XDF_PATH, include_timestamps=True)
+
+    # Should have original channels plus one timestamp channel
+    channel_names = list(emg.channels.keys())
+
+    # Find the timestamp channel
+    ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
+    assert len(ts_channels) == 1
+
+    # Check timestamp channel properties
+    ts_channel = ts_channels[0]
+    assert emg.channels[ts_channel]["physical_dimension"] == "s"
+    assert emg.channels[ts_channel]["channel_type"] == "MISC"
+
+    # Verify timestamp values are reasonable (should be monotonically increasing)
+    ts_values = emg.signals[ts_channel].values
+    assert np.all(np.diff(ts_values) >= 0), "Timestamps should be monotonically increasing"
+
+
+def test_include_timestamps_multistream():
+    """Test include_timestamps option with multi-stream file."""
+    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, include_timestamps=True)
+
+    channel_names = list(emg.channels.keys())
+
+    # Should have timestamp channels for each numeric stream (EEG, EMG, Mocap)
+    ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
+    assert len(ts_channels) == 3  # EEG, EMG, and Mocap (not Markers)
+
+    # Verify each timestamp channel
+    for ts_ch in ts_channels:
+        assert emg.channels[ts_ch]["physical_dimension"] == "s"
+        assert emg.channels[ts_ch]["channel_type"] == "MISC"
+
+
+def test_include_timestamps_by_type():
+    """Test include_timestamps with stream type selection."""
+    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"], include_timestamps=True)
+
+    channel_names = list(emg.channels.keys())
+
+    # Should have EMG channels plus one timestamp channel
+    ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
+    assert len(ts_channels) == 1
+    assert "TestEMG_LSL_timestamps" in ts_channels[0]
+
+
+def test_include_timestamps_default_false():
+    """Test that timestamps are not included by default."""
+    emg = EMG.from_file(SAMPLE_XDF_PATH)
+
+    channel_names = list(emg.channels.keys())
+    ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
+
+    assert len(ts_channels) == 0, "Timestamp channels should not be included by default"
+
+
+def test_include_timestamps_export_roundtrip():
+    """Test that timestamp channels survive EDF export and reimport."""
+    import os
+    import tempfile
+
+    # Load with timestamps
+    emg = EMG.from_file(SAMPLE_XDF_PATH, include_timestamps=True)
+
+    # Find timestamp channel
+    ts_channels = [ch for ch in emg.channels.keys() if "_LSL_timestamps" in ch]
+    assert len(ts_channels) == 1
+    ts_channel = ts_channels[0]
+    original_ts = emg.signals[ts_channel].values.copy()
+
+    # Export to EDF
+    with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
+        temp_path = f.name
+
+    try:
+        emg.to_edf(temp_path, format="edf")
+
+        # Reload from EDF
+        emg_reloaded = EMG.from_file(temp_path)
+
+        # Check timestamp channel exists in reloaded data
+        # Note: EDF has 16-char limit, so "_LSL_timestamps" may be truncated to "_LSL_t"
+        reloaded_channels = list(emg_reloaded.channels.keys())
+        reloaded_ts_channels = [ch for ch in reloaded_channels if "_LSL_t" in ch]
+        assert len(reloaded_ts_channels) == 1
+
+        # Check values are preserved (with some tolerance for EDF precision)
+        reloaded_ts = emg_reloaded.signals[reloaded_ts_channels[0]].values
+        min_len = min(len(original_ts), len(reloaded_ts))
+        correlation = np.corrcoef(original_ts[:min_len], reloaded_ts[:min_len])[0, 1]
+        assert correlation > 0.99, f"Timestamp correlation is {correlation}"
+
+    finally:
+        os.unlink(temp_path)
+        tsv_path = temp_path.replace(".edf", "_channels.tsv")
+        if os.path.exists(tsv_path):
+            os.unlink(tsv_path)

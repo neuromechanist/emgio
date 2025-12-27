@@ -238,6 +238,7 @@ class XDFImporter(BaseImporter):
         stream_ids: list[int] | None = None,
         sync_streams: bool = True,
         default_channel_type: str = "EMG",
+        include_timestamps: bool = False,
     ) -> EMG:
         """
         Load EMG data from an XDF file.
@@ -256,6 +257,11 @@ class XDFImporter(BaseImporter):
                          If False, only the first matching stream is loaded.
             default_channel_type: Default channel type for channels without
                                  explicit type info (default: "EMG")
+            include_timestamps: If True, add a timestamp channel for each stream
+                               named "{stream_name}_LSL_timestamps" containing
+                               the original LSL timestamps. Useful for preserving
+                               timing information when exporting to formats like
+                               EDF that require regular sampling.
 
         Returns:
             EMG: EMG object containing the loaded data
@@ -303,10 +309,12 @@ class XDFImporter(BaseImporter):
         emg.set_metadata("stream_count", len(selected_streams))
 
         if sync_streams and len(selected_streams) > 1:
-            self._load_synchronized_streams(emg, selected_streams, default_channel_type)
+            self._load_synchronized_streams(
+                emg, selected_streams, default_channel_type, include_timestamps
+            )
         else:
             # Load streams independently (use first stream for time base)
-            self._load_streams(emg, selected_streams, default_channel_type)
+            self._load_streams(emg, selected_streams, default_channel_type, include_timestamps)
 
         return emg
 
@@ -350,11 +358,13 @@ class XDFImporter(BaseImporter):
         emg: EMG,
         streams: list[dict],
         default_channel_type: str,
+        include_timestamps: bool = False,
     ) -> None:
         """Load streams without synchronization."""
         all_data = {}
         all_timestamps = None
         base_srate = None
+        stream_timestamp_data = {}  # Store timestamp data per stream
 
         for stream in streams:
             info = stream["info"]
@@ -377,6 +387,13 @@ class XDFImporter(BaseImporter):
             if all_timestamps is None:
                 all_timestamps = timestamps
                 base_srate = srate
+
+            # Store timestamp data for this stream if requested
+            if include_timestamps:
+                stream_timestamp_data[stream_name] = {
+                    "timestamps": timestamps,
+                    "srate": srate,
+                }
 
             # Get channel info
             channel_labels, channel_types, channel_units = self._extract_channel_info(
@@ -435,6 +452,28 @@ class XDFImporter(BaseImporter):
                 "channel_type": ch_info["type"],
             }
 
+        # Add timestamp channels if requested
+        if include_timestamps and stream_timestamp_data:
+            for stream_name, ts_info in stream_timestamp_data.items():
+                ts_label = f"{stream_name}_LSL_timestamps"
+                original_timestamps = ts_info["timestamps"]
+
+                # Resample timestamps to match the common time index
+                if len(original_timestamps) != len(time_index):
+                    relative_ts = original_timestamps - original_timestamps[0]
+                    resampled_ts = np.interp(time_index, relative_ts, original_timestamps)
+                else:
+                    resampled_ts = original_timestamps
+
+                df[ts_label] = resampled_ts
+
+                emg.channels[ts_label] = {
+                    "sample_frequency": ts_info["srate"] if ts_info["srate"] else base_srate,
+                    "physical_dimension": "s",  # seconds
+                    "prefilter": "n/a",
+                    "channel_type": "MISC",  # Miscellaneous channel type
+                }
+
         emg.signals = df
         emg.set_metadata("srate", base_srate)
 
@@ -443,11 +482,12 @@ class XDFImporter(BaseImporter):
         emg: EMG,
         streams: list[dict],
         default_channel_type: str,
+        include_timestamps: bool = False,
     ) -> None:
         """Load streams with timestamp synchronization."""
         # For now, use the same approach as _load_streams
         # pyxdf already handles synchronization during load
-        self._load_streams(emg, streams, default_channel_type)
+        self._load_streams(emg, streams, default_channel_type, include_timestamps)
 
     def _extract_channel_info(
         self,
