@@ -83,7 +83,8 @@ nav:
     - EDF: formats/edf.md
     - CSV: formats/csv.md
     - WFDB: formats/wfdb.md
-  - API Reference: 
+    - XDF: formats/xdf.md
+  - API Reference:
     - EMG Class: api/emg.md
     - Importers:
       - Base Importer: api/importers/base.md
@@ -93,6 +94,7 @@ nav:
       - EDF Importer: api/importers/edf.md
       - CSV Importer: api/importers/csv.md
       - WFDB Importer: api/importers/wfdb.md
+      - XDF Importer: api/importers/xdf.md
     - Exporters:
       - EDF/BDF Exporter: api/exporters/edf.md
     - Analysis:
@@ -106,6 +108,7 @@ nav:
     - Signal Verification: examples/verification.md
     - Converting Jupyter Notebooks: examples/notebooks.md
     - WFDB Example: examples/wfdb.md
+    - XDF Example: examples/xdf.md
   - Contributing: contributing.md
 
 extra:

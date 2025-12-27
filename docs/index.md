@@ -24,6 +24,7 @@ EMGIO simplifies this process by providing a standardized interface for loading,
   - OTB Systems (supported)
   - EDF/BDF(+) (supported, including annotations)
   - WFDB (supported, including annotations)
+  - XDF/Lab Streaming Layer (supported, multi-stream)
   - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
   
