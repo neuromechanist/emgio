@@ -2,18 +2,22 @@
 Functions for verifying signal integrity after operations like export/import.
 """
 
-import numpy as np
-from typing import Optional, Dict, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Dict, Optional
+
+import numpy as np
 
 # Use TYPE_CHECKING to avoid circular import at runtime
 if TYPE_CHECKING:
     from ..core.emg import EMG
 
 
-def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
-                    tolerance: float = 0.01,  # Default tolerance 1% for NRMSE and Max Norm Abs Diff
-                    channel_map: Optional[Dict[str, str]] = None) -> dict:
+def compare_signals(
+    emg_original: "EMG",
+    emg_reloaded: "EMG",
+    tolerance: float = 0.01,  # Default tolerance 1% for NRMSE and Max Norm Abs Diff
+    channel_map: Optional[Dict[str, str]] = None,
+) -> dict:
     """
     Compare signals between two EMG objects using normalized metrics.
     Returns a dictionary with comparison results per channel and a summary.
@@ -41,51 +45,56 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
 
     # Initialize channel summary
     channel_summary = {
-        'comparison_mode': 'unknown',
-        'unmatched_original': [],
-        'unmatched_reloaded': []
+        "comparison_mode": "unknown",
+        "unmatched_original": [],
+        "unmatched_reloaded": [],
     }
 
     # Handle channel mapping
     if channel_map is not None:
         # Use provided channel map
-        channel_summary['comparison_mode'] = 'mapped'
+        channel_summary["comparison_mode"] = "mapped"
         # Validate all original channels in map exist
         missing_original = [ch for ch in channel_map.keys() if ch not in original_channels]
         if missing_original:
-            raise ValueError(f"Channel map contains original channels not found in data: {missing_original}")
+            raise ValueError(
+                f"Channel map contains original channels not found in data: {missing_original}"
+            )
 
         # Get mapped channels that exist in reloaded data
-        valid_mappings = {orig: mapped for orig, mapped in channel_map.items()
-                          if mapped in reloaded_channels}
+        valid_mappings = {
+            orig: mapped for orig, mapped in channel_map.items() if mapped in reloaded_channels
+        }
 
         # Track unmatched channels
-        channel_summary['unmatched_original'] = [ch for ch in original_channels
-                                                 if ch not in channel_map]
-        channel_summary['unmatched_reloaded'] = [ch for ch in reloaded_channels
-                                                 if ch not in channel_map.values()]
+        channel_summary["unmatched_original"] = [
+            ch for ch in original_channels if ch not in channel_map
+        ]
+        channel_summary["unmatched_reloaded"] = [
+            ch for ch in reloaded_channels if ch not in channel_map.values()
+        ]
 
         # Use only valid mappings for comparison
-        channel_pairs = [(orig, mapped) for orig, mapped in valid_mappings.items()]
+        channel_pairs = list(valid_mappings.items())
     else:
         # Try exact name matching first
         common_channels = list(original_channels.intersection(reloaded_channels))
         if common_channels:
-            channel_summary['comparison_mode'] = 'exact_name'
+            channel_summary["comparison_mode"] = "exact_name"
             channel_pairs = [(ch, ch) for ch in common_channels]
-            channel_summary['unmatched_original'] = list(original_channels - reloaded_channels)
-            channel_summary['unmatched_reloaded'] = list(reloaded_channels - original_channels)
+            channel_summary["unmatched_original"] = list(original_channels - reloaded_channels)
+            channel_summary["unmatched_reloaded"] = list(reloaded_channels - original_channels)
         else:
             # Fall back to order-based matching
-            channel_summary['comparison_mode'] = 'order_based'
+            channel_summary["comparison_mode"] = "order_based"
             min_len = min(len(original_channels), len(reloaded_channels))
-            original_list = sorted(list(original_channels))
-            reloaded_list = sorted(list(reloaded_channels))
+            original_list = sorted(original_channels)
+            reloaded_list = sorted(reloaded_channels)
             channel_pairs = list(zip(original_list[:min_len], reloaded_list[:min_len]))
-            channel_summary['unmatched_original'] = original_list[min_len:]
-            channel_summary['unmatched_reloaded'] = reloaded_list[min_len:]
+            channel_summary["unmatched_original"] = original_list[min_len:]
+            channel_summary["unmatched_reloaded"] = reloaded_list[min_len:]
 
-    results['channel_summary'] = channel_summary
+    results["channel_summary"] = channel_summary
 
     if not channel_pairs:
         return results
@@ -120,11 +129,11 @@ def compare_signals(emg_original: 'EMG', emg_reloaded: 'EMG',
         is_identical = nrmse < tolerance and max_norm_abs_diff < tolerance
 
         results[orig_channel] = {
-            'reloaded_channel': reloaded_channel,
-            'original_range': sig_orig_range,  # Store original range for context
-            'nrmse': nrmse,
-            'max_norm_abs_diff': max_norm_abs_diff,
-            'is_identical': is_identical
+            "reloaded_channel": reloaded_channel,
+            "original_range": sig_orig_range,  # Store original range for context
+            "nrmse": nrmse,
+            "max_norm_abs_diff": max_norm_abs_diff,
+            "is_identical": is_identical,
         }
 
     return results
@@ -141,26 +150,29 @@ def report_verification_results(verification_results: dict, verify_tolerance: fl
     Returns:
         bool: True if all compared channels were identical within tolerance, False otherwise.
     """
-    summary = verification_results.get('channel_summary', {})
+    summary = verification_results.get("channel_summary", {})
     logging.info("--- Verification Report ---")
     logging.info(f"Comparison mode: {summary.get('comparison_mode', 'unknown')}")
 
-    if summary.get('unmatched_original'):
+    if summary.get("unmatched_original"):
         logging.warning(f"Unmatched original channels: {summary['unmatched_original']}")
-    if summary.get('unmatched_reloaded'):
+    if summary.get("unmatched_reloaded"):
         logging.warning(f"Unmatched reloaded channels: {summary['unmatched_reloaded']}")
 
     all_identical = True
     compared_count = 0
     for orig_channel, metrics in verification_results.items():
-        if orig_channel == 'channel_summary':
+        if orig_channel == "channel_summary":
             continue
         compared_count += 1
-        reloaded_channel = metrics['reloaded_channel']
-        channel_label = (f"'{orig_channel}' -> '{reloaded_channel}'"
-                         if orig_channel != reloaded_channel else f"'{orig_channel}'")
+        reloaded_channel = metrics["reloaded_channel"]
+        channel_label = (
+            f"'{orig_channel}' -> '{reloaded_channel}'"
+            if orig_channel != reloaded_channel
+            else f"'{orig_channel}'"
+        )
 
-        if not metrics['is_identical']:
+        if not metrics["is_identical"]:
             all_identical = False
             log_msg = (
                 f"Channel {channel_label}: Signals differ "
@@ -169,19 +181,22 @@ def report_verification_results(verification_results: dict, verify_tolerance: fl
             )
             logging.critical(log_msg)
         else:
-            logging.info(f"Channel {channel_label}: Signals are identical (within tolerance {verify_tolerance:.1e}).")
+            logging.info(
+                f"Channel {channel_label}: Signals are identical (within tolerance {verify_tolerance:.1e})."
+            )
 
     if compared_count == 0:
         logging.critical("No channels were actually compared.")
         all_identical = False  # Mark as not successful if nothing compared
 
     if all_identical:
-        log_msg = (f"Verification successful: All {compared_count} compared "
-                   f"channel pairs are identical within tolerance.")
+        log_msg = (
+            f"Verification successful: All {compared_count} compared "
+            f"channel pairs are identical within tolerance."
+        )
         logging.critical(log_msg)
-    elif summary.get('comparison_mode') != 'failed':
-        log_msg = (f"Verification finished: Differences found in "
-                   f"{compared_count} compared pairs.")
+    elif summary.get("comparison_mode") != "failed":
+        log_msg = f"Verification finished: Differences found in {compared_count} compared pairs."
         logging.critical(log_msg)
     else:  # Comparison mode failed (e.g., no pairs found)
         logging.error("Verification failed: Could not compare channels.")

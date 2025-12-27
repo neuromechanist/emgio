@@ -1,8 +1,10 @@
-import pandas as pd
-import numpy as np
 from typing import Dict, Optional
-from .base import BaseImporter
+
+import numpy as np
+import pandas as pd
+
 from ..core.emg import EMG
+from .base import BaseImporter
 
 
 class CSVImporter(BaseImporter):
@@ -25,13 +27,13 @@ class CSVImporter(BaseImporter):
         """
         # Try to read the first few lines to check for format signatures
         try:
-            with open(filepath, 'r') as f:
+            with open(filepath) as f:
                 header_lines = [f.readline().strip() for _ in range(20)]
-                header_text = '\n'.join(header_lines)
+                header_text = "\n".join(header_lines)
 
                 # Check for Trigno format signatures
-                if any(marker in header_text for marker in ['Trigno', 'Delsys', 'Label:', 'X[s]']):
-                    return 'trigno'
+                if any(marker in header_text for marker in ["Trigno", "Delsys", "Label:", "X[s]"]):
+                    return "trigno"
 
                 # Additional format checks can be added here for other importers
                 # For example:
@@ -76,7 +78,7 @@ class CSVImporter(BaseImporter):
             format_name = self._detect_specialized_format(filepath)
             if format_name:
                 importer_messages = {
-                    'trigno': (
+                    "trigno": (
                         "This file appears to be a Delsys Trigno CSV export. "
                         "For better metadata extraction and channel detection, use:\n\n"
                         "emg = EMG.from_file(filepath, importer='trigno')\n\n"
@@ -91,16 +93,16 @@ class CSVImporter(BaseImporter):
                     raise ValueError(importer_messages[format_name])
 
         # Extract kwargs with defaults
-        columns = kwargs.get('columns', None)
-        time_column = kwargs.get('time_column', None)
-        has_header = kwargs.get('has_header', None)
-        skiprows = kwargs.get('skiprows', None)
-        delimiter = kwargs.get('delimiter', None)
-        sample_frequency = kwargs.get('sample_frequency', None)
-        channel_names = kwargs.get('channel_names', [])
-        channel_types = kwargs.get('channel_types', {})
-        physical_dimensions = kwargs.get('physical_dimensions', {})
-        metadata = kwargs.get('metadata', {})
+        columns = kwargs.get("columns", None)
+        time_column = kwargs.get("time_column", None)
+        has_header = kwargs.get("has_header", None)
+        skiprows = kwargs.get("skiprows", None)
+        delimiter = kwargs.get("delimiter", None)
+        sample_frequency = kwargs.get("sample_frequency", None)
+        channel_names = kwargs.get("channel_names", [])
+        channel_types = kwargs.get("channel_types", {})
+        physical_dimensions = kwargs.get("physical_dimensions", {})
+        metadata = kwargs.get("metadata", {})
 
         # Analyze file structure if parameters not explicitly provided
         try:
@@ -108,9 +110,9 @@ class CSVImporter(BaseImporter):
                 analyzed_params = self._analyze_csv_structure(filepath)
 
                 # Use analyzed parameters for any not explicitly provided
-                has_header = has_header if has_header is not None else analyzed_params['has_header']
-                skiprows = skiprows if skiprows is not None else analyzed_params['skiprows']
-                delimiter = delimiter if delimiter is not None else analyzed_params['delimiter']
+                has_header = has_header if has_header is not None else analyzed_params["has_header"]
+                skiprows = skiprows if skiprows is not None else analyzed_params["skiprows"]
+                delimiter = delimiter if delimiter is not None else analyzed_params["delimiter"]
         except FileNotFoundError:
             # Pass through file not found errors
             raise
@@ -122,13 +124,13 @@ class CSVImporter(BaseImporter):
                 header=0 if has_header else None,
                 skiprows=skiprows,
                 delimiter=delimiter,
-                index_col=None
+                index_col=None,
             )
         except FileNotFoundError:
             # Pass through file not found errors
             raise
         except Exception as e:
-            raise ValueError(f"Failed to read CSV file: {str(e)}")
+            raise ValueError(f"Failed to read CSV file: {str(e)}") from e
 
         # If no header, generate column names
         if not has_header:
@@ -154,10 +156,10 @@ class CSVImporter(BaseImporter):
                 # If using default channel names, renumber them sequentially
                 if not has_header and not channel_names:
                     # Check if these are auto-generated channel names
-                    if all(col.startswith('Channel_') for col in col_names):
+                    if all(col.startswith("Channel_") for col in col_names):
                         # Rename columns to be sequential
                         new_names = [f"Channel_{i}" for i in range(len(col_names))]
-                        rename_map = {old: new for old, new in zip(col_names, new_names)}
+                        rename_map = dict(zip(col_names, new_names))
                         df = df.rename(columns=rename_map)
             else:
                 # Filter by column names
@@ -207,8 +209,8 @@ class CSVImporter(BaseImporter):
         emg = EMG()
 
         # Add metadata
-        emg.set_metadata('source_file', filepath)
-        emg.set_metadata('file_format', 'CSV')
+        emg.set_metadata("source_file", filepath)
+        emg.set_metadata("file_format", "CSV")
 
         # Add any user-provided metadata
         for key, value in metadata.items():
@@ -216,7 +218,7 @@ class CSVImporter(BaseImporter):
 
         # Default sampling frequency if not specified
         default_sample_frequency = 1000.0  # 1 kHz is a common default for EMG
-        if hasattr(df.index, 'to_series'):
+        if hasattr(df.index, "to_series"):
             # Calculate sampling frequency from time index if possible
             try:
                 time_diffs = df.index.to_series().diff().dropna()
@@ -251,7 +253,7 @@ class CSVImporter(BaseImporter):
                 data=df[column].values,
                 sample_frequency=sample_frequency or default_sample_frequency,
                 physical_dimension=phys_dim,
-                channel_type=ch_type
+                channel_type=ch_type,
             )
 
         # Encourage user to add metadata if missing essential information
@@ -273,25 +275,23 @@ class CSVImporter(BaseImporter):
                 - skiprows: Number of rows to skip
         """
         # Default results
-        results = {
-            'delimiter': ',',
-            'has_header': True,
-            'skiprows': 0
-        }
+        results = {"delimiter": ",", "has_header": True, "skiprows": 0}
 
         try:
             # Read the first few lines to analyze structure
-            with open(filepath, 'r') as f:
-                lines = [f.readline().strip() for _ in range(30)]  # Read first 30 lines or until EOF
+            with open(filepath) as f:
+                lines = [
+                    f.readline().strip() for _ in range(30)
+                ]  # Read first 30 lines or until EOF
                 lines = [line for line in lines if line]  # Remove empty lines
 
                 # Special case for Trigno CSV format
                 data_start = 0
                 for i, line in enumerate(lines):
-                    if 'X[s]' in line:
+                    if "X[s]" in line:
                         data_start = i
-                        results['skiprows'] = data_start
-                        results['has_header'] = True
+                        results["skiprows"] = data_start
+                        results["has_header"] = True
                         break
 
                 if data_start > 0:
@@ -300,10 +300,10 @@ class CSVImporter(BaseImporter):
 
                 # If not a special format, continue with regular analysis
                 # Count occurrences of each delimiter and choose the most common one
-                delimiters = {',': 0, '\t': 0, ';': 0, '|': 0}
+                delimiters = {",": 0, "\t": 0, ";": 0, "|": 0}
 
                 for line in lines[:5]:  # Check first 5 lines
-                    if not line or line.startswith('#'):
+                    if not line or line.startswith("#"):
                         continue
 
                     for delim in delimiters:
@@ -316,7 +316,7 @@ class CSVImporter(BaseImporter):
                 # Choose the delimiter that creates the most fields
                 if any(delimiters.values()):
                     most_common = max(delimiters.items(), key=lambda x: x[1])
-                    results['delimiter'] = most_common[0]
+                    results["delimiter"] = most_common[0]
 
                 # Infer if file has a header by checking if first row looks different from data rows
                 if len(lines) >= 2:
@@ -324,19 +324,23 @@ class CSVImporter(BaseImporter):
                     possible_data = lines[1]
 
                     # If first row contains alphabetic characters and data rows are numeric
-                    header_values = possible_header.split(results['delimiter'])
-                    data_values = possible_data.split(results['delimiter'])
+                    header_values = possible_header.split(results["delimiter"])
+                    data_values = possible_data.split(results["delimiter"])
 
                     # Check for alpha chars in header
-                    has_alpha = any(any(c.isalpha() for c in val) for val in header_values if val.strip())
+                    has_alpha = any(
+                        any(c.isalpha() for c in val) for val in header_values if val.strip()
+                    )
                     # Check if data rows are numeric
                     numeric_data = all(self._is_numeric(val) for val in data_values if val.strip())
 
                     if has_alpha and numeric_data:
-                        results['has_header'] = True
+                        results["has_header"] = True
                     else:
                         # If no clear distinction, assume no header if all fields look numeric
-                        results['has_header'] = not all(self._is_numeric(val) for val in header_values if val.strip())
+                        results["has_header"] = not all(
+                            self._is_numeric(val) for val in header_values if val.strip()
+                        )
 
         except Exception:
             # If analysis fails, return defaults
@@ -362,7 +366,7 @@ class CSVImporter(BaseImporter):
         Returns:
             Name of detected time column or None if not found
         """
-        time_keywords = ['time', 'second', 'seconds', 's']
+        time_keywords = ["time", "second", "seconds", "s"]
 
         # Check column names for time keywords
         for col in df.columns:
@@ -376,7 +380,9 @@ class CSVImporter(BaseImporter):
             # Check if the values are plausible time values (e.g., not all integers if diff is small)
             if df[first_col].dtype in [np.float64, np.float32]:
                 return first_col
-            elif df[first_col].diff().dropna().mean() > 1e-9:  # Avoid treating integer indices as time
+            elif (
+                df[first_col].diff().dropna().mean() > 1e-9
+            ):  # Avoid treating integer indices as time
                 return first_col
 
         return None
@@ -393,16 +399,16 @@ class CSVImporter(BaseImporter):
         """
         name_lower = column_name.lower()
 
-        if any(keyword in name_lower for keyword in ['emg', 'muscle']):
-            return 'EMG'
-        elif any(keyword in name_lower for keyword in ['acc', 'accel']):
-            return 'ACC'
-        elif any(keyword in name_lower for keyword in ['gyro']):
-            return 'GYRO'
-        elif any(keyword in name_lower for keyword in ['time', 'second']):
-            return 'TIME'  # Might be redundant if used as index, but useful for metadata
+        if any(keyword in name_lower for keyword in ["emg", "muscle"]):
+            return "EMG"
+        elif any(keyword in name_lower for keyword in ["acc", "accel"]):
+            return "ACC"
+        elif any(keyword in name_lower for keyword in ["gyro"]):
+            return "GYRO"
+        elif any(keyword in name_lower for keyword in ["time", "second"]):
+            return "TIME"  # Might be redundant if used as index, but useful for metadata
         else:
-            return 'OTHER'
+            return "OTHER"
 
     def _default_physical_dimension(self, channel_type: str) -> str:
         """
@@ -414,14 +420,8 @@ class CSVImporter(BaseImporter):
         Returns:
             Default physical dimension
         """
-        dimensions = {
-            'EMG': 'µV',
-            'ACC': 'g',
-            'GYRO': 'deg/s',
-            'TIME': 's',
-            'OTHER': 'a.u.'
-        }
-        return dimensions.get(channel_type, 'a.u.')
+        dimensions = {"EMG": "µV", "ACC": "g", "GYRO": "deg/s", "TIME": "s", "OTHER": "a.u."}
+        return dimensions.get(channel_type, "a.u.")
 
     def _print_metadata_reminder(self, emg: EMG) -> None:
         """
@@ -430,7 +430,7 @@ class CSVImporter(BaseImporter):
         Args:
             emg: EMG object to check
         """
-        essential_metadata = ['subject', 'device', 'recording_date']
+        essential_metadata = ["subject", "device", "recording_date"]
         missing = [meta for meta in essential_metadata if meta not in emg.metadata]
 
         if missing:

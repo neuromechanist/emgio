@@ -58,7 +58,7 @@ def analyze_signal_svd(detrended: np.ndarray, svd_rank: int = None) -> float:
     # Form the Hankel matrix
     hankel = np.zeros((m, k))
     for i in range(m):
-        hankel[i, :] = detrended[i:i + k]
+        hankel[i, :] = detrended[i : i + k]
 
     # Perform SVD
     U, S, Vh = np.linalg.svd(hankel, full_matrices=False)
@@ -164,8 +164,9 @@ def analyze_signal_fft(detrended: np.ndarray, fft_noise_range: tuple = None) -> 
 
 
 # High-level analysis functions
-def analyze_signal(signal: np.ndarray, method: str = 'svd',
-                   fft_noise_range: tuple = None, svd_rank: int = None) -> dict:
+def analyze_signal(
+    signal: np.ndarray, method: str = "svd", fft_noise_range: tuple = None, svd_rank: int = None
+) -> dict:
     """
     Analyze signal characteristics including noise floor and dynamic range.
 
@@ -181,10 +182,10 @@ def analyze_signal(signal: np.ndarray, method: str = 'svd',
     # Handle zero signal case
     if np.allclose(signal, 0):
         return {
-            'range': 0.0,
-            'noise_floor': np.finfo(float).eps,
-            'dynamic_range_db': 0.0,
-            'is_zero': True
+            "range": 0.0,
+            "noise_floor": np.finfo(float).eps,
+            "dynamic_range_db": 0.0,
+            "is_zero": True,
         }
 
     # Remove DC offset for better analysis
@@ -195,33 +196,33 @@ def analyze_signal(signal: np.ndarray, method: str = 'svd',
 
     # Use both methods and take the minimum noise floor for better accuracy
     # This helps preserve high dynamic range signals
-    if method.lower() == 'both':
+    if method.lower() == "both":
         # Try SVD first, fall back to FFT if it fails
         try:
             noise_floor_svd = analyze_signal_svd(detrended, svd_rank)
             try:
                 noise_floor_fft = analyze_signal_fft(detrended, fft_noise_range)
                 noise_floor = min(noise_floor_svd, noise_floor_fft)
-                method = 'both (min)'
+                method = "both (min)"
             except Exception:
                 # If FFT fails but SVD worked, use SVD result
                 noise_floor = noise_floor_svd
-                method = 'svd (fallback)'
+                method = "svd (fallback)"
         except Exception:
             # If SVD fails, try FFT
             try:
                 noise_floor = analyze_signal_fft(detrended, fft_noise_range)
-                method = 'fft (fallback)'
+                method = "fft (fallback)"
             except Exception:
                 # If both methods fail, use a simple statistical approach
                 noise_floor = np.std(np.diff(detrended)) / np.sqrt(2)
-                method = 'statistical (fallback)'
+                method = "statistical (fallback)"
     else:
         # Choose noise floor estimation method
         try:
-            if method.lower() == 'svd':
+            if method.lower() == "svd":
                 noise_floor = analyze_signal_svd(detrended, svd_rank)
-            elif method.lower() == 'fft':
+            elif method.lower() == "fft":
                 noise_floor = analyze_signal_fft(detrended, fft_noise_range)
             else:
                 raise ValueError(f"Unknown method: {method}. Use 'svd', 'fft', or 'both'.")
@@ -261,12 +262,12 @@ def analyze_signal(signal: np.ndarray, method: str = 'svd',
         snr_db = max_realistic_snr
 
     return {
-        'range': signal_range,
-        'noise_floor': noise_floor,
-        'dynamic_range_db': dynamic_range_db,
-        'snr_db': snr_db,
-        'is_zero': False,
-        'method': method
+        "range": signal_range,
+        "noise_floor": noise_floor,
+        "dynamic_range_db": dynamic_range_db,
+        "snr_db": snr_db,
+        "is_zero": False,
+        "method": method,
     }
 
 
@@ -283,7 +284,7 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
         tuple: (use_bdf, reason, snr_db)
     """
     # Handle zero signal case
-    if analysis.get('is_zero', False):
+    if analysis.get("is_zero", False):
         return False, "Zero signal, using EDF format", 0.0
 
     # Theoretical format capabilities
@@ -292,8 +293,8 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
     safety_margin = 3  # dB - reduced to better preserve high dynamic range signals
 
     # Get signal characteristics
-    signal_dr = analysis['dynamic_range_db']
-    signal_snr = analysis.get('snr_db', 0)
+    signal_dr = analysis["dynamic_range_db"]
+    signal_snr = analysis.get("snr_db", 0)
     # signal_range = analysis['range']  # Not used for format selection
 
     # # Check amplitude first - if signal range is very large, use BDF
@@ -306,7 +307,11 @@ def determine_format_suitability(signal: np.ndarray, analysis: dict) -> tuple:
     elif signal_dr <= (bdf_dynamic_range - safety_margin):
         return True, f"Signal requires BDF format (DR: {signal_dr:.1f} dB)", signal_snr
     else:
-        return True, f"Signal may require higher resolution than BDF (DR: {signal_dr:.1f} dB)", signal_snr
+        return (
+            True,
+            f"Signal may require higher resolution than BDF (DR: {signal_dr:.1f} dB)",
+            signal_snr,
+        )
 
 
 def quantization_analysis(signal: np.ndarray, bits: int) -> dict:
@@ -328,18 +333,13 @@ def quantization_analysis(signal: np.ndarray, bits: int) -> dict:
 
     # Calculate errors
     abs_error = np.abs(signal - quantized)
-    rmse = np.sqrt(np.mean((signal - quantized)**2))
+    rmse = np.sqrt(np.mean((signal - quantized) ** 2))
 
     # Calculate SNR
     signal_power = np.mean(signal**2)
-    noise_power = np.mean((signal - quantized)**2)
+    noise_power = np.mean((signal - quantized) ** 2)
     if noise_power < np.finfo(float).eps:
         noise_power = np.finfo(float).eps
     snr = 10 * np.log10(signal_power / noise_power)
 
-    return {
-        'step_size': step_size,
-        'max_error': np.max(abs_error),
-        'rmse': rmse,
-        'snr': snr
-    }
+    return {"step_size": step_size, "max_error": np.max(abs_error), "rmse": rmse, "snr": snr}
