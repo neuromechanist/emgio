@@ -207,3 +207,110 @@ def test_xdf_default_channel_type():
     # channels should get the default type
     for channel_info in emg.channels.values():
         assert channel_info["channel_type"] == "EEG"
+
+
+# ============================================================================
+# Multi-stream XDF tests
+# ============================================================================
+
+MULTI_STREAM_XDF_PATH = "examples/multi_stream_test.xdf"
+
+
+def test_multistream_summarize():
+    """Test summarize_xdf with multi-stream file."""
+    summary = summarize_xdf(MULTI_STREAM_XDF_PATH)
+
+    # Check we have 4 streams
+    assert len(summary.streams) == 4
+
+    # Check stream types
+    stream_types = {s.stream_type for s in summary.streams}
+    assert "EEG" in stream_types
+    assert "EMG" in stream_types
+    assert "Mocap" in stream_types
+    assert "Markers" in stream_types
+
+
+def test_multistream_import_all():
+    """Test importing all numeric streams from multi-stream file."""
+    emg = EMG.from_file(MULTI_STREAM_XDF_PATH)
+
+    # Should have channels from EEG, EMG, and Mocap (not Markers - string stream)
+    # EEG: 8, EMG: 2, Mocap: 6 = 16 total
+    assert len(emg.channels) == 16
+
+
+def test_multistream_import_by_type():
+    """Test importing specific stream types from multi-stream file."""
+    # Import only EMG
+    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"])
+    assert len(emg.channels) == 2
+    channel_names = list(emg.channels.keys())
+    assert "EMG_L" in channel_names
+    assert "EMG_R" in channel_names
+
+    # Import only EEG
+    eeg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG"])
+    assert len(eeg.channels) == 8
+    assert all("EEG" in name for name in eeg.channels.keys())
+
+    # Import only Mocap
+    mocap = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["Mocap"])
+    assert len(mocap.channels) == 6
+    assert all("Marker" in name for name in mocap.channels.keys())
+
+
+def test_multistream_import_by_name():
+    """Test importing specific streams by name from multi-stream file."""
+    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_names=["TestEMG"])
+    assert len(emg.channels) == 2
+
+
+def test_multistream_import_multiple_types():
+    """Test importing multiple stream types from multi-stream file."""
+    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG", "EMG"])
+
+    # Should have EEG (8) + EMG (2) = 10 channels
+    assert len(emg.channels) == 10
+
+
+def test_multistream_sampling_rates():
+    """Test that different sampling rates are handled correctly."""
+    summary = summarize_xdf(MULTI_STREAM_XDF_PATH)
+
+    # Check expected sampling rates
+    eeg_stream = summary.get_stream_by_name("TestEEG")
+    assert eeg_stream.nominal_srate == 256.0
+
+    emg_stream = summary.get_stream_by_name("TestEMG")
+    assert emg_stream.nominal_srate == 2048.0
+
+    mocap_stream = summary.get_stream_by_name("TestMocap")
+    assert mocap_stream.nominal_srate == 120.0
+
+    marker_stream = summary.get_stream_by_name("TestMarkers")
+    assert marker_stream.nominal_srate == 0.0  # Irregular
+
+
+def test_multistream_marker_stream_info():
+    """Test that marker (string) streams are summarized correctly."""
+    summary = summarize_xdf(MULTI_STREAM_XDF_PATH)
+
+    marker_stream = summary.get_stream_by_name("TestMarkers")
+    assert marker_stream is not None
+    assert marker_stream.stream_type == "Markers"
+    assert marker_stream.sample_count == 5
+    assert marker_stream.channel_format == "string"
+
+
+def test_multistream_channel_labels():
+    """Test that channel labels are correctly extracted from multi-stream file."""
+    summary = summarize_xdf(MULTI_STREAM_XDF_PATH)
+
+    eeg_stream = summary.get_stream_by_name("TestEEG")
+    assert "EEG1" in eeg_stream.channel_labels
+    assert len(eeg_stream.channel_labels) == 8
+
+    emg_stream = summary.get_stream_by_name("TestEMG")
+    assert "EMG_L" in emg_stream.channel_labels
+    assert "EMG_R" in emg_stream.channel_labels
