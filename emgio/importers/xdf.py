@@ -444,10 +444,11 @@ class XDFImporter(BaseImporter):
         for label, ch_info in all_data.items():
             # Resample if needed (different stream lengths)
             ch_data = ch_info["data"]
-            if len(ch_data) != len(time_index):
+            ch_timestamps = ch_info["timestamps"]
+            if len(ch_data) != len(time_index) and len(ch_timestamps) > 0:
                 # Interpolate to match base timestamps
-                ch_timestamps = ch_info["timestamps"] - ch_info["timestamps"][0]
-                ch_data = np.interp(time_index, ch_timestamps, ch_data)
+                relative_ch_ts = ch_timestamps - ch_timestamps[0]
+                ch_data = np.interp(time_index, relative_ch_ts, ch_data)
 
             df[label] = ch_data
 
@@ -465,7 +466,10 @@ class XDFImporter(BaseImporter):
                 original_timestamps = ts_info["timestamps"]
 
                 # Resample timestamps to match the common time index
-                if len(original_timestamps) != len(time_index):
+                if len(original_timestamps) == 0:
+                    # No timestamps available; create a NaN-filled array
+                    resampled_ts = np.full(len(time_index), np.nan, dtype=float)
+                elif len(original_timestamps) != len(time_index):
                     relative_ts = original_timestamps - original_timestamps[0]
                     resampled_ts = np.interp(time_index, relative_ts, original_timestamps)
                 else:
