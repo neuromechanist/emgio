@@ -13,7 +13,7 @@
       
       
       
-        <link rel="prev" href="../../formats/wfdb/">
+        <link rel="prev" href="../../formats/xdf/">
       
       
         <link rel="next" href="../importers/base/">
@@ -569,6 +569,8 @@
       
         
       
+        
+      
     
     
     
@@ -766,6 +768,34 @@
     
   
     WFDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../formats/xdf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    XDF
   
 
     
@@ -1321,6 +1351,8 @@
       
         
       
+        
+      
     
     
     
@@ -1546,6 +1578,34 @@
     
   
     WFDB Importer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../importers/xdf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    XDF Importer
   
 
     
@@ -1862,6 +1922,8 @@
       
         
       
+        
+      
     
     
     
@@ -2059,6 +2121,34 @@
     
   
     WFDB Example
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/xdf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    XDF Example
   
 
     
@@ -2618,11 +2708,16 @@
         - 'edf': EDF/EDF+/BDF/BDF+ format (EDF, BDF)
         - 'csv': Generic CSV (or TXT) files with columnar data
         - 'wfdb': Waveform Database (WFDB)
+        - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
         If None, the importer will be inferred from the file extension.
         Automatic import is supported for CSV/TXT files.
     force_csv: If True and importer is 'csv', forces using the generic CSV
               importer even if the file appears to match a specialized format.
-    **kwargs: Additional arguments passed to the importer</p>
+    **kwargs: Additional arguments passed to the importer.
+        For XDF files, useful kwargs include:
+        - stream_names: List of stream names to import
+        - stream_types: List of stream types to import (e.g., ["EMG", "EXG"])
+        - stream_ids: List of stream IDs to import</p>
 <p>Returns:
     EMG: New EMG object with loaded data</p>
 
