@@ -87,7 +87,8 @@ class XDFWriter:
 
     def _write_file_header(self):
         """Write the file header chunk."""
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
+        # Use isoformat() for proper ISO 8601 datetime with colon in timezone
+        now = datetime.now().astimezone().replace(microsecond=0).isoformat()
         content = f'<?xml version="1.0"?>\n<info>\n  <version>1.0</version>\n  <datetime>{now}</datetime>\n</info>'
         self._write_chunk(self.TAG_FILE_HEADER, content.encode("utf-8"))
 

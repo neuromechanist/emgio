@@ -193,8 +193,11 @@ def test_xdf_export_roundtrip():
 def test_xdf_file_not_found():
     """Test error handling for non-existent file."""
     importer = XDFImporter()
-    # pyxdf raises a generic Exception for missing files
-    with pytest.raises((FileNotFoundError, OSError, Exception), match="does not exist"):
+    # pyxdf raises a generic Exception for missing files; allow common error messages
+    with pytest.raises(
+        (FileNotFoundError, OSError, Exception),
+        match=r"(does not exist|No such file or directory|not found)",
+    ):
         importer.load("nonexistent.xdf")
 
 
