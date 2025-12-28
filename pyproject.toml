@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "emgio"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
     { name = "Seyed Yahya Shirazi", email = "shirazi@ieee.org" }
 ]
@@ -49,6 +49,7 @@ dependencies = [
     "matplotlib>=3.4.0",
     "pyedflib>=0.1.30",
     "wfdb>=4.0.0",
+    "pyxdf>=1.16.0",
 ]
 
 [project.optional-dependencies]

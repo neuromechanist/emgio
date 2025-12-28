@@ -24,6 +24,7 @@ EMGIO simplifies this process by providing a standardized interface for loading,
   - OTB Systems (supported)
   - EDF/BDF(+) (supported, including annotations)
   - WFDB (supported, including annotations)
+  - XDF/Lab Streaming Layer (supported, multi-stream)
   - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
   
@@ -32,6 +33,7 @@ EMGIO simplifies this process by providing a standardized interface for loading,
   - Format-specific metadata extraction
   - Handling of specialized CSV formats
   - Automatic annotation loading (WFDB, planned for EDF+/BDF+ and EEGLAB's .set files)
+  - LSL timestamp preservation for XDF files (for synchronization)
   
 - **Intelligent export**:
   - Automatic determination of EDF/BDF format based on signal quality
