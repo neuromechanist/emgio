@@ -153,6 +153,8 @@ def summarize_xdf(filepath: str | Path) -> XDFSummary:
             sample_count = 0
 
         # Calculate duration
+        # For streams with 2+ timestamps, use actual time range
+        # For single-sample or no-timestamp streams, estimate from sample rate or default to 0
         timestamps = stream.get("time_stamps", np.array([]))
         if len(timestamps) > 1:
             duration_seconds = timestamps[-1] - timestamps[0]
@@ -494,10 +496,18 @@ class XDFImporter(BaseImporter):
             # Resample if needed (different stream lengths)
             ch_data = ch_info["data"]
             ch_timestamps = ch_info["timestamps"]
-            if len(ch_data) != len(time_index) and len(ch_timestamps) > 0:
-                # Interpolate to match base timestamps
-                relative_ch_ts = ch_timestamps - ch_timestamps[0]
-                ch_data = np.interp(time_index, relative_ch_ts, ch_data)
+            if len(ch_data) != len(time_index):
+                if len(ch_timestamps) > 0:
+                    # Interpolate to match base timestamps
+                    relative_ch_ts = ch_timestamps - ch_timestamps[0]
+                    ch_data = np.interp(time_index, relative_ch_ts, ch_data)
+                else:
+                    # No timestamps available to resample mismatched data
+                    raise ValueError(
+                        f"Length mismatch for channel '{label}': "
+                        f"{len(ch_data)} samples vs {len(time_index)} time points, "
+                        "and no timestamps available for interpolation."
+                    )
 
             df[label] = ch_data
 
