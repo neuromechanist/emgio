@@ -239,6 +239,7 @@ class XDFImporter(BaseImporter):
         sync_streams: bool = True,
         default_channel_type: str = "EMG",
         include_timestamps: bool = False,
+        reference_stream: str | None = None,
     ) -> EMG:
         """
         Load EMG data from an XDF file.
@@ -254,7 +255,7 @@ class XDFImporter(BaseImporter):
             stream_types: List of stream types to import (e.g., ["EMG", "EXG"])
             stream_ids: List of stream IDs to import
             sync_streams: If True, synchronize streams to common timestamps.
-                         If False, only the first matching stream is loaded.
+                         If False, streams are loaded without synchronization.
             default_channel_type: Default channel type for channels without
                                  explicit type info (default: "EMG")
             include_timestamps: If True, add a timestamp channel for each stream
@@ -262,6 +263,10 @@ class XDFImporter(BaseImporter):
                                the original LSL timestamps. Useful for preserving
                                timing information when exporting to formats like
                                EDF that require regular sampling.
+            reference_stream: Optional stream name to use as the time base
+                             reference. If not specified, the stream with the
+                             highest sampling rate is used (recommended to
+                             avoid data loss from downsampling).
 
         Returns:
             EMG: EMG object containing the loaded data
@@ -310,11 +315,13 @@ class XDFImporter(BaseImporter):
 
         if sync_streams and len(selected_streams) > 1:
             self._load_synchronized_streams(
-                emg, selected_streams, default_channel_type, include_timestamps
+                emg, selected_streams, default_channel_type, include_timestamps, reference_stream
             )
         else:
-            # Load streams independently (use first stream for time base)
-            self._load_streams(emg, selected_streams, default_channel_type, include_timestamps)
+            # Load streams (uses highest sample rate as reference unless specified)
+            self._load_streams(
+                emg, selected_streams, default_channel_type, include_timestamps, reference_stream
+            )
 
         return emg
 
@@ -359,13 +366,16 @@ class XDFImporter(BaseImporter):
         streams: list[dict],
         default_channel_type: str,
         include_timestamps: bool = False,
+        reference_stream: str | None = None,
     ) -> None:
-        """Load streams without synchronization."""
-        all_data = {}
-        all_timestamps = None
-        base_srate = None
-        stream_timestamp_data = {}  # Store timestamp data per stream
+        """Load streams and resample to a common time base.
 
+        By default, uses the stream with the highest sampling rate as the
+        reference to avoid data loss from downsampling. A specific reference
+        stream can be specified by name.
+        """
+        # First pass: collect stream info and find reference stream
+        stream_info_list = []
         for stream in streams:
             info = stream["info"]
             stream_name = info["name"][0] if "name" in info else "Unknown"
@@ -383,10 +393,50 @@ class XDFImporter(BaseImporter):
             if not srate:
                 srate = float(info["nominal_srate"][0]) if "nominal_srate" in info else 0.0
 
-            # Use first stream's timestamps as base
-            if all_timestamps is None:
-                all_timestamps = timestamps
-                base_srate = srate
+            stream_info_list.append(
+                {
+                    "stream": stream,
+                    "name": stream_name,
+                    "info": info,
+                    "time_series": time_series,
+                    "timestamps": timestamps,
+                    "srate": srate,
+                }
+            )
+
+        if not stream_info_list:
+            raise ValueError("No valid data found in selected streams")
+
+        # Determine reference stream: user-specified, or highest sample rate
+        ref_stream_info = None
+        if reference_stream:
+            # Find the user-specified reference stream
+            for si in stream_info_list:
+                if si["name"].lower() == reference_stream.lower():
+                    ref_stream_info = si
+                    break
+            if ref_stream_info is None:
+                raise ValueError(
+                    f"Reference stream '{reference_stream}' not found in selected streams. "
+                    f"Available: {[si['name'] for si in stream_info_list]}"
+                )
+        else:
+            # Use stream with highest sampling rate (avoids downsampling data loss)
+            ref_stream_info = max(stream_info_list, key=lambda x: x["srate"] or 0)
+
+        base_srate = ref_stream_info["srate"]
+        base_timestamps = ref_stream_info["timestamps"]
+
+        # Second pass: collect all channel data
+        all_data = {}
+        stream_timestamp_data = {}  # Store timestamp data per stream
+
+        for si in stream_info_list:
+            stream_name = si["name"]
+            time_series = si["time_series"]
+            timestamps = si["timestamps"]
+            srate = si["srate"]
+            info = si["info"]
 
             # Store timestamp data for this stream if requested
             if include_timestamps:
@@ -419,19 +469,18 @@ class XDFImporter(BaseImporter):
                         "timestamps": timestamps,
                         "srate": srate,
                         "unit": channel_units[i] if i < len(channel_units) else "uV",
-                        "type": channel_types[i] if channel_types[i] else default_channel_type,
+                        "type": channel_types[i]
+                        if i < len(channel_types) and channel_types[i]
+                        else default_channel_type,
                     }
 
-        if not all_data:
-            raise ValueError("No valid data found in selected streams")
-
-        # Use the first stream's timestamps for the DataFrame index
+        # Create time index from reference stream
         # Convert to relative time starting from 0
-        if all_timestamps is not None and len(all_timestamps) > 0:
-            time_index = all_timestamps - all_timestamps[0]
+        if base_timestamps is not None and len(base_timestamps) > 0:
+            time_index = base_timestamps - base_timestamps[0]
         else:
             # Fallback: create time index from sample count and rate
-            n_samples = len(next(iter(all_data.values()))["data"])
+            n_samples = len(ref_stream_info["time_series"])
             if base_srate and base_srate > 0:
                 time_index = np.arange(n_samples) / base_srate
             else:
@@ -493,11 +542,12 @@ class XDFImporter(BaseImporter):
         streams: list[dict],
         default_channel_type: str,
         include_timestamps: bool = False,
+        reference_stream: str | None = None,
     ) -> None:
         """Load streams with timestamp synchronization."""
         # For now, use the same approach as _load_streams
         # pyxdf already handles synchronization during load
-        self._load_streams(emg, streams, default_channel_type, include_timestamps)
+        self._load_streams(emg, streams, default_channel_type, include_timestamps, reference_stream)
 
     def _extract_channel_info(
         self,

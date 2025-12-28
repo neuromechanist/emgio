@@ -316,6 +316,68 @@ def test_multistream_channel_labels():
     assert "EMG_R" in emg_stream.channel_labels
 
 
+def test_multistream_uses_highest_sample_rate():
+    """Test that multi-stream loading uses highest sampling rate as reference.
+
+    This is critical to avoid data loss from downsampling high-frequency signals.
+    When loading EEG (256 Hz) and EMG (2048 Hz), the result should have the
+    sample count matching the EMG stream (the highest rate).
+    """
+    # Get expected sample counts from summary
+    summary = summarize_xdf(MULTI_STREAM_XDF_PATH)
+    emg_stream = summary.get_stream_by_name("TestEMG")  # 2048 Hz - highest
+
+    # Load both streams (EEG at 256 Hz, EMG at 2048 Hz)
+    combined = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG", "EMG"])
+
+    # The number of samples should match the highest rate stream (EMG at 2048 Hz)
+    n_samples = len(combined.signals)
+    assert n_samples == emg_stream.sample_count, (
+        f"Expected {emg_stream.sample_count} samples (from 2048 Hz stream), got {n_samples}"
+    )
+
+    # Verify the metadata reflects the highest sample rate
+    assert combined.get_metadata("srate") == 2048.0
+
+
+def test_multistream_reference_stream_parameter():
+    """Test that reference_stream parameter allows user to specify time base."""
+    from emgio.importers.xdf import XDFImporter
+
+    importer = XDFImporter()
+
+    # Get expected sample counts
+    summary = summarize_xdf(MULTI_STREAM_XDF_PATH)
+    eeg_stream = summary.get_stream_by_name("TestEEG")  # 256 Hz
+
+    # Force use of EEG as reference (lower rate)
+    combined = importer.load(
+        MULTI_STREAM_XDF_PATH,
+        stream_types=["EEG", "EMG"],
+        reference_stream="TestEEG",
+    )
+
+    # Should use EEG sample count (lower rate, will lose EMG resolution)
+    n_samples = len(combined.signals)
+    assert n_samples == eeg_stream.sample_count, (
+        f"Expected {eeg_stream.sample_count} samples (from EEG reference), got {n_samples}"
+    )
+
+
+def test_multistream_reference_stream_not_found():
+    """Test error when specified reference stream doesn't exist."""
+    from emgio.importers.xdf import XDFImporter
+
+    importer = XDFImporter()
+
+    with pytest.raises(ValueError, match="Reference stream 'NonExistent' not found"):
+        importer.load(
+            MULTI_STREAM_XDF_PATH,
+            stream_types=["EEG", "EMG"],
+            reference_stream="NonExistent",
+        )
+
+
 # ============================================================================
 # Timestamp channel tests
 # ============================================================================
