@@ -49,6 +49,9 @@ env/
 # Ruff
 .ruff_cache/
 
+# MkDocs
+site/
+
 # Context and planning files
 .context/
 CLAUDE.md
