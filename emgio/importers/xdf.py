@@ -468,7 +468,7 @@ class XDFImporter(BaseImporter):
                         "data": time_series[:, i],
                         "timestamps": timestamps,
                         "srate": srate,
-                        "unit": channel_units[i] if i < len(channel_units) else "uV",
+                        "unit": channel_units[i] if i < len(channel_units) else "a.u.",
                         "type": channel_types[i]
                         if i < len(channel_types) and channel_types[i]
                         else default_channel_type,
@@ -555,35 +555,68 @@ class XDFImporter(BaseImporter):
         n_channels: int,
         stream_name: str,
     ) -> tuple:
-        """Extract channel labels, types, and units from stream info."""
+        """Extract channel labels, types, and units from stream info.
+
+        This method safely extracts channel metadata from XDF stream info,
+        handling malformed or missing metadata gracefully.
+        """
         channel_labels = []
         channel_types = []
         channel_units = []
 
-        if "desc" in info and info["desc"] and info["desc"][0]:
-            desc = info["desc"][0]
-            if isinstance(desc, dict) and "channels" in desc and desc["channels"]:
-                channels_info = desc["channels"][0]
-                if isinstance(channels_info, dict) and "channel" in channels_info:
-                    for ch in channels_info["channel"]:
-                        if isinstance(ch, dict):
-                            label = ch.get("label", [""])[0] if "label" in ch else ""
-                            ch_type = ch.get("type", [""])[0] if "type" in ch else ""
-                            unit = ch.get("unit", [""])[0] if "unit" in ch else ""
-                            channel_labels.append(
-                                label if label else f"{stream_name}_Ch{len(channel_labels) + 1}"
-                            )
-                            # Infer type from label if not explicitly provided
-                            if not ch_type and label:
-                                ch_type = _determine_channel_type_from_label(label)
-                            channel_types.append(ch_type)
-                            channel_units.append(unit if unit else "uV")
+        try:
+            if "desc" in info and info["desc"] and info["desc"][0]:
+                desc = info["desc"][0]
+                if isinstance(desc, dict) and "channels" in desc and desc["channels"]:
+                    channels_info = desc["channels"][0]
+                    if isinstance(channels_info, dict) and "channel" in channels_info:
+                        for ch in channels_info["channel"]:
+                            if isinstance(ch, dict):
+                                # Safely extract label
+                                label = ""
+                                if "label" in ch:
+                                    label_val = ch.get("label", [""])
+                                    if isinstance(label_val, list) and label_val:
+                                        label = str(label_val[0]) if label_val[0] else ""
+                                    elif isinstance(label_val, str):
+                                        label = label_val
+
+                                # Safely extract type
+                                ch_type = ""
+                                if "type" in ch:
+                                    type_val = ch.get("type", [""])
+                                    if isinstance(type_val, list) and type_val:
+                                        ch_type = str(type_val[0]) if type_val[0] else ""
+                                    elif isinstance(type_val, str):
+                                        ch_type = type_val
+
+                                # Safely extract unit
+                                unit = ""
+                                if "unit" in ch:
+                                    unit_val = ch.get("unit", [""])
+                                    if isinstance(unit_val, list) and unit_val:
+                                        unit = str(unit_val[0]) if unit_val[0] else ""
+                                    elif isinstance(unit_val, str):
+                                        unit = unit_val
+
+                                channel_labels.append(
+                                    label if label else f"{stream_name}_Ch{len(channel_labels) + 1}"
+                                )
+                                # Infer type from label if not explicitly provided
+                                if not ch_type and label:
+                                    ch_type = _determine_channel_type_from_label(label)
+                                channel_types.append(ch_type)
+                                # Use a.u. (arbitrary units) as default; uV is only for EMG/EEG
+                                channel_units.append(unit if unit else "a.u.")
+        except (KeyError, IndexError, TypeError, AttributeError):
+            # If metadata parsing fails, we'll fall back to default labels below
+            pass
 
         # Fill in missing labels
         while len(channel_labels) < n_channels:
             channel_labels.append(f"{stream_name}_Ch{len(channel_labels) + 1}")
             channel_types.append("")
-            channel_units.append("uV")
+            channel_units.append("a.u.")
 
         return channel_labels, channel_types, channel_units
 

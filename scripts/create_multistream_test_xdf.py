@@ -27,13 +27,15 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 
 # Paths - configured via environment variables or defaults
 # SOURCE_XDF: Path to a large multi-stream XDF file to extract from
-SOURCE_XDF = Path(os.environ.get("EMGIO_SOURCE_XDF", ""))
+_source_xdf_str = os.environ.get("EMGIO_SOURCE_XDF", "")
+SOURCE_XDF = Path(_source_xdf_str) if _source_xdf_str else None
 # OUTPUT_XDF: Where to save the test file (default: examples/multi_stream_test.xdf)
 OUTPUT_XDF = Path(
     os.environ.get("EMGIO_OUTPUT_XDF", str(PROJECT_ROOT / "examples" / "multi_stream_test.xdf"))
 )
 # LABRECORDER_CLI: Path to LabRecorderCLI executable
-LABRECORDER_CLI = Path(os.environ.get("EMGIO_LABRECORDER_CLI", ""))
+_labrecorder_str = os.environ.get("EMGIO_LABRECORDER_CLI", "")
+LABRECORDER_CLI = Path(_labrecorder_str) if _labrecorder_str else None
 
 # Duration to extract (seconds)
 EXTRACT_DURATION = 5.0
@@ -43,14 +45,22 @@ def _validate_paths():
     """Validate required paths are configured and exist."""
     errors = []
 
-    if not SOURCE_XDF or not SOURCE_XDF.exists():
+    if SOURCE_XDF is None:
         errors.append(
-            "SOURCE_XDF not found. Set EMGIO_SOURCE_XDF environment variable to a valid XDF file path."
+            "SOURCE_XDF not set. Set EMGIO_SOURCE_XDF environment variable to a valid XDF file path."
+        )
+    elif not SOURCE_XDF.exists():
+        errors.append(
+            f"SOURCE_XDF file not found: {SOURCE_XDF}. Check EMGIO_SOURCE_XDF environment variable."
         )
 
-    if not LABRECORDER_CLI or not LABRECORDER_CLI.exists():
+    if LABRECORDER_CLI is None:
         errors.append(
-            "LABRECORDER_CLI not found. Set EMGIO_LABRECORDER_CLI environment variable to LabRecorderCLI path."
+            "LABRECORDER_CLI not set. Set EMGIO_LABRECORDER_CLI environment variable to LabRecorderCLI path."
+        )
+    elif not LABRECORDER_CLI.exists():
+        errors.append(
+            f"LABRECORDER_CLI not found: {LABRECORDER_CLI}. Check EMGIO_LABRECORDER_CLI environment variable."
         )
 
     if errors:
@@ -71,7 +81,7 @@ def main():
         return
 
     import pyxdf
-    from pylsl import StreamInfo, StreamOutlet, local_clock
+    from pylsl import StreamInfo, StreamOutlet
 
     print(f"Loading source XDF: {SOURCE_XDF}")
     data, header = pyxdf.load_xdf(str(SOURCE_XDF))
@@ -223,7 +233,6 @@ def main():
 
     # Push data
     print("\nPushing data to LSL streams...")
-    local_clock()
 
     # Find the maximum duration
     max_duration = max(s["timestamps"][-1] for s in streams_to_replay if len(s["timestamps"]) > 0)
