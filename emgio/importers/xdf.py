@@ -133,7 +133,8 @@ def summarize_xdf(filepath: str | Path) -> XDFSummary:
         info = stream["info"]
 
         # Extract basic info
-        stream_id = info.get("stream_id", 0)
+        # Note: stream_id may be missing in some XDF files; use -1 as sentinel
+        stream_id = info.get("stream_id", -1)
         name = info["name"][0] if "name" in info else "Unknown"
         stream_type = info["type"][0] if "type" in info else "Unknown"
         channel_count = int(info["channel_count"][0]) if "channel_count" in info else 0
@@ -554,9 +555,13 @@ class XDFImporter(BaseImporter):
         include_timestamps: bool = False,
         reference_stream: str | None = None,
     ) -> None:
-        """Load streams with timestamp synchronization."""
-        # For now, use the same approach as _load_streams
-        # pyxdf already handles synchronization during load
+        """Load streams with timestamp synchronization.
+
+        This method is an intentional wrapper around _load_streams, serving as
+        a dedicated extension point for future synchronization enhancements.
+        Currently, pyxdf handles clock synchronization during file loading,
+        so this delegates to _load_streams without additional processing.
+        """
         self._load_streams(emg, streams, default_channel_type, include_timestamps, reference_stream)
 
     def _extract_channel_info(
@@ -616,7 +621,8 @@ class XDFImporter(BaseImporter):
                                 if not ch_type and label:
                                     ch_type = _determine_channel_type_from_label(label)
                                 channel_types.append(ch_type)
-                                # Use a.u. (arbitrary units) as default; uV is only for EMG/EEG
+                                # Default to a.u. (arbitrary units); specific units like uV
+                                # should be provided in stream metadata
                                 channel_units.append(unit if unit else "a.u.")
         except (KeyError, IndexError, TypeError, AttributeError):
             # If metadata parsing fails, we'll fall back to default labels below
