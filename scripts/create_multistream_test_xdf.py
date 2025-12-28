@@ -86,6 +86,10 @@ def main():
             stream_starts[name] = ts[0]
             print(f"  {name}: starts at {ts[0]:.2f}")
 
+    if not stream_starts:
+        print("No streams with timestamps found in source XDF; cannot determine common start time.")
+        return
+
     # Start from when all streams are active
     start_time = max(stream_starts.values())
     end_time = start_time + EXTRACT_DURATION
@@ -178,12 +182,23 @@ def main():
             "string": cf_string,
         }
 
+        # Safely determine the channel format with sensible defaults
+        format_str = stream_info.get("format")
+        if format_str is None:
+            # Default to string for marker streams, float32 otherwise
+            format_str = "string" if stream_info.get("is_marker") else "float32"
+        if format_str not in format_map:
+            print(
+                f"Unsupported channel format '{format_str}' for stream '{stream_info.get('name')}', skipping"
+            )
+            continue
+
         lsl_info = StreamInfo(
             name=stream_info["name"],
             type=stream_info["type"],
             channel_count=stream_info["channel_count"],
             nominal_srate=stream_info["nominal_srate"],
-            channel_format=format_map[stream_info["format"]],
+            channel_format=format_map[format_str],
             source_id=f"emgio_test_{stream_info['name']}",
         )
 
@@ -245,7 +260,15 @@ def main():
 
     # Stop recorder
     recorder_proc.terminate()
-    recorder_proc.wait(timeout=5)
+    try:
+        recorder_proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        print("Recorder did not exit within 5 seconds after terminate(). Forcing kill...")
+        recorder_proc.kill()
+        try:
+            recorder_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            print("WARNING: Recorder process may still be running despite kill().")
 
     print(f"\nDone! Output file: {OUTPUT_XDF}")
 
