@@ -100,11 +100,15 @@ class XDFSummary:
 
 def summarize_xdf(filepath: str | Path) -> XDFSummary:
     """
-    Summarize the contents of an XDF file without fully loading all data.
+    Summarize the contents of an XDF file without loading signal data.
 
-    This function loads the XDF file and extracts metadata about all streams,
-    including channel names, types, sampling rates, and data shapes. Use this
-    to explore an XDF file before deciding which streams to import.
+    This function parses XDF chunk headers and metadata only, skipping actual
+    signal data. This enables memory-efficient exploration of large XDF files
+    (even multi-GB files) with minimal RAM usage.
+
+    The function extracts metadata from StreamHeader and StreamFooter chunks,
+    which contain all necessary information about streams without requiring
+    the actual time series data to be loaded.
 
     Args:
         filepath: Path to the XDF file
@@ -118,49 +122,45 @@ def summarize_xdf(filepath: str | Path) -> XDFSummary:
         >>> # Find EMG streams
         >>> emg_streams = summary.get_streams_by_type("EMG")
     """
-    try:
-        import pyxdf
-    except ImportError as e:
-        raise ImportError(
-            "pyxdf is required for XDF file support. Install it with: pip install pyxdf"
-        ) from e
-
     filepath = str(filepath)
-    data, header = pyxdf.load_xdf(filepath)
+    streams_data, header_info = _parse_xdf_metadata_only(filepath)
 
     streams = []
-    for stream in data:
-        info = stream["info"]
+    for stream_id, stream_data in streams_data.items():
+        header = stream_data.get("header", {})
+        footer = stream_data.get("footer", {})
 
-        # Extract basic info
-        # Note: stream_id may be missing in some XDF files; use -1 as sentinel
-        stream_id = info.get("stream_id", -1)
-        name = info["name"][0] if "name" in info else "Unknown"
-        stream_type = info["type"][0] if "type" in info else "Unknown"
-        channel_count = int(info["channel_count"][0]) if "channel_count" in info else 0
-        nominal_srate = float(info["nominal_srate"][0]) if "nominal_srate" in info else 0.0
-        effective_srate = stream.get("effective_srate")
-        channel_format = info["channel_format"][0] if "channel_format" in info else "unknown"
-        source_id = info["source_id"][0] if "source_id" in info else ""
-        hostname = info["hostname"][0] if "hostname" in info else ""
+        # Extract basic info from header
+        name = header.get("name", "Unknown")
+        stream_type = header.get("type", "Unknown")
+        channel_count = int(header.get("channel_count", 0))
+        nominal_srate = float(header.get("nominal_srate", 0.0))
+        channel_format = header.get("channel_format", "unknown")
+        source_id = header.get("source_id", "")
+        hostname = header.get("hostname", "")
 
-        # Get data shape info - handle both numpy arrays and lists (marker streams)
-        time_series = stream["time_series"]
-        if isinstance(time_series, np.ndarray):
-            sample_count = time_series.shape[0] if time_series.ndim > 0 else 0
-        elif isinstance(time_series, list):
-            sample_count = len(time_series)
-        else:
-            sample_count = 0
+        # Get sample count and timing from footer (if available)
+        sample_count = int(footer.get("sample_count", 0))
+        first_timestamp = footer.get("first_timestamp")
+        last_timestamp = footer.get("last_timestamp")
+        measured_srate = footer.get("measured_srate")
+
+        # Calculate effective sample rate
+        effective_srate = None
+        if measured_srate is not None:
+            effective_srate = float(measured_srate)
+        elif sample_count > 0 and first_timestamp is not None and last_timestamp is not None:
+            duration = float(last_timestamp) - float(first_timestamp)
+            if duration > 0:
+                effective_srate = sample_count / duration
 
         # Calculate duration
-        # For streams with 2+ timestamps, use actual time range
-        # For single-sample or no-timestamp streams, estimate from sample rate or default to 0
-        timestamps = stream.get("time_stamps", np.array([]))
-        if len(timestamps) > 1:
-            duration_seconds = timestamps[-1] - timestamps[0]
+        if first_timestamp is not None and last_timestamp is not None:
+            duration_seconds = float(last_timestamp) - float(first_timestamp)
         elif effective_srate and effective_srate > 0 and sample_count > 0:
             duration_seconds = sample_count / effective_srate
+        elif nominal_srate > 0 and sample_count > 0:
+            duration_seconds = sample_count / nominal_srate
         else:
             duration_seconds = 0.0
 
@@ -169,19 +169,22 @@ def summarize_xdf(filepath: str | Path) -> XDFSummary:
         channel_types = []
         channel_units = []
 
-        if "desc" in info and info["desc"] and info["desc"][0]:
-            desc = info["desc"][0]
-            if isinstance(desc, dict) and "channels" in desc and desc["channels"]:
-                channels_info = desc["channels"][0]
-                if isinstance(channels_info, dict) and "channel" in channels_info:
-                    for ch in channels_info["channel"]:
-                        if isinstance(ch, dict):
-                            label = ch.get("label", [""])[0] if "label" in ch else ""
-                            ch_type = ch.get("type", [""])[0] if "type" in ch else ""
-                            unit = ch.get("unit", [""])[0] if "unit" in ch else ""
-                            channel_labels.append(label)
-                            channel_types.append(ch_type)
-                            channel_units.append(unit)
+        desc = header.get("desc", {})
+        if isinstance(desc, dict) and "channels" in desc:
+            channels_info = desc.get("channels", {})
+            if isinstance(channels_info, dict) and "channel" in channels_info:
+                channel_list = channels_info["channel"]
+                # Handle single channel case (not a list)
+                if isinstance(channel_list, dict):
+                    channel_list = [channel_list]
+                for ch in channel_list:
+                    if isinstance(ch, dict):
+                        label = ch.get("label", "")
+                        ch_type = ch.get("type", "")
+                        unit = ch.get("unit", "")
+                        channel_labels.append(label)
+                        channel_types.append(ch_type)
+                        channel_units.append(unit)
 
         # If no channel info in desc, create default labels
         if not channel_labels:
@@ -207,9 +210,163 @@ def summarize_xdf(filepath: str | Path) -> XDFSummary:
         )
         streams.append(stream_info)
 
-    header_info = dict(header.get("info", {})) if header else {}
-
     return XDFSummary(filepath=filepath, streams=streams, header_info=header_info)
+
+
+def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
+    """
+    Parse XDF file metadata without loading signal data.
+
+    This function reads only the structural chunks (FileHeader, StreamHeader,
+    StreamFooter) and skips over Samples chunks entirely, resulting in minimal
+    memory usage even for large files.
+
+    Args:
+        filepath: Path to the XDF file
+
+    Returns:
+        Tuple of (streams_data, header_info) where:
+        - streams_data: dict mapping stream_id to {"header": {...}, "footer": {...}}
+        - header_info: dict with file-level header information
+    """
+    import gzip
+    import struct
+    from xml.etree.ElementTree import fromstring
+
+    def read_varlen_int(f):
+        """Read a variable-length integer from the file."""
+        nbytes = f.read(1)
+        if len(nbytes) == 0:
+            raise EOFError
+        nbytes = nbytes[0]
+        if nbytes == 1:
+            return f.read(1)[0]
+        elif nbytes == 4:
+            return struct.unpack("<I", f.read(4))[0]
+        elif nbytes == 8:
+            return struct.unpack("<Q", f.read(8))[0]
+        else:
+            raise ValueError(f"Invalid variable-length integer indicator: {nbytes}")
+
+    def xml_to_dict(element):
+        """Convert XML element to a dict, similar to pyxdf's _xml2dict."""
+        result = {}
+        for child in element:
+            if len(child) == 0:
+                result[child.tag] = child.text
+            else:
+                child_dict = xml_to_dict(child)
+                if child.tag in result:
+                    # If tag already exists, convert to list
+                    if not isinstance(result[child.tag], list):
+                        result[child.tag] = [result[child.tag]]
+                    result[child.tag].append(child_dict)
+                else:
+                    result[child.tag] = child_dict
+        return result
+
+    def parse_stream_header_xml(xml_string: str) -> dict:
+        """Parse StreamHeader XML into a dict with all metadata including desc."""
+        root = fromstring(xml_string)
+        result = {}
+        for child in root:
+            if child.tag == "desc":
+                # Parse desc fully for channel info
+                result["desc"] = xml_to_dict(child)
+            elif len(child) == 0:
+                result[child.tag] = child.text
+            else:
+                result[child.tag] = xml_to_dict(child)
+        return result
+
+    def parse_footer_xml(xml_string: str) -> dict:
+        """Parse StreamFooter XML into a dict."""
+        root = fromstring(xml_string)
+        result = {}
+        for child in root:
+            if len(child) == 0:
+                result[child.tag] = child.text
+            else:
+                result[child.tag] = xml_to_dict(child)
+        return result
+
+    streams_data = {}
+    header_info = {}
+
+    # Open file (handle both .xdf and .xdfz compressed files)
+    if filepath.endswith(".xdfz") or filepath.endswith(".xdf.gz"):
+        f = gzip.open(filepath, "rb")
+    else:
+        f = open(filepath, "rb")
+
+    try:
+        # Read and verify magic bytes
+        magic = f.read(4)
+        if magic != b"XDF:":
+            raise ValueError(f"Invalid XDF file: expected 'XDF:' magic bytes, got {magic!r}")
+
+        # Process chunks
+        while True:
+            try:
+                chunk_len = read_varlen_int(f)
+            except EOFError:
+                break
+
+            tag_bytes = f.read(2)
+            if len(tag_bytes) < 2:
+                break
+            tag = struct.unpack("<H", tag_bytes)[0]
+
+            if tag == 1:
+                # FileHeader chunk
+                xml_bytes = f.read(chunk_len - 2)
+                xml_string = xml_bytes.decode("utf-8", errors="replace")
+                try:
+                    root = fromstring(xml_string)
+                    header_info = xml_to_dict(root)
+                except Exception:
+                    pass
+
+            elif tag == 2:
+                # StreamHeader chunk - parse fully including desc
+                stream_id = struct.unpack("<I", f.read(4))[0]
+                xml_bytes = f.read(chunk_len - 6)
+                xml_string = xml_bytes.decode("utf-8", errors="replace")
+                try:
+                    header = parse_stream_header_xml(xml_string)
+                    if stream_id not in streams_data:
+                        streams_data[stream_id] = {"header": {}, "footer": {}}
+                    streams_data[stream_id]["header"] = header
+                except Exception:
+                    if stream_id not in streams_data:
+                        streams_data[stream_id] = {"header": {}, "footer": {}}
+
+            elif tag == 6:
+                # StreamFooter chunk - contains sample_count, timestamps, etc.
+                stream_id = struct.unpack("<I", f.read(4))[0]
+                xml_bytes = f.read(chunk_len - 6)
+                xml_string = xml_bytes.decode("utf-8", errors="replace")
+                try:
+                    footer = parse_footer_xml(xml_string)
+                    if stream_id not in streams_data:
+                        streams_data[stream_id] = {"header": {}, "footer": {}}
+                    streams_data[stream_id]["footer"] = footer
+                except Exception:
+                    pass
+
+            elif tag in (3, 4, 5):
+                # Samples (3), ClockOffset (4), Boundary (5) - skip entirely
+                # This is the key optimization: we don't load any signal data
+                f.seek(chunk_len - 2, 1)  # Seek relative to current position
+
+            else:
+                # Unknown chunk type - skip
+                f.seek(chunk_len - 2, 1)
+
+    finally:
+        f.close()
+
+    return streams_data, header_info
 
 
 class XDFImporter(BaseImporter):
@@ -219,13 +376,18 @@ class XDFImporter(BaseImporter):
     XDF files can contain multiple data streams. This importer allows selective
     import of specific streams by name, type, or ID.
 
+    Memory Optimization:
+        For large XDF files, use stream selection parameters to load only the
+        streams you need. The importer uses pyxdf's native stream selection
+        to avoid loading unnecessary data into memory.
+
     Example:
-        >>> # First, explore the file
+        >>> # First, explore the file (memory-efficient)
         >>> from emgio.importers.xdf import summarize_xdf
         >>> summary = summarize_xdf("recording.xdf")
         >>> print(summary)
         >>>
-        >>> # Import specific streams
+        >>> # Import specific streams (only loads selected streams)
         >>> importer = XDFImporter()
         >>> emg = importer.load("recording.xdf", stream_names=["EMG_stream"])
         >>>
@@ -243,6 +405,7 @@ class XDFImporter(BaseImporter):
         default_channel_type: str = "EMG",
         include_timestamps: bool = False,
         reference_stream: str | None = None,
+        max_memory_gb: float | None = None,
     ) -> EMG:
         """
         Load EMG data from an XDF file.
@@ -251,6 +414,14 @@ class XDFImporter(BaseImporter):
         criteria are provided, streams matching ANY criterion are included.
         If no selection criteria are provided, all streams with numeric data
         are loaded.
+
+        Memory Optimization:
+            - Stream selection is passed directly to pyxdf, so only requested
+              streams are loaded into memory. This significantly reduces RAM
+              usage for large files with multiple streams.
+            - Use summarize_xdf() first to explore file contents without loading data.
+            - The max_memory_gb parameter can warn or raise if estimated memory
+              usage exceeds the limit.
 
         Args:
             filepath: Path to the XDF file
@@ -270,6 +441,9 @@ class XDFImporter(BaseImporter):
                              reference. If not specified, the stream with the
                              highest sampling rate is used (recommended to
                              avoid data loss from downsampling).
+            max_memory_gb: Optional maximum memory usage in GB. If specified,
+                          raises MemoryError if estimated memory exceeds this
+                          limit. Use summarize_xdf() to estimate memory needs.
 
         Returns:
             EMG: EMG object containing the loaded data
@@ -277,6 +451,7 @@ class XDFImporter(BaseImporter):
         Raises:
             ValueError: If no matching streams found or file cannot be read
             ImportError: If pyxdf is not installed
+            MemoryError: If estimated memory exceeds max_memory_gb
         """
         try:
             import pyxdf
@@ -286,12 +461,25 @@ class XDFImporter(BaseImporter):
             ) from e
 
         filepath = str(filepath)
-        data, header = pyxdf.load_xdf(filepath)
+
+        # Check memory usage before loading if max_memory_gb is specified
+        if max_memory_gb is not None:
+            self._check_memory_usage(
+                filepath, stream_names, stream_types, stream_ids, max_memory_gb
+            )
+
+        # Build pyxdf select_streams parameter for efficient loading
+        select_streams = self._build_select_streams(
+            filepath, stream_names, stream_types, stream_ids
+        )
+
+        # Load only selected streams (pyxdf handles the filtering at load time)
+        data, header = pyxdf.load_xdf(filepath, select_streams=select_streams)
 
         if not data:
             raise ValueError(f"No streams found in XDF file: {filepath}")
 
-        # Filter streams based on selection criteria
+        # Filter streams based on selection criteria (for additional filtering)
         selected_streams = self._select_streams(data, stream_names, stream_types, stream_ids)
 
         if not selected_streams:
@@ -327,6 +515,103 @@ class XDFImporter(BaseImporter):
             )
 
         return emg
+
+    def _build_select_streams(
+        self,
+        filepath: str,
+        stream_names: list[str] | None,
+        stream_types: list[str] | None,
+        stream_ids: list[int] | None,
+    ) -> list[dict] | list[int] | None:
+        """
+        Build pyxdf select_streams parameter for efficient loading.
+
+        This method converts our selection criteria into pyxdf's native format,
+        enabling pyxdf to skip loading unneeded streams entirely.
+        """
+        if stream_names is None and stream_types is None and stream_ids is None:
+            return None  # Load all streams
+
+        # If stream_ids are specified, use them directly (most efficient)
+        if stream_ids is not None:
+            return stream_ids
+
+        # For stream_names and stream_types, we need to resolve them to IDs
+        # using the memory-efficient metadata parser
+        if stream_names or stream_types:
+            summary = summarize_xdf(filepath)
+            matching_ids = []
+
+            for stream in summary.streams:
+                if stream_names and stream.name.lower() in [n.lower() for n in stream_names]:
+                    matching_ids.append(stream.stream_id)
+                elif stream_types and stream.stream_type.upper() in [
+                    t.upper() for t in stream_types
+                ]:
+                    matching_ids.append(stream.stream_id)
+
+            if matching_ids:
+                return matching_ids
+
+        return None
+
+    def _check_memory_usage(
+        self,
+        filepath: str,
+        stream_names: list[str] | None,
+        stream_types: list[str] | None,
+        stream_ids: list[int] | None,
+        max_memory_gb: float,
+    ) -> None:
+        """
+        Estimate memory usage and raise MemoryError if it exceeds the limit.
+
+        Uses the memory-efficient summarize_xdf() to estimate data size.
+        """
+        # Data type sizes in bytes
+        dtype_sizes = {
+            "float32": 4,
+            "double64": 8,
+            "int8": 1,
+            "int16": 2,
+            "int32": 4,
+            "int64": 8,
+            "string": 50,  # Estimate for strings
+        }
+
+        summary = summarize_xdf(filepath)
+        total_bytes = 0
+
+        for stream in summary.streams:
+            # Check if this stream would be selected
+            include = False
+            if stream_names is None and stream_types is None and stream_ids is None:
+                include = True
+            elif stream_names and stream.name.lower() in [n.lower() for n in stream_names]:
+                include = True
+            elif stream_types and stream.stream_type.upper() in [t.upper() for t in stream_types]:
+                include = True
+            elif stream_ids and stream.stream_id in stream_ids:
+                include = True
+
+            if include:
+                dtype_size = dtype_sizes.get(stream.channel_format, 8)
+                # Estimate: samples * channels * dtype_size * 2 (for timestamps)
+                stream_bytes = stream.sample_count * stream.channel_count * dtype_size
+                stream_bytes += stream.sample_count * 8  # timestamps (float64)
+                total_bytes += stream_bytes
+
+        # Add overhead for pandas DataFrame and processing (~50% extra)
+        estimated_gb = (total_bytes * 1.5) / (1024**3)
+
+        if estimated_gb > max_memory_gb:
+            raise MemoryError(
+                f"Estimated memory usage ({estimated_gb:.2f} GB) exceeds limit "
+                f"({max_memory_gb:.2f} GB). Consider:\n"
+                f"  - Loading fewer streams using stream_names, stream_types, or stream_ids\n"
+                f"  - Using summarize_xdf() to identify which streams you need\n"
+                f"  - Processing the file in chunks"
+            )
 
     def _select_streams(
         self,
