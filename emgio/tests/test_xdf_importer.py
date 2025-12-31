@@ -18,8 +18,10 @@ def test_summarize_xdf():
 
     Note: The summarize_xdf function uses memory-efficient parsing that reads
     metadata from StreamFooter chunks without loading signal data. The sample
-    count in the footer may differ slightly (typically by 1-2 samples) from
-    the actual data count due to how XDF files are written.
+    count in the footer may differ slightly from the actual data count due to
+    how XDF files are written (the footer is written before the final samples
+    are flushed). We allow a tolerance of ±2 samples (total range of 4) to
+    account for this variance.
     """
     summary = summarize_xdf(SAMPLE_XDF_PATH)
 
@@ -35,7 +37,7 @@ def test_summarize_xdf():
     assert stream.stream_type == "EEG"
     assert stream.channel_count == 8
     assert stream.nominal_srate == 1000.0
-    # Sample count from footer may differ slightly from actual data (within 1-2 samples)
+    # Sample count from footer may differ by ±2 samples from actual data
     assert abs(stream.sample_count - 9520) <= 2
     assert stream.duration_seconds > 9.0
 

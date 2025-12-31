@@ -228,23 +228,39 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
         Tuple of (streams_data, header_info) where:
         - streams_data: dict mapping stream_id to {"header": {...}, "footer": {...}}
         - header_info: dict with file-level header information
+
+    Note:
+        Memory estimates for string-type streams (markers) are approximate since
+        string lengths vary. The estimate uses 50 bytes per sample as a rough average.
     """
     import gzip
     import struct
     from xml.etree.ElementTree import fromstring
 
     def read_varlen_int(f):
-        """Read a variable-length integer from the file."""
-        nbytes = f.read(1)
-        if len(nbytes) == 0:
-            raise EOFError
-        nbytes = nbytes[0]
+        """Read a variable-length integer from the file.
+
+        Raises EOFError if the file is truncated.
+        """
+        length_indicator = f.read(1)
+        if not length_indicator:
+            raise EOFError("Unexpected end of file while reading variable-length integer.")
+        nbytes = length_indicator[0]
         if nbytes == 1:
-            return f.read(1)[0]
+            data = f.read(1)
+            if len(data) != 1:
+                raise EOFError("Unexpected end of file while reading 1-byte integer value.")
+            return data[0]
         elif nbytes == 4:
-            return struct.unpack("<I", f.read(4))[0]
+            data = f.read(4)
+            if len(data) != 4:
+                raise EOFError("Unexpected end of file while reading 4-byte integer value.")
+            return struct.unpack("<I", data)[0]
         elif nbytes == 8:
-            return struct.unpack("<Q", f.read(8))[0]
+            data = f.read(8)
+            if len(data) != 8:
+                raise EOFError("Unexpected end of file while reading 8-byte integer value.")
+            return struct.unpack("<Q", data)[0]
         else:
             raise ValueError(f"Invalid variable-length integer indicator: {nbytes}")
 
@@ -290,16 +306,18 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
                 result[child.tag] = xml_to_dict(child)
         return result
 
-    streams_data = {}
-    header_info = {}
+    streams_data: dict = {}
+    header_info: dict = {}
 
-    # Open file (handle both .xdf and .xdfz compressed files)
-    if filepath.endswith(".xdfz") or filepath.endswith(".xdf.gz"):
-        f = gzip.open(filepath, "rb")
-    else:
-        f = open(filepath, "rb")
-
+    # Initialize file handle to None for safe cleanup
+    f = None
     try:
+        # Open file (handle both .xdf and .xdfz compressed files)
+        if filepath.endswith(".xdfz") or filepath.endswith(".xdf.gz"):
+            f = gzip.open(filepath, "rb")
+        else:
+            f = open(filepath, "rb")
+
         # Read and verify magic bytes
         magic = f.read(4)
         if magic != b"XDF:":
@@ -325,6 +343,7 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
                     root = fromstring(xml_string)
                     header_info = xml_to_dict(root)
                 except Exception:
+                    # If FileHeader XML is malformed, continue without file-level metadata
                     pass
 
             elif tag == 2:
@@ -338,6 +357,8 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
                         streams_data[stream_id] = {"header": {}, "footer": {}}
                     streams_data[stream_id]["header"] = header
                 except Exception:
+                    # If StreamHeader XML is malformed, record the stream with empty header
+                    # rather than failing the entire import
                     if stream_id not in streams_data:
                         streams_data[stream_id] = {"header": {}, "footer": {}}
 
@@ -352,6 +373,8 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
                         streams_data[stream_id] = {"header": {}, "footer": {}}
                     streams_data[stream_id]["footer"] = footer
                 except Exception:
+                    # If footer XML is malformed, ignore it and leave this stream
+                    # without footer metadata rather than failing the entire import
                     pass
 
             elif tag in (3, 4, 5):
@@ -364,7 +387,8 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
                 f.seek(chunk_len - 2, 1)
 
     finally:
-        f.close()
+        if f is not None:
+            f.close()
 
     return streams_data, header_info
 
@@ -524,34 +548,40 @@ class XDFImporter(BaseImporter):
         stream_ids: list[int] | None,
     ) -> list[dict] | list[int] | None:
         """
-        Build pyxdf select_streams parameter for efficient loading.
+        Build the value for pyxdf's ``select_streams`` parameter for efficient loading.
 
-        This method converts our selection criteria into pyxdf's native format,
-        enabling pyxdf to skip loading unneeded streams entirely.
+        pyxdf accepts ``select_streams`` as either:
+        - a list of integer stream IDs (e.g. ``[1, 2, 3]``), or
+        - a list of dictionaries with selection criteria (e.g. ``[{"name": "EMG"}]``).
+
+        This method converts our selection criteria into that native format, returning
+        either a list of IDs or ``None`` (to load all streams). We resolve names and
+        types to IDs using the memory-efficient metadata parser.
         """
         if stream_names is None and stream_types is None and stream_ids is None:
             return None  # Load all streams
 
         # If stream_ids are specified, use them directly (most efficient)
         if stream_ids is not None:
-            return stream_ids
+            return list(stream_ids)  # Return a copy to avoid mutation
 
         # For stream_names and stream_types, we need to resolve them to IDs
         # using the memory-efficient metadata parser
         if stream_names or stream_types:
             summary = summarize_xdf(filepath)
-            matching_ids = []
+            # Use a set to avoid duplicate IDs if a stream matches both name and type
+            matching_ids: set[int] = set()
 
             for stream in summary.streams:
+                # Check name match (use separate if, not elif, to check all criteria)
                 if stream_names and stream.name.lower() in [n.lower() for n in stream_names]:
-                    matching_ids.append(stream.stream_id)
-                elif stream_types and stream.stream_type.upper() in [
-                    t.upper() for t in stream_types
-                ]:
-                    matching_ids.append(stream.stream_id)
+                    matching_ids.add(stream.stream_id)
+                # Check type match
+                if stream_types and stream.stream_type.upper() in [t.upper() for t in stream_types]:
+                    matching_ids.add(stream.stream_id)
 
             if matching_ids:
-                return matching_ids
+                return list(matching_ids)
 
         return None
 

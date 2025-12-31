@@ -477,8 +477,18 @@ class EDFExporter:
                 ch_info = emg.channels[ch_name]
 
                 # Get signal min/max for scaling factor calculation (no copy needed)
-                signal_min = float(np.nanmin(signal))
-                signal_max = float(np.nanmax(signal))
+                # Handle edge case of empty or all-NaN signals
+                if signal.size == 0 or np.all(np.isnan(signal)):
+                    warnings.warn(
+                        f"Channel '{ch_name}' has an empty or all-NaN signal. "
+                        "Using default min/max of 0.0 for scaling.",
+                        stacklevel=2,
+                    )
+                    signal_min = 0.0
+                    signal_max = 0.0
+                else:
+                    signal_min = float(np.nanmin(signal))
+                    signal_max = float(np.nanmax(signal))
 
                 # Calculate scaling factors for header based on the chosen format (use_bdf)
                 phys_min, phys_max, dig_min, dig_max, scale_factor = _determine_scaling_factors(
@@ -537,13 +547,14 @@ class EDFExporter:
             writer.setSignalHeaders(channel_info_list)
 
             # Pass 2: Write signals one channel at a time using writePhysicalSamples
-            # This avoids holding all signal copies in memory simultaneously
+            # This avoids holding all signal copies in memory simultaneously.
+            # Note: Channels must be written in the same order as setSignalHeaders.
+            # We iterate over emg.channels which maintains insertion order (Python 3.7+).
             for ch_name in emg.channels:
                 signal = emg.signals[ch_name].values
                 # Handle NaNs and ensure float64 dtype (required by pyedflib)
-                physical_signal = np.nan_to_num(signal, nan=0.0, copy=True).astype(
-                    np.float64, copy=False
-                )
+                # Note: astype() creates a copy anyway, so no need for copy=True in nan_to_num
+                physical_signal = np.nan_to_num(signal, nan=0.0).astype(np.float64)
                 writer.writePhysicalSamples(physical_signal)
                 # physical_signal is garbage collected after each iteration
 
