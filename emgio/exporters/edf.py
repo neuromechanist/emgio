@@ -1,8 +1,7 @@
 import os
 import warnings
-from typing import Literal, Optional
+from typing import Literal
 
-# import logging  # Add logging import - Removed as unused in this file
 import numpy as np
 import pandas as pd
 import pyedflib
@@ -319,7 +318,7 @@ class EDFExporter:
         svd_rank: int = None,
         format: Literal["auto", "edf", "bdf"] = "auto",
         bypass_analysis: bool = False,
-        events_df: Optional[pd.DataFrame] = None,
+        events_df: pd.DataFrame | None = None,
         create_channels_tsv: bool = True,
         **kwargs,
     ) -> None:
@@ -470,26 +469,30 @@ class EDFExporter:
         writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=filetype)
 
         try:
-            # Prepare channel information and signals for writing
-            signals_to_write = []
+            # MEMORY OPTIMIZATION: Two-pass approach to avoid holding all signals in memory
+            # Pass 1: Collect headers only (compute min/max without copying data)
             for _i, ch_name in enumerate(emg.channels):
                 signal = emg.signals[ch_name].values
                 ch_info = emg.channels[ch_name]
-                # No need for full analysis result for scaling factors anymore
 
-                # Get signal min/max for scaling factor calculation
-                signal_min = float(np.min(signal))
-                signal_max = float(np.max(signal))
+                # Get signal min/max for scaling factor calculation (no copy needed)
+                # Handle edge case of empty or all-NaN signals
+                if signal.size == 0 or np.all(np.isnan(signal)):
+                    warnings.warn(
+                        f"Channel '{ch_name}' has an empty or all-NaN signal. "
+                        "Using default min/max of 0.0 for scaling.",
+                        stacklevel=2,
+                    )
+                    signal_min = 0.0
+                    signal_max = 0.0
+                else:
+                    signal_min = float(np.nanmin(signal))
+                    signal_max = float(np.nanmax(signal))
 
                 # Calculate scaling factors for header based on the chosen format (use_bdf)
                 phys_min, phys_max, dig_min, dig_max, scale_factor = _determine_scaling_factors(
                     signal_min, signal_max, use_bdf=use_bdf
                 )
-
-                # Prepare the signal data (handle NaNs, but DO NOT pre-scale)
-                physical_signal = signal.copy()
-                physical_signal = np.nan_to_num(physical_signal, nan=0.0)
-                signals_to_write.append(physical_signal)
 
                 # Prepare channel header dictionary
                 ch_dict = {
@@ -501,7 +504,7 @@ class EDFExporter:
                     "digital_max": dig_max,
                     "digital_min": dig_min,
                     "prefilter": ch_info["prefilter"],
-                    "transducer": f"{ch_info.get('channel_type', 'Unknown')} sensor",  # Use get for safety
+                    "transducer": f"{ch_info.get('channel_type', 'Unknown')} sensor",
                 }
                 channel_info_list.append(ch_dict)
 
@@ -536,16 +539,24 @@ class EDFExporter:
                 channels_tsv_data["type"].append(bids_type)
                 channels_tsv_data["units"].append(ch_info["physical_dimension"])
                 channels_tsv_data["sampling_frequency"].append(ch_info["sample_frequency"])
-                channels_tsv_data["reference"].append(
-                    "n/a"
-                )  # Can be updated if reference info is available
-                channels_tsv_data["status"].append(
-                    "good"
-                )  # Default to good, can be updated based on signal quality
+                channels_tsv_data["reference"].append("n/a")
+                channels_tsv_data["status"].append("good")
 
-            # Set headers and write data (pass physical signals)
+            # Set all headers before writing
             writer.setSignalHeaders(channel_info_list)
-            writer.writeSamples(np.array(signals_to_write))
+
+            # Pass 2: Write signals one channel at a time using writePhysicalSamples
+            # This avoids holding all signal copies in memory simultaneously.
+            # IMPORTANT: Channels must be written in the exact same order as setSignalHeaders.
+            # We iterate over emg.channels which maintains insertion order (Python 3.7+).
+            # Both Pass 1 and Pass 2 iterate over emg.channels to ensure consistent ordering.
+            for ch_name in emg.channels:
+                signal = emg.signals[ch_name].values
+                # Handle NaNs and ensure float64 dtype (required by pyedflib)
+                # Note: astype() with copy=False avoids extra copy when already float64
+                physical_signal = np.nan_to_num(signal, nan=0.0).astype(np.float64, copy=False)
+                writer.writePhysicalSamples(physical_signal)
+                # physical_signal is garbage collected after each iteration
 
             # Write annotations if provided
             if events_df is not None and not events_df.empty:
