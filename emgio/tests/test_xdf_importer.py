@@ -18,10 +18,10 @@ def test_summarize_xdf():
 
     Note: The summarize_xdf function uses memory-efficient parsing that reads
     metadata from StreamFooter chunks without loading signal data. The sample
-    count in the footer may differ slightly from the actual data count due to
-    how XDF files are written (the footer is written before the final samples
-    are flushed). We allow a tolerance of ±2 samples (total range of 4) to
-    account for this variance.
+    count in the footer is typically slightly lower than the actual data count
+    because the footer is written before all samples are flushed. However, in
+    some cases it may also be slightly higher due to recording software quirks.
+    We allow a tolerance of ±2 samples to account for this variance.
     """
     summary = summarize_xdf(SAMPLE_XDF_PATH)
 

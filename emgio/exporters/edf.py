@@ -548,13 +548,14 @@ class EDFExporter:
 
             # Pass 2: Write signals one channel at a time using writePhysicalSamples
             # This avoids holding all signal copies in memory simultaneously.
-            # Note: Channels must be written in the same order as setSignalHeaders.
+            # IMPORTANT: Channels must be written in the exact same order as setSignalHeaders.
             # We iterate over emg.channels which maintains insertion order (Python 3.7+).
+            # Both Pass 1 and Pass 2 iterate over emg.channels to ensure consistent ordering.
             for ch_name in emg.channels:
                 signal = emg.signals[ch_name].values
                 # Handle NaNs and ensure float64 dtype (required by pyedflib)
-                # Note: astype() creates a copy anyway, so no need for copy=True in nan_to_num
-                physical_signal = np.nan_to_num(signal, nan=0.0).astype(np.float64)
+                # Note: astype() with copy=False avoids extra copy when already float64
+                physical_signal = np.nan_to_num(signal, nan=0.0).astype(np.float64, copy=False)
                 writer.writePhysicalSamples(physical_signal)
                 # physical_signal is garbage collected after each iteration
 

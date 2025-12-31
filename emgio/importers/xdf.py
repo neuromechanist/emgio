@@ -4,6 +4,7 @@ XDF files can contain multiple streams (EMG, EEG, markers, etc.). This module
 provides tools to explore XDF contents and selectively import specific streams.
 """
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,8 @@ import pandas as pd
 
 from ..core.emg import EMG
 from .base import BaseImporter
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -342,9 +345,9 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
                 try:
                     root = fromstring(xml_string)
                     header_info = xml_to_dict(root)
-                except Exception:
+                except Exception as e:
                     # If FileHeader XML is malformed, continue without file-level metadata
-                    pass
+                    logger.warning("Failed to parse XDF FileHeader: %s", e)
 
             elif tag == 2:
                 # StreamHeader chunk - parse fully including desc
@@ -356,9 +359,15 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
                     if stream_id not in streams_data:
                         streams_data[stream_id] = {"header": {}, "footer": {}}
                     streams_data[stream_id]["header"] = header
-                except Exception:
+                except Exception as e:
                     # If StreamHeader XML is malformed, record the stream with empty header
                     # rather than failing the entire import
+                    logger.warning(
+                        "Failed to parse StreamHeader for stream %d: %s. "
+                        "Channel metadata may be missing.",
+                        stream_id,
+                        e,
+                    )
                     if stream_id not in streams_data:
                         streams_data[stream_id] = {"header": {}, "footer": {}}
 
@@ -372,10 +381,15 @@ def _parse_xdf_metadata_only(filepath: str) -> tuple[dict, dict]:
                     if stream_id not in streams_data:
                         streams_data[stream_id] = {"header": {}, "footer": {}}
                     streams_data[stream_id]["footer"] = footer
-                except Exception:
+                except Exception as e:
                     # If footer XML is malformed, ignore it and leave this stream
                     # without footer metadata rather than failing the entire import
-                    pass
+                    logger.warning(
+                        "Failed to parse StreamFooter for stream %d: %s. "
+                        "Sample count and duration may be unavailable.",
+                        stream_id,
+                        e,
+                    )
 
             elif tag in (3, 4, 5):
                 # Samples (3), ClockOffset (4), Boundary (5) - skip entirely
@@ -582,6 +596,9 @@ class XDFImporter(BaseImporter):
 
             if matching_ids:
                 return list(matching_ids)
+            # Criteria were specified but no streams matched: return empty list
+            # to avoid loading all streams (which would happen with None)
+            return []
 
         return None
 
@@ -613,20 +630,21 @@ class XDFImporter(BaseImporter):
         total_bytes = 0
 
         for stream in summary.streams:
-            # Check if this stream would be selected
+            # Check if this stream would be selected (use separate ifs to match
+            # _build_select_streams OR logic: include if ANY criterion matches)
             include = False
             if stream_names is None and stream_types is None and stream_ids is None:
                 include = True
-            elif stream_names and stream.name.lower() in [n.lower() for n in stream_names]:
+            if stream_names and stream.name.lower() in [n.lower() for n in stream_names]:
                 include = True
-            elif stream_types and stream.stream_type.upper() in [t.upper() for t in stream_types]:
+            if stream_types and stream.stream_type.upper() in [t.upper() for t in stream_types]:
                 include = True
-            elif stream_ids and stream.stream_id in stream_ids:
+            if stream_ids and stream.stream_id in stream_ids:
                 include = True
 
             if include:
                 dtype_size = dtype_sizes.get(stream.channel_format, 8)
-                # Estimate: samples * channels * dtype_size * 2 (for timestamps)
+                # Estimate: (samples * channels * dtype_size) + (samples * 8 for timestamps)
                 stream_bytes = stream.sample_count * stream.channel_count * dtype_size
                 stream_bytes += stream.sample_count * 8  # timestamps (float64)
                 total_bytes += stream_bytes
