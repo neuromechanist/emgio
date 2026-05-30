@@ -1,0 +1,171 @@
+"""Real-data round-trip harness (issue #48).
+
+Imports every real fixture, exports it to EDF/BDF, reimports, and checks signal
+integrity with the real ``compare_signals`` metrics. This is the grounding
+backbone the mock-based ``to_edf`` tests lacked (a mock exporter never wrote
+real bytes, which is how the 1-second truncation bug shipped). NO MOCKS.
+
+Known limitations are asserted explicitly rather than skipped:
+- mixed per-channel sample rates (XDF, Trigno) must fail loudly on export;
+- MEG ``.fif`` is not importable yet (needs an MNE-based importer, #53);
+- event round-trip through EDF+ annotations is pending #47 (xfail).
+"""
+
+import os
+import pathlib
+import tempfile
+from dataclasses import dataclass
+
+import pytest
+
+from emgio import EMG
+from emgio.analysis.verification import compare_signals
+
+# Round-trips are expensive; compute each fixture's once and share it across the
+# structural and value-integrity tests.
+_RT_DIR = tempfile.mkdtemp(prefix="emgio_roundtrip_")
+_RT_CACHE: dict = {}
+
+_REPO = pathlib.Path(__file__).resolve().parents[2]
+EX = _REPO / "examples"
+BIDS = EX / "bids"
+
+
+@dataclass(frozen=True)
+class Case:
+    name: str
+    path: pathlib.Path
+    importer: str | None
+    has_emg: bool  # whether EMG channels are legitimately present at import
+    # Whether per-channel signal VALUES round-trip cleanly. emg/ieeg currently
+    # do not, due to the exporter per-channel scaling bug (#61); their value
+    # check is xfailed below until that is fixed.
+    value_clean: bool = False
+    tolerance: float = 0.05
+
+
+# Single-rate fixtures. Structural integrity (no sample loss, channel count,
+# no modality creep) holds for all; signal-VALUE integrity is xfailed for the
+# ones hitting the exporter scaling bug (#61).
+ROUNDTRIP_CASES = [
+    Case(
+        "emg",
+        BIDS / "emg/sub-01/emg/sub-01_task-isometric10percentmvc_run-01_emg.edf",
+        None,
+        has_emg=True,
+        value_clean=False,
+    ),
+    Case(
+        "ieeg",
+        BIDS / "ieeg/sub-01/ses-postimp/ieeg/sub-01_ses-postimp_task-stim_run-08_ieeg.edf",
+        None,
+        has_emg=False,
+        value_clean=False,
+    ),
+    Case(
+        "eeg",
+        BIDS / "eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set",
+        "eeglab",
+        has_emg=False,
+        value_clean=True,
+    ),
+    Case("otb", EX / "one_sessantaquattro_truncated.otb+", "otb", has_emg=True, value_clean=True),
+]
+
+
+def _value_param(case):
+    """Parametrize value-integrity, xfailing fixtures blocked by the #61 bug."""
+    if case.value_clean:
+        return case
+    return pytest.param(
+        case,
+        marks=pytest.mark.xfail(reason="exporter per-channel scaling corruption, #61", strict=True),
+    )
+
+
+# Mixed per-channel sample rate -> EDF export must raise (one rate per file).
+MIXED_RATE_CASES = [
+    Case("xdf", EX / "multi_stream_test.xdf", None, has_emg=True),
+    Case("trigno", EX / "truncated_trigno_sample.csv", "trigno", has_emg=True),
+]
+
+
+def _roundtrip(case):
+    """Import -> export (auto) -> reimport once per fixture (cached)."""
+    if case.name not in _RT_CACHE:
+        emg = EMG.from_file(str(case.path), importer=case.importer)
+        out = os.path.join(_RT_DIR, f"{case.name}.edf")
+        emg.to_edf(out, format="auto", bypass_analysis=True)
+        written = out if os.path.exists(out) else os.path.splitext(out)[0] + ".bdf"
+        _RT_CACHE[case.name] = (emg, EMG.from_file(written))
+    return _RT_CACHE[case.name]
+
+
+@pytest.mark.parametrize("case", ROUNDTRIP_CASES, ids=lambda c: c.name)
+def test_roundtrip_preserves_structure(case):
+    """No sample loss, channel count preserved, no modality creep (all fixtures)."""
+    if not case.path.exists():
+        pytest.skip(f"fixture missing: {case.path}")
+    emg, reloaded = _roundtrip(case)
+
+    # No samples lost (modulo one EDF data-record of zero padding).
+    rate = max(int(c["sample_frequency"]) for c in emg.channels.values())
+    assert emg.signals.shape[0] <= reloaded.signals.shape[0] <= emg.signals.shape[0] + rate
+    assert len(reloaded.channels) == len(emg.channels)
+
+    # No modality creep: a fixture with no EMG must not gain EMG channels.
+    if not case.has_emg:
+        reloaded_emg = [c for c, i in reloaded.channels.items() if i["channel_type"] == "EMG"]
+        assert not reloaded_emg, f"{case.name}: EMG channels appeared after round-trip"
+
+
+@pytest.mark.parametrize("case", [_value_param(c) for c in ROUNDTRIP_CASES], ids=lambda c: c.name)
+def test_roundtrip_preserves_signal_values(case):
+    """Every channel's values survive the round-trip within tolerance.
+
+    xfail for emg/ieeg pending the exporter per-channel scaling fix (#61).
+    """
+    if not case.path.exists():
+        pytest.skip(f"fixture missing: {case.path}")
+    emg, reloaded = _roundtrip(case)
+    results = compare_signals(emg, reloaded, tolerance=case.tolerance)
+    compared = {k: v for k, v in results.items() if k != "channel_summary"}
+    assert compared, "no channels were compared"
+    not_identical = [k for k, v in compared.items() if not v["is_identical"]]
+    assert not not_identical, f"{case.name}: channels differ after round-trip: {not_identical}"
+
+
+@pytest.mark.parametrize("case", MIXED_RATE_CASES, ids=lambda c: c.name)
+def test_mixed_rate_export_raises(case, tmp_path):
+    if not case.path.exists():
+        pytest.skip(f"fixture missing: {case.path}")
+    emg = EMG.from_file(str(case.path), importer=case.importer)
+    rates = {int(c["sample_frequency"]) for c in emg.channels.values()}
+    if len(rates) <= 1:
+        pytest.skip(f"{case.name}: fixture is single-rate, guard not exercised")
+    with pytest.raises(ValueError, match="single sampling rate"):
+        emg.to_edf(str(tmp_path / f"{case.name}.edf"), format="edf", bypass_analysis=True)
+
+
+def test_meg_fif_import_unsupported():
+    meg = BIDS / "meg/sub-01/meg/sub-01_task-mouse_meg.fif"
+    if not meg.exists():
+        pytest.skip("MEG fixture missing")
+    # Until an MNE-based MEG importer lands (#53), .fif is unsupported.
+    with pytest.raises(ValueError, match="Unsupported file extension"):
+        EMG.from_file(str(meg))
+
+
+@pytest.mark.xfail(reason="EDF+ annotation round-trip pending #47", strict=True)
+def test_event_roundtrip_through_edf(tmp_path):
+    """Events written to EDF+ should survive reimport (enabled by #47)."""
+    ieeg = BIDS / "ieeg/sub-01/ses-postimp/ieeg/sub-01_ses-postimp_task-stim_run-08_ieeg.edf"
+    if not ieeg.exists():
+        pytest.skip("iEEG fixture missing")
+    emg = EMG.from_file(str(ieeg))
+    n_events = len(emg.events)
+    assert n_events > 0
+    out = tmp_path / "ev.edf"
+    emg.to_edf(str(out), format="edf", bypass_analysis=True)
+    reloaded = EMG.from_file(str(out), bids_channels="off")
+    assert len(reloaded.events) == n_events
