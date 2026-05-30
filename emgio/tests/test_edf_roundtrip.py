@@ -32,4 +32,22 @@ def test_export_preserves_full_recording_length(tmp_path, fmt):
 
     reloaded = EMG.from_file(str(out))
     n_out = len(reloaded.signals[reloaded.signals.columns[0]])
-    assert n_out == n_in, f"{fmt} export truncated {n_in} samples to {n_out}"
+    # The true invariant is "no truncation". EDF stores whole data records, so a
+    # recording that is not an integer number of seconds is zero-padded by at most
+    # one record on the last block; never fewer samples than the input.
+    assert n_in <= n_out <= n_in + samples_per_record, (
+        f"{fmt} export changed length: {n_in} samples -> {n_out}"
+    )
+
+
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(EXAMPLE_DIR, "truncated_trigno_sample.csv")),
+    reason="Trigno example fixture missing",
+)
+def test_export_rejects_mixed_sample_rates(tmp_path):
+    """Mixed per-channel sample rates must fail loudly, not write a corrupt file."""
+    emg = EMG.from_file(os.path.join(EXAMPLE_DIR, "truncated_trigno_sample.csv"), importer="trigno")
+    rates = {int(emg.channels[c]["sample_frequency"]) for c in emg.channels}
+    assert len(rates) > 1, "fixture must have mixed rates to exercise the guard"
+    with pytest.raises(ValueError, match="single sampling rate"):
+        emg.to_edf(str(tmp_path / "mixed.edf"), format="edf", bypass_analysis=True)

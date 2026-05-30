@@ -459,6 +459,19 @@ class EDFExporter:
         }
         channel_info_list = []
 
+        # EDF/BDF export requires a single sampling rate across channels: emgio stores
+        # all channels on one uniform-length grid, and pyedflib's writeSamples produces
+        # an unreadable file when per-channel record counts differ. Fail loudly instead
+        # of writing a corrupt file; mixed-rate sources (e.g. Trigno EMG + ACC) must be
+        # resampled to a common rate before export.
+        distinct_rates = {int(emg.channels[ch]["sample_frequency"]) for ch in emg.channels}
+        if len(distinct_rates) > 1:
+            raise ValueError(
+                "EDF/BDF export requires a single sampling rate across all channels, but "
+                f"multiple were found: {sorted(distinct_rates)} Hz. Resample channels to a "
+                "common rate before exporting."
+            )
+
         if use_bdf:
             filepath = os.path.splitext(filepath)[0] + ".bdf"
             filetype = pyedflib.FILETYPE_BDFPLUS
