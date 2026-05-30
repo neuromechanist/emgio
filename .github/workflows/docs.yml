@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - main
+  # Run on every PR regardless of base so stacked/epic PRs get their own CI.
   pull_request:
-    branches:
-      - main
 
 permissions:
   contents: write

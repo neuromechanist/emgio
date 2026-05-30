@@ -3,8 +3,8 @@ name: Lint
 on:
   push:
     branches: [ main ]
+  # Run on every PR regardless of base so stacked/epic PRs get their own CI.
   pull_request:
-    branches: [ main ]
 
 # Cancel superseded runs on the same ref for fast feedback.
 concurrency:
@@ -33,12 +33,6 @@ jobs:
   ty:
     name: ty (type check, non-blocking)
     runs-on: ubuntu-latest
-    # Type checking is informational for now: ty still reports pre-existing
-    # diagnostics across the codebase, so it does not fail CI yet. NOTE:
-    # continue-on-error makes this job's result invisible to branch protection,
-    # so it cannot be a required check until the diagnostics are driven to zero
-    # and continue-on-error is flipped to false. Tracked in issue #43.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -48,5 +42,11 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
+      # Type checking is informational for now: ty still reports pre-existing
+      # diagnostics. continue-on-error at the STEP level lets the step fail while
+      # the JOB (and its status check) stays green -- job-level continue-on-error
+      # instead surfaces a FAILED check that branch rules block on. Remove this
+      # to make ty a blocking gate once diagnostics reach zero. Tracked in #43.
       - name: ty check
+        continue-on-error: true
         run: uvx ty check emgio
