@@ -1,0 +1,48 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Cancel superseded runs on the same ref for fast feedback.
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    name: ruff (lint + format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Ruff lint
+        run: uvx ruff check --output-format=github .
+
+      - name: Ruff format check
+        run: uvx ruff format --check .
+
+  ty:
+    name: ty (type check, non-blocking)
+    runs-on: ubuntu-latest
+    # Type checking is informational for now: ty still reports pre-existing
+    # diagnostics across the codebase. Do not fail CI on it yet (tracked
+    # separately); flip continue-on-error to false once diagnostics reach zero.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: ty check
+        run: uvx ty check emgio
