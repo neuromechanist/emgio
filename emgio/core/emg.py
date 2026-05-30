@@ -111,6 +111,7 @@ class EMG:
         filepath: str,
         importer: Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf"] | None = None,
         force_csv: bool = False,
+        bids_channels: str = "auto",
         **kwargs,
     ) -> "EMG":
         """
@@ -176,7 +177,19 @@ class EMG:
         importer_class = getattr(importer_module, importers[importer])
 
         # Create importer instance and load data
-        return importer_class().load(filepath, **kwargs)
+        emg = importer_class().load(filepath, **kwargs)
+
+        # In a BIDS layout, the sibling _channels.tsv is the authoritative source
+        # of per-channel type/units; apply it over the importer's header/label
+        # guesses unless explicitly disabled with bids_channels="off".
+        if bids_channels != "off":
+            from ..bids import apply_channels_tsv, find_channels_tsv
+
+            channels_tsv = find_channels_tsv(filepath)
+            if channels_tsv:
+                apply_channels_tsv(emg, channels_tsv)
+
+        return emg
 
     def select_channels(
         self,
