@@ -485,6 +485,9 @@ def test_emg_add_event(empty_emg):
     pd.testing.assert_frame_equal(
         empty_emg.events, pd.DataFrame([{"onset": 1.0, "duration": 0.5, "description": "Event A"}])
     )
+    # onset/duration must be float64 (not object) even from the empty frame
+    assert empty_emg.events["onset"].dtype == np.float64
+    assert empty_emg.events["duration"].dtype == np.float64
 
     # Add second event (should be sorted)
     empty_emg.add_event(onset=0.5, duration=0.1, description="Event B")
@@ -508,6 +511,18 @@ def test_emg_add_event(empty_emg):
         ]
     )
     pd.testing.assert_frame_equal(empty_emg.events, expected_df)
+    # dtype must survive the concat path too
+    assert empty_emg.events["onset"].dtype == np.float64
+    assert empty_emg.events["duration"].dtype == np.float64
+
+
+def test_add_event_integer_inputs_coerced_to_float(empty_emg):
+    """Integer onset/duration must be stored as float64, not int64 or object."""
+    empty_emg.add_event(onset=2, duration=0, description="Integer onset")
+    assert empty_emg.events["onset"].dtype == np.float64
+    assert empty_emg.events["duration"].dtype == np.float64
+    assert empty_emg.events.loc[0, "onset"] == 2.0
+    assert empty_emg.events.loc[0, "duration"] == 0.0
 
 
 def test_to_edf_export(sample_emg, mock_edf_exporter):

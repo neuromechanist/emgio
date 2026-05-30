@@ -490,7 +490,7 @@ class EMG:
         # Avoid concatenating onto the empty, object-dtype events frame, which
         # would coerce the numeric columns to object. Start from the typed
         # new_event when there are no existing events.
-        if self.events.empty:
+        if self.events is None or self.events.empty:
             self.events = new_event
         else:
             self.events = pd.concat([self.events, new_event], ignore_index=True)

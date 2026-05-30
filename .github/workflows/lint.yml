@@ -8,7 +8,7 @@ on:
 
 # Cancel superseded runs on the same ref for fast feedback.
 concurrency:
-  group: lint-${{ github.workflow }}-${{ github.ref }}
+  group: lint-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,8 +33,10 @@ jobs:
     name: ty (type check, non-blocking)
     runs-on: ubuntu-latest
     # Type checking is informational for now: ty still reports pre-existing
-    # diagnostics across the codebase. Do not fail CI on it yet (tracked
-    # separately); flip continue-on-error to false once diagnostics reach zero.
+    # diagnostics across the codebase, so it does not fail CI yet. NOTE:
+    # continue-on-error makes this job's result invisible to branch protection,
+    # so it cannot be a required check until the diagnostics are driven to zero
+    # and continue-on-error is flipped to false. Tracked in issue #43.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4

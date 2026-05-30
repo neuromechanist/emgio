@@ -90,7 +90,12 @@ def compare_signals(
             min_len = min(len(original_channels), len(reloaded_channels))
             original_list = sorted(original_channels)
             reloaded_list = sorted(reloaded_channels)
-            channel_pairs = list(zip(original_list[:min_len], reloaded_list[:min_len], strict=True))
+            # Both lists are explicitly sliced to min_len, so truncation here is
+            # intentional (unmatched channels are tracked below); strict=False
+            # documents that the differing original/reloaded counts are tolerated.
+            channel_pairs = list(
+                zip(original_list[:min_len], reloaded_list[:min_len], strict=False)
+            )
             channel_summary["unmatched_original"] = original_list[min_len:]
             channel_summary["unmatched_reloaded"] = reloaded_list[min_len:]
 
