@@ -24,6 +24,12 @@ class EDFImporter(BaseImporter):
 
         if "EMG" in label or "EMG" in transducer:
             return "EMG"
+        elif "EEG" in label or "EEG" in transducer:
+            return "EEG"
+        elif "ECG" in label or "EKG" in label or "ECG" in transducer:
+            return "ECG"
+        elif "EOG" in label or "EOG" in transducer:
+            return "EOG"
         elif "ACC" in label or "ACCELEROMETER" in transducer:
             return "ACC"
         elif "GYRO" in label or "GYROSCOPE" in transducer:

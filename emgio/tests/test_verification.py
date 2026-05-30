@@ -170,8 +170,8 @@ def test_compare_signals_empty_intersection():
     time = np.linspace(0, 1, 1000)
     signal = np.sin(2 * np.pi * 10 * time)
 
-    emg1.add_channel("CH1", signal, 1000, "mV")
-    emg2.add_channel("CH2", signal, 1000, "mV")
+    emg1.add_channel("CH1", signal, 1000, "mV", "EMG")
+    emg2.add_channel("CH2", signal, 1000, "mV", "EMG")
 
     result = compare_signals(emg1, emg2)
 
@@ -190,8 +190,8 @@ def test_compare_signals_invalid_channel_map():
     time = np.linspace(0, 1, 1000)
     signal = np.sin(2 * np.pi * 10 * time)
 
-    emg1.add_channel("CH1", signal, 1000, "mV")
-    emg2.add_channel("CH2", signal, 1000, "mV")
+    emg1.add_channel("CH1", signal, 1000, "mV", "EMG")
+    emg2.add_channel("CH2", signal, 1000, "mV", "EMG")
 
     # Channel map with non-existent original channel
     channel_map = {"NONEXISTENT": "CH2"}
@@ -207,8 +207,8 @@ def test_compare_signals_with_constant_signal():
 
     # Add constant signals to both
     const_signal = np.ones(1000)
-    emg1.add_channel("CONST", const_signal, 1000, "mV")
-    emg2.add_channel("CONST", const_signal + 1e-6, 1000, "mV")  # Tiny difference
+    emg1.add_channel("CONST", const_signal, 1000, "mV", "EMG")
+    emg2.add_channel("CONST", const_signal + 1e-6, 1000, "mV", "EMG")  # Tiny difference
 
     result = compare_signals(emg1, emg2)
 

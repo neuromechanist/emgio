@@ -153,7 +153,7 @@ def test_add_channel_validation(empty_emg):
 
     # Test with float data
     data_float = np.array([1.1, 2.2, 3.3])
-    empty_emg.add_channel("FLOAT", data_float, 1000, "mV")
+    empty_emg.add_channel("FLOAT", data_float, 1000, "mV", "EMG")
     assert np.array_equal(empty_emg.signals["FLOAT"].values, data_float)
 
     # Test channel info storage
@@ -581,7 +581,7 @@ def test_to_edf_export(sample_emg, mock_edf_exporter):
 
     # Test exporting with no events in the EMG object
     empty_event_emg = EMG()
-    empty_event_emg.add_channel("CH1", np.array([1, 2, 3]), 100, "V")
+    empty_event_emg.add_channel("CH1", np.array([1, 2, 3]), 100, "V", "EMG")
     empty_event_emg.to_edf(filepath, format="edf")
     assert "events_df" in mock_edf_exporter.last_export["kwargs"]
     assert mock_edf_exporter.last_export["kwargs"]["events_df"].empty
@@ -671,7 +671,7 @@ def test_add_channel_with_prefilter(empty_emg):
     """Test adding channel with prefilter specification."""
     data = np.array([1, 2, 3])
     prefilter = "HP 20Hz"
-    empty_emg.add_channel("EMG1", data, 1000, "mV", prefilter=prefilter)
+    empty_emg.add_channel("EMG1", data, 1000, "mV", "EMG", prefilter=prefilter)
 
     assert empty_emg.channels["EMG1"]["prefilter"] == prefilter
 

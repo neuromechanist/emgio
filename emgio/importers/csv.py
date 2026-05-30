@@ -404,7 +404,10 @@ class CSVImporter(BaseImporter):
         elif any(keyword in name_lower for keyword in ["gyro"]):
             return "GYRO"
         elif any(keyword in name_lower for keyword in ["time", "second"]):
-            return "TIME"  # Might be redundant if used as index, but useful for metadata
+            # A time column is normally consumed as the index. If one still
+            # reaches here it is not a signal channel; classify it as MISC
+            # ("TIME" is not a valid BIDS/modality channel type).
+            return "MISC"
         else:
             return "OTHER"
 
