@@ -1,21 +1,24 @@
 # Installation
 
-There are several ways to install EMGIO depending on your needs.
+EMGIO uses [UV](https://docs.astral.sh/uv/) for Python environment and package
+management. There are several ways to install EMGIO depending on your needs.
 
 ## From PyPI (Recommended)
 
 The easiest way to install EMGIO is from PyPI:
 
 ```bash
-pip install emgio
+uv pip install emgio
 ```
+
+If your own project is uv-managed, use `uv add emgio` instead to track it as a dependency.
 
 ## From GitHub Repository
 
 To install the latest development version directly from GitHub:
 
 ```bash
-pip install git+https://github.com/neuromechanist/emgio.git
+uv pip install "git+https://github.com/neuromechanist/emgio.git"
 ```
 
 Or clone and install:
@@ -23,7 +26,7 @@ Or clone and install:
 ```bash
 git clone https://github.com/neuromechanist/emgio.git
 cd emgio
-pip install .
+uv pip install .
 ```
 
 ## Development Installation
@@ -33,7 +36,7 @@ For development purposes, install EMGIO in editable mode with dev dependencies:
 ```bash
 git clone https://github.com/neuromechanist/emgio.git
 cd emgio
-pip install -e ".[dev]"
+uv sync --extra dev
 ```
 
 This allows you to modify the source code and see the changes without reinstalling.
@@ -44,13 +47,13 @@ EMGIO provides optional dependency groups:
 
 ```bash
 # Development tools (pytest, ruff, coverage)
-pip install emgio[dev]
+uv pip install "emgio[dev]"
 
 # Documentation tools (mkdocs, mkdocstrings)
-pip install emgio[docs]
+uv pip install "emgio[docs]"
 
 # All optional dependencies
-pip install emgio[all]
+uv pip install "emgio[all]"
 ```
 
 ## Dependencies
@@ -65,6 +68,7 @@ EMGIO has the following core dependencies:
 | matplotlib    | Visualization          | >=3.4.0         |
 | pyedflib      | EDF/BDF file handling  | >=0.1.30        |
 | wfdb          | WFDB format support    | >=4.0.0         |
+| pyxdf         | XDF/LSL format support | >=1.16.0        |
 
 These dependencies are automatically installed when you install EMGIO.
 
@@ -77,8 +81,8 @@ EMGIO requires Python 3.11 or later. We test on Python 3.11, 3.12, 3.13, and 3.1
 To run the tests:
 
 ```bash
-pip install -e ".[dev]"
-pytest
+uv sync --extra dev
+uv run pytest
 ```
 
 ## Verifying Installation
@@ -90,4 +94,4 @@ import emgio
 print(emgio.__version__)
 ```
 
-You should see the version number (e.g., `0.2.0`) without any errors.
+You should see the version number (e.g., `0.2.2` or later) without any errors.

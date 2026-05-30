@@ -16,15 +16,14 @@ The EMGIO repository includes several example Jupyter notebooks that demonstrate
 
 To run the example notebooks:
 
-1. Install EMGIO and Jupyter:
+1. Install EMGIO in development mode:
    ```bash
-   pip install -e .  # Install EMGIO in development mode
-   pip install jupyter
+   uv sync --extra dev
    ```
 
-2. Start Jupyter:
+2. Start Jupyter (no separate install needed):
    ```bash
-   jupyter notebook
+   uv run --with jupyter jupyter notebook
    ```
 
 3. Navigate to the `examples` directory and open one of the notebooks.
