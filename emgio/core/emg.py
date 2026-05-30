@@ -131,6 +131,10 @@ class EMG:
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
                       importer even if the file appears to match a specialized format.
+            bids_channels: When 'auto' (default), look for a sibling BIDS
+                      _channels.tsv next to the file and apply its per-channel
+                      type/units over the importer's inferred values. Pass 'off'
+                      to disable.
             **kwargs: Additional arguments passed to the importer.
                 For XDF files, useful kwargs include:
                 - stream_names: List of stream names to import

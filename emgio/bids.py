@@ -34,11 +34,18 @@ def find_channels_tsv(data_filepath: str) -> str | None:
     """
     directory, filename = os.path.split(data_filepath)
     stem = os.path.splitext(filename)[0]
-    # Drop the trailing _<suffix> entity (e.g. _ieeg, _eeg, _emg, _meg).
+    candidates = []
+    # BIDS-correct: drop the trailing _<suffix> entity (e.g. _ieeg, _eeg, _meg).
     if "_" in stem:
-        stem = stem.rsplit("_", 1)[0]
-    candidate = os.path.join(directory, f"{stem}_channels.tsv")
-    return candidate if os.path.isfile(candidate) else None
+        candidates.append(f"{stem.rsplit('_', 1)[0]}_channels.tsv")
+    # Fallback: the full-stem form emgio's own EDF exporter currently writes,
+    # so a to_edf -> from_file round-trip also finds the sidecar.
+    candidates.append(f"{stem}_channels.tsv")
+    for name in candidates:
+        path = os.path.join(directory, name)
+        if os.path.isfile(path):
+            return path
+    return None
 
 
 def apply_channels_tsv(emg: EMG, channels_tsv_path: str) -> int:
@@ -62,7 +69,7 @@ def apply_channels_tsv(emg: EMG, channels_tsv_path: str) -> int:
 
     updated = 0
     for _, row in df.iterrows():
-        name = row["name"]
+        name = str(row["name"]).strip()
         if name not in emg.channels:
             continue
         kwargs: dict[str, str] = {}
