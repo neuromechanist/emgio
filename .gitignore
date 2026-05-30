@@ -51,8 +51,3 @@ env/
 
 # MkDocs
 site/
-
-# Context and planning files
-.context/
-CLAUDE.md
-.rules/

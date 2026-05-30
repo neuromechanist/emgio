@@ -10,15 +10,12 @@ git clone https://github.com/neuromechanist/emgio.git
 cd emgio
 ```
 
-2. Install for development:
+2. Install for development (editable install with dev dependencies):
 ```bash
-pip install -e .
+uv sync --extra dev
 ```
 
-3. Install test dependencies:
-```bash
-pip install -r test-requirements.txt
-```
+EMGIO uses [UV](https://docs.astral.sh/uv/) for environment and package management.
 
 ## Code Structure
 
@@ -52,13 +49,13 @@ emgio/
 EMGIO uses pytest for testing. To run the full test suite:
 
 ```bash
-pytest
+uv run pytest
 ```
 
 To run tests with coverage:
 
 ```bash
-pytest --cov=emgio
+uv run pytest --cov=emgio
 ```
 
 ### Writing Tests
@@ -87,12 +84,12 @@ Documentation is built using MkDocs with the Material theme:
 
 1. Install documentation dependencies:
 ```bash
-pip install -r docs/requirements.txt
+uv sync --extra docs
 ```
 
 2. Build and serve the documentation locally:
 ```bash
-mkdocs serve
+uv run mkdocs serve
 ```
 
 3. Open your browser at [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
@@ -109,15 +106,15 @@ mkdocs serve
 1. Fork the repository on GitHub
 2. Create a feature branch (`git checkout -b feature/my-new-feature`)
 3. Make your changes and add tests
-4. Ensure all tests pass (`pytest`)
-5. Make sure the documentation builds without errors (`mkdocs build`)
+4. Ensure all tests pass (`uv run pytest`)
+5. Make sure the documentation builds without errors (`uv run mkdocs build`)
 6. Commit your changes (`git commit -am 'Add new feature'`)
 7. Push to your branch (`git push origin feature/my-new-feature`)
 8. Create a new Pull Request on GitHub
 
 ## Coding Style
 
-EMGIO follows PEP 8 guidelines. We recommend using tools like flake8 or pylint to check your code style before submitting a pull request.
+EMGIO follows PEP 8 guidelines. Use ruff to check and format your code before submitting a pull request (`uv run ruff check --fix . && uv run ruff format .`).
 
 Some specific style guidelines:
 - Use 4 spaces for indentation (not tabs)
@@ -133,7 +130,7 @@ To add support for a new EMG format:
 2. Implement a class that inherits from `BaseImporter`
 3. Implement the required methods
 4. Add the new importer to `__init__.py`
-5. Add tests in `tests/test_importers.py`
+5. Add tests in `emgio/tests/` (e.g. `emgio/tests/test_importers.py`)
 6. Document the new format in the user guide
 
 ## License
