@@ -11,8 +11,10 @@ Known limitations are asserted explicitly rather than skipped:
 - event round-trip through EDF+ annotations is pending #47 (xfail).
 """
 
+import atexit
 import os
 import pathlib
+import shutil
 import tempfile
 from dataclasses import dataclass
 
@@ -25,6 +27,7 @@ from emgio.analysis.verification import compare_signals
 # structural and value-integrity tests.
 _RT_DIR = tempfile.mkdtemp(prefix="emgio_roundtrip_")
 _RT_CACHE: dict = {}
+atexit.register(shutil.rmtree, _RT_DIR, ignore_errors=True)
 
 _REPO = pathlib.Path(__file__).resolve().parents[2]
 EX = _REPO / "examples"
@@ -95,7 +98,9 @@ def _roundtrip(case):
     if case.name not in _RT_CACHE:
         emg = EMG.from_file(str(case.path), importer=case.importer)
         out = os.path.join(_RT_DIR, f"{case.name}.edf")
-        emg.to_edf(out, format="auto", bypass_analysis=True)
+        # format="auto" exercises the real EDF/BDF selection (and ignores
+        # bypass_analysis by design), which is what a round-trip harness wants.
+        emg.to_edf(out, format="auto")
         written = out if os.path.exists(out) else os.path.splitext(out)[0] + ".bdf"
         _RT_CACHE[case.name] = (emg, EMG.from_file(written))
     return _RT_CACHE[case.name]
@@ -156,16 +161,22 @@ def test_meg_fif_import_unsupported():
         EMG.from_file(str(meg))
 
 
-@pytest.mark.xfail(reason="EDF+ annotation round-trip pending #47", strict=True)
+@pytest.mark.xfail(reason="EDF+ annotation read-back pending #47", strict=True)
 def test_event_roundtrip_through_edf(tmp_path):
-    """Events written to EDF+ should survive reimport (enabled by #47)."""
-    ieeg = BIDS / "ieeg/sub-01/ses-postimp/ieeg/sub-01_ses-postimp_task-stim_run-08_ieeg.edf"
-    if not ieeg.exists():
-        pytest.skip("iEEG fixture missing")
-    emg = EMG.from_file(str(ieeg))
-    n_events = len(emg.events)
-    assert n_events > 0
+    """Events exported as EDF+ annotations should survive reimport.
+
+    Events are added explicitly here (rather than relying on import, which does
+    not yet read EDF+ annotations) so this exercises export-write -> reimport.
+    It fails today because the EDF importer drops annotations on read; #47 adds
+    read-back and flips this to pass.
+    """
+    fixture = BIDS / "emg/sub-01/emg/sub-01_task-isometric10percentmvc_run-01_emg.edf"
+    if not fixture.exists():
+        pytest.skip("EMG fixture missing")
+    emg = EMG.from_file(str(fixture))
+    emg.add_event(onset=0.5, duration=0.0, description="m1")
+    emg.add_event(onset=1.0, duration=0.2, description="m2")
     out = tmp_path / "ev.edf"
     emg.to_edf(str(out), format="edf", bypass_analysis=True)
     reloaded = EMG.from_file(str(out), bids_channels="off")
-    assert len(reloaded.events) == n_events
+    assert len(reloaded.events) == 2
