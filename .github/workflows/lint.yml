@@ -22,6 +22,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
 
       - name: Ruff lint
         run: uvx ruff check --output-format=github .
@@ -45,6 +46,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
 
       - name: ty check
         run: uvx ty check emgio
