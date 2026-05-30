@@ -27,8 +27,8 @@ def sample_emg():
     acc_data = np.cos(2 * np.pi * 5 * time) * 1.5  # Use a non-unity amplitude
 
     # Add channels
-    emg.add_channel("EMG1", emg_data, 1000, "mV", "n/a", "EMG")
-    emg.add_channel("ACC1", acc_data, 1000, "g", "n/a", "ACC")
+    emg.add_channel("EMG1", emg_data, 1000, "mV", "EMG")
+    emg.add_channel("ACC1", acc_data, 1000, "g", "ACC")
 
     return emg
 
@@ -663,12 +663,12 @@ def test_high_dynamic_range():
     hdr_signal, actual_dr = generate_high_dynamic_range_signal(dynamic_range_db=85)
     assert actual_dr > 75, f"Generated signal has {actual_dr:.1f} dB DR, expected >75 dB"
     print(f"Successfully generated test signal with {actual_dr:.1f} dB dynamic range")
-    emg.add_channel("HDR_EMG", hdr_signal, 1000, "uV", "n/a", "EMG")
+    emg.add_channel("HDR_EMG", hdr_signal, 1000, "uV", "EMG")
 
     # Add a regular channel for comparison - this has high dynamic range
     time = np.linspace(0, 1, 1000)
     regular_signal = np.sin(2 * np.pi * 10 * time) * 1000
-    emg.add_channel("REG_EMG", regular_signal, 1000, "uV", "n/a", "EMG")
+    emg.add_channel("REG_EMG", regular_signal, 1000, "uV", "EMG")
 
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         edf_path = f.name

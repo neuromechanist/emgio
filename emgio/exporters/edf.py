@@ -8,6 +8,7 @@ import pyedflib
 
 from ..analysis.signal import analyze_signal, determine_format_suitability
 from ..core.emg import EMG
+from ..core.modality import to_bids_channels_tsv_type
 
 
 def _format_physical_value(value: float, max_chars: int) -> tuple:
@@ -524,31 +525,11 @@ class EDFExporter:
                 # Add to BIDS-compliant channels.tsv data
                 channels_tsv_data["name"].append(ch_name)
 
-                # Map channel type to BIDS-compliant uppercase values
-                ch_type = ch_info.get("channel_type", "Unknown").upper()
-                # Map common channel types to BIDS standard values
-                if ch_type in [
-                    "EMG",
-                    "EEG",
-                    "MEG",
-                    "ECG",
-                    "EOG",
-                    "VEOG",
-                    "HEOG",
-                    "REF",
-                    "TRIG",
-                    "MISC",
-                ]:
-                    bids_type = ch_type
-                elif "EMG" in ch_type:
-                    bids_type = "EMG"
-                elif "ACC" in ch_type or "ACCEL" in ch_type:
-                    bids_type = "MISC"
-                elif "GYRO" in ch_type:
-                    bids_type = "MISC"
-                else:
-                    bids_type = "MISC"
-
+                # Channels carry a validated channel_type from the modality
+                # vocabulary, so use it directly for channels.tsv. This preserves
+                # genuine BIDS types (EEG/SEEG/ECOG/...) instead of flattening
+                # everything but a short whitelist to MISC.
+                bids_type = to_bids_channels_tsv_type(ch_info.get("channel_type", "OTHER"))
                 channels_tsv_data["type"].append(bids_type)
                 channels_tsv_data["units"].append(ch_info["physical_dimension"])
                 channels_tsv_data["sampling_frequency"].append(ch_info["sample_frequency"])

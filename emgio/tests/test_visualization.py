@@ -167,7 +167,7 @@ def test_plot_signals_options(sample_emg):
 def test_plot_signals_with_constant(sample_emg):
     """Test plot_signals with constant signals (zero range)."""
     # Add a constant signal
-    sample_emg.add_channel("CONST", np.ones(1000), 1000, "mV")
+    sample_emg.add_channel("CONST", np.ones(1000), 1000, "mV", "EMG")
 
     mock_plt = MockPlt()
     # This should not raise any errors despite the constant signal
@@ -220,8 +220,8 @@ def test_plot_comparison_with_channel_map(emg_pair):
     signal1 = np.sin(2 * np.pi * 10 * time)
     signal2 = np.cos(2 * np.pi * 5 * time)
 
-    emg_renamed.add_channel("Channel1", signal1, 1000, "mV")
-    emg_renamed.add_channel("Channel2", signal2, 1000, "mV")
+    emg_renamed.add_channel("Channel1", signal1, 1000, "mV", "EMG")
+    emg_renamed.add_channel("Channel2", signal2, 1000, "mV", "EMG")
 
     # Define channel mapping
     channel_map = {"EMG1": "Channel1", "EMG2": "Channel2"}
@@ -243,8 +243,8 @@ def test_plot_comparison_no_common_channels():
     signal1 = np.sin(2 * np.pi * 10 * time)
     signal2 = np.cos(2 * np.pi * 5 * time)
 
-    emg1.add_channel("CH1", signal1, 1000, "mV")
-    emg2.add_channel("CH2", signal2, 1000, "mV")
+    emg1.add_channel("CH1", signal1, 1000, "mV", "EMG")
+    emg2.add_channel("CH2", signal2, 1000, "mV", "EMG")
 
     # This should not raise errors, but will print a warning
     with patch("builtins.print") as mock_print:
@@ -266,8 +266,8 @@ def test_plot_comparison_different_lengths():
     signal1 = np.sin(2 * np.pi * 10 * time1)
     signal2 = np.sin(2 * np.pi * 10 * time2)
 
-    emg1.add_channel("CH1", signal1, 1000, "mV")
-    emg2.add_channel("CH1", signal2, 1000, "mV")
+    emg1.add_channel("CH1", signal1, 1000, "mV", "EMG")
+    emg2.add_channel("CH1", signal2, 1000, "mV", "EMG")
 
     mock_plt = MockPlt()
     # This should handle different length signals
@@ -284,11 +284,11 @@ def test_plot_comparison_order_based():
     signal1 = np.sin(2 * np.pi * 10 * time)
     signal2 = np.cos(2 * np.pi * 5 * time)
 
-    emg1.add_channel("CH1", signal1, 1000, "mV")
-    emg1.add_channel("CH2", signal2, 1000, "mV")
+    emg1.add_channel("CH1", signal1, 1000, "mV", "EMG")
+    emg1.add_channel("CH2", signal2, 1000, "mV", "EMG")
 
-    emg2.add_channel("Channel1", signal1, 1000, "mV")
-    emg2.add_channel("Channel2", signal2, 1000, "mV")
+    emg2.add_channel("Channel1", signal1, 1000, "mV", "EMG")
+    emg2.add_channel("Channel2", signal2, 1000, "mV", "EMG")
 
     # No common names, should fall back to order-based
     with patch("builtins.print") as mock_print:

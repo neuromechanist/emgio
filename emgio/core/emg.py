@@ -8,6 +8,11 @@ import pandas as pd
 from ..analysis.verification import compare_signals, report_verification_results
 from ..visualization.static import plot_comparison
 from ..visualization.static import plot_signals as static_plot_signals
+from .modality import (
+    infer_modality_from_channel_type,
+    validate_channel_type,
+    validate_modality,
+)
 
 # --- Configuration ---
 enable_logging = False  # Set to False to disable most logging
@@ -178,6 +183,8 @@ class EMG:
         channels: str | list[str] | None = None,
         channel_type: str | None = None,
         inplace: bool = False,
+        *,
+        modality: str | None = None,
     ) -> "EMG":
         """
         Select specific channels from the data and return a new EMG object.
@@ -205,13 +212,15 @@ class EMG:
         if self.signals is None:
             raise ValueError("No signals loaded")
 
-        # If channel_type specified but no channels, select all of that type
+        # If type/modality specified but no channels, select all matching channels
         if channels is None and channel_type is not None:
-            channels = [
-                ch for ch, info in self.channels.items() if info["channel_type"] == channel_type
-            ]
+            channels = self.get_channels_by_type(channel_type)
             if not channels:
                 raise ValueError(f"No channels found of type: {channel_type}")
+        elif channels is None and modality is not None:
+            channels = self.get_channels_by_modality(modality)
+            if not channels:
+                raise ValueError(f"No channels found of modality: {modality}")
         elif isinstance(channels, str):
             channels = [channels]
 
@@ -225,6 +234,15 @@ class EMG:
             channels = [ch for ch in channels if self.channels[ch]["channel_type"] == channel_type]
             if not channels:
                 raise ValueError(f"None of the selected channels are of type: {channel_type}")
+
+        # Filter by modality if specified
+        if modality is not None:
+            canonical_modality = validate_modality(modality)
+            channels = [
+                ch for ch in channels if self.channels[ch].get("modality") == canonical_modality
+            ]
+            if not channels:
+                raise ValueError(f"None of the selected channels are of modality: {modality}")
 
         # Create new EMG object
         new_emg = EMG()
@@ -264,6 +282,32 @@ class EMG:
             List of channel names of the specified type
         """
         return [ch for ch, info in self.channels.items() if info["channel_type"] == channel_type]
+
+    def get_modalities(self) -> list[str]:
+        """
+        Get the list of unique modalities present in the data.
+
+        Returns:
+            List of modalities (e.g., ['EEG', 'EMG', 'MISC']).
+        """
+        return list(
+            {info.get("modality") for info in self.channels.values() if info.get("modality")}
+        )
+
+    def get_channels_by_modality(self, modality: str) -> list[str]:
+        """
+        Get the channels belonging to a given modality.
+
+        Args:
+            modality: Modality to filter by ('EEG', 'EMG', 'IEEG', 'MEG', 'BEH', 'MISC').
+
+        Returns:
+            List of channel names of the specified modality.
+        """
+        canonical_modality = validate_modality(modality)
+        return [
+            ch for ch, info in self.channels.items() if info.get("modality") == canonical_modality
+        ]
 
     def to_edf(
         self,
@@ -448,8 +492,10 @@ class EMG:
         data: np.ndarray,
         sample_frequency: float,
         physical_dimension: str,
+        channel_type: str,
+        *,
+        modality: str | None = None,
         prefilter: str = "n/a",
-        channel_type: str = "EMG",
     ) -> None:
         """
         Add a new channel to the EMG data.
@@ -459,9 +505,20 @@ class EMG:
             data: Channel data
             sample_frequency: Sampling frequency in Hz (as per EDF specification)
             physical_dimension: Physical dimension/unit of measurement (as per EDF specification)
-            prefilter: Pre-filtering applied to the channel
-            channel_type: Channel type ('EMG', 'ACC', 'GYRO', etc.)
+            channel_type: BIDS channel type ('EEG', 'EMG', 'ECG', 'ACC', 'SEEG', ...).
+                Required; validated against the modality vocabulary. There is no
+                default (a missing type must be explicit, e.g. 'OTHER'/'MISC').
+            modality: Coarse modality ('EEG', 'EMG', 'IEEG', 'MEG', 'BEH', 'MISC').
+                If None, it is inferred from ``channel_type``.
+            prefilter: Pre-filtering applied to the channel (keyword-only).
         """
+        canonical_type = validate_channel_type(channel_type)
+        canonical_modality = (
+            infer_modality_from_channel_type(canonical_type)
+            if modality is None
+            else validate_modality(modality)
+        )
+
         if self.signals is None:
             # Create DataFrame with time index
             time = np.arange(len(data)) / sample_frequency
@@ -472,8 +529,47 @@ class EMG:
             "sample_frequency": sample_frequency,
             "physical_dimension": physical_dimension,
             "prefilter": prefilter,
-            "channel_type": channel_type,
+            "channel_type": canonical_type,
+            "modality": canonical_modality,
         }
+
+    def set_channel(
+        self,
+        label: str,
+        *,
+        channel_type: str | None = None,
+        modality: str | None = None,
+        physical_dimension: str | None = None,
+        prefilter: str | None = None,
+    ) -> None:
+        """
+        Update metadata of an existing channel (the supported relabel path).
+
+        Args:
+            label: Existing channel label.
+            channel_type: New BIDS channel type (validated). When given without an
+                explicit ``modality``, the modality is re-derived from it.
+            modality: New coarse modality (validated).
+            physical_dimension: New physical unit.
+            prefilter: New prefilter string.
+
+        Raises:
+            KeyError: If ``label`` is not an existing channel.
+            ValueError: If ``channel_type``/``modality`` are not in the vocabulary.
+        """
+        if label not in self.channels:
+            raise KeyError(f"Channel not found: {label}")
+        info = self.channels[label]
+        if channel_type is not None:
+            info["channel_type"] = validate_channel_type(channel_type)
+            if modality is None:
+                info["modality"] = infer_modality_from_channel_type(info["channel_type"])
+        if modality is not None:
+            info["modality"] = validate_modality(modality)
+        if physical_dimension is not None:
+            info["physical_dimension"] = physical_dimension
+        if prefilter is not None:
+            info["prefilter"] = prefilter
 
     def add_event(self, onset: float, duration: float, description: str) -> None:
         """

@@ -120,6 +120,49 @@ def validate_modality(modality: str) -> str:
     return m
 
 
+# Channel types valid for the BIDS ``channels.tsv`` ``type`` column
+# (electrophysiology + physiology). Device-domain types (ACC/GYRO/...) and
+# ``OTHER`` are reported as ``MISC`` there since they are not BIDS channel types.
+_BIDS_CHANNELS_TSV_TYPES: frozenset[str] = frozenset(
+    {
+        "EEG",
+        "SEEG",
+        "ECOG",
+        "DBS",
+        "MEGMAG",
+        "MEGGRADAXIAL",
+        "MEGGRADPLANAR",
+        "MEGREFMAG",
+        "MEGREFGRADAXIAL",
+        "MEGREFGRADPLANAR",
+        "EMG",
+        "ECG",
+        "EKG",
+        "EOG",
+        "VEOG",
+        "HEOG",
+        "REF",
+        "TRIG",
+        "MISC",
+        "RESP",
+        "GSR",
+        "TEMP",
+        "PPG",
+        "SYSCLOCK",
+    }
+)
+
+
+def to_bids_channels_tsv_type(channel_type: str) -> str:
+    """Map an emgio channel type to a BIDS ``channels.tsv`` ``type`` value.
+
+    Genuine BIDS electrophysiology/physiology types pass through; device-domain
+    types (ACC, GYRO, QUAT, CTRL, MAGN) and ``OTHER`` map to ``MISC``.
+    """
+    ct = validate_channel_type(channel_type)
+    return ct if ct in _BIDS_CHANNELS_TSV_TYPES else "MISC"
+
+
 def infer_modality_from_channel_type(channel_type: str) -> str:
     """Derive the coarse modality for a channel type.
 

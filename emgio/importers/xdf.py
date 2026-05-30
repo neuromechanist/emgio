@@ -440,7 +440,7 @@ class XDFImporter(BaseImporter):
         stream_types: list[str] | None = None,
         stream_ids: list[int] | None = None,
         sync_streams: bool = True,
-        default_channel_type: str = "EMG",
+        default_channel_type: str = "OTHER",
         include_timestamps: bool = False,
         reference_stream: str | None = None,
         max_memory_gb: float | None = None,
@@ -469,7 +469,8 @@ class XDFImporter(BaseImporter):
             sync_streams: If True, synchronize streams to common timestamps.
                          If False, streams are loaded without synchronization.
             default_channel_type: Default channel type for channels without
-                                 explicit type info (default: "EMG")
+                                 explicit type info (default: "OTHER"; no silent
+                                 EMG assumption)
             include_timestamps: If True, add a timestamp channel for each stream
                                named "{stream_name}_LSL_timestamps" containing
                                the original LSL timestamps. Useful for preserving
