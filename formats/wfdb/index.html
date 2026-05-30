@@ -1951,7 +1951,7 @@
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Or load using just the base name (looks for files in the current directory)</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># emg = EMG.from_file(&#39;record&#39;)</span>
 </code></pre></div>
-<p>EMGIO uses the <code>wfdb-python</code> library internally. Ensure it's installed (<code>pip install wfdb</code>).</p>
+<p>EMGIO uses the <code>wfdb</code> library (PyPI package <code>wfdb</code>) internally. It ships as a core dependency, so no separate installation is required.</p>
 <h2 id="annotation-handling">Annotation Handling<a class="headerlink" href="#annotation-handling" title="Permanent link">&para;</a></h2>
 <p>If an annotation file (e.g., <code>record.atr</code>) exists in the same directory and shares the same base name as the header file, the <code>WFDBImporter</code> will <strong>automatically load</strong> these annotations.</p>
 <p>Loaded annotations are stored in the <code>emg.events</code> pandas DataFrame with the following columns:</p>
