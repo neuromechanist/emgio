@@ -1,5 +1,3 @@
-from typing import List, Tuple
-
 import pandas as pd
 
 from ..core.emg import EMG
@@ -9,7 +7,7 @@ from .base import BaseImporter
 class TrignoImporter(BaseImporter):
     """Importer for Delsys Trigno EMG system data."""
 
-    def _analyze_csv_structure(self, csv_path: str) -> Tuple[List[str], int, str]:
+    def _analyze_csv_structure(self, csv_path: str) -> tuple[list[str], int, str]:
         """
         Analyze the CSV file structure to identify metadata and data sections.
 
@@ -41,7 +39,7 @@ class TrignoImporter(BaseImporter):
 
         return metadata_lines, data_start_line, header_line
 
-    def _parse_metadata(self, metadata_lines: List[str]) -> dict:
+    def _parse_metadata(self, metadata_lines: list[str]) -> dict:
         """
         Parse metadata lines to extract channel information.
 

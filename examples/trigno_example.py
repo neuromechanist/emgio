@@ -8,14 +8,13 @@ This example shows how to:
 """
 
 import os
+
 from emgio import EMG
 
 
 def main():
     # Sample data path - replace with your actual data path
-    data_path = (
-        'examples/truncated_trigno_sample.csv'  # Update this path to your Trigno CSV file
-    )
+    data_path = "examples/truncated_trigno_sample.csv"  # Update this path to your Trigno CSV file
 
     if not os.path.exists(data_path):
         print(f"Sample file not found: {data_path}")
@@ -24,7 +23,7 @@ def main():
 
     # Load the data using Trigno importer
     print("Loading EMG data...")
-    emg = EMG.from_file(data_path, importer='trigno')
+    emg = EMG.from_file(data_path, importer="trigno")
 
     # Print available channels
     print("\nAvailable channels:")
@@ -34,7 +33,7 @@ def main():
         print(f"  Dimension: {ch_info['physical_dimension']}")
 
     # Select EMG channels only and create a new EMG object
-    emg_channels = [ch for ch, info in emg.channels.items() if info['channel_type'] == 'EMG']
+    emg_channels = [ch for ch, info in emg.channels.items() if info["channel_type"] == "EMG"]
     emg_only = emg.select_channels(emg_channels)  # Creates a new EMG object with only EMG channels
     # Original emg object remains unchanged with all channels
 
@@ -42,13 +41,10 @@ def main():
     print("\nPlotting EMG signals from EMG-only channels...")
 
     # Default plot with uniform scaling
-    emg_only.plot_signals(
-        time_range=(0, 5),
-        title="EMG Signals - Uniform Scale"
-    )
+    emg_only.plot_signals(time_range=(0, 5), title="EMG Signals - Uniform Scale")
 
     # Export to EDF/BDF (format will be automatically selected)
-    output_path = 'examples/trigno_emg'  # Extension will be added by the exporter (.edf or .bdf)
+    output_path = "examples/trigno_emg"  # Extension will be added by the exporter (.edf or .bdf)
     print("\nExporting EMG data...")
     print("Note: The exporter will automatically:")
     print("- Convert voltage units to mV if needed")
@@ -62,7 +58,7 @@ def main():
     # fft_noise_range: Optional tuple (min_freq, max_freq) for FFT method
     # Since the non-emg channels have different sampling frequency, the output will become bdf to handle
     # NaNs for the missing values in the non-emg channels. This is the default behavior for mixed sampling frequencies.
-    emg_only.to_edf(output_path, method='both', svd_rank=None, fft_noise_range=None)
+    emg_only.to_edf(output_path, method="both", svd_rank=None, fft_noise_range=None)
 
     # Alternative examples:
     # Using only FFT method:

@@ -1,5 +1,3 @@
-from typing import Dict, Optional
-
 import numpy as np
 import pandas as pd
 
@@ -15,7 +13,7 @@ class CSVImporter(BaseImporter):
     headers, time columns, and allow for specific column selection.
     """
 
-    def _detect_specialized_format(self, filepath: str) -> Optional[str]:
+    def _detect_specialized_format(self, filepath: str) -> str | None:
         """
         Detect if the file matches a known specialized format.
 
@@ -159,7 +157,7 @@ class CSVImporter(BaseImporter):
                     if all(col.startswith("Channel_") for col in col_names):
                         # Rename columns to be sequential
                         new_names = [f"Channel_{i}" for i in range(len(col_names))]
-                        rename_map = dict(zip(col_names, new_names))
+                        rename_map = dict(zip(col_names, new_names, strict=True))
                         df = df.rename(columns=rename_map)
             else:
                 # Filter by column names
@@ -261,7 +259,7 @@ class CSVImporter(BaseImporter):
 
         return emg
 
-    def _analyze_csv_structure(self, filepath: str) -> Dict:
+    def _analyze_csv_structure(self, filepath: str) -> dict:
         """
         Analyze the CSV file structure to detect delimiter, headers, and rows to skip.
 
@@ -356,7 +354,7 @@ class CSVImporter(BaseImporter):
         except ValueError:
             return False
 
-    def _detect_time_column(self, df: pd.DataFrame) -> Optional[str]:
+    def _detect_time_column(self, df: pd.DataFrame) -> str | None:
         """
         Try to detect which column represents time.
 
