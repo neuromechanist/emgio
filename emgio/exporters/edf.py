@@ -545,18 +545,18 @@ class EDFExporter:
             # Set all headers before writing
             writer.setSignalHeaders(channel_info_list)
 
-            # Pass 2: Write signals one channel at a time using writePhysicalSamples
-            # This avoids holding all signal copies in memory simultaneously.
-            # IMPORTANT: Channels must be written in the exact same order as setSignalHeaders.
-            # We iterate over emg.channels which maintains insertion order (Python 3.7+).
-            # Both Pass 1 and Pass 2 iterate over emg.channels to ensure consistent ordering.
-            for ch_name in emg.channels:
-                signal = emg.signals[ch_name].values
-                # Handle NaNs and ensure float64 dtype (required by pyedflib)
-                # Note: astype() with copy=False avoids extra copy when already float64
-                physical_signal = np.nan_to_num(signal, nan=0.0).astype(np.float64, copy=False)
-                writer.writePhysicalSamples(physical_signal)
-                # physical_signal is garbage collected after each iteration
+            # Pass 2: Write every data record for all signals at once.
+            # pyedflib's writePhysicalSamples() writes exactly ONE data record
+            # (sample_frequency samples) per call, so calling it once per channel with
+            # the full array silently truncated every export to a single record
+            # (one second). writeSamples() emits all records for every signal.
+            # IMPORTANT: order must match setSignalHeaders; emg.channels preserves
+            # insertion order (Python 3.7+) and both passes iterate it.
+            signals_to_write = [
+                np.nan_to_num(emg.signals[ch_name].values, nan=0.0).astype(np.float64, copy=False)
+                for ch_name in emg.channels
+            ]
+            writer.writeSamples(signals_to_write)
 
             # Write annotations if provided
             if events_df is not None and not events_df.empty:
