@@ -1,0 +1,42 @@
+"""Regression test: the real EEGLAB BIDS EEG fixture imports cleanly.
+
+Guards the EEGLAB importer fixes:
+- chanlocs X/Y/Z were read with ``float(field_value[0])`` on ``(1, 1)``-shaped
+  scipy arrays, which crashed import of any real ``.set`` with electrode coords;
+- the time index was built from EEGLAB's millisecond ``times`` field divided by
+  the sampling rate, which mis-scaled it.
+
+Uses the real CC0 fixture under ``examples/bids/eeg`` (NO MOCKS).
+"""
+
+import os
+
+import pytest
+
+from emgio import EMG
+
+EEG_SET = "examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set"
+
+
+@pytest.mark.skipif(not os.path.exists(EEG_SET), reason="EEG BIDS fixture missing")
+def test_eeglab_bids_eeg_fixture_imports():
+    emg = EMG.from_file(EEG_SET, importer="eeglab")
+
+    # All 64 channels imported with their real 10-10 montage labels.
+    assert len(emg.channels) == 64
+    assert "FP1" in emg.signals.columns
+
+    col = emg.signals.columns[0]
+    assert emg.channels[col]["sample_frequency"] == 250
+
+    # 60 s at 250 Hz.
+    n = len(emg.signals[col])
+    assert n == 15000
+
+    # Time index is seconds derived from the sample count, not the old
+    # milliseconds/srate mis-scaling (which gave ~240 s for a 60 s recording).
+    assert emg.signals.index[-1] == pytest.approx((n - 1) / 250, rel=1e-6)
+
+    # Events were parsed from the .set event struct.
+    events = emg.get_metadata("events")
+    assert events is not None and len(events) == 3
