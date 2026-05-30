@@ -11,11 +11,12 @@ import numpy as np
 import pytest
 
 from emgio import EMG
+from emgio.core.modality import VALID_CHANNEL_TYPES
+from emgio.importers.csv import CSVImporter
 
-EEG_SET = (
-    pathlib.Path(__file__).resolve().parents[2]
-    / "examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set"
-)
+_REPO = pathlib.Path(__file__).resolve().parents[2]
+EEG_SET = _REPO / "examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set"
+XDF_FILE = _REPO / "examples/multi_stream_test.xdf"
 
 
 def test_add_channel_requires_channel_type():
@@ -49,6 +50,23 @@ def test_set_channel_and_modality_selectors():
     emg.set_channel("b", channel_type="ECG")
     assert emg.channels["b"]["channel_type"] == "ECG"
     assert emg.channels["b"]["modality"] == "MISC"  # re-derived from new type
+
+
+def test_csv_time_column_is_not_an_invalid_type():
+    """A time-named column must classify as a valid type (not the bogus 'TIME')."""
+    ct = CSVImporter()._infer_channel_type("timestamp")
+    assert ct in VALID_CHANNEL_TYPES
+
+
+@pytest.mark.skipif(not XDF_FILE.exists(), reason="XDF fixture missing")
+def test_xdf_channels_carry_valid_type_and_modality():
+    emg = EMG.from_file(str(XDF_FILE))
+    assert len(emg.channels) > 0
+    for info in emg.channels.values():
+        # No raw/unvalidated LSL type strings leak through, and every channel
+        # carries a modality (so the modality selectors work for XDF data).
+        assert info["channel_type"] in VALID_CHANNEL_TYPES
+        assert info.get("modality") is not None
 
 
 @pytest.mark.skipif(not EEG_SET.exists(), reason="EEG BIDS fixture missing")

@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.emg import EMG
+from ..core.modality import infer_modality_from_channel_type, validate_channel_type
 from .base import BaseImporter
 
 logger = logging.getLogger(__name__)
@@ -846,11 +847,20 @@ class XDFImporter(BaseImporter):
 
             df[label] = ch_data
 
+            # Validate the stream-derived type against the modality vocabulary;
+            # arbitrary LSL type strings (e.g. "Markers", "Kinematics") map to
+            # OTHER rather than being stored unvalidated (which would later fail
+            # at export) or silently assumed to be EMG.
+            try:
+                ch_type = validate_channel_type(ch_info["type"])
+            except ValueError:
+                ch_type = "OTHER"
             emg.channels[label] = {
                 "sample_frequency": ch_info["srate"] if ch_info["srate"] else base_srate,
                 "physical_dimension": ch_info["unit"],
                 "prefilter": "n/a",
-                "channel_type": ch_info["type"],
+                "channel_type": ch_type,
+                "modality": infer_modality_from_channel_type(ch_type),
             }
 
         # Add timestamp channels if requested
@@ -876,6 +886,7 @@ class XDFImporter(BaseImporter):
                     "physical_dimension": "s",  # seconds
                     "prefilter": "n/a",
                     "channel_type": "MISC",  # Miscellaneous channel type
+                    "modality": "MISC",
                 }
 
         emg.signals = df

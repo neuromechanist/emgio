@@ -212,6 +212,9 @@ class EMG:
         if self.signals is None:
             raise ValueError("No signals loaded")
 
+        if channels is None and channel_type is None and modality is None:
+            raise ValueError("Specify at least one of: channels, channel_type, or modality.")
+
         # If type/modality specified but no channels, select all matching channels
         if channels is None and channel_type is not None:
             channels = self.get_channels_by_type(channel_type)
@@ -555,7 +558,8 @@ class EMG:
 
         Raises:
             KeyError: If ``label`` is not an existing channel.
-            ValueError: If ``channel_type``/``modality`` are not in the vocabulary.
+            ValueError: If ``channel_type`` or ``modality`` is not in the
+                modality vocabulary.
         """
         if label not in self.channels:
             raise KeyError(f"Channel not found: {label}")
