@@ -174,10 +174,5 @@ if marker_stream:
 
 ## Requirements
 
-The XDF importer requires the `pyxdf` package:
-
-```bash
-uv add pyxdf
-```
-
-This is included as a core dependency when installing EMGIO.
+The XDF importer requires the `pyxdf` package. It is included as a core
+dependency when installing EMGIO, so no additional installation is required.

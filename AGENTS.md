@@ -41,7 +41,7 @@ uv run mkdocs serve          # Build/serve documentation
 ## [CRITICAL] Core Principles - Never Compromise
 
 ### [FUNDAMENTAL] NO MOCKS - Test Reality Only
-- Use real EMG data files in tests/data/
+- Use real EMG data files from `examples/` (the shared test-data directory)
 - Test with actual format conversions
 - Verify round-trip integrity (import → export → import)
 **Details:** .rules/testing.md

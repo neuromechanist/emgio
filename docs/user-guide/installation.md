@@ -5,11 +5,13 @@ management. There are several ways to install EMGIO depending on your needs.
 
 ## From PyPI (Recommended)
 
-The easiest way to add EMGIO to a project is from PyPI:
+The easiest way to install EMGIO is from PyPI:
 
 ```bash
-uv add emgio
+uv pip install emgio
 ```
+
+If your own project is uv-managed, use `uv add emgio` instead to track it as a dependency.
 
 ## From GitHub Repository
 
@@ -45,13 +47,13 @@ EMGIO provides optional dependency groups:
 
 ```bash
 # Development tools (pytest, ruff, coverage)
-uv add "emgio[dev]"
+uv pip install "emgio[dev]"
 
 # Documentation tools (mkdocs, mkdocstrings)
-uv add "emgio[docs]"
+uv pip install "emgio[docs]"
 
 # All optional dependencies
-uv add "emgio[all]"
+uv pip install "emgio[all]"
 ```
 
 ## Dependencies
@@ -92,4 +94,4 @@ import emgio
 print(emgio.__version__)
 ```
 
-You should see the version number (e.g., `0.2.0`) without any errors.
+You should see the version number (e.g., `0.2.2` or later) without any errors.

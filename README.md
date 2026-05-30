@@ -48,8 +48,10 @@ EMGIO uses [UV](https://docs.astral.sh/uv/) for Python environment and package m
 ### From PyPI (recommended)
 
 ```bash
-uv add emgio
+uv pip install emgio
 ```
+
+(If your own project is uv-managed, use `uv add emgio` to track it as a dependency.)
 
 ### From source
 

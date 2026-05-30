@@ -13,7 +13,7 @@
 
 ## Type Hints
 - **Required for:** All public functions and methods
-- **Tool:** `mypy` for type checking
+- **Tool:** `ty` for type checking (`uv run ty`)
 - **Example:**
 ```python
 def process_data(items: list[dict[str, Any]]) -> pd.DataFrame:

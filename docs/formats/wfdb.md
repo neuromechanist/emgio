@@ -24,7 +24,7 @@ emg = EMG.from_file('path/to/your/record.hea')
 # emg = EMG.from_file('record')
 ```
 
-EMGIO uses the `wfdb-python` library internally. It ships as a core dependency; if needed you can add it explicitly with `uv add wfdb`.
+EMGIO uses the `wfdb` library (PyPI package `wfdb`) internally. It ships as a core dependency, so no separate installation is required.
 
 ## Annotation Handling
 

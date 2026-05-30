@@ -130,7 +130,7 @@ To add support for a new EMG format:
 2. Implement a class that inherits from `BaseImporter`
 3. Implement the required methods
 4. Add the new importer to `__init__.py`
-5. Add tests in `tests/test_importers.py`
+5. Add tests in `emgio/tests/` (e.g. `emgio/tests/test_importers.py`)
 6. Document the new format in the user guide
 
 ## License

@@ -40,9 +40,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       run: uv python install ${{ matrix.python-version }}
     - name: Install dependencies
-      run: |
-        uv venv --python ${{ matrix.python-version }}
-        uv pip install -e ".[dev]"
+      run: uv sync --extra dev
     - name: Lint
       run: uv run ruff check .
     - name: Test
