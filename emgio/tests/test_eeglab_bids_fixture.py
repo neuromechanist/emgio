@@ -9,18 +9,23 @@ Guards the EEGLAB importer fixes:
 Uses the real CC0 fixture under ``examples/bids/eeg`` (NO MOCKS).
 """
 
-import os
+import pathlib
 
 import pytest
 
 from emgio import EMG
 
-EEG_SET = "examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set"
+# Anchor to the repo root (this file is at emgio/tests/) so the test does not
+# silently skip when pytest runs from a different working directory.
+EEG_SET = (
+    pathlib.Path(__file__).resolve().parents[2]
+    / "examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set"
+)
 
 
-@pytest.mark.skipif(not os.path.exists(EEG_SET), reason="EEG BIDS fixture missing")
+@pytest.mark.skipif(not EEG_SET.exists(), reason="EEG BIDS fixture missing")
 def test_eeglab_bids_eeg_fixture_imports():
-    emg = EMG.from_file(EEG_SET, importer="eeglab")
+    emg = EMG.from_file(str(EEG_SET), importer="eeglab")
 
     # All 64 channels imported with their real 10-10 montage labels.
     assert len(emg.channels) == 64

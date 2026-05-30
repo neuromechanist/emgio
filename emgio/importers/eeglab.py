@@ -83,25 +83,25 @@ class EEGLABImporter(BaseImporter):
         Returns:
             str: Channel type ('EMG', 'ACC', 'GYRO', etc.)
         """
-        # Check if type is explicitly specified
-        if "type" in channel_info and len(channel_info["type"]) > 0:
-            ch_type = str(channel_info["type"][0])
-
-            # Map EEGLAB channel types to emgio channel types
-            if ch_type.upper() == "EMG":
+        # Check if type is explicitly specified. After _process_channel_info,
+        # 'type' and 'label' are plain strings (scalar-flattened), so consume them
+        # as strings rather than indexing/.size like the old array form.
+        ch_type = channel_info.get("type")
+        if ch_type:
+            ch_type_upper = ch_type.upper()
+            if ch_type_upper == "EMG":
                 return "EMG"
-            elif ch_type.upper() in ["ACC", "ACCELEROMETER"]:
+            elif ch_type_upper in ["ACC", "ACCELEROMETER"]:
                 return "ACC"
-            elif ch_type.upper() in ["GYRO", "GYROSCOPE"]:
+            elif ch_type_upper in ["GYRO", "GYROSCOPE"]:
                 return "GYRO"
-            elif ch_type.upper() in ["TRIG", "TRIGGER"]:
+            elif ch_type_upper in ["TRIG", "TRIGGER"]:
                 return "TRIG"
 
-        # If type is not specified or not recognized, try to determine from label
-        if "labels" in channel_info and channel_info["labels"].size > 0:
-            label = str(channel_info["labels"][0])
+        # If type is not specified or not recognized, try to determine from label.
+        label = channel_info.get("label", "")
+        if label:
             label_upper = label.upper()
-
             if "EMG" in label_upper:
                 return "EMG"
             elif "ACC" in label_upper:
