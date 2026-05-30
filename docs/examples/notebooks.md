@@ -18,8 +18,8 @@ To run the example notebooks:
 
 1. Install EMGIO and Jupyter:
    ```bash
-   pip install -e .  # Install EMGIO in development mode
-   pip install jupyter
+   uv sync --extra dev   # Install EMGIO in development mode
+   uv pip install jupyter
    ```
 
 2. Start Jupyter:

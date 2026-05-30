@@ -43,10 +43,12 @@ The documentation including installation instructions, examples, and API referen
 
 ## Installation
 
+EMGIO uses [UV](https://docs.astral.sh/uv/) for Python environment and package management.
+
 ### From PyPI (recommended)
 
 ```bash
-pip install emgio
+uv add emgio
 ```
 
 ### From source
@@ -54,7 +56,7 @@ pip install emgio
 ```bash
 git clone https://github.com/neuromechanist/emgio.git
 cd emgio
-pip install .
+uv pip install .
 ```
 
 ## Usage
@@ -121,22 +123,15 @@ git clone https://github.com/neuromechanist/emgio.git
 cd emgio
 ```
 
-2. Install for development:
+2. Install for development (editable install with dev dependencies):
 ```bash
-pip install -e .
-```
-
-3. Install test dependencies (optional):
-```bash
-pip install -r test-requirements.txt
+uv sync --extra dev
 ```
 
 ### Running Tests
 
-Make sure you have installed the test dependencies first, then run:
-
 ```bash
-pytest
+uv run pytest
 ```
 
 ## Contributing
