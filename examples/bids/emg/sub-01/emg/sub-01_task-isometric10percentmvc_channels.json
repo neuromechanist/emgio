@@ -1,0 +1,24 @@
+{
+    "reference_electrode": {
+        "Description": "Name of the reference electrode for this channel."
+    },
+    "grid_name": {
+        "Description": "Manufacturer model name of the electrode grid."
+    },
+    "interelectrode_distance": {
+        "Description": "Distance between adjacent electrodes in the grid.",
+        "Units": "mm"
+    },
+    "target_muscle": {
+        "Description": "Name of the muscle targeted by this electrode."
+    },
+    "signal_electrode": {
+        "Description": "Name of the signal electrode for this channel."
+    },
+    "group": {
+        "Description": "Electrode group identifier (grid1 or grid2)."
+    },
+    "ch_description": {
+        "Description": "Description of what is measured on this channel."
+    }
+}

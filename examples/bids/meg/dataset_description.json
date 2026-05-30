@@ -1,0 +1,20 @@
+{
+  "Name": "emgio MEG test fixture (derived from OpenNeuro ds002908)",
+  "BIDSVersion": "1.9.0",
+  "DatasetType": "raw",
+  "License": "CC0",
+  "Authors": [
+    "Rafal Bogacz",
+    "Vladimir Litvak"
+  ],
+  "Acknowledgements": "Derived fixture: one 30 s excerpt of sub-01 ses-1 task-mouse from OpenNeuro ds002908 'Human MEG recordings during sequential conflict task' (CC0). Source was recorded on a CTF-275 system at 2400 Hz; this fixture was read with MNE-Python (read_raw_ctf), cropped to the first 30 s, anti-alias downsampled to 100 Hz, the 32 auxiliary misc channels were dropped, and the result was saved as Elekta/Neuromag FIF. The .fif format is not yet readable by emgio; this fixture exists for a future MNE-based MEG importer.",
+  "SourceDatasets": [
+    {
+      "DOI": "10.18112/openneuro.ds002908.v1.0.0",
+      "URL": "https://openneuro.org/datasets/ds002908"
+    }
+  ],
+  "ReferencesAndLinks": [
+    "Patai, Z. E., Foltynie, T., Limousin, P., Hariz, M. I., Zrinzo, L., Bogacz, R., Litvak, V. (2020). Conflict detection in a sequential decision task is associated with increased cortico-subthalamic coherence and prolonged subthalamic oscillatory response in the beta band."
+  ]
+}

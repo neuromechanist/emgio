@@ -1,0 +1,7 @@
+{
+  "MEGCoordinateSystem": "CTF",
+  "MEGCoordinateUnits": "cm",
+  "MEGCoordinateSystemDescription": "CTF head coordinate system. Origin midway between the left and right preauricular points; +x toward the nasion, +y toward the left preauricular point, +z up.",
+  "HeadCoilCoordinateSystem": "CTF",
+  "HeadCoilCoordinateUnits": "cm"
+}

@@ -1,0 +1,5 @@
+{
+    "EMGCoordinateSystem": "Other",
+    "EMGCoordinateSystemDescription": "x-axis: proximal -> distal; y-axis: medial -> lateral; all local electrode coordinates are reported per grid.",
+    "EMGCoordinateUnits": "mm"
+}

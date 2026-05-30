@@ -1,0 +1,2 @@
+onset	duration	stimulusOnsetRec	stimulusOffsetRec	trialnumber	stimulusConditionCode	stimulusFrequency	stimulusAmplitude_mA	stimulusPulseDuration_ms	stimulusStimulusDuration_ms	stimulusType	stimulusOnsetLogFile	stimulusOffsetLogFile
+0.6791	0	0.6791	0.6791	1	800	1	0.8	0	0	spine_direct_electrical_stimulation	0.6791	0.6791
