@@ -485,10 +485,14 @@ class EMG:
             description: Event description string.
         """
         new_event = pd.DataFrame(
-            [{"onset": onset, "duration": duration, "description": description}]
+            [{"onset": float(onset), "duration": float(duration), "description": description}]
         )
-        # Use pd.concat for appending, ignore_index=True resets the index
-        self.events = pd.concat([self.events, new_event], ignore_index=True)
+        # Avoid concatenating onto the empty, object-dtype events frame, which
+        # would coerce the numeric columns to object. Start from the typed
+        # new_event when there are no existing events.
+        if self.events is None or self.events.empty:
+            self.events = new_event
+        else:
+            self.events = pd.concat([self.events, new_event], ignore_index=True)
         # Sort events by onset time for consistency
-        self.events.sort_values(by="onset", inplace=True)
-        self.events.reset_index(drop=True, inplace=True)
+        self.events = self.events.sort_values(by="onset").reset_index(drop=True)

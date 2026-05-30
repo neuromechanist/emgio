@@ -1,15 +1,16 @@
-import os
 import logging
+import os
 import sys
+
 from emgio.core.emg import EMG
 
 # Add the project root to the Python path
 # This allows importing emgio even if it's not installed
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
 # Configure logging
-logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 # --- Configuration ---
 # Use a file that exists in the examples directory
@@ -34,8 +35,10 @@ try:
     logging.info("EMG data loaded successfully.")
     logging.info(f"Channels found: {list(emg_data.signals.columns)}")
     logging.info(f"Duration: {emg_data.signals.index[-1]:.2f} seconds")
-    emg_channels = emg_data.get_channels_by_type('EMG')
-    emg_only = emg_data.select_channels(emg_channels[:2])  # Creates a new EMG object with only EMG channels
+    emg_channels = emg_data.get_channels_by_type("EMG")
+    emg_only = emg_data.select_channels(
+        emg_channels[:2]
+    )  # Creates a new EMG object with only EMG channels
 
 
 except FileNotFoundError:
@@ -50,13 +53,13 @@ logging.info(f"\n--- Exporting to EDF ({output_file_edf}) ---")
 try:
     verification_results_edf = emg_only.to_edf(
         output_path_edf,
-        format='edf',  # Force EDF for this example
+        format="edf",  # Force EDF for this example
         bypass_analysis=True,
         verify=verify_export,
         verify_tolerance=verification_tolerance,
         # Example: verify_channel_map={'Original Name 1': 'Reloaded Name A', 'Original Name 2': 'Reloaded Name B'}
         # If verify_channel_map is None (default), it tries exact name match, then order-based match.
-        verify_channel_map=None  # Using automatic matching for this run
+        verify_channel_map=None,  # Using automatic matching for this run
     )
 
     logging.info(f"Successfully exported to {output_path_edf}")
@@ -70,7 +73,9 @@ except Exception as e:
 
 # --- Export to BDF with Verification ---
 # BDF is often better for high-precision data like Trigno
-logging.info(f"\n--- Exporting to BDF ({output_file_bdf}) --- Example using explicit channel map ---")
+logging.info(
+    f"\n--- Exporting to BDF ({output_file_bdf}) --- Example using explicit channel map ---"
+)
 try:
     # Example: Create a dummy channel map (mapping names to themselves here,
     # but could map to different names if needed)
@@ -81,12 +86,12 @@ try:
 
     verification_results_bdf = emg_only.to_edf(
         output_path_bdf,
-        format='bdf',  # Force BDF for this example
+        format="bdf",  # Force BDF for this example
         bypass_analysis=True,
         verify=verify_export,
         verify_tolerance=verification_tolerance,
         verify_channel_map=explicit_map,  # Pass the explicit map
-        verify_plot=True  # Plot comparison
+        verify_plot=True,  # Plot comparison
     )
     logging.info(f"Successfully exported to {output_path_bdf}")
     if verify_export and verification_results_bdf:

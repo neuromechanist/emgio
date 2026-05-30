@@ -11,12 +11,13 @@ The file contains unlabeled columns of EMG data with no header.
 """
 
 import os
+
 from emgio import EMG
 
 
 def main():
     # Sample data path - replace with your actual data path
-    data_path = 'examples/truncated_emg_sample_zenodo7668251.txt'
+    data_path = "examples/truncated_emg_sample_zenodo7668251.txt"
 
     if not os.path.exists(data_path):
         print(f"Sample file not found: {data_path}")
@@ -24,21 +25,21 @@ def main():
         return
 
     # Set up channel naming and metadata for the unlabeled data file
-    channel_names = ['EMG_CH1', 'EMG_CH2', 'EMG_CH3', 'EMG_CH4']
+    channel_names = ["EMG_CH1", "EMG_CH2", "EMG_CH3", "EMG_CH4"]
 
     # Define channel types (all are EMG channels in this case)
-    channel_types = {name: 'EMG' for name in channel_names}
+    channel_types = dict.fromkeys(channel_names, "EMG")
 
     # Define physical dimensions (units) for each channel
-    physical_dimensions = {name: 'mV' for name in channel_names}
+    physical_dimensions = dict.fromkeys(channel_names, "mV")
 
     # Additional metadata for the recording
     metadata = {
-        'subject': 'Sample Subject',
-        'device': 'Sample EMG Device',
-        'recording_date': '2023-01-01',
-        'experiment': 'Sample EMG Recording',
-        'source': 'Zenodo Dataset 7668251'
+        "subject": "Sample Subject",
+        "device": "Sample EMG Device",
+        "recording_date": "2023-01-01",
+        "experiment": "Sample EMG Recording",
+        "source": "Zenodo Dataset 7668251",
     }
 
     # Load the data using CSV importer
@@ -47,18 +48,18 @@ def main():
     try:
         # Prepare parameters for the CSV importer
         csv_params = {
-            'columns': [0, 1, 2, 3],  # Select columns by index (0-based)
-            'has_header': False,       # No header in this file
-            'delimiter': None,         # Auto-detect delimiter
-            'sample_frequency': 1000.0,  # 1kHz sampling rate
-            'channel_names': channel_names,
-            'channel_types': channel_types,
-            'physical_dimensions': physical_dimensions,
-            'metadata': metadata
+            "columns": [0, 1, 2, 3],  # Select columns by index (0-based)
+            "has_header": False,  # No header in this file
+            "delimiter": None,  # Auto-detect delimiter
+            "sample_frequency": 1000.0,  # 1kHz sampling rate
+            "channel_names": channel_names,
+            "channel_types": channel_types,
+            "physical_dimensions": physical_dimensions,
+            "metadata": metadata,
         }
 
         # Create importer and load the data
-        emg = EMG.from_file(data_path, importer='csv', **csv_params)
+        emg = EMG.from_file(data_path, importer="csv", **csv_params)
 
         # Rename channels and set their types and units
         print("Renaming channels and setting metadata...")
@@ -98,31 +99,24 @@ def main():
     print("\nRecording Information:")
     print("-" * 50)
     for key, value in emg.metadata.items():
-        if key != 'source_file':  # Skip the file path
+        if key != "source_file":  # Skip the file path
             print(f"{key}: {value}")
 
     # Plot the first 3 seconds of data
     print("\nPlotting EMG signals...")
     try:
         # Default plot
-        emg.plot_signals(
-            time_range=(0, 3),
-            title="EMG Signals - First 3 Seconds",
-            grid=True
-        )
+        emg.plot_signals(time_range=(0, 3), title="EMG Signals - First 3 Seconds", grid=True)
 
         # Plot with detrending (removes mean)
         emg.plot_signals(
-            time_range=(0, 3),
-            title="EMG Signals - Detrended",
-            detrend=True,
-            grid=True
+            time_range=(0, 3), title="EMG Signals - Detrended", detrend=True, grid=True
         )
     except Exception as e:
         print(f"Error plotting signals: {str(e)}")
 
     # Export to EDF/BDF
-    output_path = 'examples/csv_emg'  # Extension will be added by the exporter (.edf or .bdf)
+    output_path = "examples/csv_emg"  # Extension will be added by the exporter (.edf or .bdf)
     print("\nExporting EMG data...")
 
     try:
