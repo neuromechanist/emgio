@@ -3,7 +3,7 @@ Functions for verifying signal integrity after operations like export/import.
 """
 
 import logging
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -16,7 +16,7 @@ def compare_signals(
     emg_original: "EMG",
     emg_reloaded: "EMG",
     tolerance: float = 0.01,  # Default tolerance 1% for NRMSE and Max Norm Abs Diff
-    channel_map: Optional[Dict[str, str]] = None,
+    channel_map: dict[str, str] | None = None,
 ) -> dict:
     """
     Compare signals between two EMG objects using normalized metrics.
@@ -90,7 +90,12 @@ def compare_signals(
             min_len = min(len(original_channels), len(reloaded_channels))
             original_list = sorted(original_channels)
             reloaded_list = sorted(reloaded_channels)
-            channel_pairs = list(zip(original_list[:min_len], reloaded_list[:min_len]))
+            # Both lists are explicitly sliced to min_len, so truncation here is
+            # intentional (unmatched channels are tracked below); strict=False
+            # documents that the differing original/reloaded counts are tolerated.
+            channel_pairs = list(
+                zip(original_list[:min_len], reloaded_list[:min_len], strict=False)
+            )
             channel_summary["unmatched_original"] = original_list[min_len:]
             channel_summary["unmatched_reloaded"] = reloaded_list[min_len:]
 

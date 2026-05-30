@@ -1,5 +1,3 @@
-from typing import Dict, Tuple
-
 import numpy as np
 import pyedflib
 
@@ -35,7 +33,7 @@ class EDFImporter(BaseImporter):
         else:
             return "OTHER"
 
-    def _extract_metadata(self, edf_reader: pyedflib.EdfReader) -> Dict:
+    def _extract_metadata(self, edf_reader: pyedflib.EdfReader) -> dict:
         """
         Extract metadata from EDF file header.
 
@@ -73,7 +71,7 @@ class EDFImporter(BaseImporter):
 
     def _read_signal_data(
         self, edf_reader: pyedflib.EdfReader, signal_idx: int
-    ) -> Tuple[np.ndarray, Dict]:
+    ) -> tuple[np.ndarray, dict]:
         """
         Read signal data and header information for a specific channel.
 

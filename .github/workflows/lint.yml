@@ -1,0 +1,52 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main ]
+  # Run on every PR regardless of base so stacked/epic PRs get their own CI.
+  pull_request:
+
+# Cancel superseded runs on the same ref for fast feedback.
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    name: ruff (lint + format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Ruff lint
+        run: uvx ruff check --output-format=github .
+
+      - name: Ruff format check
+        run: uvx ruff format --check .
+
+  ty:
+    name: ty (type check, non-blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      # Type checking is informational for now: ty still reports pre-existing
+      # diagnostics. continue-on-error at the STEP level lets the step fail while
+      # the JOB (and its status check) stays green -- job-level continue-on-error
+      # instead surfaces a FAILED check that branch rules block on. Remove this
+      # to make ty a blocking gate once diagnostics reach zero. Tracked in #43.
+      - name: ty check
+        continue-on-error: true
+        run: uvx ty check emgio

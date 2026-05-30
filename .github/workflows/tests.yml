@@ -3,8 +3,12 @@ name: Tests
 on:
   push:
     branches: [ main ]
+  # Run on every PR regardless of base so stacked/epic PRs get their own CI.
   pull_request:
-    branches: [ main ]
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -18,6 +22,9 @@ jobs:
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
 
     - name: Set up Python ${{ matrix.python-version }}
       run: uv python install ${{ matrix.python-version }}

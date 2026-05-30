@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ from .base import BaseImporter
 class EEGLABImporter(BaseImporter):
     """Importer for EEGLAB .set files containing EMG data."""
 
-    def _extract_metadata(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_metadata(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Extract metadata from EEGLAB .set file.
 
@@ -73,7 +73,7 @@ class EEGLABImporter(BaseImporter):
 
         return metadata
 
-    def _determine_channel_type(self, channel_info: Dict[str, Any]) -> str:
+    def _determine_channel_type(self, channel_info: dict[str, Any]) -> str:
         """
         Determine channel type based on channel information.
 
@@ -114,7 +114,7 @@ class EEGLABImporter(BaseImporter):
         # Default to EMG if we can't determine the type
         return "EMG"
 
-    def _process_channel_info(self, chanlocs: np.ndarray) -> List[Dict[str, Any]]:
+    def _process_channel_info(self, chanlocs: np.ndarray) -> list[dict[str, Any]]:
         """
         Process channel location information.
 
@@ -155,7 +155,7 @@ class EEGLABImporter(BaseImporter):
 
         return channel_info_list
 
-    def _process_events(self, events: np.ndarray) -> List[Dict[str, Any]]:
+    def _process_events(self, events: np.ndarray) -> list[dict[str, Any]]:
         """
         Process event information.
 

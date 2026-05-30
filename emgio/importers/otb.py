@@ -2,7 +2,6 @@ import os
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -54,7 +53,7 @@ class OTBImporter(BaseImporter):
             print(f"Error during extraction: {str(e)}")
             raise ValueError(f"Could not extract OTB file: {str(e)}") from e
 
-    def _parse_xml_metadata(self, xml_path: str) -> Dict:
+    def _parse_xml_metadata(self, xml_path: str) -> dict:
         """
         Parse XML metadata file to extract device and channel information.
 
@@ -189,7 +188,7 @@ class OTBImporter(BaseImporter):
 
         return metadata
 
-    def _read_signal_data(self, sig_path: str, metadata: Dict) -> Tuple[np.ndarray, float]:
+    def _read_signal_data(self, sig_path: str, metadata: dict) -> tuple[np.ndarray, float]:
         """
         Read binary signal data and apply appropriate scaling.
 
