@@ -31,7 +31,7 @@ jobs:
         run: uvx ruff format --check .
 
   ty:
-    name: ty (type check, non-blocking)
+    name: ty (type check)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,8 +42,13 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
+      # Sync deps first so ty can resolve third-party imports (numpy, pandas,
+      # mne, ...); without an environment it reports spurious unresolved-import.
+      - name: Install dependencies
+        run: uv sync --extra dev
+
       # Type checking is a BLOCKING gate on the package source (#43). The
       # [tool.ty.src] config in pyproject excludes emgio/tests from the gate
       # (tests are exercised by running them); ty reports zero on the source.
       - name: ty check
-        run: uvx ty check emgio
+        run: uv run ty check emgio

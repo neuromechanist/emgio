@@ -200,13 +200,12 @@ def _determine_scaling_factors(
     return phys_min, phys_max, digital_min, digital_max, scaling_factor
 
 
-def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
+def summarize_channels(channels: dict, analyses: dict) -> str:
     """
     Generate a summary of channel characteristics grouped by type.
 
     Args:
         channels: Dictionary of channel information
-        signals: Dictionary of signal data
         analyses: Dictionary of signal analyses
 
     Returns:
@@ -630,9 +629,7 @@ class EDFExporter:
                         "use_bdf": use_bdf,  # Use the final decision for the whole file
                     }
 
-                summary = summarize_channels(
-                    cast(dict, emg.channels), cast(dict, emg.signals), summary_analyses
-                )
+                summary = summarize_channels(cast(dict, emg.channels), summary_analyses)
                 print("\nSummary:")
                 print(summary)
             else:
@@ -641,17 +638,9 @@ class EDFExporter:
             print(f"\nEMG data exported to: {filepath}")
             return filepath
         except Exception as e:
-            # Clean up if there was an error
-            if "writer" in locals() and hasattr(writer, "close") and callable(writer.close):
-                try:
-                    # Check if file is open before closing
-                    # pyedflib EdfWriter.header is untyped
-                    if not writer.header["file_handle"].closed:  # ty: ignore[unresolved-attribute]
-                        writer.close()
-                except Exception:
-                    pass  # Ignore errors during cleanup
-
-            # Wait a moment before trying to delete the file
+            # The writer is closed unconditionally in the finally block below; here
+            # we only remove the partially written file so a failed export leaves no
+            # corrupt output behind.
             import time
 
             time.sleep(0.1)
