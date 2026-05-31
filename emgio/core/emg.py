@@ -102,6 +102,8 @@ class EMG:
             return "wfdb"
         elif extension in {".xdf", ".xdfz"}:
             return "xdf"
+        elif extension in {".fif", ".ds"}:
+            return "meg"
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -109,7 +111,8 @@ class EMG:
     def from_file(
         cls,
         filepath: str,
-        importer: Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf"] | None = None,
+        importer: Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg"]
+        | None = None,
         force_csv: bool = False,
         bids_channels: str = "auto",
         **kwargs,
@@ -127,6 +130,7 @@ class EMG:
                 - 'csv': Generic CSV (or TXT) files with columnar data
                 - 'wfdb': Waveform Database (WFDB)
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
+                - 'meg': MEG via MNE (.fif and CTF .ds; requires the 'meg' extra)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -155,6 +159,7 @@ class EMG:
             "csv": "CSVImporter",  # Generic CSV/Text files
             "wfdb": "WFDBImporter",  # Waveform Database format
             "xdf": "XDFImporter",  # XDF multi-stream format
+            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds)
         }
 
         if importer not in importers:
@@ -167,7 +172,8 @@ class EMG:
                 "- eeglab: EEGLAB .set files\n"
                 "- csv: Generic CSV/Text files\n"
                 "- wfdb: Waveform Database\n"
-                "- xdf: XDF multi-stream format"
+                "- xdf: XDF multi-stream format\n"
+                "- meg: MEG via MNE (.fif, CTF .ds)"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
