@@ -2,7 +2,7 @@ import math
 import os
 import warnings
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, InvalidOperation
-from typing import Literal
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -630,7 +630,9 @@ class EDFExporter:
                         "use_bdf": use_bdf,  # Use the final decision for the whole file
                     }
 
-                summary = summarize_channels(emg.channels, emg.signals, summary_analyses)
+                summary = summarize_channels(
+                    cast(dict, emg.channels), cast(dict, emg.signals), summary_analyses
+                )
                 print("\nSummary:")
                 print(summary)
             else:
@@ -643,7 +645,8 @@ class EDFExporter:
             if "writer" in locals() and hasattr(writer, "close") and callable(writer.close):
                 try:
                     # Check if file is open before closing
-                    if not writer.header["file_handle"].closed:
+                    # pyedflib EdfWriter.header is untyped
+                    if not writer.header["file_handle"].closed:  # ty: ignore[unresolved-attribute]
                         writer.close()
                 except Exception:
                     pass  # Ignore errors during cleanup

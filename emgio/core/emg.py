@@ -257,6 +257,9 @@ class EMG:
         elif isinstance(channels, str):
             channels = [channels]
 
+        if channels is None:
+            raise ValueError("Specify at least one of: channels, channel_type, or modality.")
+
         # Validate channels exist
         if not all(ch in self.signals.columns for ch in channels):
             missing = [ch for ch in channels if ch not in self.signals.columns]
@@ -568,7 +571,7 @@ class EMG:
             events_to_export = events_df
 
         # Combine parameters
-        all_params = {
+        all_params: dict[str, Any] = {
             "precision_threshold": precision_threshold,
             "method": method,
             "fft_noise_range": fft_noise_range,

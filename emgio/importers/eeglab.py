@@ -133,12 +133,16 @@ class EEGLABImporter(BaseImporter):
         """
         channel_info_list = []
 
+        field_names = chanlocs.dtype.names
+        if field_names is None:
+            return channel_info_list
+
         # Process each channel
         for i in range(len(chanlocs[0])):
             channel_info = {}
 
             # Extract channel fields
-            for field in chanlocs.dtype.names:
+            for field in field_names:
                 # Get the field value for this channel
                 field_value = chanlocs[0][i][field]
                 if field_value.size == 0:
@@ -184,12 +188,16 @@ class EEGLABImporter(BaseImporter):
         if events.size == 0:
             return event_list
 
+        field_names = events.dtype.names
+        if field_names is None:
+            return event_list
+
         # Process each event
         for i in range(len(events[0])):
             event_info = {}
 
             # Extract event fields
-            for field in events.dtype.names:
+            for field in field_names:
                 # Get the field value for this event
                 field_value = events[0][i][field]
 
