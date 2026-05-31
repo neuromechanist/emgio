@@ -52,6 +52,20 @@ def _physical_dimension(signal) -> str:
     return dim if dim and dim != "dimensionless" else "n/a"
 
 
+def _unique_label(name: str, used: set[str]) -> str:
+    """Return ``name``, or the first free ``name_<n>``, so merged streams stay distinct.
+
+    Counter-based so it always terminates, even when several disambiguated names
+    already collide (e.g. ``used = {"ch", "ch_0", "ch_0_0"}``).
+    """
+    if name not in used:
+        return name
+    i = 0
+    while f"{name}_{i}" in used:
+        i += 1
+    return f"{name}_{i}"
+
+
 def _channel_names(signal, stream_index: int, n_channels: int) -> list[str]:
     """Channel names from neo array annotations, falling back to generated names.
 
@@ -128,11 +142,7 @@ class NeoImporter(BaseImporter):
                 dimension = _physical_dimension(sig)
                 names = _channel_names(sig, idx, data.shape[1])
                 for col, name in enumerate(names):
-                    label = name
-                    while label in used:  # disambiguate collisions across merged streams
-                        label = f"{name}_{idx}"
-                        if label in used:
-                            label = f"{name}_{idx}_{col}"
+                    label = _unique_label(name, used)  # keep merged streams distinct
                     used.add(label)
                     emg.add_channel(
                         label=label,
@@ -145,12 +155,15 @@ class NeoImporter(BaseImporter):
             emg.signals = emg.signals.copy()  # de-fragment after many inserts (#66)
 
         # Align events to the imported signal's time origin (neo times are in the
-        # recording's absolute time base, which may not start at zero).
+        # recording's absolute time base, which may not start at zero). The 0-based
+        # signal grid discards the absolute origin, so keep it in metadata for
+        # downstream (e.g. BIDS) temporal alignment.
         t0 = float(selected[0].t_start.rescale("s").magnitude)
         self._add_events(emg, seg, t0)
 
         emg.set_metadata("source_file", filepath)
         emg.set_metadata("neo_io", type(reader).__name__)
+        emg.set_metadata("t_start_s", t0)
         emg.set_metadata("number_of_signals", len(emg.channels))
         return emg
 
@@ -183,6 +196,11 @@ class NeoImporter(BaseImporter):
                 raise ValueError(
                     f"No stream named {stream!r}; available streams: {describe(analogsignals)}"
                 )
+            if len(matches) > 1:
+                raise ValueError(
+                    f"Stream name {stream!r} is ambiguous ({len(matches)} streams share it); "
+                    f"select by integer index instead. Streams: {describe(analogsignals)}"
+                )
             return matches
 
         if len(analogsignals) == 1:
@@ -200,6 +218,15 @@ class NeoImporter(BaseImporter):
             raise ValueError(
                 f"{filepath} has same-rate streams of differing lengths that cannot share "
                 f"one time grid; pass stream= to choose one. Streams: {describe(analogsignals)}"
+            )
+        # Same rate and length but a different t_start would place samples at the
+        # wrong relative time on the shared 0-based grid -- refuse to merge silently.
+        t_starts = {round(float(s.t_start.rescale("s").magnitude), 9) for s in analogsignals}
+        if len(t_starts) > 1:
+            raise ValueError(
+                f"{filepath} has same-rate streams with differing t_start values that cannot "
+                f"share one time grid; pass stream= to choose one. Streams: "
+                f"{describe(analogsignals)}"
             )
         return list(analogsignals)
 

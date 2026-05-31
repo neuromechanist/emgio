@@ -18,7 +18,7 @@ from emgio import Recording
 neo = pytest.importorskip("neo", reason="neo importer requires the optional 'neo' extra")
 import quantities as pq  # noqa: E402  (only importable once neo is present)
 
-from emgio.importers.neo import NeoImporter, _channel_names  # noqa: E402
+from emgio.importers.neo import NeoImporter, _channel_names, _unique_label  # noqa: E402
 
 
 def _write_block(path, streams, *, events=None, epochs=None):
@@ -55,6 +55,7 @@ def test_neo_roundtrip_single_stream(tmp_path):
 
     rec = NeoImporter().load(str(path))
 
+    assert rec.signals is not None
     assert len(rec.channels) == 3
     assert rec.signals.shape == (1000, 3)
     for ch in rec.channels:
@@ -62,6 +63,7 @@ def test_neo_roundtrip_single_stream(tmp_path):
         assert rec.channels[ch]["physical_dimension"] == "uV"
         assert rec.channels[ch]["channel_type"] == "OTHER"
     assert np.allclose(np.sort(rec.signals.to_numpy(), axis=0), np.sort(data, axis=0))
+    assert rec.metadata["t_start_s"] == 0.0
 
 
 def test_neo_from_file_routing(tmp_path):
@@ -92,9 +94,13 @@ def test_neo_infer_importer_extensions():
 # --- stream selection (real in-memory neo AnalogSignals, no mocks) ---
 
 
-def _sig(name, n_samples, n_channels, rate):
+def _sig(name, n_samples, n_channels, rate, t_start=0.0):
     return neo.AnalogSignal(
-        np.zeros((n_samples, n_channels)), units="uV", sampling_rate=rate * pq.Hz, name=name
+        np.zeros((n_samples, n_channels)),
+        units="uV",
+        sampling_rate=rate * pq.Hz,
+        t_start=t_start * pq.s,
+        name=name,
     )
 
 
@@ -120,15 +126,34 @@ def test_select_multirate_requires_selector():
         NeoImporter._select_streams(streams, "missing", "f")
 
 
+def test_select_ambiguous_stream_name_rejected():
+    streams = [_sig("amp", 100, 2, 30000.0), _sig("amp", 50, 1, 1000.0)]
+    with pytest.raises(ValueError, match="ambiguous"):
+        NeoImporter._select_streams(streams, "amp", "f")
+
+
 def test_select_same_rate_differing_lengths_rejected():
     streams = [_sig("a", 100, 2, 1000.0), _sig("b", 80, 2, 1000.0)]
     with pytest.raises(ValueError, match="differing lengths"):
         NeoImporter._select_streams(streams, None, "f")
 
 
+def test_select_same_rate_differing_t_start_rejected():
+    streams = [_sig("a", 100, 2, 1000.0, t_start=0.0), _sig("b", 100, 2, 1000.0, t_start=5.0)]
+    with pytest.raises(ValueError, match="differing t_start"):
+        NeoImporter._select_streams(streams, None, "f")
+
+
 def test_select_no_signals_rejected():
     with pytest.raises(ValueError, match="No continuous analog signals"):
         NeoImporter._select_streams([], None, "f")
+
+
+def test_unique_label_terminates_on_deep_collisions():
+    assert _unique_label("ch", set()) == "ch"
+    assert _unique_label("ch", {"ch"}) == "ch_0"
+    # The adversarial set that made the old two-step fallback spin forever.
+    assert _unique_label("ch", {"ch", "ch_0", "ch_0_0"}) == "ch_1"
 
 
 def test_channel_names_from_annotations_else_generated():
