@@ -618,10 +618,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#copying-metadata-between-emg-objects" class="md-nav__link">
+  <a href="#copying-metadata-between-recording-objects" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Copying Metadata Between EMG Objects
+        Copying Metadata Between Recording Objects
       
     </span>
   </a>
@@ -1026,7 +1026,7 @@
   <span class="md-ellipsis">
     
   
-    EMG Class
+    Recording Class
   
 
     
@@ -2001,10 +2001,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#copying-metadata-between-emg-objects" class="md-nav__link">
+  <a href="#copying-metadata-between-recording-objects" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Copying Metadata Between EMG Objects
+        Copying Metadata Between Recording Objects
       
     </span>
   </a>
@@ -2044,11 +2044,11 @@
 
 <h1 id="metadata-handling">Metadata Handling<a class="headerlink" href="#metadata-handling" title="Permanent link">&para;</a></h1>
 <p>EMGIO provides comprehensive metadata management capabilities, allowing you to work with recording session information, subject details, and other contextual data. Proper metadata handling is particularly important when working with research data that needs to be shared or archived.</p>
-<p>The <code>EMG</code> object stores various pieces of metadata loaded from the source file or added manually.</p>
+<p>The <code>Recording</code> object stores various pieces of metadata loaded from the source file or added manually.</p>
 <h2 id="accessing-metadata">Accessing Metadata<a class="headerlink" href="#accessing-metadata" title="Permanent link">&para;</a></h2>
 <p>When you load data into EMGIO, any available metadata from the source file is automatically imported:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Load data</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;data.set&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;eeglab&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;data.set&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;eeglab&#39;</span><span class="p">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Access all metadata</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">all_metadata</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">metadata</span>
@@ -2199,8 +2199,8 @@
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>EMG2    EMG     µV      2000                  ...
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>ACC1    ACC     g       2000                  ...
 </code></pre></div>
-<h2 id="copying-metadata-between-emg-objects">Copying Metadata Between EMG Objects<a class="headerlink" href="#copying-metadata-between-emg-objects" title="Permanent link">&para;</a></h2>
-<p>When working with multiple EMG objects, you can copy metadata between them:</p>
+<h2 id="copying-metadata-between-recording-objects">Copying Metadata Between Recording Objects<a class="headerlink" href="#copying-metadata-between-recording-objects" title="Permanent link">&para;</a></h2>
+<p>When working with multiple Recording objects, you can copy metadata between them:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Create a subset with only EMG channels</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">emg_only</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">select_channels</span><span class="p">(</span><span class="n">channel_type</span><span class="o">=</span><span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>

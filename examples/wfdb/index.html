@@ -891,7 +891,7 @@
   <span class="md-ellipsis">
     
   
-    EMG Class
+    Recording Class
   
 
     
@@ -1940,9 +1940,9 @@
 </code></pre></div>
 <h2 id="key-steps-explained">Key Steps Explained<a class="headerlink" href="#key-steps-explained" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Import <code>EMG</code>:</strong> The core class is imported.</li>
+<li><strong>Import <code>Recording</code>:</strong> The core class is imported.</li>
 <li><strong>Define Path:</strong> The path to the WFDB header file (<code>.hea</code>) is specified.</li>
-<li><strong>Load Data:</strong> <code>EMG.from_file()</code> is called with the header file path. EMGIO infers the importer (<code>'wfdb'</code>) based on the <code>.hea</code> extension (this could also be explicitly set using <code>importer='wfdb'</code>). The importer reads the header, data, and automatically looks for <code>100.atr</code> to load annotations.</li>
+<li><strong>Load Data:</strong> <code>Recording.from_file()</code> is called with the header file path. EMGIO infers the importer (<code>'wfdb'</code>) based on the <code>.hea</code> extension (this could also be explicitly set using <code>importer='wfdb'</code>). The importer reads the header, data, and automatically looks for <code>100.atr</code> to load annotations.</li>
 <li><strong>Access Metadata:</strong> Basic metadata like <code>record_name</code> and <code>sampling_frequency</code> are accessed using <code>emg.get_metadata()</code>.</li>
 <li><strong>Access Channels:</strong> Information about the loaded channels (<code>MLII</code>, <code>V5</code>) is iterated through <code>emg.channels</code>.</li>
 <li><strong>Access Annotations:</strong> The script checks if the <code>emg.events</code> DataFrame is populated. If the <code>.atr</code> file was loaded successfully, it prints the first and last few annotations.</li>

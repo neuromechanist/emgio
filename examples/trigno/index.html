@@ -891,7 +891,7 @@
   <span class="md-ellipsis">
     
   
-    EMG Class
+    Recording Class
   
 
     
@@ -1980,12 +1980,12 @@
 <p>This page demonstrates how to work with EMG data from the Delsys Trigno wireless EMG system. Trigno data is typically exported as CSV files with a specific format that EMGIO can parse.</p>
 <h2 id="basic-trigno-example">Basic Trigno Example<a class="headerlink" href="#basic-trigno-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">EMG</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Load data from Trigno CSV file</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">data_path</span> <span class="o">=</span> <span class="s1">&#39;path_to_your_trigno_data.csv&#39;</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Print information about the loaded data</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of channels: </span><span class="si">{</span><span class="n">emg</span><span class="o">.</span><span class="n">get_n_channels</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -2049,8 +2049,8 @@
 <h2 id="working-with-multiple-trigno-recordings">Working with Multiple Trigno Recordings<a class="headerlink" href="#working-with-multiple-trigno-recordings" title="Permanent link">&para;</a></h2>
 <p>If you have multiple recordings from the same experiment, you can load them separately and compare:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Load two recordings</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">session1</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;session1.csv&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">session2</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;session2.csv&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">session1</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;session1.csv&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">session2</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;session2.csv&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Add metadata to distinguish them</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">session1</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s1">&#39;session&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">)</span>
@@ -2079,13 +2079,13 @@
 <h2 id="complete-trigno-workflow-example">Complete Trigno Workflow Example<a class="headerlink" href="#complete-trigno-workflow-example" title="Permanent link">&para;</a></h2>
 <p>Here's a complete workflow using Trigno data:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">EMG</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># 1. Load the data</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">data_path</span> <span class="o">=</span> <span class="s1">&#39;trigno_recording.csv&#39;</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">EMG</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
 <a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1"># 2. Add metadata</span>
 <a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s1">&#39;subject&#39;</span><span class="p">,</span> <span class="s1">&#39;S001&#39;</span><span class="p">)</span>
