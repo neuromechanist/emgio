@@ -52,6 +52,9 @@ dependencies = [
     "pyxdf>=1.16.0",
 ]
 
+[project.scripts]
+biosigio = "emgio.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",

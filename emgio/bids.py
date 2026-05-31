@@ -19,15 +19,15 @@ if TYPE_CHECKING:
     from .core.emg import EMG
 
 
-def find_channels_tsv(data_filepath: str) -> str | None:
-    """Return the sibling BIDS ``_channels.tsv`` path for a data file, or None.
+def _find_sidecar(data_filepath: str, kind: str) -> str | None:
+    """Return the sibling BIDS ``_<kind>.tsv`` path for a data file, or None.
 
-    BIDS names the sidecar with the data file's entities but the ``channels``
-    suffix, e.g. ``sub-01_task-rest_ieeg.edf`` ->
-    ``sub-01_task-rest_channels.tsv``.
+    BIDS names a sidecar with the data file's entities but a different suffix,
+    e.g. ``sub-01_task-rest_ieeg.edf`` -> ``sub-01_task-rest_channels.tsv``.
 
     Args:
         data_filepath: Path to a (BIDS) data file.
+        kind: Sidecar kind, e.g. ``"channels"`` or ``"events"``.
 
     Returns:
         The sidecar path if it exists next to the data file, else ``None``.
@@ -37,15 +37,25 @@ def find_channels_tsv(data_filepath: str) -> str | None:
     candidates = []
     # BIDS-correct: drop the trailing _<suffix> entity (e.g. _ieeg, _eeg, _meg).
     if "_" in stem:
-        candidates.append(f"{stem.rsplit('_', 1)[0]}_channels.tsv")
+        candidates.append(f"{stem.rsplit('_', 1)[0]}_{kind}.tsv")
     # Fallback: the full-stem form emgio's own EDF exporter currently writes,
     # so a to_edf -> from_file round-trip also finds the sidecar.
-    candidates.append(f"{stem}_channels.tsv")
+    candidates.append(f"{stem}_{kind}.tsv")
     for name in candidates:
         path = os.path.join(directory, name)
         if os.path.isfile(path):
             return path
     return None
+
+
+def find_channels_tsv(data_filepath: str) -> str | None:
+    """Return the sibling BIDS ``_channels.tsv`` path for a data file, or None."""
+    return _find_sidecar(data_filepath, "channels")
+
+
+def find_events_tsv(data_filepath: str) -> str | None:
+    """Return the sibling BIDS ``_events.tsv`` path for a data file, or None."""
+    return _find_sidecar(data_filepath, "events")
 
 
 def apply_channels_tsv(emg: EMG, channels_tsv_path: str) -> int:
