@@ -32,10 +32,10 @@ def find_elbow_point(singular_values: np.ndarray) -> int:
     elbow_idx = np.argmax(np.abs(second_derivative)) + 2
 
     # Ensure we don't return too small a value (at least 1)
-    return max(1, min(elbow_idx, len(singular_values) - 1))
+    return int(max(1, min(elbow_idx, len(singular_values) - 1)))
 
 
-def analyze_signal_svd(detrended: np.ndarray, svd_rank: int = None) -> float:
+def analyze_signal_svd(detrended: np.ndarray, svd_rank: int | None = None) -> float:
     """
     Estimate noise floor using SVD-based method with automatic elbow detection.
 
@@ -109,7 +109,7 @@ def analyze_signal_svd(detrended: np.ndarray, svd_rank: int = None) -> float:
 
 
 # FFT-based analysis functions
-def analyze_signal_fft(detrended: np.ndarray, fft_noise_range: tuple = None) -> float:
+def analyze_signal_fft(detrended: np.ndarray, fft_noise_range: tuple | None = None) -> float:
     """
     Estimate noise floor using enhanced FFT-based method.
 
@@ -165,7 +165,10 @@ def analyze_signal_fft(detrended: np.ndarray, fft_noise_range: tuple = None) -> 
 
 # High-level analysis functions
 def analyze_signal(
-    signal: np.ndarray, method: str = "svd", fft_noise_range: tuple = None, svd_rank: int = None
+    signal: np.ndarray,
+    method: str = "svd",
+    fft_noise_range: tuple | None = None,
+    svd_rank: int | None = None,
 ) -> dict:
     """
     Analyze signal characteristics including noise floor and dynamic range.

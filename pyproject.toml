@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "emgio"
-version = "0.3.0"
+version = "0.4.0"
 authors = [
     { name = "Seyed Yahya Shirazi", email = "shirazi@ieee.org" }
 ]
@@ -56,11 +56,36 @@ dependencies = [
 biosigio = "emgio.cli:main"
 
 [project.optional-dependencies]
+# MEG (.fif/CTF .ds) and BrainVision (.vhdr) import are backed by MNE, kept out
+# of the core deps (MNE is heavy). Install with `uv sync --extra meg`.
+meg = [
+    "mne>=1.6",
+]
+# Parquet + Arrow/Feather serialization (analytics, fast IPC). Install with
+# `uv sync --extra arrow`. Zarr will get its own extra in a later phase.
+arrow = [
+    "pyarrow>=14",
+]
+# Proprietary electrophysiology acquisition formats (Intan, Blackrock, Spike2,
+# Plexon, Micromed, Neuralynx, ...) via python-neo. Install with
+# `uv sync --extra neo`.
+neo = [
+    "neo>=0.13",
+]
+# Sharded Zarr v3 serving store (viewing + inference + training from one store).
+# Install with `uv sync --extra zarr`.
+zarr = [
+    "zarr>=3",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.14",
     "ty",
+    "mne>=1.6",
+    "pyarrow>=14",
+    "neo>=0.13",
+    "zarr>=3",
 ]
 docs = [
     "mkdocs>=1.6.0",
@@ -71,7 +96,7 @@ docs = [
     "mike>=2.1.0",
 ]
 all = [
-    "emgio[dev,docs]",
+    "emgio[dev,docs,meg,arrow,neo,zarr]",
 ]
 
 [project.urls]
@@ -84,6 +109,11 @@ Changelog = "https://github.com/neuromechanist/emgio/releases"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["emgio*"]
+
+[tool.ty.src]
+# Type-check the shipped package strictly; tests are exercised by running them,
+# so gating their typing adds churn for little value (see #43).
+exclude = ["emgio/tests/**"]
 
 [tool.ruff]
 line-length = 100

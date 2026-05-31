@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 import pandas as pd
 import pyedflib
@@ -97,14 +99,14 @@ class EDFImporter(BaseImporter):
 
         # Extract signal information
         signal_info = {
-            "label": signal_header["label"].strip(),
-            "transducer": signal_header.get("transducer", "").strip(),
-            "physical_dimension": signal_header.get("dimension", "").strip() or "n/a",
+            "label": cast(str, signal_header["label"]).strip(),
+            "transducer": cast(str, signal_header.get("transducer", "")).strip(),
+            "physical_dimension": cast(str, signal_header.get("dimension", "")).strip() or "n/a",
             "physical_min": signal_header["physical_min"],
             "physical_max": signal_header["physical_max"],
             "digital_min": signal_header["digital_min"],
             "digital_max": signal_header["digital_max"],
-            "prefilter": signal_header.get("prefilter", "").strip() or "n/a",
+            "prefilter": cast(str, signal_header.get("prefilter", "")).strip() or "n/a",
             "sample_frequency": signal_header["sample_frequency"],
         }
 

@@ -7,7 +7,7 @@ provides tools to explore XDF contents and selectively import specific streams.
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -713,9 +713,10 @@ class XDFImporter(BaseImporter):
         stream can be specified by name.
         """
         # First pass: collect stream info and find reference stream
-        stream_info_list = []
+        stream_info_list: list[dict[str, Any]] = []
         for stream in streams:
-            info = stream["info"]
+            # pyxdf returns deeply dynamic dict values; cast at this boundary.
+            info = cast(dict[str, Any], stream["info"])
             stream_name = info["name"][0] if "name" in info else "Unknown"
             time_series = stream["time_series"]
             timestamps = stream["time_stamps"]
@@ -763,18 +764,18 @@ class XDFImporter(BaseImporter):
             ref_stream_info = max(stream_info_list, key=lambda x: x["srate"] or 0)
 
         base_srate = ref_stream_info["srate"]
-        base_timestamps = ref_stream_info["timestamps"]
+        base_timestamps = cast(np.ndarray, ref_stream_info["timestamps"])
 
         # Second pass: collect all channel data
-        all_data = {}
-        stream_timestamp_data = {}  # Store timestamp data per stream
+        all_data: dict[str, dict[str, Any]] = {}
+        stream_timestamp_data: dict[str, dict[str, Any]] = {}  # Store timestamp data per stream
 
         for si in stream_info_list:
             stream_name = si["name"]
-            time_series = si["time_series"]
-            timestamps = si["timestamps"]
+            time_series = cast(np.ndarray, si["time_series"])
+            timestamps = cast(np.ndarray, si["timestamps"])
             srate = si["srate"]
-            info = si["info"]
+            info = cast(dict[str, Any], si["info"])
 
             # Store timestamp data for this stream if requested
             if include_timestamps:

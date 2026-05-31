@@ -14,8 +14,7 @@ class of bug).
 
 Known limitations are asserted explicitly rather than skipped:
 - mixed per-channel sample rates (XDF, Trigno) must fail loudly on export;
-- MEG ``.fif`` is not importable yet (needs an MNE-based importer, #53);
-- event round-trip through EDF+ annotations is pending #47 (xfail).
+- MEG ``.fif`` imports via the MNE-backed importer (#53; needs the 'meg' extra).
 """
 
 import atexit
@@ -171,13 +170,16 @@ def test_mixed_rate_export_raises(case, tmp_path):
         emg.to_edf(str(tmp_path / f"{case.name}.edf"), format="edf", bypass_analysis=True)
 
 
-def test_meg_fif_import_unsupported():
+def test_meg_fif_imports_via_mne():
+    """MEG .fif now imports through the MNE-backed importer (#53)."""
     meg = BIDS / "meg/sub-01/meg/sub-01_task-mouse_meg.fif"
     if not meg.exists():
         pytest.skip("MEG fixture missing")
-    # Until an MNE-based MEG importer lands (#53), .fif is unsupported.
-    with pytest.raises(ValueError, match="Unsupported file extension"):
-        EMG.from_file(str(meg))
+    pytest.importorskip("mne", reason="MEG import requires the optional 'meg' extra (mne)")
+    emg = EMG.from_file(str(meg))
+    assert len(emg.channels) > 0
+    # No modality creep: a MEG file must not invent EMG channels.
+    assert not [c for c, i in emg.channels.items() if i["channel_type"] == "EMG"]
 
 
 def test_event_roundtrip_through_edf(tmp_path):

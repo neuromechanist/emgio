@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -23,10 +23,30 @@ if enable_logging:
 else:
     logging.basicConfig(level=logging.CRITICAL)  # Effectively turns off most logging
 
+# Supported importer names (extension-inferred or passed explicitly to from_file).
+ImporterName = Literal[
+    "trigno",
+    "otb",
+    "eeglab",
+    "edf",
+    "csv",
+    "wfdb",
+    "xdf",
+    "meg",
+    "brainvision",
+    "tabular",
+    "neo",
+    "zarr",
+]
 
-class EMG:
+
+class Recording:
     """
-    Core EMG class for handling EMG data and metadata.
+    Core biosignal recording: signals + channels + events + metadata.
+
+    Modality-agnostic container for EEG / EMG / iEEG / MEG / stim / marker data
+    imported from any supported format. (``EMG`` is a deprecated alias of this
+    class kept for backward compatibility; prefer ``Recording``.)
 
     Attributes:
         signals (pd.DataFrame): Raw signal data with time as index.
@@ -37,7 +57,7 @@ class EMG:
     """
 
     def __init__(self):
-        """Initialize an empty EMG object."""
+        """Initialize an empty recording."""
         self.signals = None
         self.metadata = {}
         self.channels = {}
@@ -85,7 +105,7 @@ class EMG:
         )
 
     @classmethod
-    def _infer_importer(cls, filepath: str) -> str:
+    def _infer_importer(cls, filepath: str) -> ImporterName:
         """
         Infer the importer to use based on the file extension.
         """
@@ -102,6 +122,31 @@ class EMG:
             return "wfdb"
         elif extension in {".xdf", ".xdfz"}:
             return "xdf"
+        elif extension in {".fif", ".ds"}:
+            return "meg"
+        elif extension in {".vhdr"}:
+            return "brainvision"
+        elif extension in {".parquet", ".feather", ".arrow"}:
+            return "tabular"
+        elif extension in {
+            ".rhd",
+            ".rhs",
+            ".ns1",
+            ".ns2",
+            ".ns3",
+            ".ns4",
+            ".ns5",
+            ".ns6",
+            ".smr",
+            ".smrx",
+            ".plx",
+            ".pl2",
+            ".trc",
+            ".ncs",
+        }:
+            return "neo"
+        elif extension == ".zarr":
+            return "zarr"
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -109,11 +154,11 @@ class EMG:
     def from_file(
         cls,
         filepath: str,
-        importer: Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf"] | None = None,
+        importer: ImporterName | None = None,
         force_csv: bool = False,
         bids_channels: str = "auto",
         **kwargs,
-    ) -> "EMG":
+    ) -> "Recording":
         """
         The method to create EMG object from file.
 
@@ -127,6 +172,13 @@ class EMG:
                 - 'csv': Generic CSV (or TXT) files with columnar data
                 - 'wfdb': Waveform Database (WFDB)
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
+                - 'meg': MEG via MNE (.fif and CTF .ds; requires the 'meg' extra)
+                - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
+                - 'tabular': biosigIO Parquet/Arrow/Feather (requires the 'arrow' extra)
+                - 'neo': proprietary electrophysiology formats via python-neo
+                  (Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...;
+                  requires the 'neo' extra)
+                - 'zarr': biosigIO Zarr serving store (requires the 'zarr' extra)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -155,6 +207,11 @@ class EMG:
             "csv": "CSVImporter",  # Generic CSV/Text files
             "wfdb": "WFDBImporter",  # Waveform Database format
             "xdf": "XDFImporter",  # XDF multi-stream format
+            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds)
+            "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
+            "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
+            "neo": "NeoImporter",  # proprietary ephys via python-neo
+            "zarr": "ZarrImporter",  # biosigIO Zarr serving store
         }
 
         if importer not in importers:
@@ -167,7 +224,13 @@ class EMG:
                 "- eeglab: EEGLAB .set files\n"
                 "- csv: Generic CSV/Text files\n"
                 "- wfdb: Waveform Database\n"
-                "- xdf: XDF multi-stream format"
+                "- xdf: XDF multi-stream format\n"
+                "- meg: MEG via MNE (.fif, CTF .ds)\n"
+                "- brainvision: BrainVision via MNE (.vhdr)\n"
+                "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)\n"
+                "- neo: proprietary electrophysiology formats via python-neo "
+                "(Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...)\n"
+                "- zarr: biosigIO Zarr serving store (.zarr)"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
@@ -202,7 +265,7 @@ class EMG:
         inplace: bool = False,
         *,
         modality: str | None = None,
-    ) -> "EMG":
+    ) -> "Recording":
         """
         Select specific channels from the data and return a new EMG object.
 
@@ -244,6 +307,9 @@ class EMG:
         elif isinstance(channels, str):
             channels = [channels]
 
+        if channels is None:
+            raise ValueError("Specify at least one of: channels, channel_type, or modality.")
+
         # Validate channels exist
         if not all(ch in self.signals.columns for ch in channels):
             missing = [ch for ch in channels if ch not in self.signals.columns]
@@ -265,7 +331,7 @@ class EMG:
                 raise ValueError(f"None of the selected channels are of modality: {modality}")
 
         # Create new EMG object
-        new_emg = EMG()
+        new_emg = Recording()
 
         # Copy selected signals and channels
         new_emg.signals = self.signals[channels].copy()
@@ -281,6 +347,122 @@ class EMG:
             self.channels = new_emg.channels
             self.metadata = new_emg.metadata
             return self
+
+    def resample(self, target_rate: float) -> "Recording":
+        """Return a NEW, anti-aliased down-sampled copy of this recording.
+
+        Low-resolution demos need a smaller, lighter recording; this rebuilds the
+        uniform signal grid at ``target_rate`` using a polyphase resampler
+        (``scipy.signal.resample_poly``), which applies a Kaiser-windowed sinc
+        anti-alias FIR before decimation. A naive stride-decimation would fold
+        energy above the new Nyquist back into the band (aliasing); resample_poly
+        removes that energy first, so no aliasing occurs.
+
+        Non-destructive: ``self`` is left untouched and a new EMG is returned,
+        mirroring ``select_channels``'s copy semantics.
+
+        Resampling factors come from the integer source/target rates:
+        ``g = gcd(int(src), int(target)); up = int(target)//g; down = int(src)//g``
+        and ``resample_poly(x, up, down)`` runs once, vectorized over all channels
+        along ``axis=0``.
+
+        Args:
+            target_rate: Desired sampling rate in Hz. Must be <= the source rate
+                (this is a DOWN-sampling helper). A target equal to the source
+                returns an unchanged copy; a target above it raises ``ValueError``
+                rather than silently up-sampling (up-sampling cannot recover
+                detail and is out of scope for the low-res pipeline).
+
+        Returns:
+            EMG: A new EMG with the resampled signals, each channel's
+                ``sample_frequency`` set to the achieved rate (source * up / down,
+                which equals ``target_rate`` for integer rates), and channel/recording
+                metadata and events preserved. Events are unchanged because their
+                onsets/durations are in SECONDS, which stay valid under any rate
+                change (only the per-sample grid shrinks, not wall-clock time).
+
+        Raises:
+            ValueError: If no signals are loaded, if channels do not share a single
+                ``sample_frequency`` (emgio stores one uniform grid; mixed-rate
+                resampling is out of scope), or if ``target_rate`` exceeds the
+                source rate.
+        """
+        from math import gcd
+
+        from scipy.signal import resample_poly
+
+        if self.signals is None:
+            raise ValueError("No signals loaded")
+
+        if target_rate <= 0:
+            raise ValueError(f"target_rate must be positive, got {target_rate}")
+
+        # emgio stores all channels on one uniform-length grid; a per-channel rate
+        # mix is out of scope here, matching the exporter's single-rate guard.
+        distinct_rates = {info["sample_frequency"] for info in self.channels.values()}
+        if len(distinct_rates) > 1:
+            raise ValueError(
+                "Resampling requires a single sampling rate across all channels, but "
+                f"multiple were found: {sorted(distinct_rates)} Hz. emgio stores one "
+                "uniform grid; resample each rate group separately."
+            )
+
+        source_rate = float(next(iter(distinct_rates)))
+
+        # Down-sampling only: refuse to up-sample/alias; an equal rate is a no-op
+        # copy so callers can resample unconditionally without special-casing.
+        if target_rate > source_rate:
+            raise ValueError(
+                f"target_rate {target_rate} Hz exceeds source rate {source_rate} Hz; "
+                "resample() only down-samples (low-res). Up-sampling is out of scope."
+            )
+
+        new_emg = Recording()
+        new_emg.channels = {ch: info.copy() for ch, info in self.channels.items()}
+        new_emg.metadata = self.metadata.copy()
+        # Onsets/durations are in SECONDS, so they remain valid after the grid
+        # changes; copy them through unchanged.
+        new_emg.events = self.events.copy() if self.events is not None else self.events
+
+        if target_rate == source_rate:
+            # No grid change: copy signals through untouched (fresh RangeIndex for
+            # consistency with the resampled path).
+            new_emg.signals = self.signals.copy().reset_index(drop=True)
+            return new_emg
+
+        # Rational resampling factors from the integer rates.
+        src_i = int(round(source_rate))
+        tgt_i = int(round(target_rate))
+        g = gcd(src_i, tgt_i)
+        up = tgt_i // g
+        down = src_i // g
+
+        # The achieved rate is exactly source * up / down. Store THAT, not the
+        # requested float, so the metadata can never disagree with the data (a
+        # non-integer or odd target snaps to the nearest achievable rational rate;
+        # warn so the caller knows). This avoids silently writing e.g. 99.5 Hz
+        # onto a grid that resample_poly actually produced at 100 Hz.
+        actual_rate = source_rate * up / down
+        if abs(actual_rate - target_rate) > 1e-9:
+            logging.warning(
+                "Requested resample to %g Hz; nearest achievable rational rate is "
+                "%g Hz, which is what is stored on the channels.",
+                target_rate,
+                actual_rate,
+            )
+
+        columns = list(self.signals.columns)
+        data = self.signals.to_numpy(dtype=float)
+        # resample_poly over axis=0 resamples every channel column at once with the
+        # shared anti-alias FIR.
+        resampled = resample_poly(data, up, down, axis=0)
+
+        new_emg.signals = pd.DataFrame(resampled, columns=columns)
+        new_emg.signals.index = pd.RangeIndex(len(new_emg.signals))
+        for info in new_emg.channels.values():
+            info["sample_frequency"] = actual_rate
+
+        return new_emg
 
     def get_channel_types(self) -> list[str]:
         """
@@ -333,8 +515,8 @@ class EMG:
         self,
         filepath: str,
         method: str = "both",
-        fft_noise_range: tuple = None,
-        svd_rank: int = None,
+        fft_noise_range: tuple | None = None,
+        svd_rank: int | None = None,
         precision_threshold: float = 0.01,
         format: Literal["auto", "edf", "bdf"] = "auto",
         bypass_analysis: bool | None = None,
@@ -346,7 +528,7 @@ class EMG:
         create_channels_tsv: bool = True,
         clip_outliers: bool | str = "auto",
         **kwargs,
-    ) -> str | None:
+    ) -> dict | None:
         """
         Export EMG data to EDF/BDF format, optionally including events.
 
@@ -439,7 +621,7 @@ class EMG:
             events_to_export = events_df
 
         # Combine parameters
-        all_params = {
+        all_params: dict[str, Any] = {
             "precision_threshold": precision_threshold,
             "method": method,
             "fft_noise_range": fft_noise_range,
@@ -459,7 +641,7 @@ class EMG:
             logging.info(f"Verification requested. Reloading exported file: {filepath}")
             try:
                 # Reload the exported file
-                reloaded_emg = EMG.from_file(filepath, importer="edf")
+                reloaded_emg = Recording.from_file(filepath, importer="edf")
 
                 logging.info("Comparing original signals with reloaded signals...")
                 # Compare signals using the imported function
@@ -492,7 +674,65 @@ class EMG:
 
         return verification_report_dict
 
-    def set_metadata(self, key: str, value: any) -> None:
+    def to_parquet(self, filepath: str) -> str:
+        """Export to a self-describing biosigIO Parquet file.
+
+        Signals are stored as a columnar table (channels = columns, time index
+        preserved); channels/events/metadata travel in the file's schema metadata,
+        so ``Recording.from_file`` round-trips it losslessly. Great for analytics
+        (DuckDB/Polars/pandas/Spark). Requires the ``arrow`` extra (pyarrow).
+
+        Args:
+            filepath: Output ``.parquet`` path.
+
+        Returns:
+            str: The written file path.
+        """
+        from ..exporters.tabular import TabularExporter
+
+        return TabularExporter.to_parquet(self, filepath)
+
+    def to_arrow(self, filepath: str) -> str:
+        """Export to a biosigIO Arrow/Feather file (fast zero-copy IPC).
+
+        Same self-describing schema as :meth:`to_parquet`; round-trips via
+        ``Recording.from_file``. Requires the ``arrow`` extra (pyarrow).
+
+        Args:
+            filepath: Output ``.feather`` / ``.arrow`` path.
+
+        Returns:
+            str: The written file path.
+        """
+        from ..exporters.tabular import TabularExporter
+
+        return TabularExporter.to_arrow(self, filepath)
+
+    def to_zarr(self, filepath: str, **kwargs) -> str:
+        """Export to a sharded Zarr v3 serving store with a min/max view pyramid.
+
+        Writes one cloud-native store that serves viewing, inference, and training
+        from a single conversion: ``level 0`` of each ``(modality, rate)`` group is
+        the anti-aliased, per-modality-resampled inference signal, with a min/max
+        render pyramid above it (flagged not-for-inference). A derived serving copy,
+        not the archival source (BIDS/EDF stay authoritative). Requires the ``zarr``
+        extra (zarr v3). See :class:`~emgio.exporters.zarr.ZarrExporter` for the
+        tuning knobs (``modality_rates``, ``dtype``, chunk/shard sizing, ...).
+
+        Args:
+            filepath: Output store path (``.zarr`` appended if missing).
+            **kwargs: Forwarded to :meth:`ZarrExporter.export`.
+
+        Returns:
+            str: The written store path.
+        """
+        from ..exporters.zarr import ZarrExporter
+
+        if self.signals is None:
+            raise ValueError("No signals loaded")
+        return ZarrExporter.export(self, filepath, **kwargs)
+
+    def set_metadata(self, key: str, value: Any) -> None:
         """
         Set metadata value.
 
@@ -502,7 +742,7 @@ class EMG:
         """
         self.metadata[key] = value
 
-    def get_metadata(self, key: str) -> any:
+    def get_metadata(self, key: str) -> Any:
         """
         Get metadata value.
 
@@ -621,3 +861,9 @@ class EMG:
             self.events = pd.concat([self.events, new_event], ignore_index=True)
         # Sort events by onset time for consistency
         self.events = self.events.sort_values(by="onset").reset_index(drop=True)
+
+
+# Deprecated alias: the class was named ``EMG`` before it became modality-agnostic
+# (it now holds EEG/iEEG/MEG/EMG/...). Kept for backward compatibility; new code
+# should use ``Recording``. (Package rename emgio -> biosigio is tracked separately.)
+EMG = Recording
