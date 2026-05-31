@@ -1,0 +1,8 @@
+name	type	units	ch_description	sampling_frequency	signal_electrode	reference_electrode	group	target_muscle	interelectrode_distance	grid_name	low_cutoff	high_cutoff
+Ch001	EMG	mV	ElectroMyoGraphy	10240.0	E001	R1	grid1	Tibialis Anterior	4	GR04MM1305	10	500
+Ch002	EMG	mV	ElectroMyoGraphy	10240.0	E002	R1	grid1	Tibialis Anterior	4	GR04MM1305	10	500
+Ch003	EMG	mV	ElectroMyoGraphy	10240.0	E003	R1	grid1	Tibialis Anterior	4	GR04MM1305	10	500
+Ch004	EMG	mV	ElectroMyoGraphy	10240.0	E004	R1	grid1	Tibialis Anterior	4	GR04MM1305	10	500
+Ch005	EMG	mV	ElectroMyoGraphy	10240.0	E005	R1	grid1	Tibialis Anterior	4	GR04MM1305	10	500
+Ch130	MISC	%(MVC)	performed path	10240.0	n/a	n/a	n/a	n/a	n/a	n/a	10	500
+Ch131	MISC	V	acquired data	10240.0	n/a	n/a	n/a	n/a	n/a	n/a	10	500

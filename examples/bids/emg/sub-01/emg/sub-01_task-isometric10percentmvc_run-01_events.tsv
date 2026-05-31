@@ -1,0 +1,4 @@
+onset	duration	trial_type
+3.0	2.0	ramp_up
+5.0	20.0	plateau
+25.0	2.0	ramp_down

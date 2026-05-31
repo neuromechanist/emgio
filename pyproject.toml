@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "emgio"
-version = "0.2.2"
+version = "0.3.0"
 authors = [
     { name = "Seyed Yahya Shirazi", email = "shirazi@ieee.org" }
 ]
@@ -51,6 +51,9 @@ dependencies = [
     "wfdb>=4.0.0",
     "pyxdf>=1.16.0",
 ]
+
+[project.scripts]
+biosigio = "emgio.cli:main"
 
 [project.optional-dependencies]
 dev = [

@@ -51,3 +51,6 @@ env/
 
 # MkDocs
 site/
+
+# uv generates this on every `uv run`; this project pins via pyproject.toml only
+uv.lock

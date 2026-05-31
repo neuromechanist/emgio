@@ -5,6 +5,7 @@ import pandas as pd
 from scipy.io import loadmat
 
 from ..core.emg import EMG
+from ..core.modality import infer_modality_from_channel_type
 from .base import BaseImporter
 
 
@@ -83,27 +84,32 @@ class EEGLABImporter(BaseImporter):
         Returns:
             str: Channel type ('EMG', 'ACC', 'GYRO', etc.)
         """
-        # Check if type is explicitly specified
-        if "type" in channel_info and len(channel_info["type"]) > 0:
-            ch_type = str(channel_info["type"][0])
-
-            # Map EEGLAB channel types to emgio channel types
-            if ch_type.upper() == "EMG":
-                return "EMG"
-            elif ch_type.upper() in ["ACC", "ACCELEROMETER"]:
+        # Check if type is explicitly specified. After _process_channel_info,
+        # 'type' and 'label' are plain strings (scalar-flattened), so consume them
+        # as strings rather than indexing/.size like the old array form.
+        ch_type = channel_info.get("type")
+        if ch_type:
+            ch_type_upper = ch_type.upper()
+            # Neural/physiological BIDS types pass straight through.
+            if ch_type_upper in ("EEG", "EMG", "ECG", "EKG", "EOG", "SEEG", "ECOG"):
+                return ch_type_upper
+            elif ch_type_upper in ["ACC", "ACCELEROMETER"]:
                 return "ACC"
-            elif ch_type.upper() in ["GYRO", "GYROSCOPE"]:
+            elif ch_type_upper in ["GYRO", "GYROSCOPE"]:
                 return "GYRO"
-            elif ch_type.upper() in ["TRIG", "TRIGGER"]:
+            elif ch_type_upper in ["TRIG", "TRIGGER"]:
                 return "TRIG"
 
-        # If type is not specified or not recognized, try to determine from label
-        if "labels" in channel_info and channel_info["labels"].size > 0:
-            label = str(channel_info["labels"][0])
+        # If type is not specified or not recognized, try to determine from label.
+        label = channel_info.get("label", "")
+        if label:
             label_upper = label.upper()
-
             if "EMG" in label_upper:
                 return "EMG"
+            elif "ECG" in label_upper or "EKG" in label_upper:
+                return "ECG"
+            elif "EOG" in label_upper:
+                return "EOG"
             elif "ACC" in label_upper:
                 return "ACC"
             elif "GYRO" in label_upper:
@@ -111,8 +117,9 @@ class EEGLABImporter(BaseImporter):
             elif "TRIG" in label_upper:
                 return "TRIG"
 
-        # Default to EMG if we can't determine the type
-        return "EMG"
+        # No reliable type info: do NOT assume EMG (avoids modality creep onto
+        # EEG/other data). Caller-supplied BIDS channels.tsv types can refine this.
+        return "OTHER"
 
     def _process_channel_info(self, chanlocs: np.ndarray) -> list[dict[str, Any]]:
         """
@@ -134,18 +141,24 @@ class EEGLABImporter(BaseImporter):
             for field in chanlocs.dtype.names:
                 # Get the field value for this channel
                 field_value = chanlocs[0][i][field]
+                if field_value.size == 0:
+                    continue
+                # scipy.io.loadmat returns scalar struct fields as nested
+                # (1, 1)-shaped arrays, so field_value[0] is still 1-D and
+                # float()/str() on it fails or mis-formats. Flatten to a scalar.
+                scalar = np.asarray(field_value).ravel()[0]
 
                 # Process based on field name
-                if field == "labels" and field_value.size > 0:
-                    channel_info["label"] = str(field_value[0])
-                elif field == "type" and field_value.size > 0:
-                    channel_info["type"] = str(field_value[0])
-                elif field == "X" and field_value.size > 0:
-                    channel_info["X"] = float(field_value[0])
-                elif field == "Y" and field_value.size > 0:
-                    channel_info["Y"] = float(field_value[0])
-                elif field == "Z" and field_value.size > 0:
-                    channel_info["Z"] = float(field_value[0])
+                if field == "labels":
+                    channel_info["label"] = str(scalar)
+                elif field == "type":
+                    channel_info["type"] = str(scalar)
+                elif field == "X":
+                    channel_info["X"] = float(scalar)
+                elif field == "Y":
+                    channel_info["Y"] = float(scalar)
+                elif field == "Z":
+                    channel_info["Z"] = float(scalar)
 
             # Determine channel type
             channel_info["channel_type"] = self._determine_channel_type(channel_info)
@@ -232,7 +245,7 @@ class EEGLABImporter(BaseImporter):
                 # If no channel locations, create default channel info
                 channel_info_list = []
                 for i in range(metadata.get("nbchan", 0)):
-                    channel_info_list.append({"label": f"Channel{i + 1}", "channel_type": "EMG"})
+                    channel_info_list.append({"label": f"Channel{i + 1}", "channel_type": "OTHER"})
 
             # Process event information
             if "event" in data and data["event"].size > 0:
@@ -247,13 +260,11 @@ class EEGLABImporter(BaseImporter):
                 # Get sampling rate
                 srate = metadata.get("srate", 1000)
 
-                # Create time array for index
-                if "times" in data and data["times"].size > 0:
-                    time_index = data["times"][0] / srate
-                else:
-                    # Create time array based on number of points and sampling rate
-                    pnts = metadata.get("pnts", signal_data.shape[1])
-                    time_index = np.arange(pnts) / srate
+                # Derive the time index in seconds from the sample count. EEGLAB's
+                # `times` field is in milliseconds, so dividing it by srate (the old
+                # behavior) mis-scaled the index; sample_index / srate is correct and
+                # always matches the data length.
+                time_index = np.arange(signal_data.shape[1]) / srate
 
                 # Create DataFrame with time index
                 df = pd.DataFrame(index=time_index)
@@ -276,12 +287,14 @@ class EEGLABImporter(BaseImporter):
                     if i < signal_data.shape[0]:  # Make sure we have data for this channel
                         channel_label = channel_info.get("label", f"Channel{i + 1}")
 
-                        # Add channel info
+                        # Add channel info (no silent EMG default; carry modality)
+                        ch_type = channel_info.get("channel_type", "OTHER")
                         emg.channels[channel_label] = {
                             "sample_frequency": srate,
                             "physical_dimension": "uV",  # Default unit for EEG/EMG
                             "prefilter": "n/a",
-                            "channel_type": channel_info.get("channel_type", "EMG"),
+                            "channel_type": ch_type,
+                            "modality": infer_modality_from_channel_type(ch_type),
                         }
 
                         # Add additional channel metadata

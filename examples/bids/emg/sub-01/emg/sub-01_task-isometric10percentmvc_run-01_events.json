@@ -1,0 +1,18 @@
+{
+    "onset": {
+        "Description": "Onset of the event relative to recording start",
+        "Units": "s"
+    },
+    "duration": {
+        "Description": "Duration of the event",
+        "Units": "s"
+    },
+    "trial_type": {
+        "Description": "Phase of the trapezoidal isometric ankle-dorsiflexion contraction at 10% MVC, following the protocol described in the dataset (linear ramps at 5%/s, 20 s plateau). Event onsets/durations were inserted for this test fixture because the source EDF contained no embedded annotations.",
+        "Levels": {
+            "ramp_up": "Linear increase of target torque from 0 to 10% MVC at 5%/s",
+            "plateau": "Sustained 10% MVC isometric contraction",
+            "ramp_down": "Linear decrease of target torque from 10% MVC to 0 at 5%/s"
+        }
+    }
+}

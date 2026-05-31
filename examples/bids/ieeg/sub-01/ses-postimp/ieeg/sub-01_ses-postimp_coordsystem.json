@@ -1,0 +1,6 @@
+{
+    "iEEGCoordinateSystem": "Other",
+    "iEEGCoordinateUnits": "mm",
+    "iEEGCoordinateSystemDescription": "Anatomical x/y/z are not provided in the source dataset (n/a). Electrode positions are described instead by relative on-array offsets (rel_xlocation_microns / rel_ylocation_microns columns in _electrodes.tsv).",
+    "iEEGCoordinateProcessingDescription": "n/a"
+}

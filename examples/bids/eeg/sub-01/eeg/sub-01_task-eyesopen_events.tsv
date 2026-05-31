@@ -1,0 +1,4 @@
+onset	duration	trial_type
+0.500	0	eyes_open_start
+20.000	0	fixation_check
+40.000	0	rest_marker

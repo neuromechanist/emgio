@@ -1,0 +1,35 @@
+{
+  "TaskName": "mouse",
+  "InstitutionName": "WTCN University College London",
+  "Manufacturer": "CTF",
+  "ManufacturersModelName": "CTF-275",
+  "DeviceSerialNumber": "11035",
+  "SoftwareVersions": "Acq 5.4.2-linux-20070507",
+  "PowerLineFrequency": 50,
+  "SamplingFrequency": 100.0,
+  "MEGChannelCount": 274,
+  "MEGREFChannelCount": 29,
+  "EEGChannelCount": 0,
+  "EOGChannelCount": 0,
+  "ECGChannelCount": 0,
+  "EMGChannelCount": 0,
+  "MiscChannelCount": 0,
+  "TriggerChannelCount": 2,
+  "DewarPosition": "upright",
+  "SoftwareFilters": {
+    "SpatialCompensation": {
+      "GradientOrder": "3rd"
+    }
+  },
+  "RecordingDuration": 30.0,
+  "RecordingType": "continuous",
+  "EpochLength": 0,
+  "ContinuousHeadLocalization": true,
+  "HeadCoilFrequency": [
+    1470,
+    1530,
+    1590
+  ],
+  "DigitizedLandmarks": false,
+  "DigitizedHeadPoints": false
+}

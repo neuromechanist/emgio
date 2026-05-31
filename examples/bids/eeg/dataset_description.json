@@ -1,0 +1,20 @@
+{
+  "Name": "emgio EEG test fixture (derived from OpenNeuro ds006921)",
+  "BIDSVersion": "1.9.0",
+  "DatasetType": "raw",
+  "License": "CC0",
+  "Authors": [
+    "Ramne, M.",
+    "Damercheli, S.",
+    "Apelgren, F.",
+    "Pettersson, I.",
+    "Lendaro, E."
+  ],
+  "Acknowledgements": "Derived fixture: one 60 s, 250 Hz downsampled excerpt of sub-10 ses-1 task-EYESOPEN run-2 from OpenNeuro ds006921 'High Density Resting State EEG of Phantom Limb Pain and Controls' (CC0).",
+  "SourceDatasets": [
+    {
+      "DOI": "doi:10.18112/openneuro.ds006921.v1.1.1",
+      "URL": "https://openneuro.org/datasets/ds006921"
+    }
+  ]
+}
