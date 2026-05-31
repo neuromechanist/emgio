@@ -1,12 +1,12 @@
-# Welcome to EMGIO
+# Welcome to biosigIO
 
-[![PyPI version](https://badge.fury.io/py/emgio.svg)](https://badge.fury.io/py/emgio)
-[![Tests](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml)
-[![codecov](https://codecov.io/gh/neuromechanist/emgio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/emgio)
+[![PyPI version](https://badge.fury.io/py/biosigio.svg)](https://badge.fury.io/py/biosigio)
+[![Tests](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/neuromechanist/biosigio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/biosigio)
 
-EMGIO is a Python package for EMG data import/export and manipulation. It provides a unified interface for working with EMG data from various systems and exporting to standardized formats with harmonized metadata.
+biosigIO is a Python package for EMG data import/export and manipulation. It provides a unified interface for working with EMG data from various systems and exporting to standardized formats with harmonized metadata.
 
-## Why EMGIO?
+## Why biosigIO?
 
 Working with EMG data across multiple recording systems can be challenging due to:
 
@@ -15,7 +15,7 @@ Working with EMG data across multiple recording systems can be challenging due t
 - Inconsistent channel naming
 - Diverse sampling rates and filtering
 
-EMGIO simplifies this process by providing a standardized interface for loading, manipulating, and exporting EMG data regardless of the original source.
+biosigIO simplifies this process by providing a standardized interface for loading, manipulating, and exporting EMG data regardless of the original source.
 
 ## Key Features
 
@@ -56,7 +56,7 @@ EMGIO simplifies this process by providing a standardized interface for loading,
 ## Quick Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Load data with automatic format detection, will issue an error to indicate use of the `trigno` importer
 emg = Recording.from_file('data.csv')  # Format detected from file extension
@@ -75,7 +75,7 @@ emg.to_edf('output.edf')  # Extension will be added if not provided
 
 This documentation is organized as follows:
 
-- **User Guide**: Step-by-step instructions for using EMGIO
+- **User Guide**: Step-by-step instructions for using biosigIO
 - **Data Formats**: Details about supported input/output formats
 - **API Reference**: Complete documentation of classes and methods
 - **Examples**: Practical examples for various use cases

@@ -1,13 +1,13 @@
-# Contributing to EMGIO
+# Contributing to biosigIO
 
-We welcome contributions to EMGIO! This guide will help you get started with the development process.
+We welcome contributions to biosigIO! This guide will help you get started with the development process.
 
 ## Development Setup
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/neuromechanist/emgio.git
-cd emgio
+git clone https://github.com/neuromechanist/biosigio.git
+cd biosigio
 ```
 
 2. Install for development (editable install with dev dependencies):
@@ -15,15 +15,15 @@ cd emgio
 uv sync --extra dev
 ```
 
-EMGIO uses [UV](https://docs.astral.sh/uv/) for environment and package management.
+biosigIO uses [UV](https://docs.astral.sh/uv/) for environment and package management.
 
 ## Code Structure
 
-The EMGIO codebase is organized as follows:
+The biosigIO codebase is organized as follows:
 
 ```
-emgio/
-├── emgio/              # Main package directory
+biosigio/
+├── biosigio/              # Main package directory
 │   ├── __init__.py     # Package initialization
 │   ├── core/           # Core functionality
 │   │   ├── emg.py      # Main Recording class
@@ -46,7 +46,7 @@ emgio/
 
 ### Running Tests
 
-EMGIO uses pytest for testing. To run the full test suite:
+biosigIO uses pytest for testing. To run the full test suite:
 
 ```bash
 uv run pytest
@@ -55,12 +55,12 @@ uv run pytest
 To run tests with coverage:
 
 ```bash
-uv run pytest --cov=emgio
+uv run pytest --cov=biosigio
 ```
 
 ### Writing Tests
 
-When adding new features, please include appropriate tests. Tests should be placed in the `emgio/tests` directory, with a naming convention of `test_*.py`.
+When adding new features, please include appropriate tests. Tests should be placed in the `biosigio/tests` directory, with a naming convention of `test_*.py`.
 
 Example test:
 
@@ -114,7 +114,7 @@ uv run mkdocs serve
 
 ## Coding Style
 
-EMGIO follows PEP 8 guidelines. Use ruff to check and format your code before submitting a pull request (`uv run ruff check --fix . && uv run ruff format .`).
+biosigIO follows PEP 8 guidelines. Use ruff to check and format your code before submitting a pull request (`uv run ruff check --fix . && uv run ruff format .`).
 
 Some specific style guidelines:
 - Use 4 spaces for indentation (not tabs)
@@ -126,13 +126,13 @@ Some specific style guidelines:
 
 To add support for a new EMG format:
 
-1. Create a new file in `emgio/importers/` (e.g., `new_format.py`)
+1. Create a new file in `biosigio/importers/` (e.g., `new_format.py`)
 2. Implement a class that inherits from `BaseImporter`
 3. Implement the required methods
 4. Add the new importer to `__init__.py`
-5. Add tests in `emgio/tests/` (e.g. `emgio/tests/test_importers.py`)
+5. Add tests in `biosigio/tests/` (e.g. `biosigio/tests/test_importers.py`)
 6. Document the new format in the user guide
 
 ## License
 
-By contributing to EMGIO, you agree that your contributions will be licensed under the BSD 3-Clause License. 
+By contributing to biosigIO, you agree that your contributions will be licensed under the BSD 3-Clause License. 

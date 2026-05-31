@@ -1,12 +1,12 @@
 # EEGLAB Examples
 
-This page provides examples for working with EEGLAB `.set` files using EMGIO.
+This page provides examples for working with EEGLAB `.set` files using biosigIO.
 
 ## Basic EEGLAB Example
 
 ```python
 import os
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
 
 # Load data from an EEGLAB .set file
@@ -52,7 +52,7 @@ if emg_channels:
 EEGLAB files often contain event markers. Here's how to access and work with them:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -96,10 +96,10 @@ if 'event' in emg.metadata:
 
 ## Converting Epoched Data
 
-EEGLAB can store continuous or epoched data. EMGIO can work with both:
+EEGLAB can store continuous or epoched data. biosigIO can work with both:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
 
 # Load epoched EEGLAB data
@@ -119,7 +119,7 @@ if is_epoched:
     print(f"Number of epochs: {n_epochs}")
     print(f"Epoch length: {epoch_length} samples ({epoch_duration:.2f} seconds)")
     
-    # EMGIO automatically concatenates epochs, so the data is handled as continuous
+    # biosigIO automatically concatenates epochs, so the data is handled as continuous
     # The total duration is epochs * epoch_duration
     total_duration = emg.get_duration()
     print(f"Total duration: {total_duration:.2f} seconds")
@@ -163,7 +163,7 @@ if is_epoched:
 Converting EEGLAB data to EDF/BDF format:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Load EEGLAB data
 emg = Recording.from_file('data.set', importer='eeglab')

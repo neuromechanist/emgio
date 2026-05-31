@@ -1,10 +1,10 @@
 # EDF/BDF Exporter
 
-The EDF/BDF exporter module in EMGIO provides functionality to export EMG data to EDF (European Data Format) or BDF (BioSemi Data Format) files.
+The EDF/BDF exporter module in biosigIO provides functionality to export EMG data to EDF (European Data Format) or BDF (BioSemi Data Format) files.
 
 ## Module Documentation
 
-::: emgio.exporters.edf
+::: biosigio.exporters.edf
     options:
       show_root_heading: true
       show_source: true
@@ -13,7 +13,7 @@ The EDF/BDF exporter module in EMGIO provides functionality to export EMG data t
 ## Usage Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Load data
 emg = Recording.from_file('data.csv', importer='trigno')
@@ -28,7 +28,7 @@ emg.to_edf('output_bdf', format='bdf')  # Forces 24-bit BDF
 
 ## Automatic Format Selection
 
-A key feature of EMGIO's exporter is its ability to automatically determine whether to use EDF (16-bit) or BDF (24-bit) format based on the dynamic range of the data:
+A key feature of biosigIO's exporter is its ability to automatically determine whether to use EDF (16-bit) or BDF (24-bit) format based on the dynamic range of the data:
 
 ```python
 # Control the analysis method for format selection
@@ -79,7 +79,7 @@ Fast Fourier Transform (FFT) analysis:
 
 ## Output Files
 
-When exporting, EMGIO generates the following files:
+When exporting, biosigIO generates the following files:
 
 1. **Main data file**: Either `.edf` or `.bdf` extension depending on the format selected
 2. **Channels metadata file**: A `{output_path}.channels.tsv` file with detailed channel information in BIDS-compatible format

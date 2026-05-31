@@ -1,12 +1,12 @@
 # Trigno Examples
 
-This page demonstrates how to work with EMG data from the Delsys Trigno wireless EMG system. Trigno data is typically exported as CSV files with a specific format that EMGIO can parse.
+This page demonstrates how to work with EMG data from the Delsys Trigno wireless EMG system. Trigno data is typically exported as CSV files with a specific format that biosigIO can parse.
 
 ## Basic Trigno Example
 
 ```python
 import os
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
 
 # Load data from Trigno CSV file
@@ -121,7 +121,7 @@ Here's a complete workflow using Trigno data:
 
 ```python
 import os
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
 import numpy as np
 

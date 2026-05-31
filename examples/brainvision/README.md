@@ -13,7 +13,7 @@ Regenerate (requires `pybv` + the `meg` extra):
 
 ```python
 import numpy as np, pybv
-from emgio import Recording
+from biosigio import Recording
 emg = Recording.from_file("examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set", importer="eeglab")
 rate = 250
 chans = list(emg.signals.columns)[:8]

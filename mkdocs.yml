@@ -1,8 +1,8 @@
-site_name: EMGIO Documentation
-site_description: Documentation for EMGIO - EMG data import/export and manipulation
+site_name: biosigIO Documentation
+site_description: Documentation for biosigIO - EMG data import/export and manipulation
 site_author: Seyed (Yahya) Shirazi
-repo_url: https://github.com/neuromechanist/emgio
-repo_name: neuromechanist/emgio
+repo_url: https://github.com/neuromechanist/biosigio
+repo_name: neuromechanist/biosigio
 
 theme:
   name: material

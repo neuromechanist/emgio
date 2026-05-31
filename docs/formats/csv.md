@@ -1,6 +1,6 @@
 # Generic CSV Format
 
-EMGIO provides a flexible CSV importer that can handle a wide variety of CSV-formatted data files, including those with or without headers, different delimiters, and various time column formats.
+biosigIO provides a flexible CSV importer that can handle a wide variety of CSV-formatted data files, including those with or without headers, different delimiters, and various time column formats.
 
 ## Features
 
@@ -12,7 +12,7 @@ EMGIO provides a flexible CSV importer that can handle a wide variety of CSV-for
 ## Usage
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Basic usage (automatic format detection)
 emg = Recording.from_file('data.csv')

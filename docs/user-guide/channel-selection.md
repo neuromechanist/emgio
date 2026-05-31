@@ -1,6 +1,6 @@
 # Channel Selection
 
-EMG recordings often contain various channel types (EMG, accelerometer, gyroscope, etc.) or channels you may want to exclude from analysis. EMGIO provides flexible methods for selecting and working with specific channels.
+EMG recordings often contain various channel types (EMG, accelerometer, gyroscope, etc.) or channels you may want to exclude from analysis. biosigIO provides flexible methods for selecting and working with specific channels.
 
 ## Getting Channel Information
 
@@ -33,7 +33,7 @@ print(f"Selected channels: {len(subset_emg.channels)}")
 
 ## Selecting Channels by Type
 
-EMGIO allows you to select channels based on their type:
+biosigIO allows you to select channels based on their type:
 
 ```python
 # Get available channel types

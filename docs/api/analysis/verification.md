@@ -4,7 +4,7 @@ The `verification` module provides functions for verifying signal integrity afte
 
 ## Module Documentation
 
-::: emgio.analysis.verification
+::: biosigio.analysis.verification
     options:
       show_root_heading: true
       show_source: true
@@ -20,8 +20,8 @@ The `verification` module provides functions for verifying signal integrity afte
 ### Comparing Signals
 
 ```python
-from emgio import Recording
-from emgio.analysis.verification import compare_signals, report_verification_results
+from biosigio import Recording
+from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Load original EMG data
 emg_original = Recording.from_file("data.csv", importer="trigno")

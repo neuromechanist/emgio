@@ -1,13 +1,13 @@
 # Signal Verification Examples
 
-This page demonstrates how to use EMGIO's verification capabilities to ensure signal integrity when transferring EMG data between formats.
+This page demonstrates how to use biosigIO's verification capabilities to ensure signal integrity when transferring EMG data between formats.
 
 ## Basic Verification Workflow
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
-from emgio.analysis.verification import compare_signals, report_verification_results
+from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Load original data from a device-specific format
 emg_original = Recording.from_file('sample_data.csv', importer='trigno')
@@ -33,7 +33,7 @@ print(f"Verification result: {'Passed' if is_identical else 'Failed'}")
 The `plot_comparison()` function provides a visual way to compare signals:
 
 ```python
-from emgio.visualization.static import plot_comparison
+from biosigio.visualization.static import plot_comparison
 
 # Visual comparison of original and reloaded signals
 plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
@@ -56,7 +56,7 @@ plt.show()
 For more control and detailed analysis, you can use the verification module directly:
 
 ```python
-from emgio.analysis.verification import compare_signals, report_verification_results
+from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Compare with detailed metrics
 results = compare_signals(
@@ -84,7 +84,7 @@ for channel, metrics in results.items():
 When channels are renamed during export/import:
 
 ```python
-from emgio.visualization.static import plot_comparison
+from biosigio.visualization.static import plot_comparison
 
 # Define explicit channel mapping
 channel_map = {
@@ -117,10 +117,10 @@ plt.show()
 ## Real-World Example: CSV to EDF Conversion
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
-from emgio.analysis.verification import compare_signals, report_verification_results
-from emgio.visualization.static import plot_comparison
+from biosigio.analysis.verification import compare_signals, report_verification_results
+from biosigio.visualization.static import plot_comparison
 
 # 1. Load original Trigno CSV data
 emg_trigno = Recording.from_file('trigno_data.csv', importer='trigno')

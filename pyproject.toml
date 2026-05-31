@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "emgio"
-version = "0.6.0"
+name = "biosigio"
+version = "1.0.0"
 authors = [
     { name = "Seyed Yahya Shirazi", email = "shirazi@ieee.org" }
 ]
@@ -53,7 +53,7 @@ dependencies = [
 ]
 
 [project.scripts]
-biosigio = "emgio.cli:main"
+biosigio = "biosigio.cli:main"
 
 [project.optional-dependencies]
 # MEG (.fif/CTF .ds) and BrainVision (.vhdr) import are backed by MNE, kept out
@@ -96,24 +96,24 @@ docs = [
     "mike>=2.1.0",
 ]
 all = [
-    "emgio[dev,docs,meg,arrow,neo,zarr]",
+    "biosigio[dev,docs,meg,arrow,neo,zarr]",
 ]
 
 [project.urls]
-Homepage = "https://github.com/neuromechanist/emgio"
-Documentation = "https://neuromechanist.github.io/emgio/"
-Repository = "https://github.com/neuromechanist/emgio"
-Issues = "https://github.com/neuromechanist/emgio/issues"
-Changelog = "https://github.com/neuromechanist/emgio/releases"
+Homepage = "https://github.com/neuromechanist/biosigio"
+Documentation = "https://neuromechanist.github.io/biosigio/"
+Repository = "https://github.com/neuromechanist/biosigio"
+Issues = "https://github.com/neuromechanist/biosigio/issues"
+Changelog = "https://github.com/neuromechanist/biosigio/releases"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["emgio*"]
+include = ["biosigio*"]
 
 [tool.ty.src]
 # Type-check the shipped package strictly; tests are exercised by running them,
 # so gating their typing adds churn for little value (see #43).
-exclude = ["emgio/tests/**"]
+exclude = ["biosigio/tests/**"]
 
 [tool.ruff]
 line-length = 100
@@ -143,15 +143,15 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
-    "--cov=emgio",
+    "--cov=biosigio",
     "--cov-report=html",
     "--cov-report=term-missing",
 ]
 
 [tool.coverage.run]
-source = ["emgio"]
+source = ["biosigio"]
 omit = [
-    "emgio/version.py",
+    "biosigio/version.py",
 ]
 
 [tool.coverage.report]

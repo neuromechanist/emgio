@@ -1,8 +1,8 @@
-# Grison et al 2025: HDsEMG recordings (emgio test fixture, truncated)
+# Grison et al 2025: HDsEMG recordings (biosigio test fixture, truncated)
 
 BIDS-formatted version of a HDsEMG dataset corresponding to *[Grison et al. 2025](https://doi.org/10.1113/JP287913)*.
 
-> **emgio test fixture note.** This is a heavily truncated copy of one subject / one
+> **biosigio test fixture note.** This is a heavily truncated copy of one subject / one
 > run from the original dataset (OpenNeuro/NEMAR `nm000165`, License: CC0). To keep the
 > fixture small (< 5 MB), only the first 5 EMG channels (Ch001-Ch005, grid1) and 2 MISC
 > torque channels (Ch130 performed-path, Ch131 acquired-V) were retained, out of the

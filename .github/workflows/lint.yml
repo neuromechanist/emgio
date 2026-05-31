@@ -48,7 +48,7 @@ jobs:
         run: uv sync --extra dev
 
       # Type checking is a BLOCKING gate on the package source (#43). The
-      # [tool.ty.src] config in pyproject excludes emgio/tests from the gate
+      # [tool.ty.src] config in pyproject excludes biosigio/tests from the gate
       # (tests are exercised by running them); ty reports zero on the source.
       - name: ty check
-        run: uv run ty check emgio
+        run: uv run ty check biosigio

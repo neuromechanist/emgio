@@ -1,4 +1,4 @@
-# EMGIO Development Plan
+# biosigIO Development Plan
 
 ## Project Overview
 **Goal:** Unified EMG data import/export library with metadata preservation

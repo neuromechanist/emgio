@@ -1,4 +1,4 @@
-# EMGIO Research Notes
+# biosigIO Research Notes
 
 ## Purpose
 Track technical solutions, approaches, and references discovered during development.

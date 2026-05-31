@@ -8,7 +8,7 @@ the `zarr` extra.
 
 ## Module Documentation
 
-::: emgio.importers.zarr
+::: biosigio.importers.zarr
     options:
       show_root_heading: true
       show_source: true
@@ -17,7 +17,7 @@ the `zarr` extra.
 ## Usage Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 rec = Recording.from_file("out.zarr")
 

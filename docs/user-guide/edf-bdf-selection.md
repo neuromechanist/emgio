@@ -1,6 +1,6 @@
 # EDF/BDF Format Selection
 
-One of the key features of EMGIO is its ability to automatically determine whether to use the EDF (16-bit) or BDF (24-bit) format when exporting data. This decision is based on the dynamic range and precision requirements of your EMG data.
+One of the key features of biosigIO is its ability to automatically determine whether to use the EDF (16-bit) or BDF (24-bit) format when exporting data. This decision is based on the dynamic range and precision requirements of your EMG data.
 
 ## Why Format Selection Matters
 
@@ -18,9 +18,9 @@ One of the key features of EMGIO is its ability to automatically determine wheth
 
 Using 16-bit EDF when possible reduces storage requirements while maintaining sufficient precision for most analyses. However, when data contains very small signal components relative to the peak values, higher precision may be necessary to avoid quantization errors and preserve information.
 
-## How EMGIO Selects the Format
+## How biosigIO Selects the Format
 
-EMGIO uses two complementary approaches to determine the appropriate format:
+biosigIO uses two complementary approaches to determine the appropriate format:
 
 ### 1. SVD (Singular Value Decomposition) Analysis
 
@@ -76,7 +76,7 @@ emg.to_edf('output', format='bdf')  # Force BDF (24-bit)
 
 ## Understanding the Output
 
-After export, EMGIO will indicate which format was selected:
+After export, biosigIO will indicate which format was selected:
 
 ```
 Exporting to EDF format: dynamic range is 78.3 dB (less than 90 dB threshold)
@@ -92,7 +92,7 @@ Output file: output.bdf
 
 ## Best Practices
 
-- Let EMGIO automatically determine the format when possible
+- Let biosigIO automatically determine the format when possible
 - When in doubt, visualize your data to see if it contains very small but important signal components
 - For critical applications, consider using the BDF format to ensure maximum precision
 - If file size is a concern and precision is adequate, force the EDF format to save space

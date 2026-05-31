@@ -4,7 +4,7 @@ The `XDFImporter` class handles importing data from XDF (Extensible Data Format)
 
 ## Class Documentation
 
-::: emgio.importers.xdf
+::: biosigio.importers.xdf
     options:
       show_root_heading: true
       show_source: true
@@ -15,8 +15,8 @@ The `XDFImporter` class handles importing data from XDF (Extensible Data Format)
 ### Basic Loading
 
 ```python
-from emgio import Recording
-from emgio.importers.xdf import XDFImporter
+from biosigio import Recording
+from biosigio.importers.xdf import XDFImporter
 
 # Method 1: Using Recording.from_file (recommended)
 emg = Recording.from_file('recording.xdf')
@@ -31,7 +31,7 @@ emg = importer.load('recording.xdf')
 Before loading, explore what streams are available:
 
 ```python
-from emgio.importers.xdf import summarize_xdf
+from biosigio.importers.xdf import summarize_xdf
 
 summary = summarize_xdf('recording.xdf')
 print(summary)

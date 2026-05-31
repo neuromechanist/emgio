@@ -1,6 +1,6 @@
 # Signal Verification
 
-EMGIO provides tools to verify signal integrity when transferring data between formats. This is particularly useful when:
+biosigIO provides tools to verify signal integrity when transferring data between formats. This is particularly useful when:
 
 - Exporting EMG data to formats like EDF/BDF
 - Sharing data with collaborators who use different software
@@ -9,11 +9,11 @@ EMGIO provides tools to verify signal integrity when transferring data between f
 
 ## Verification Workflow
 
-The standard way to verify signal integrity involves comparing an original Recording object with one that has been exported and then reloaded. This is done using the `compare_signals` and `report_verification_results` functions from the `emgio.analysis.verification` module.
+The standard way to verify signal integrity involves comparing an original Recording object with one that has been exported and then reloaded. This is done using the `compare_signals` and `report_verification_results` functions from the `biosigio.analysis.verification` module.
 
 ```python
-from emgio import Recording
-from emgio.analysis.verification import compare_signals, report_verification_results
+from biosigio import Recording
+from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Load original data
 emg_original = Recording.from_file('raw_data.csv', importer='trigno')
@@ -44,10 +44,10 @@ for channel, metrics in results.items():
 
 ## Visual Verification
 
-You can visually compare original and reloaded signals using the `plot_comparison()` function from the `emgio.visualization.static` module:
+You can visually compare original and reloaded signals using the `plot_comparison()` function from the `biosigio.visualization.static` module:
 
 ```python
-from emgio.visualization.static import plot_comparison
+from biosigio.visualization.static import plot_comparison
 import matplotlib.pyplot as plt
 
 # Plot comparison of original and reloaded signals
@@ -75,7 +75,7 @@ plt.show()
 For more detailed verification, you can use the functions in the `verification` module directly:
 
 ```python
-from emgio.analysis.verification import compare_signals, report_verification_results
+from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Compare signals with detailed metrics
 results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
@@ -94,7 +94,7 @@ for channel, metrics in results.items():
 When channels might be renamed during the export/import process, you can provide a mapping:
 
 ```python
-from emgio.analysis.verification import compare_signals, report_verification_results
+from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Define mapping from original channel names to reloaded channel names
 channel_map = {
@@ -107,7 +107,7 @@ results = compare_signals(emg_original, emg_reloaded, channel_map=channel_map)
 report_verification_results(results, verify_tolerance=0.01)
 
 # Visual comparison with channel mapping
-from emgio.visualization.static import plot_comparison
+from biosigio.visualization.static import plot_comparison
 import matplotlib.pyplot as plt
 plot_comparison(emg_original, emg_reloaded, channel_map=channel_map)
 plt.show()
@@ -115,7 +115,7 @@ plt.show()
 
 ## Understanding Verification Metrics
 
-EMGIO uses the following metrics for signal verification:
+biosigIO uses the following metrics for signal verification:
 
 - **Normalized RMSE (NRMSE)**: Root mean square error normalized by the peak-to-peak range of the original signal
 - **Maximum Normalized Absolute Difference**: The maximum absolute difference between signals, normalized by the peak-to-peak range

@@ -1,10 +1,10 @@
 # Jupyter Notebook Examples
 
-EMGIO can be used effectively in Jupyter Notebooks for interactive data analysis and visualization. This page provides an overview of working with EMGIO in Jupyter environments.
+biosigIO can be used effectively in Jupyter Notebooks for interactive data analysis and visualization. This page provides an overview of working with biosigIO in Jupyter environments.
 
 ## Available Example Notebooks
 
-The EMGIO repository includes several example Jupyter notebooks that demonstrate different aspects of working with EMG data:
+The biosigIO repository includes several example Jupyter notebooks that demonstrate different aspects of working with EMG data:
 
 1. **Trigno Example Notebook**: Working with Delsys Trigno data
    - Location: `examples/trigno_example.ipynb`
@@ -16,7 +16,7 @@ The EMGIO repository includes several example Jupyter notebooks that demonstrate
 
 To run the example notebooks:
 
-1. Install EMGIO in development mode:
+1. Install biosigIO in development mode:
    ```bash
    uv sync --extra dev
    ```
@@ -30,12 +30,12 @@ To run the example notebooks:
 
 ## Key Features for Jupyter Notebooks
 
-When working with EMGIO in Jupyter notebooks, you can take advantage of these features:
+When working with biosigIO in Jupyter notebooks, you can take advantage of these features:
 
 ### Interactive Plotting
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
 %matplotlib inline  # For displaying plots in the notebook
 
@@ -194,4 +194,4 @@ plt.savefig('emg_plot.svg')  # SVG for editing
    channel_df
    ```
 
-These examples show how to leverage Jupyter notebooks for interactive exploration and analysis of EMG data with EMGIO. 
+These examples show how to leverage Jupyter notebooks for interactive exploration and analysis of EMG data with biosigIO. 

@@ -14,8 +14,8 @@ uv sync --extra arrow      # Parquet / Arrow / Feather
 uv sync --extra zarr       # Zarr serving store
 
 # Or with pip, into an existing environment
-pip install 'emgio[arrow]'
-pip install 'emgio[zarr]'
+pip install 'biosigio[arrow]'
+pip install 'biosigio[zarr]'
 ```
 
 The examples below build a small `Recording` in memory so they run without any
@@ -24,7 +24,7 @@ format (EDF, WFDB, XDF, ...) and serialize that instead.
 
 ```python
 import numpy as np
-from emgio import Recording
+from biosigio import Recording
 
 # Build a small two-channel recording (1 second at 1000 Hz)
 fs = 1000.0
@@ -117,7 +117,7 @@ print(fs_served)   # 1000.0 here; lower than native for, e.g., a 2048 Hz source
 
 ### Selecting a group in a multi-rate store
 
-A store may hold several `(modality, rate)` groups that cannot share emgio's
+A store may hold several `(modality, rate)` groups that cannot share biosigio's
 single time grid (for example an EEG group at 250 Hz and an EMG group at
 1000 Hz). When more than one group is present, pass the `group=` selector to
 choose which one to reconstruct:

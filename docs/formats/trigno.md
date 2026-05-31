@@ -1,6 +1,6 @@
 # Trigno Format
 
-The Delsys Trigno wireless EMG system exports data in a CSV format. This page describes the format and how EMGIO works with it.
+The Delsys Trigno wireless EMG system exports data in a CSV format. This page describes the format and how biosigIO works with it.
 
 ## Format Description
 
@@ -27,14 +27,14 @@ Time(s),EMG1,EMG2,EMG3,EMG4,ACC1_X,ACC1_Y,ACC1_Z,...
 
 ## Channel Types
 
-EMGIO recognizes the following channel types in Trigno CSV files:
+biosigIO recognizes the following channel types in Trigno CSV files:
 
 - **EMG** - Electromyography channels (typically in μV or mV)
 - **ACC** - Accelerometer channels (typically in g)
 
 ## Importer Implementation
 
-The Trigno importer in EMGIO (`emgio.importers.trigno`) processes these files by:
+The Trigno importer in biosigIO (`biosigio.importers.trigno`) processes these files by:
 
 1. Reading the header section to extract metadata
 2. Parsing the data section as a pandas DataFrame
@@ -44,7 +44,7 @@ The Trigno importer in EMGIO (`emgio.importers.trigno`) processes these files by
 ## Code Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Load data from Trigno CSV file
 emg = Recording.from_file('data.csv', importer='trigno')

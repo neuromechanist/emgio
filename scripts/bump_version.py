@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Version bumping script for EMGIO.
+"""Version bumping script for biosigIO.
 
 This script helps manage semantic versioning with support for:
 - major.minor.patch version bumping
@@ -41,7 +41,7 @@ class VersionBumper:
 
     def __init__(self, project_root: Path):
         self.project_root = project_root
-        self.version_file = project_root / "emgio" / "version.py"
+        self.version_file = project_root / "biosigio" / "version.py"
         self.pyproject_file = project_root / "pyproject.toml"
 
     # PEP 440 prerelease prefix mapping (without number)
@@ -182,7 +182,7 @@ class VersionBumper:
         else:
             version_info = f"({major}, {minor}, {patch})"
 
-        content = f'''"""Version information for EMGIO."""
+        content = f'''"""Version information for biosigIO."""
 
 __version__ = "{version_str}"
 __version_info__ = {version_info}
@@ -235,7 +235,7 @@ def get_version_info() -> tuple:
         uncommitted_files = [
             f
             for f in result.stdout.strip().split("\n")
-            if f and not f.startswith("emgio/version.py") and not f.startswith("pyproject.toml")
+            if f and not f.startswith("biosigio/version.py") and not f.startswith("pyproject.toml")
         ]
 
         if uncommitted_files:
@@ -247,7 +247,9 @@ def get_version_info() -> tuple:
 
         # Stage version files
         subprocess.run(
-            ["git", "add", "emgio/version.py", "pyproject.toml"], cwd=self.project_root, check=True
+            ["git", "add", "biosigio/version.py", "pyproject.toml"],
+            cwd=self.project_root,
+            check=True,
         )
 
         # Commit
@@ -322,7 +324,7 @@ For full changelog, see commit history.
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Bump EMGIO version and create Git tag/release",
+        description="Bump biosigIO version and create Git tag/release",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

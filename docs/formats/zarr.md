@@ -1,6 +1,6 @@
 # Zarr Serving Store
 
-EMGIO can export a recording to a biosigIO Zarr serving store: a single, cloud-native store that serves three downstream jobs from one conversion, namely fast interactive viewing on thin clients, edge and batch inference, and training-time streaming. This page documents the store contract and the serving model so the consumers of the store (a web viewer, an inference service, a training loader, a batch converter) can read it correctly. Those consumers are built elsewhere; EMGIO only produces and reads the store.
+biosigIO can export a recording to a biosigIO Zarr serving store: a single, cloud-native store that serves three downstream jobs from one conversion, namely fast interactive viewing on thin clients, edge and batch inference, and training-time streaming. This page documents the store contract and the serving model so the consumers of the store (a web viewer, an inference service, a training loader, a batch converter) can read it correctly. Those consumers are built elsewhere; biosigIO only produces and reads the store.
 
 ## Overview
 
@@ -12,13 +12,13 @@ Zarr is an optional dependency (the `zarr` extra, which installs zarr v3) and is
 
 ```bash
 uv sync --extra zarr        # development install
-pip install 'emgio[zarr]'   # existing environment
+pip install 'biosigio[zarr]'   # existing environment
 ```
 
 Write a store with `Recording.to_zarr`:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 rec = Recording.from_file('recording.edf')
 
@@ -114,7 +114,7 @@ rec.to_zarr('recording.zarr', dtype='float32')
 Read a store back into a `Recording` with `Recording.from_file`. The `.zarr` extension is auto-detected, or pass `importer='zarr'` explicitly:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Extension-inferred
 rec = Recording.from_file('recording.zarr')
@@ -125,7 +125,7 @@ rec = Recording.from_file('recording.zarr', importer='zarr')
 
 The importer reads level 0 of one group, applies the `physical = digital * scale + offset` dequantization, and restores channels, events, and recording metadata. The view pyramid is render-only and is never read here.
 
-Because the groups in a store can sit at different rates that cannot share EMGIO's single time grid, the importer reconstructs one group at a time. When a store holds a single group it is selected automatically; when it holds more than one, pass the `group=` selector by group name. Calling `from_file` on a multi-group store without `group=` raises an error that lists the available groups:
+Because the groups in a store can sit at different rates that cannot share biosigIO's single time grid, the importer reconstructs one group at a time. When a store holds a single group it is selected automatically; when it holds more than one, pass the `group=` selector by group name. Calling `from_file` on a multi-group store without `group=` raises an error that lists the available groups:
 
 ```python
 # Multi-group store: choose which (modality, rate) group to reconstruct
@@ -141,11 +141,11 @@ The root group attributes carry the format tag and version so a reader can recog
 - `format` is `"biosigio-zarr"`.
 - `format_version` is currently `2`. In version 2, `recording_metadata` is a native JSON object, with non-JSON-native values such as datetimes carried in typed envelopes, so a browser or zarrita reader can consume it without a second parse. Version 1 stored `recording_metadata` as a JSON string; the reader still accepts version 1 stores.
 
-A reader should reject a store whose `format_version` is newer than the one it supports rather than guess at an unknown layout. The EMGIO importer does exactly this: it raises if the store's version exceeds the version this build reads.
+A reader should reject a store whose `format_version` is newer than the one it supports rather than guess at an unknown layout. The biosigIO importer does exactly this: it raises if the store's version exceeds the version this build reads.
 
 ## Serving model (external)
 
-The viewing, inference, training, and batch-conversion layers live outside EMGIO. EMGIO only writes and reads the store; the sections below summarize the intended serving model so those external consumers can be built against the same contract.
+The viewing, inference, training, and batch-conversion layers live outside biosigIO. biosigIO only writes and reads the store; the sections below summarize the intended serving model so those external consumers can be built against the same contract.
 
 **Reads need no backend.** A Zarr v3 store is objects plus JSON, so a browser reader (zarrita) streams it directly from object storage over HTTPS using ranged GETs. The viewing path has no decode service.
 

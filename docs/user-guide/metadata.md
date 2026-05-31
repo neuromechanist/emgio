@@ -1,12 +1,12 @@
 # Metadata Handling
 
-EMGIO provides comprehensive metadata management capabilities, allowing you to work with recording session information, subject details, and other contextual data. Proper metadata handling is particularly important when working with research data that needs to be shared or archived.
+biosigIO provides comprehensive metadata management capabilities, allowing you to work with recording session information, subject details, and other contextual data. Proper metadata handling is particularly important when working with research data that needs to be shared or archived.
 
 The `Recording` object stores various pieces of metadata loaded from the source file or added manually.
 
 ## Accessing Metadata
 
-When you load data into EMGIO, any available metadata from the source file is automatically imported:
+When you load data into biosigIO, any available metadata from the source file is automatically imported:
 
 ```python
 # Load data
@@ -129,7 +129,7 @@ emg.set_metadata_dict({
 
 ## Common Metadata Fields
 
-While EMGIO is flexible about what metadata you can store, some common fields include:
+While biosigIO is flexible about what metadata you can store, some common fields include:
 
 | Field | Description | Example |
 |-------|-------------|---------|
@@ -142,7 +142,7 @@ While EMGIO is flexible about what metadata you can store, some common fields in
 
 ## Metadata in Exported Files
 
-When exporting to EDF/BDF, EMGIO automatically includes metadata in the file header and generates a sidecar channels.tsv file with channel-specific metadata following BIDS conventions:
+When exporting to EDF/BDF, biosigIO automatically includes metadata in the file header and generates a sidecar channels.tsv file with channel-specific metadata following BIDS conventions:
 
 ```python
 # Export to EDF with metadata

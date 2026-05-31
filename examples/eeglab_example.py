@@ -1,5 +1,5 @@
 """
-Example script demonstrating how to use the EMGIO package with EEGLAB .set files.
+Example script demonstrating how to use the biosigIO package with EEGLAB .set files.
 This example shows how to:
 1. Load data from an EEGLAB .set file
 2. Access metadata and channel information
@@ -10,7 +10,7 @@ This example shows how to:
 
 import os
 
-from emgio import Recording
+from biosigio import Recording
 
 
 def main():

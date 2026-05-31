@@ -6,7 +6,7 @@
 |---|---|
 | Status | Draft for engineering review |
 | Owner | Yahya Shirazi |
-| Applies to | `biosigio` (formerly `emgio`), NEMAR serving layer |
+| Applies to | `biosigio` (formerly `biosigio`), NEMAR serving layer |
 | Reference code | `zarr_exporter.py` (target path `biosigio/exporters/zarr.py`) |
 
 ---
@@ -94,9 +94,9 @@ Key contract points:
 - **`physical = digital * scale + offset`**, per channel, when `dtype="int16"`. For `float32` the scale is 1 and offset is 0.
 - **Events** are stored as onset, duration, and an integer code per event, with a portable code to label map. This stays compact when there are many events with few unique labels.
 
-### Implementation notes (as shipped in emgio 0.6.0)
+### Implementation notes (as shipped in biosigio 0.6.0)
 
-These clarify the contract to match the reference implementation (`emgio/exporters/zarr.py`, `emgio/importers/zarr.py`). Readers built to this PRD should rely on them:
+These clarify the contract to match the reference implementation (`biosigio/exporters/zarr.py`, `biosigio/importers/zarr.py`). Readers built to this PRD should rely on them:
 
 - **`format_version` is `2`** (`format = "biosigio-zarr"`). Readers should accept a version less than or equal to the one they know and reject a newer one. Version 2 stores `recording_metadata` as a **native JSON object** (directly readable by a browser/zarrita client); version 1 stored it as a JSON string. Both encode non-JSON values (datetime, date, numpy) as typed envelopes `{"__biosigio_type__": "datetime"|"date", "value": ...}`; a reader detects and decodes these.
 - **Group directory names encode the TARGET (served) rate**, not the native rate (e.g. a 500 Hz native EEG group is named `eeg_250hz`). Address groups by the names in the root `channel_groups` attribute, never by reconstructing from a native rate. The native rate is recovered from the group `original_rate` attribute.
@@ -183,8 +183,8 @@ The cap table is a single configurable parameter, not hard-coded behavior.
 | Milestone | Deliverable | Status |
 |---|---|---|
 | M0 | Zarr writer (`zarr_exporter.py`), synthetic roundtrip verified | Done |
-| M1 | `Recording.to_zarr` wiring, plus unit and roundtrip tests in repo style | Done (`emgio/exporters/zarr.py`, `test_zarr.py`) |
-| M2 | `from_zarr` reader for verification and braindecode and training integration | Done (`emgio/importers/zarr.py`, `importer="zarr"` + `.zarr` autodetect) |
+| M1 | `Recording.to_zarr` wiring, plus unit and roundtrip tests in repo style | Done (`biosigio/exporters/zarr.py`, `test_zarr.py`) |
+| M2 | `from_zarr` reader for verification and braindecode and training integration | Done (`biosigio/importers/zarr.py`, `importer="zarr"` + `.zarr` autodetect) |
 | M3 | Batch conversion over NEMAR BIDS: per-dataset, idempotent, versioned output prefix, manifest, all four modalities | |
 | M4 | Web viewer: zarrita plus WebGL, pyramid level selection, events overlay | |
 | M5 | Serving infra: bucket layout, CORS, CDN, cache headers, auth for restricted data | |

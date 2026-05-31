@@ -4,7 +4,7 @@ The `OTBImporter` class is responsible for importing EMG and other electrophysio
 
 ## Class Documentation
 
-::: emgio.importers.otb
+::: biosigio.importers.otb
     options:
       show_root_heading: true
       show_source: true
@@ -13,8 +13,8 @@ The `OTBImporter` class is responsible for importing EMG and other electrophysio
 ## Usage Example
 
 ```python
-from emgio import Recording
-from emgio.importers.otb import OTBImporter
+from biosigio import Recording
+from biosigio.importers.otb import OTBImporter
 
 # Method 1: Using Recording.from_file (recommended)
 emg = Recording.from_file('data.otb+', importer='otb')

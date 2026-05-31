@@ -1,6 +1,6 @@
 # XDF Format
 
-EMGIO supports loading data stored in the Extensible Data Format (XDF), the native format for Lab Streaming Layer (LSL) recordings. XDF files can contain multiple synchronized data streams from various devices, making them common in multi-modal experiments.
+biosigIO supports loading data stored in the Extensible Data Format (XDF), the native format for Lab Streaming Layer (LSL) recordings. XDF files can contain multiple synchronized data streams from various devices, making them common in multi-modal experiments.
 
 ## File Structure
 
@@ -21,7 +21,7 @@ Common file extensions:
 Before loading, you can explore the contents of an XDF file using `summarize_xdf`:
 
 ```python
-from emgio.importers.xdf import summarize_xdf
+from biosigio.importers.xdf import summarize_xdf
 
 # Get a summary of all streams in the file
 summary = summarize_xdf('recording.xdf')
@@ -46,7 +46,7 @@ if stream:
 Load all numeric streams from an XDF file:
 
 ```python
-from emgio.core.emg import Recording
+from biosigio.core.emg import Recording
 
 # Load all numeric streams (excludes marker/string streams)
 emg = Recording.from_file('recording.xdf')
@@ -72,7 +72,7 @@ emg = Recording.from_file('recording.xdf', stream_ids=[1, 3])
 
 ## Multi-Stream Handling
 
-When loading multiple streams with different sampling rates, EMGIO:
+When loading multiple streams with different sampling rates, biosigIO:
 
 1. Resamples all streams to a common time base
 2. Uses the highest sampling rate among selected streams
@@ -175,4 +175,4 @@ if marker_stream:
 ## Requirements
 
 The XDF importer requires the `pyxdf` package. It is included as a core
-dependency when installing EMGIO, so no additional installation is required.
+dependency when installing biosigIO, so no additional installation is required.
