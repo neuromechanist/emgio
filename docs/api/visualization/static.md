@@ -1,6 +1,6 @@
 # Static Visualization API
 
-The `static` module in `emgio.visualization` provides functions for static plotting of EMG data. These functions are primarily used internally by the `EMG` class methods but can also be called directly for advanced customization.
+The `static` module in `emgio.visualization` provides functions for static plotting of EMG data. These functions are primarily used internally by the `Recording` class methods but can also be called directly for advanced customization.
 
 ## Module Documentation
 
@@ -17,16 +17,16 @@ The `static` module in `emgio.visualization` provides functions for static plott
 
 ## Direct Usage Examples
 
-While these functions are typically accessed through the `EMG` class methods, they can be called directly for advanced use cases:
+While these functions are typically accessed through the `Recording` class methods, they can be called directly for advanced use cases:
 
 ### Plotting Signals Directly
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.visualization.static import plot_signals
 
 # Load EMG data
-emg = EMG.from_file("data.csv", importer="trigno")
+emg = Recording.from_file("data.csv", importer="trigno")
 
 # Plot signals directly with custom parameters
 plot_signals(
@@ -45,12 +45,12 @@ plot_signals(
 ### Plotting Comparison Directly
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.visualization.static import plot_comparison
 
 # Load original and reloaded EMG data
-emg_original = EMG.from_file("original.csv", importer="trigno")
-emg_reloaded = EMG.from_file("reloaded.edf")
+emg_original = Recording.from_file("original.csv", importer="trigno")
+emg_reloaded = Recording.from_file("reloaded.edf")
 
 # Create channel mapping
 channel_map = {
@@ -84,4 +84,4 @@ The static plotting functions provide several parameters for customization:
 - **Grid lines**: Toggle grid visibility
 - **Titles**: Add custom titles to plots
 
-For most use cases, the corresponding methods on the `EMG` class (`plot_signals()` and `plot_comparison()`) are recommended as they provide simplified interfaces to these functions. 
+For most use cases, the corresponding methods on the `Recording` class (`plot_signals()` and `plot_comparison()`) are recommended as they provide simplified interfaces to these functions. 

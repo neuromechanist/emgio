@@ -9,7 +9,7 @@ import pandas as pd
 import pyedflib
 
 from ..analysis.signal import analyze_signal, determine_format_suitability
-from ..core.emg import EMG
+from ..core.emg import Recording
 from ..core.modality import to_bids_channels_tsv_type
 
 # EDF and BDF share the same 256-byte-per-signal header layout: physical_min and
@@ -274,7 +274,7 @@ class EDFExporter:
 
     @staticmethod
     def export(
-        emg: EMG,
+        emg: Recording,
         filepath: str,
         precision_threshold: float = 0.01,
         method: str = "both",
@@ -293,7 +293,7 @@ class EDFExporter:
         Export EMG data to EDF/BDF format with optional BIDS-compliant channels.tsv file.
 
         Args:
-            emg: EMG object containing the data
+            emg: Recording object containing the data
             filepath: Path to save the EDF/BDF file
             precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
             method: Method for signal analysis ('svd', 'fft', or 'both')
@@ -350,14 +350,14 @@ class EDFExporter:
             if not bypass_analysis:
                 print("\nUser specified BDF format (24-bit).")
             else:
-                # Log critical only if bypassing, already logged in EMG.to_edf
+                # Log critical only if bypassing, already logged in Recording.to_edf
                 pass  # logging.log(logging.CRITICAL, "Skipping analysis, using specified BDF format.")
         elif format.lower() == "edf":
             use_bdf = False
             if not bypass_analysis:
                 print("\nUser specified EDF format (16-bit).")
             else:
-                # Log critical only if bypassing, already logged in EMG.to_edf
+                # Log critical only if bypassing, already logged in Recording.to_edf
                 pass  # logging.log(logging.CRITICAL, "Skipping analysis, using specified EDF format.")
         elif format.lower() != "auto":
             warnings.warn(
@@ -423,7 +423,7 @@ class EDFExporter:
                     print(
                         "\nUsing EDF format (16-bit) based on signal analysis (precision within acceptable range)."
                     )
-        # else: # bypass_analysis is True - logging handled in EMG.to_edf
+        # else: # bypass_analysis is True - logging handled in Recording.to_edf
         #     pass # logging.log(logging.CRITICAL, "Signal analysis bypassed.")
 
         # Set file format and create writer

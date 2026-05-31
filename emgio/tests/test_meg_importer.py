@@ -14,7 +14,7 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from emgio import EMG
+from emgio import Recording
 
 pytest.importorskip("mne", reason="MEG import requires the optional 'meg' extra (mne)")
 
@@ -26,7 +26,7 @@ pytestmark = pytest.mark.skipif(not MEG.exists(), reason="MEG fixture missing")
 
 @pytest.fixture(scope="module")
 def meg_emg():
-    return EMG.from_file(str(MEG))
+    return Recording.from_file(str(MEG))
 
 
 def test_meg_channel_types_preserved(meg_emg):
@@ -75,7 +75,7 @@ def test_meg_roundtrip_preserves_tesla_signals(meg_emg, tmp_path):
     out = tmp_path / "meg.edf"
     meg_emg.to_edf(str(out), format="bdf", bypass_analysis=True)
     written = out if out.exists() else out.with_suffix(".bdf")
-    reloaded = EMG.from_file(str(written), bids_channels="off")
+    reloaded = Recording.from_file(str(written), bids_channels="off")
     assert len(reloaded.channels) == len(meg_emg.channels)
 
     # Check a handful of magnetometer channels on a 10 s window.

@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
 
-from emgio.core.emg import EMG
+from emgio.core.emg import Recording
 
 
 def main():
     # Load OTB data
     print("Loading OTB data...")
     # example two: one_sessantaquattro_truncated.otb+, example two: two_mouvi_truncated.otb+
-    emg = EMG.from_file("examples/one_sessantaquattro_truncated.otb+", importer="otb")
+    emg = Recording.from_file("examples/one_sessantaquattro_truncated.otb+", importer="otb")
 
     # Print metadata
     print("\nDevice Information:")
@@ -29,7 +29,7 @@ def main():
     for ch_type, count in channel_types.items():
         print(f"{ch_type}: {count} channels")
 
-    # Create a new EMG object with only EMG channels
+    # Create a new Recording object with only EMG channels
     emg_data = emg.select_channels(channel_type="EMG")
     if emg_data.signals is not None and not emg_data.signals.empty:
         print("\nPlotting EMG channels...")

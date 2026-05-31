@@ -13,16 +13,16 @@ The `EDFImporter` class is responsible for importing EMG and other physiological
 ## Usage Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.importers.edf import EDFImporter
 
-# Method 1: Using EMG.from_file (recommended)
-emg = EMG.from_file('data.edf', importer='edf')  # Works for both .edf and .bdf
+# Method 1: Using Recording.from_file (recommended)
+emg = Recording.from_file('data.edf', importer='edf')  # Works for both .edf and .bdf
 
 # Method 2: Using the importer directly
 importer = EDFImporter('data.edf')
 signals, channels, metadata = importer.load()
-emg = EMG(signals, channels, metadata)
+emg = Recording(signals, channels, metadata)
 ```
 
 ## File Format Support
@@ -90,7 +90,7 @@ EDF+ files can contain annotations that mark specific events or segments in the 
 
 ```python
 # Load EDF+ file with annotations
-emg = EMG.from_file('data.edf+', importer='edf')
+emg = Recording.from_file('data.edf+', importer='edf')
 
 # Access annotations
 annotations = emg.get_metadata('annotations')

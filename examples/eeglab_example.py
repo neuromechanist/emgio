@@ -10,7 +10,7 @@ This example shows how to:
 
 import os
 
-from emgio import EMG
+from emgio import Recording
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
 
     # Load the data using EEGLAB importer
     print("Loading EMG data from EEGLAB .set file...")
-    emg = EMG.from_file(data_path, importer="eeglab")
+    emg = Recording.from_file(data_path, importer="eeglab")
 
     # Print metadata
     print("\nMetadata:")
@@ -60,12 +60,12 @@ def main():
         if len(events) > 5:
             print(f"  ... and {len(events) - 5} more events")
 
-    # Select EMG channels only and create a new EMG object
+    # Select EMG channels only and create a new Recording object
     emg_channels = emg.get_channels_by_type("EMG")
     if emg_channels:
         emg_only = emg.select_channels(
             emg_channels
-        )  # Creates a new EMG object with only EMG channels
+        )  # Creates a new Recording object with only EMG channels
 
         # Plot the first 5 seconds of data with different configurations
         print("\nPlotting EMG signals...")

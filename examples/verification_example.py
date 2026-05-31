@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-from emgio.core.emg import EMG
+from emgio.core.emg import Recording
 
 # Add the project root to the Python path
 # This allows importing emgio even if it's not installed
@@ -31,14 +31,14 @@ output_path_bdf = os.path.join(os.path.dirname(__file__), output_file_bdf)
 logging.info(f"Loading EMG data from: {input_path}")
 try:
     # Load the EMG data (assuming it's identifiable by the importer)
-    emg_data = EMG.from_file(input_path)
+    emg_data = Recording.from_file(input_path)
     logging.info("EMG data loaded successfully.")
     logging.info(f"Channels found: {list(emg_data.signals.columns)}")
     logging.info(f"Duration: {emg_data.signals.index[-1]:.2f} seconds")
     emg_channels = emg_data.get_channels_by_type("EMG")
     emg_only = emg_data.select_channels(
         emg_channels[:2]
-    )  # Creates a new EMG object with only EMG channels
+    )  # Creates a new Recording object with only EMG channels
 
 
 except FileNotFoundError:

@@ -66,13 +66,13 @@ uv pip install .
 ### Basic Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load data with automatic format detection
-emg = EMG.from_file('data.csv')  # Format detected from file extension
+emg = Recording.from_file('data.csv')  # Format detected from file extension
 
 # Load data with explicit importer
-emg = EMG.from_file('data.csv', importer='trigno')
+emg = Recording.from_file('data.csv', importer='trigno')
 
 # Plot specific channels
 emg.plot_signals(['EMG1', 'EMG2'])
@@ -85,7 +85,7 @@ emg.to_edf('output.edf')
 
 ```python
 # Import a generic CSV file
-emg = EMG.from_file('data.csv', importer='csv',
+emg = Recording.from_file('data.csv', importer='csv',
                    sample_frequency=1000,  # Required if no time column
                    has_header=True,        # Whether file has header row
                    channel_names=['EMG_L', 'EMG_R', 'ACC_X'])

@@ -6,7 +6,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from ..importers.xdf import XDFImporter, XDFStreamInfo, XDFSummary, summarize_xdf
 
 # Path to the sample XDF file
@@ -102,8 +102,8 @@ def test_xdf_importer_basic():
 
 
 def test_xdf_importer_from_emg_class():
-    """Test XDF import through EMG.from_file."""
-    emg = EMG.from_file(SAMPLE_XDF_PATH)
+    """Test XDF import through Recording.from_file."""
+    emg = Recording.from_file(SAMPLE_XDF_PATH)
 
     # Check basic loading
     assert emg.signals is not None
@@ -163,7 +163,7 @@ def test_xdf_importer_timestamps():
 def test_xdf_export_roundtrip():
     """Test XDF import and EDF export roundtrip."""
     # Load XDF file
-    emg = EMG.from_file(SAMPLE_XDF_PATH)
+    emg = Recording.from_file(SAMPLE_XDF_PATH)
 
     # Export to EDF
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
@@ -173,7 +173,7 @@ def test_xdf_export_roundtrip():
         emg.to_edf(temp_path, format="edf")
 
         # Reload from EDF
-        emg_reloaded = EMG.from_file(temp_path)
+        emg_reloaded = Recording.from_file(temp_path)
 
         # Check basic structure preserved
         assert len(emg_reloaded.channels) == len(emg.channels)
@@ -245,7 +245,7 @@ def test_multistream_summarize():
 
 def test_multistream_import_all():
     """Test importing all numeric streams from multi-stream file."""
-    emg = EMG.from_file(MULTI_STREAM_XDF_PATH)
+    emg = Recording.from_file(MULTI_STREAM_XDF_PATH)
 
     # Should have channels from EEG, EMG, and Mocap (not Markers - string stream)
     # EEG: 8, EMG: 2, Mocap: 6 = 16 total
@@ -255,32 +255,32 @@ def test_multistream_import_all():
 def test_multistream_import_by_type():
     """Test importing specific stream types from multi-stream file."""
     # Import only EMG
-    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"])
+    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"])
     assert len(emg.channels) == 2
     channel_names = list(emg.channels.keys())
     assert "EMG_L" in channel_names
     assert "EMG_R" in channel_names
 
     # Import only EEG
-    eeg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG"])
+    eeg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG"])
     assert len(eeg.channels) == 8
     assert all("EEG" in name for name in eeg.channels.keys())
 
     # Import only Mocap
-    mocap = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["Mocap"])
+    mocap = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["Mocap"])
     assert len(mocap.channels) == 6
     assert all("Marker" in name for name in mocap.channels.keys())
 
 
 def test_multistream_import_by_name():
     """Test importing specific streams by name from multi-stream file."""
-    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_names=["TestEMG"])
+    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_names=["TestEMG"])
     assert len(emg.channels) == 2
 
 
 def test_multistream_import_multiple_types():
     """Test importing multiple stream types from multi-stream file."""
-    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG", "EMG"])
+    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG", "EMG"])
 
     # Should have EEG (8) + EMG (2) = 10 channels
     assert len(emg.channels) == 10
@@ -340,7 +340,7 @@ def test_multistream_uses_highest_sample_rate():
     emg_stream = summary.get_stream_by_name("TestEMG")  # 2048 Hz - highest
 
     # Load both streams (EEG at 256 Hz, EMG at 2048 Hz)
-    combined = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG", "EMG"])
+    combined = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG", "EMG"])
 
     # The number of samples should match the highest rate stream (EMG at 2048 Hz)
     n_samples = len(combined.signals)
@@ -419,7 +419,7 @@ def test_include_timestamps_single_stream():
 
 def test_include_timestamps_multistream():
     """Test include_timestamps option with multi-stream file."""
-    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, include_timestamps=True)
+    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, include_timestamps=True)
 
     channel_names = list(emg.channels.keys())
 
@@ -435,7 +435,7 @@ def test_include_timestamps_multistream():
 
 def test_include_timestamps_by_type():
     """Test include_timestamps with stream type selection."""
-    emg = EMG.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"], include_timestamps=True)
+    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"], include_timestamps=True)
 
     channel_names = list(emg.channels.keys())
 
@@ -447,7 +447,7 @@ def test_include_timestamps_by_type():
 
 def test_include_timestamps_default_false():
     """Test that timestamps are not included by default."""
-    emg = EMG.from_file(SAMPLE_XDF_PATH)
+    emg = Recording.from_file(SAMPLE_XDF_PATH)
 
     channel_names = list(emg.channels.keys())
     ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
@@ -461,7 +461,7 @@ def test_include_timestamps_export_roundtrip():
     import tempfile
 
     # Load with timestamps
-    emg = EMG.from_file(SAMPLE_XDF_PATH, include_timestamps=True)
+    emg = Recording.from_file(SAMPLE_XDF_PATH, include_timestamps=True)
 
     # Find timestamp channel
     ts_channels = [ch for ch in emg.channels.keys() if "_LSL_timestamps" in ch]
@@ -477,7 +477,7 @@ def test_include_timestamps_export_roundtrip():
         emg.to_edf(temp_path, format="edf")
 
         # Reload from EDF
-        emg_reloaded = EMG.from_file(temp_path)
+        emg_reloaded = Recording.from_file(temp_path)
 
         # Check timestamp channel exists in reloaded data
         # Note: EDF has 16-char limit, so "_LSL_timestamps" may be truncated to "_LSL_t"

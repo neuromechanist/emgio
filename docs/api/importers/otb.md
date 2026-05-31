@@ -13,16 +13,16 @@ The `OTBImporter` class is responsible for importing EMG and other electrophysio
 ## Usage Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.importers.otb import OTBImporter
 
-# Method 1: Using EMG.from_file (recommended)
-emg = EMG.from_file('data.otb+', importer='otb')
+# Method 1: Using Recording.from_file (recommended)
+emg = Recording.from_file('data.otb+', importer='otb')
 
 # Method 2: Using the importer directly
 importer = OTBImporter('data.otb+')
 signals, channels, metadata = importer.load()
-emg = EMG(signals, channels, metadata)
+emg = Recording(signals, channels, metadata)
 ```
 
 ## File Format Support

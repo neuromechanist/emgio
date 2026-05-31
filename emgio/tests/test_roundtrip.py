@@ -27,7 +27,7 @@ from dataclasses import dataclass
 import numpy as np
 import pytest
 
-from emgio import EMG
+from emgio import Recording
 
 # Round-trips are expensive; compute each fixture's once and share it across the
 # structural and value-integrity tests.
@@ -88,13 +88,13 @@ MIXED_RATE_CASES = [
 def _roundtrip(case):
     """Import -> export (auto) -> reimport once per fixture (cached)."""
     if case.name not in _RT_CACHE:
-        emg = EMG.from_file(str(case.path), importer=case.importer)
+        emg = Recording.from_file(str(case.path), importer=case.importer)
         out = os.path.join(_RT_DIR, f"{case.name}.edf")
         # format="auto" exercises the real EDF/BDF selection (and ignores
         # bypass_analysis by design), which is what a round-trip harness wants.
         emg.to_edf(out, format="auto")
         written = out if os.path.exists(out) else os.path.splitext(out)[0] + ".bdf"
-        _RT_CACHE[case.name] = (emg, EMG.from_file(written))
+        _RT_CACHE[case.name] = (emg, Recording.from_file(written))
     return _RT_CACHE[case.name]
 
 
@@ -162,7 +162,7 @@ def test_roundtrip_preserves_signal_values(case):
 def test_mixed_rate_export_raises(case, tmp_path):
     if not case.path.exists():
         pytest.skip(f"fixture missing: {case.path}")
-    emg = EMG.from_file(str(case.path), importer=case.importer)
+    emg = Recording.from_file(str(case.path), importer=case.importer)
     rates = {int(c["sample_frequency"]) for c in emg.channels.values()}
     if len(rates) <= 1:
         pytest.skip(f"{case.name}: fixture is single-rate, guard not exercised")
@@ -176,7 +176,7 @@ def test_meg_fif_imports_via_mne():
     if not meg.exists():
         pytest.skip("MEG fixture missing")
     pytest.importorskip("mne", reason="MEG import requires the optional 'meg' extra (mne)")
-    emg = EMG.from_file(str(meg))
+    emg = Recording.from_file(str(meg))
     assert len(emg.channels) > 0
     # No modality creep: a MEG file must not invent EMG channels.
     assert not [c for c, i in emg.channels.items() if i["channel_type"] == "EMG"]
@@ -192,13 +192,13 @@ def test_event_roundtrip_through_edf(tmp_path):
     fixture = BIDS / "emg/sub-01/emg/sub-01_task-isometric10percentmvc_run-01_emg.edf"
     if not fixture.exists():
         pytest.skip("EMG fixture missing")
-    emg = EMG.from_file(str(fixture))
+    emg = Recording.from_file(str(fixture))
     emg.add_event(onset=0.5, duration=0.0, description="m1")
     emg.add_event(onset=1.0, duration=0.2, description="m2")
     out = tmp_path / "ev.edf"
     emg.to_edf(str(out), format="edf", bypass_analysis=True)
 
-    reloaded = EMG.from_file(str(out), bids_channels="off")
+    reloaded = Recording.from_file(str(out), bids_channels="off")
     assert len(reloaded.events) == 2
     assert list(reloaded.events["description"]) == ["m1", "m2"]
     assert np.allclose(reloaded.events["onset"].to_numpy(), [0.5, 1.0], atol=1e-3)

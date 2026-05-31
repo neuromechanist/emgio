@@ -12,14 +12,14 @@ from ..analysis.signal import analyze_signal, determine_format_suitability, quan
 from ..analysis.signal import analyze_signal_fft as _analyze_signal_fft
 from ..analysis.signal import analyze_signal_svd as _analyze_signal_svd
 from ..analysis.signal import find_elbow_point as _find_elbow_point
-from ..core.emg import EMG
+from ..core.emg import Recording
 from ..exporters.edf import EDFExporter, _determine_scaling_factors
 
 
 @pytest.fixture
 def sample_emg():
-    """Create an EMG object with sample data."""
-    emg = EMG()
+    """Create a Recording object with sample data."""
+    emg = Recording()
 
     # Create sample data
     time = np.linspace(0, 1, 1000)  # 1 second at 1000Hz
@@ -274,8 +274,8 @@ def test_edf_export_no_channels_tsv(sample_emg):
 
 
 def test_edf_export_no_signals():
-    """Test error handling when exporting empty EMG object."""
-    empty_emg = EMG()
+    """Test error handling when exporting empty Recording object."""
+    empty_emg = Recording()
     with pytest.raises(ValueError):
         with tempfile.NamedTemporaryFile(suffix=".edf") as f:
             EDFExporter.export(empty_emg, f.name)
@@ -368,23 +368,23 @@ def test_signal_analysis():
 
 def test_format_selection():
     """Test format selection based on signal characteristics (format='auto')."""
-    EMG()
+    Recording()
     time = np.linspace(0, 1, 1000)
 
     # Test case 1: High quality signal with small amplitude (should still use BDF due to dynamic range)
     clean_signal = np.sin(2 * np.pi * 10 * time) * 1  # Clean 10 Hz sine with amplitude 1
-    emg_clean = EMG()
+    emg_clean = Recording()
     emg_clean.add_channel("Clean", clean_signal, 1000, "uV", "EMG")
 
     # Test case 2: Moderate dynamic range signal that will trigger EDF
     # Update test to reflect signals under ~80dB typically use EDF
     hdr_signal, actual_dr = generate_high_dynamic_range_signal(dynamic_range_db=85)
     print(f"HDR signal generated with {actual_dr:.1f} dB dynamic range")
-    emg_hdr = EMG()
+    emg_hdr = Recording()
     emg_hdr.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
 
     # Test case 3: Mixed signals (should result in BDF due to high DR clean signal)
-    emg_mixed = EMG()
+    emg_mixed = Recording()
     emg_mixed.add_channel("Clean", clean_signal, 1000, "uV", "EMG")
     emg_mixed.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
 
@@ -454,12 +454,12 @@ def test_format_reproducibility():
 
     # BDF test signal (large amplitude, requires BDF ideally)
     bdf_signal = np.sin(2 * np.pi * 10 * time) * 1e6
-    emg_bdf = EMG()
+    emg_bdf = Recording()
     emg_bdf.add_channel("LargeAmp", bdf_signal, 1000, "uV", "EMG")
 
     # EDF test signal (smaller amplitude, suitable for EDF)
     edf_signal = np.sin(2 * np.pi * 10 * time) * 1000
-    emg_edf = EMG()
+    emg_edf = Recording()
     emg_edf.add_channel("SmallAmp", edf_signal, 1000, "uV", "EMG")
 
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
@@ -502,7 +502,7 @@ def test_format_reproducibility():
 
 def test_bdf_format_selection():
     """Test automatic BDF format selection with scaling verification."""
-    emg = EMG()
+    emg = Recording()
     time = np.linspace(0, 1, 1000)
     # Create signal that should trigger BDF in 'auto' mode
     signal = np.sin(2 * np.pi * 10 * time) * 1e6  # Large amplitude
@@ -551,14 +551,14 @@ def test_bdf_format_selection():
 
 def test_user_format_selection():
     """Test explicit format selection by user (format='edf' or 'bdf')."""
-    # Create necessary EMG objects inside the test where needed
+    # Create necessary Recording objects inside the test where needed
     time = np.linspace(0, 1, 1000)
 
     # Signal that would normally trigger BDF (High Dynamic Range)
     hdr_signal, _ = generate_high_dynamic_range_signal(
         dynamic_range_db=85
     )  # Lower threshold for reliability
-    emg_hdr = EMG()
+    emg_hdr = Recording()
     emg_hdr.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
 
     # Signal that would normally trigger EDF (Lower Dynamic Range)
@@ -566,7 +566,7 @@ def test_user_format_selection():
     noisy_signal = np.sin(2 * np.pi * 10 * time) * 100
     noise = np.random.normal(0, 5.0, 1000)
     noisy_signal += noise
-    emg_lowdr = EMG()
+    emg_lowdr = Recording()
     emg_lowdr.add_channel("LowDR", noisy_signal, 1000, "uV", "EMG")
 
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
@@ -635,8 +635,8 @@ def test_user_format_selection():
 
 def test_high_dynamic_range():
     """Test export of signals with high dynamic range using auto format."""
-    # Create EMG object
-    emg = EMG()
+    # Create Recording object
+    emg = Recording()
 
     # Generate a high dynamic range signal (lowered threshold for test reliability)
     hdr_signal, actual_dr = generate_high_dynamic_range_signal(dynamic_range_db=85)

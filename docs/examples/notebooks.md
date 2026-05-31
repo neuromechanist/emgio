@@ -35,12 +35,12 @@ When working with EMGIO in Jupyter notebooks, you can take advantage of these fe
 ### Interactive Plotting
 
 ```python
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 %matplotlib inline  # For displaying plots in the notebook
 
 # Load EMG data
-emg = EMG.from_file('data.csv', importer='trigno')
+emg = Recording.from_file('data.csv', importer='trigno')
 
 # Plot signals with customized appearance
 emg.plot_signals(
@@ -58,7 +58,7 @@ Jupyter notebooks are excellent for interactively exploring your EMG data:
 
 ```python
 # Load data
-emg = EMG.from_file('data.otb+', importer='otb')
+emg = Recording.from_file('data.otb+', importer='otb')
 
 # Display channel information
 channel_types = emg.get_channel_types()
@@ -84,7 +84,7 @@ import ipywidgets as widgets
 from IPython.display import display
 
 # Load data
-emg = EMG.from_file('data.set', importer='eeglab')
+emg = Recording.from_file('data.set', importer='eeglab')
 
 # Get all channels
 all_channels = list(emg.channels.keys())

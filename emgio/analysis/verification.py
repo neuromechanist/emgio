@@ -9,23 +9,23 @@ import numpy as np
 
 # Use TYPE_CHECKING to avoid circular import at runtime
 if TYPE_CHECKING:
-    from ..core.emg import EMG
+    from ..core.emg import Recording
 
 
 def compare_signals(
-    emg_original: "EMG",
-    emg_reloaded: "EMG",
+    emg_original: "Recording",
+    emg_reloaded: "Recording",
     tolerance: float = 0.01,  # Default tolerance 1% for NRMSE and Max Norm Abs Diff
     channel_map: dict[str, str] | None = None,
 ) -> dict:
     """
-    Compare signals between two EMG objects using normalized metrics.
+    Compare signals between two Recording objects using normalized metrics.
     Returns a dictionary with comparison results per channel and a summary.
     Does NOT perform logging/printing.
 
     Args:
-        emg_original: The original EMG object before export.
-        emg_reloaded: The EMG object reloaded from the exported file.
+        emg_original: The original Recording object before export.
+        emg_reloaded: The Recording object reloaded from the exported file.
         tolerance: Relative tolerance for comparisons (default: 0.001 or 0.1%).
                    Used for NRMSE, Max Norm Abs Diff, and identity check.
         channel_map: Optional dictionary mapping original channel names (keys)
@@ -37,11 +37,11 @@ def compare_signals(
               Metrics include 'nrmse' (Normalized RMSE), 'max_norm_abs_diff'.
               Also includes 'channel_summary' with comparison mode and unmatched channels.
     """
-    # Removed local import: from emgio.core.emg import EMG
+    # Removed local import: from emgio.core.emg import Recording
 
     results = {}
     if emg_original.signals is None or emg_reloaded.signals is None:
-        raise ValueError("No signals loaded in one or both EMG objects to compare")
+        raise ValueError("No signals loaded in one or both Recording objects to compare")
     original_channels = set(emg_original.signals.columns)
     reloaded_channels = set(emg_reloaded.signals.columns)
 

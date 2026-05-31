@@ -213,7 +213,7 @@ def test_csv_format_detection(sample_trigno_csv):
     # Check if the error message contains the trigno suggestion
     error_msg = str(exc_info.value)
     assert "Delsys Trigno CSV export" in error_msg
-    assert "emg = EMG.from_file(filepath, importer='trigno')" in error_msg
+    assert "recording = Recording.from_file(filepath, importer='trigno')" in error_msg
     assert "force_generic=True" in error_msg
 
     # Test with force_generic=True

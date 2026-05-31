@@ -4,12 +4,12 @@ Many OpenNeuro BIDS EEG/iEEG datasets ship the BrainVision triplet rather than
 EDF or EEGLAB .set. MNE reads it natively (only writing needs pybv), and is an
 optional dependency imported lazily with a clear install hint. Channel types and
 units come from the shared :mod:`_mne_common` mapping; ``.vmrk`` markers (which
-MNE exposes as annotations) are read into ``EMG.events``.
+MNE exposes as annotations) are read into ``Recording.events``.
 """
 
 import pandas as pd
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from ._mne_common import raw_to_emg, require_mne
 from .base import BaseImporter
 
@@ -36,7 +36,7 @@ class BrainVisionImporter(BaseImporter):
             evt["duration"] = evt["duration"].astype("float64")
         return evt
 
-    def load(self, filepath: str) -> EMG:
+    def load(self, filepath: str) -> Recording:
         """Load a BrainVision recording (pass the ``.vhdr`` header path).
 
         Args:
@@ -44,8 +44,8 @@ class BrainVisionImporter(BaseImporter):
                 ``.eeg`` siblings are resolved by MNE).
 
         Returns:
-            EMG: channels carry their type and physical unit; ``.vmrk`` markers
-            are read into ``EMG.events``.
+            Recording: channels carry their type and physical unit; ``.vmrk`` markers
+            are read into ``Recording.events``.
         """
         mne = require_mne()
         try:

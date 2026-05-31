@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from emgio import EMG
+from emgio import Recording
 
 EXAMPLE_DIR = "examples"
 OTB_FIXTURE = os.path.join(EXAMPLE_DIR, "one_sessantaquattro_truncated.otb+")
@@ -20,7 +20,7 @@ OTB_FIXTURE = os.path.join(EXAMPLE_DIR, "one_sessantaquattro_truncated.otb+")
 @pytest.mark.parametrize("fmt", ["edf", "bdf"])
 def test_export_preserves_full_recording_length(tmp_path, fmt):
     """A multi-second recording must round-trip without losing samples."""
-    emg = EMG.from_file(OTB_FIXTURE, importer="otb")
+    emg = Recording.from_file(OTB_FIXTURE, importer="otb")
     first = emg.signals.columns[0]
     n_in = len(emg.signals[first])
     samples_per_record = emg.channels[first]["sample_frequency"]
@@ -30,7 +30,7 @@ def test_export_preserves_full_recording_length(tmp_path, fmt):
     out = tmp_path / f"roundtrip.{fmt}"
     emg.to_edf(str(out), format=fmt, bypass_analysis=True)
 
-    reloaded = EMG.from_file(str(out))
+    reloaded = Recording.from_file(str(out))
     n_out = len(reloaded.signals[reloaded.signals.columns[0]])
     # The true invariant is "no truncation". EDF stores whole data records, so a
     # recording that is not an integer number of seconds is zero-padded by at most
@@ -46,7 +46,9 @@ def test_export_preserves_full_recording_length(tmp_path, fmt):
 )
 def test_export_rejects_mixed_sample_rates(tmp_path):
     """Mixed per-channel sample rates must fail loudly, not write a corrupt file."""
-    emg = EMG.from_file(os.path.join(EXAMPLE_DIR, "truncated_trigno_sample.csv"), importer="trigno")
+    emg = Recording.from_file(
+        os.path.join(EXAMPLE_DIR, "truncated_trigno_sample.csv"), importer="trigno"
+    )
     rates = {int(emg.channels[c]["sample_frequency"]) for c in emg.channels}
     assert len(rates) > 1, "fixture must have mixed rates to exercise the guard"
     with pytest.raises(ValueError, match="single sampling rate"):

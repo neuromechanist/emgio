@@ -14,7 +14,7 @@ import subprocess
 import numpy as np
 import pytest
 
-from emgio import EMG, __version__
+from emgio import Recording, __version__
 from emgio.cli import (
     EXIT_INPUT,
     EXIT_OK,
@@ -127,7 +127,7 @@ def test_is_unknown_uses_channel_type_not_modality():
 
 def test_apply_modality_fills_only_unknown_channels():
     """--modality fills OTHER-typed channels but leaves detected ones untouched."""
-    emg = EMG()
+    emg = Recording()
     emg.add_channel("X", np.zeros(100), 100, "uV", "OTHER")
     emg.add_channel("ECG1", np.zeros(100), 100, "uV", "ECG")
     _apply_modality(emg, "EEG")

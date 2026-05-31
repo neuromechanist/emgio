@@ -9,18 +9,18 @@ EMGIO provides tools to verify signal integrity when transferring data between f
 
 ## Verification Workflow
 
-The standard way to verify signal integrity involves comparing an original EMG object with one that has been exported and then reloaded. This is done using the `compare_signals` and `report_verification_results` functions from the `emgio.analysis.verification` module.
+The standard way to verify signal integrity involves comparing an original Recording object with one that has been exported and then reloaded. This is done using the `compare_signals` and `report_verification_results` functions from the `emgio.analysis.verification` module.
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.analysis.verification import compare_signals, report_verification_results
 
 # Load original data
-emg_original = EMG.from_file('raw_data.csv', importer='trigno')
+emg_original = Recording.from_file('raw_data.csv', importer='trigno')
 
 # Export to EDF and reload
 emg_original.to_edf('exported_data')
-emg_reloaded = EMG.from_file('exported_data.edf')
+emg_reloaded = Recording.from_file('exported_data.edf')
 
 # Compare signals with detailed metrics
 results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)

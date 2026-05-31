@@ -15,7 +15,7 @@
 - [x] Setup GitHub Actions CI/CD
 
 ### Phase 2: Core Features [COMPLETED]
-- [x] Implement EMG class with signal handling
+- [x] Implement Recording class with signal handling
 - [x] Add multi-format importers (EEGLAB, Trigno, OTB, EDF/BDF, WFDB, XDF, CSV)
 - [x] Create EDF/BDF exporter with auto format selection
 - [x] Implement metadata and channel management

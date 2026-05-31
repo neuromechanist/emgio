@@ -13,10 +13,10 @@ The EDF/BDF exporter module in EMGIO provides functionality to export EMG data t
 ## Usage Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load data
-emg = EMG.from_file('data.csv', importer='trigno')
+emg = Recording.from_file('data.csv', importer='trigno')
 
 # Export to EDF/BDF with automatic format selection
 emg.to_edf('output')  # Will generate output.edf or output.bdf

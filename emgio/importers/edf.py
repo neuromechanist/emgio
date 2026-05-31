@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pyedflib
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from .base import BaseImporter
 
 
@@ -123,7 +123,7 @@ class EDFImporter(BaseImporter):
 
         Returns:
             pd.DataFrame: events with float64 ``onset``/``duration`` and string
-            ``description``, sorted by onset (matching :meth:`EMG.add_event`).
+            ``description``, sorted by onset (matching :meth:`Recording.add_event`).
         """
         onsets, durations, descriptions = edf_reader.readAnnotations()
         rows = []
@@ -144,7 +144,7 @@ class EDFImporter(BaseImporter):
             events["duration"] = events["duration"].astype("float64")
         return events
 
-    def load(self, filepath: str) -> EMG:
+    def load(self, filepath: str) -> Recording:
         """
         Load EMG data from EDF/EDF+/BDF file.
 
@@ -152,13 +152,13 @@ class EDFImporter(BaseImporter):
             filepath: Path to the EDF file
 
         Returns:
-            EMG: EMG object containing the loaded data
+            Recording: Recording object containing the loaded data
         """
         try:
             edf_reader = pyedflib.EdfReader(filepath)
 
-            # Create EMG object
-            emg = EMG()
+            # Create Recording object
+            emg = Recording()
 
             # Extract and store metadata
             metadata = self._extract_metadata(edf_reader)
@@ -180,7 +180,7 @@ class EDFImporter(BaseImporter):
                     signal_info["label"], signal_info["transducer"]
                 )
 
-                # Add channel to EMG object
+                # Add channel to Recording object
                 emg.add_channel(
                     label=signal_info["label"],
                     data=signal_data,

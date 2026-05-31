@@ -5,7 +5,7 @@ import shutil
 import pandas as pd
 import pytest
 
-from emgio.core.emg import EMG
+from emgio.core.emg import Recording
 from emgio.importers.wfdb import WFDBImporter
 
 # Directory containing the test WFDB files (relative to project root)
@@ -62,7 +62,7 @@ def test_wfdb_load_basic(wfdb_importer, wfdb_data):
     """Test basic loading of a WFDB record (.hea file)."""
     emg = wfdb_importer.load(str(wfdb_data["hea"]))
 
-    assert isinstance(emg, EMG)
+    assert isinstance(emg, Recording)
     assert emg.signals is not None
     assert isinstance(emg.signals, pd.DataFrame)
     # Record 100 has 2 signals
@@ -144,6 +144,6 @@ def test_wfdb_importer_handles_record_name_input(wfdb_importer, wfdb_data):
     record_base_path = os.path.join(wfdb_data["dir"], WFDB_RECORD_NAME)
     emg = wfdb_importer.load(record_base_path)
 
-    assert isinstance(emg, EMG)
+    assert isinstance(emg, Recording)
     assert emg.get_metadata("record_name") == WFDB_RECORD_NAME
     assert not emg.events.empty  # Check annotations loaded correctly too

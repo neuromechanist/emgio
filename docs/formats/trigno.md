@@ -44,10 +44,10 @@ The Trigno importer in EMGIO (`emgio.importers.trigno`) processes these files by
 ## Code Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load data from Trigno CSV file
-emg = EMG.from_file('data.csv', importer='trigno')
+emg = Recording.from_file('data.csv', importer='trigno')
 
 # Print identified channel types
 channel_types = emg.get_channel_types()

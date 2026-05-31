@@ -2,7 +2,7 @@
 
 MNE is an optional, heavy dependency, so it is imported lazily via
 :func:`require_mne` (with a clear install hint) rather than at module import.
-Both importers turn an MNE ``Raw`` into an :class:`~emgio.core.emg.EMG` with the
+Both importers turn an MNE ``Raw`` into a :class:`~emgio.core.emg.Recording` with the
 same channel-type/unit mapping (:func:`raw_to_emg`); they differ only in how the
 ``Raw`` is read and how events are extracted.
 """
@@ -11,7 +11,7 @@ import warnings
 
 import pandas as pd
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 
 # MNE channel type (raw.get_channel_types()) -> emgio/BIDS channel type. Each MNE
 # type maps to its own emgio type so distinct sensor streams are preserved, not
@@ -57,8 +57,8 @@ def require_mne():
     return mne
 
 
-def raw_to_emg(raw) -> EMG:
-    """Build an EMG from an MNE ``Raw``: channels with mapped types and FIFF units.
+def raw_to_emg(raw) -> Recording:
+    """Build a Recording from an MNE ``Raw``: channels with mapped types and FIFF units.
 
     Does not read events (the two importers extract them differently) and does not
     set ``source_file`` (the caller has the path). High-channel-count recordings
@@ -66,7 +66,7 @@ def raw_to_emg(raw) -> EMG:
     expected pandas warning is suppressed and the frame de-fragmented once after
     (root-cause perf drift tracked in #66).
     """
-    emg = EMG()
+    emg = Recording()
     sfreq = float(raw.info["sfreq"])
     data = raw.get_data()  # (n_channels, n_samples) in SI units
     mne_types = raw.get_channel_types()

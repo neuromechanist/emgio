@@ -7,19 +7,19 @@ import pandas as pd
 import pyedflib
 import pytest
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 
 
 @pytest.fixture
 def empty_emg():
-    """Create an empty EMG object."""
-    return EMG()
+    """Create an empty Recording object."""
+    return Recording()
 
 
 @pytest.fixture
 def sample_emg():
-    """Create an EMG object with sample data."""
-    emg = EMG()
+    """Create a Recording object with sample data."""
+    emg = Recording()
 
     # Add sample channels
     time = np.linspace(0, 1, 1000)  # 1 second at 1000Hz
@@ -33,14 +33,14 @@ def sample_emg():
 
 
 def test_emg_initialization(empty_emg):
-    """Test EMG object initialization."""
+    """Test Recording object initialization."""
     assert empty_emg.signals is None
     assert empty_emg.metadata == {}
     assert empty_emg.channels == {}
 
 
 def test_add_channel(empty_emg):
-    """Test adding a channel to EMG object."""
+    """Test adding a channel to Recording object."""
     data = np.array([1, 2, 3, 4, 5])
     empty_emg.add_channel("EMG1", data, 1000, "mV", "EMG")
 
@@ -178,7 +178,7 @@ def mock_importers(monkeypatch):
 
     class MockTrignoImporter(MockBaseImporter):
         def _load(self, filepath, **kwargs):
-            emg = EMG()
+            emg = Recording()
             emg.add_channel("TEST", np.array([1, 2, 3]), 1000, "mV", channel_type="EMG")
             emg.set_metadata("device", "Delsys Trigno")
             emg.set_metadata("source_file", filepath)
@@ -186,7 +186,7 @@ def mock_importers(monkeypatch):
 
     class MockOTBImporter(MockBaseImporter):
         def _load(self, filepath, **kwargs):
-            emg = EMG()
+            emg = Recording()
             emg.add_channel("OTB", np.array([4, 5, 6]), 2000, "mV", channel_type="EMG")
             emg.set_metadata("device", "OT Bioelettronica")
             emg.set_metadata("source_file", filepath)
@@ -206,11 +206,11 @@ def mock_importers(monkeypatch):
                     raise ValueError(
                         "This file appears to be a Delsys Trigno CSV export. "
                         "For better metadata extraction and channel detection, use:\n\n"
-                        "emg = EMG.from_file(filepath, importer='trigno')\n\n"
+                        "recording = Recording.from_file(filepath, importer='trigno')\n\n"
                         "If you still want to use the generic CSV importer, set force_generic=True"
                     )
 
-            emg = EMG()
+            emg = Recording()
             emg.add_channel("CSV_CH1", np.array([7, 8, 9]), 1000, "mV", channel_type="EMG")
             emg.set_metadata("file_format", "CSV")
             emg.set_metadata("source_file", filepath)
@@ -252,43 +252,43 @@ def test_from_file(mock_importers, tmp_path):
     trigno_named_file.write_text("")
 
     # Test Trigno importer
-    emg_trigno = EMG.from_file(str(trigno_file), importer="trigno")
+    emg_trigno = Recording.from_file(str(trigno_file), importer="trigno")
     assert "TEST" in emg_trigno.signals.columns
     assert emg_trigno.channels["TEST"]["sample_frequency"] == 1000
 
     # Test OTB importer (including auto-detection)
     for importer in ["otb", None]:
-        emg_otb = EMG.from_file(str(otb_file), importer=importer)
+        emg_otb = Recording.from_file(str(otb_file), importer=importer)
         assert "OTB" in emg_otb.signals.columns
         assert emg_otb.channels["OTB"]["sample_frequency"] == 2000
 
     # Test CSV importer
-    emg_csv = EMG.from_file(str(csv_file), importer="csv")
+    emg_csv = Recording.from_file(str(csv_file), importer="csv")
     assert "CSV_CH1" in emg_csv.signals.columns
     assert emg_csv.get_metadata("file_format") == "CSV"
 
     # Test CSV importer with auto-detection for .txt files
-    emg_txt = EMG.from_file(str(csv_file), importer=None)
+    emg_txt = Recording.from_file(str(csv_file), importer=None)
     assert "CSV_CH1" in emg_txt.signals.columns
     assert emg_txt.get_metadata("file_format") == "CSV"
 
     # Test format detection and force_csv
     # First, test that format detection raises an error for trigno file
     with pytest.raises(ValueError, match="Delsys Trigno CSV export"):
-        EMG.from_file(str(trigno_named_file), importer="csv")
+        Recording.from_file(str(trigno_named_file), importer="csv")
 
     # Now test with force_csv=True to bypass detection
-    emg_forced = EMG.from_file(str(trigno_named_file), importer="csv", force_csv=True)
+    emg_forced = Recording.from_file(str(trigno_named_file), importer="csv", force_csv=True)
     assert "CSV_CH1" in emg_forced.signals.columns
 
     # Test passing parameters to CSV importer
     custom_kwargs = {"channel_types": {"CSV_CH1": "ACC"}}
-    emg_with_params = EMG.from_file(str(csv_file), importer="csv", **custom_kwargs)
+    emg_with_params = Recording.from_file(str(csv_file), importer="csv", **custom_kwargs)
     assert "CSV_CH1" in emg_with_params.signals.columns
 
     # Test invalid importer
     with pytest.raises(ValueError, match="Unsupported importer"):
-        EMG.from_file(str(trigno_file), importer="invalid")
+        Recording.from_file(str(trigno_file), importer="invalid")
 
 
 class MockPlt:
@@ -434,7 +434,7 @@ def test_plot_signals_time_range(sample_emg, mock_plt):
 
 
 def test_emg_add_event(empty_emg):
-    """Test adding events to the EMG object."""
+    """Test adding events to the Recording object."""
     assert empty_emg.events.empty
 
     # Add first event
@@ -490,7 +490,7 @@ def test_to_edf_writes_real_file_and_channels_tsv(sample_emg, tmp_path):
     written = out if out.exists() else out.with_suffix(".bdf")
     assert written.exists()
     assert written.with_name(written.stem + "_channels.tsv").exists()
-    reloaded = EMG.from_file(str(written), bids_channels="off")
+    reloaded = Recording.from_file(str(written), bids_channels="off")
     assert set(reloaded.signals.columns) == {"EMG1", "ACC1"}
 
 
@@ -523,7 +523,7 @@ def test_to_edf_bypass_analysis_defaulting(sample_emg, tmp_path, capsys):
 
 def test_to_edf_external_events_are_written_and_object_untouched(sample_emg, tmp_path):
     """The external events_df (not self.events) is what reaches the file, and the
-    EMG object's own events are left intact.
+    Recording object's own events are left intact.
 
     Forwarding is verified by reading the EDF+ annotations back with pyedflib
     directly (emgio's own annotation read-back is pending #47).
@@ -543,7 +543,7 @@ def test_to_edf_external_events_are_written_and_object_untouched(sample_emg, tmp
 
 
 def test_to_edf_empty_raises(empty_emg, tmp_path):
-    """Exporting an EMG object with no signals raises ValueError."""
+    """Exporting a Recording object with no signals raises ValueError."""
     with pytest.raises(ValueError):
         empty_emg.to_edf(str(tmp_path / "test.edf"))
 

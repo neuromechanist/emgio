@@ -2,7 +2,7 @@
 
 EMGIO provides comprehensive metadata management capabilities, allowing you to work with recording session information, subject details, and other contextual data. Proper metadata handling is particularly important when working with research data that needs to be shared or archived.
 
-The `EMG` object stores various pieces of metadata loaded from the source file or added manually.
+The `Recording` object stores various pieces of metadata loaded from the source file or added manually.
 
 ## Accessing Metadata
 
@@ -10,7 +10,7 @@ When you load data into EMGIO, any available metadata from the source file is au
 
 ```python
 # Load data
-emg = EMG.from_file('data.set', importer='eeglab')
+emg = Recording.from_file('data.set', importer='eeglab')
 
 # Access all metadata
 all_metadata = emg.metadata
@@ -162,9 +162,9 @@ EMG2    EMG     µV      2000                  ...
 ACC1    ACC     g       2000                  ...
 ```
 
-## Copying Metadata Between EMG Objects
+## Copying Metadata Between Recording Objects
 
-When working with multiple EMG objects, you can copy metadata between them:
+When working with multiple Recording objects, you can copy metadata between them:
 
 ```python
 # Create a subset with only EMG channels

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from ..core.modality import infer_modality_from_channel_type
 from .base import BaseImporter
 
@@ -221,7 +221,7 @@ class EEGLABImporter(BaseImporter):
 
         return event_list
 
-    def load(self, filepath: str) -> EMG:
+    def load(self, filepath: str) -> Recording:
         """
         Load EMG data from EEGLAB .set file.
 
@@ -229,14 +229,14 @@ class EEGLABImporter(BaseImporter):
             filepath: Path to the EEGLAB .set file
 
         Returns:
-            EMG: EMG object containing the loaded data
+            Recording: Recording object containing the loaded data
         """
         try:
             # Load the .set file
             data = loadmat(filepath)
 
-            # Create EMG object
-            emg = EMG()
+            # Create Recording object
+            emg = Recording()
 
             # Extract and store metadata
             metadata = self._extract_metadata(data)
@@ -277,7 +277,7 @@ class EEGLABImporter(BaseImporter):
                 # Create DataFrame with time index
                 df = pd.DataFrame(index=time_index)
 
-                # Add channels to EMG object
+                # Add channels to Recording object
                 for i, channel_info in enumerate(channel_info_list):
                     if i < signal_data.shape[0]:  # Make sure we have data for this channel
                         # Get channel data

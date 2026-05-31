@@ -5,7 +5,7 @@ clear install hint rather than at module import. MEG recordings mix several
 sensor types in one file (magnetometers, gradiometers, reference sensors)
 alongside stim/EEG/EOG/ECG channels; the shared :mod:`_mne_common` mapping keeps
 each type distinct (they are NOT collapsed into a single "MEG" type), and
-stim-channel triggers are read into ``EMG.events``.
+stim-channel triggers are read into ``Recording.events``.
 """
 
 import os
@@ -13,7 +13,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from ._mne_common import raw_to_emg, require_mne
 from .base import BaseImporter
 
@@ -47,15 +47,15 @@ class MEGImporter(BaseImporter):
             evt["duration"] = evt["duration"].astype("float64")
         return evt
 
-    def load(self, filepath: str) -> EMG:
-        """Load a MEG recording into an EMG object.
+    def load(self, filepath: str) -> Recording:
+        """Load a MEG recording into a Recording object.
 
         Args:
             filepath: Path to a ``.fif`` file or a CTF ``.ds`` directory.
 
         Returns:
-            EMG: channels carry their MEG/EEG/stim type and physical unit; stim
-            triggers are read into ``EMG.events``.
+            Recording: channels carry their MEG/EEG/stim type and physical unit; stim
+            triggers are read into ``Recording.events``.
         """
         mne = require_mne()
         try:
