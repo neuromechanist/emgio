@@ -31,7 +31,7 @@ from biosigio import Recording
 
 # Round-trips are expensive; compute each fixture's once and share it across the
 # structural and value-integrity tests.
-_RT_DIR = tempfile.mkdtemp(prefix="emgio_roundtrip_")
+_RT_DIR = tempfile.mkdtemp(prefix="biosigio_roundtrip_")
 _RT_CACHE: dict = {}
 atexit.register(shutil.rmtree, _RT_DIR, ignore_errors=True)
 
