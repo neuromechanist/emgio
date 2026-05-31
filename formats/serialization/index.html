@@ -13,10 +13,10 @@
       
       
       
-        <link rel="prev" href="../../user-guide/verification/">
+        <link rel="prev" href="../xdf/">
       
       
-        <link rel="next" href="../eeglab/">
+        <link rel="next" href="../zarr/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Trigno - EMGIO Documentation</title>
+        <title>Overview (Parquet/Arrow/Zarr) - EMGIO Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#trigno-format" class="md-skip">
+        <a href="#serialization-serving-formats" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Trigno
+              Overview (Parquet/Arrow/Zarr)
             
           </span>
         </div>
@@ -552,10 +552,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -577,11 +575,13 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -602,7 +602,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -617,37 +617,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Trigno
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../trigno/" class="md-nav__link">
         
   
   
@@ -663,98 +636,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#format-description" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Format Description
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Format Description">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-file-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example File Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#channel-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Channel Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#importer-implementation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Importer Implementation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#code-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notes-and-limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes and Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -939,8 +820,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -952,13 +835,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
@@ -979,7 +860,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -994,10 +875,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../serialization/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview (Parquet/Arrow/Zarr)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1013,6 +921,131 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use-which" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to Use Which
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lossless-vs-derived-round-trip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lossless vs Derived Round-Trip
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#self-describing-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-Describing Schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#round-trip-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Round-Trip Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Round-Trip Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parquet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parquet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arrowfeather" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow/Feather
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#zarr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zarr
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2187,22 +2220,88 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#format-description" class="md-nav__link">
+  <a href="#when-to-use-which" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Format Description
+        When to Use Which
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Format Description">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lossless-vs-derived-round-trip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lossless vs Derived Round-Trip
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#self-describing-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-Describing Schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#round-trip-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Round-Trip Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Round-Trip Examples">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-file-structure" class="md-nav__link">
+  <a href="#parquet" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example File Structure
+        Parquet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arrowfeather" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow/Feather
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#zarr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zarr
       
     </span>
   </a>
@@ -2215,43 +2314,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#channel-types" class="md-nav__link">
+  <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Channel Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#importer-implementation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Importer Implementation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#code-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notes-and-limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes and Limitations
+        See Also
       
     </span>
   </a>
@@ -2278,65 +2344,162 @@
   
 
 
-<h1 id="trigno-format">Trigno Format<a class="headerlink" href="#trigno-format" title="Permanent link">&para;</a></h1>
-<p>The Delsys Trigno wireless EMG system exports data in a CSV format. This page describes the format and how EMGIO works with it.</p>
-<h2 id="format-description">Format Description<a class="headerlink" href="#format-description" title="Permanent link">&para;</a></h2>
-<p>Trigno CSV files typically have the following structure:</p>
-<ul>
-<li>A header section with metadata</li>
-<li>A data section with columns for each channel</li>
-<li>EMG and accelerometer data in separate columns</li>
-</ul>
-<h3 id="example-file-structure">Example File Structure<a class="headerlink" href="#example-file-structure" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a># Trigno Data File
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a># Date: 2023-05-01
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a># Time: 10:30:00
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a># Device: Trigno Wireless System
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a># ...additional metadata...
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>Time(s),EMG1,EMG2,EMG3,EMG4,ACC1_X,ACC1_Y,ACC1_Z,...
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>0.000,0.01,0.02,0.03,0.04,0.1,0.2,0.3,...
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>0.001,0.02,0.03,0.04,0.05,0.1,0.2,0.3,...
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>0.002,0.03,0.04,0.05,0.06,0.1,0.2,0.3,...
+<h1 id="serialization-serving-formats">Serialization &amp; Serving Formats<a class="headerlink" href="#serialization-serving-formats" title="Permanent link">&para;</a></h1>
+<p>Besides EDF/BDF, emgio can serialize a <code>Recording</code> to three columnar or array
+formats: Parquet, Arrow/Feather, and Zarr. Each carries enough information to be
+read back without any side files, and all of them round-trip through the same
+entry point, <code>Recording.from_file</code>, which auto-detects the format from the file
+extension (<code>.parquet</code>, <code>.feather</code>, <code>.arrow</code>, <code>.zarr</code>).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.edf&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="s1">&#39;recording.parquet&#39;</span><span class="p">)</span>   <span class="c1"># analytics</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_arrow</span><span class="p">(</span><span class="s1">&#39;recording.feather&#39;</span><span class="p">)</span>     <span class="c1"># fast IPC</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">)</span>         <span class="c1"># cloud-native serving</span>
 </code></pre></div>
-<h2 id="channel-types">Channel Types<a class="headerlink" href="#channel-types" title="Permanent link">&para;</a></h2>
-<p>EMGIO recognizes the following channel types in Trigno CSV files:</p>
+<h2 id="when-to-use-which">When to Use Which<a class="headerlink" href="#when-to-use-which" title="Permanent link">&para;</a></h2>
+<p>The three formats solve different jobs. Parquet and Arrow/Feather are
+lossless columnar tables for analysis and interchange; Zarr is a derived,
+downsampled and quantized serving store, not an archival source.</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Best for</th>
+<th>Lossless</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parquet</td>
+<td>Analytics (DuckDB, Polars, pandas, Spark)</td>
+<td>Yes</td>
+<td>Self-describing columnar table; one file per recording</td>
+</tr>
+<tr>
+<td>Arrow/Feather</td>
+<td>Fast zero-copy inter-process communication (IPC)</td>
+<td>Yes</td>
+<td>Same schema as Parquet, optimized for speed over compression</td>
+</tr>
+<tr>
+<td>Zarr</td>
+<td>Cloud-native serving: one store serves viewing, inference, and training</td>
+<td>No</td>
+<td>Derived, downsampled and quantized serving copy; the Brain Imaging Data Structure (BIDS) and EDF stay authoritative</td>
+</tr>
+</tbody>
+</table>
+<p>Parquet and Arrow keep the full signal: channels become columns, the time index
+is preserved, and channels, events, and recording metadata travel in the file's
+schema. Use them whenever you want the recording back exactly as it was.</p>
+<p>Zarr is the serving format. A single conversion produces one cloud-native store
+that all three downstream consumers read directly from object storage: a viewer
+streams a min/max render pyramid, inference reads the anti-aliased base signal,
+and training streams shards of it. Because it is downsampled per modality and
+stored as scaled <code>int16</code> by default, it is a derived copy and not the source of
+truth. The original BIDS dataset (or EDF) remains the authoritative, citable
+artifact. See the <a href="../zarr/">Zarr store contract</a> for the full layout.</p>
+<h2 id="lossless-vs-derived-round-trip">Lossless vs Derived Round-Trip<a class="headerlink" href="#lossless-vs-derived-round-trip" title="Permanent link">&para;</a></h2>
+<p>The two families round-trip differently, and the difference is intentional.</p>
+<p><strong>Parquet and Arrow are lossless.</strong> Reading a <code>.parquet</code> or <code>.feather</code> file back
+restores the <code>Recording</code> exactly: signals (with their time index), channels,
+events, and recording metadata. The file holds everything needed to rebuild the
+object, so import is a faithful inverse of export.</p>
+<p><strong>Zarr is reconstructed, not restored.</strong> The importer rebuilds a <code>Recording</code>
+from the store's canonical <code>level 0</code> signal, which is the anti-aliased,
+per-modality downsampled inference signal, so the reconstructed sampling rate is
+the store's canonical rate rather than the original acquisition rate. The
+per-channel Zarr-only attributes (the <code>scale</code>/<code>offset</code> quantization parameters,
+the <code>usable_for_inference</code> flags, the render pyramid) are applied during
+dequantization but are not surfaced back onto the reconstructed channels. The
+min/max view pyramid (<code>view/*</code>) is render-only and is never read on import.</p>
+<p>For both families, <code>source_file</code> is reset to the path you read from, while the
+original <code>source_format</code> provenance is preserved (a re-imported serialization
+file keeps the format it was originally converted from rather than being
+relabeled as <code>tabular</code> or <code>zarr</code>).</p>
+<h2 id="self-describing-schema">Self-Describing Schema<a class="headerlink" href="#self-describing-schema" title="Permanent link">&para;</a></h2>
+<p>Both families embed a versioned <code>biosigio</code> metadata blob so a reader can
+recognize and version-check the file before trusting it.</p>
 <ul>
-<li><strong>EMG</strong> - Electromyography channels (typically in μV or mV)</li>
-<li><strong>ACC</strong> - Accelerometer channels (typically in g)</li>
+<li><strong>Parquet and Arrow</strong> carry the blob in the Arrow schema metadata
+  (<code>tabular_schema.FORMAT = "biosigio-tabular"</code>, <code>FORMAT_VERSION = 1</code>). It holds
+  the recording metadata, per-channel info, and events as one JSON object.</li>
+<li><strong>Zarr</strong> carries an equivalent blob in the store's root attributes
+  (<code>FORMAT = "biosigio-zarr"</code>, <code>FORMAT_VERSION = 2</code>), reusing the same metadata
+  encoding so both formats record state the same way.</li>
 </ul>
-<h2 id="importer-implementation">Importer Implementation<a class="headerlink" href="#importer-implementation" title="Permanent link">&para;</a></h2>
-<p>The Trigno importer in EMGIO (<code>emgio.importers.trigno</code>) processes these files by:</p>
-<ol>
-<li>Reading the header section to extract metadata</li>
-<li>Parsing the data section as a pandas DataFrame</li>
-<li>Identifying channel types based on naming conventions</li>
-<li>Setting appropriate units and sampling frequencies for each channel</li>
-</ol>
-<h2 id="code-example">Code Example<a class="headerlink" href="#code-example" title="Permanent link">&para;</a></h2>
+<p>The encoding is lossless for values that are not native to JSON: datetimes and
+dates become a typed envelope and are reconstructed to their original Python type
+on read, and numpy scalars/arrays are converted to their Python equivalents.
+Metadata that cannot be serialized raises an error rather than being silently
+coerced to a string, because metadata loss is data loss.</p>
+<h2 id="optional-dependencies">Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Permanent link">&para;</a></h2>
+<p>These formats are not part of the core install; install the matching extra.</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Extra</th>
+<th>Install</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parquet, Arrow/Feather</td>
+<td><code>arrow</code> (pyarrow)</td>
+<td><code>uv sync --extra arrow</code> or <code>pip install 'emgio[arrow]'</code></td>
+</tr>
+<tr>
+<td>Zarr</td>
+<td><code>zarr</code> (zarr v3)</td>
+<td><code>uv sync --extra zarr</code> or <code>pip install 'emgio[zarr]'</code></td>
+</tr>
+</tbody>
+</table>
+<p>If the extra is missing, the exporter and importer raise an <code>ImportError</code> with
+the exact install command, so you never get a partial or silent failure.</p>
+<h2 id="round-trip-examples">Round-Trip Examples<a class="headerlink" href="#round-trip-examples" title="Permanent link">&para;</a></h2>
+<h3 id="parquet">Parquet<a class="headerlink" href="#parquet" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Load data from Trigno CSV file</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;data.csv&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.edf&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="s1">&#39;recording.parquet&#39;</span><span class="p">)</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Print identified channel types</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">channel_types</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_channel_types</span><span class="p">()</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identified channel types: </span><span class="si">{</span><span class="n">channel_types</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Get EMG channels</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">emg_channels</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_channels_by_type</span><span class="p">(</span><span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;EMG channels: </span><span class="si">{</span><span class="n">emg_channels</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Get accelerometer channels</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">acc_channels</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_channels_by_type</span><span class="p">(</span><span class="s1">&#39;ACC&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ACC channels: </span><span class="si">{</span><span class="n">acc_channels</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Auto-detected from the .parquet extension; restored exactly.</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">restored</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.parquet&#39;</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
+<h3 id="arrowfeather">Arrow/Feather<a class="headerlink" href="#arrowfeather" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.edf&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_arrow</span><span class="p">(</span><span class="s1">&#39;recording.feather&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">restored</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.feather&#39;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="zarr">Zarr<a class="headerlink" href="#zarr" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.edf&#39;</span><span class="p">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># Reconstructed at the store&#39;s canonical (downsampled) level-0 rate.</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">served</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p>A Zarr store can hold several <code>(modality, rate)</code> groups that cannot share a
+single time grid. When there is more than one group, pass <code>group=</code> to choose
+which to reconstruct:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">served</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s1">&#39;eeg_250hz&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p>Keep these examples minimal; for the full store layout, tuning knobs, and the
+serving model, see the <a href="../zarr/">Zarr store contract</a>, and for end-to-end
+walk-throughs see the <a href="../../examples/serialization/">serialization examples</a>.</p>
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Trigno systems can have different sampling rates for EMG and accelerometer channels</li>
-<li>The importer automatically detects the sampling rate from the time column</li>
-<li>Column names may vary between different Trigno system versions</li>
-<li>Some metadata may be missing depending on the export settings </li>
+<li><a href="../zarr/">Zarr Serving Store</a>: the on-disk contract, signal rules, and serving model.</li>
+<li><a href="../../examples/serialization/">Serialization Examples</a>: worked round-trip examples.</li>
 </ul>
 
 

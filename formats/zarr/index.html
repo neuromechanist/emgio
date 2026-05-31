@@ -13,10 +13,10 @@
       
       
       
-        <link rel="prev" href="../../user-guide/verification/">
+        <link rel="prev" href="../serialization/">
       
       
-        <link rel="next" href="../eeglab/">
+        <link rel="next" href="../../api/emg/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Trigno - EMGIO Documentation</title>
+        <title>Zarr Serving Store - EMGIO Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#trigno-format" class="md-skip">
+        <a href="#zarr-serving-store" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Trigno
+              Zarr Serving Store
             
           </span>
         </div>
@@ -552,10 +552,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -577,11 +575,13 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -602,7 +602,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -617,37 +617,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Trigno
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../trigno/" class="md-nav__link">
         
   
   
@@ -663,98 +636,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#format-description" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Format Description
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Format Description">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-file-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example File Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#channel-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Channel Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#importer-implementation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Importer Implementation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#code-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notes-and-limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes and Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -939,8 +820,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -952,13 +835,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
@@ -979,7 +860,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1022,10 +903,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../zarr/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zarr Serving Store
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1041,6 +949,114 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#store-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#level-0-vs-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Level 0 vs view/*
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-modality-rates-and-dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-modality rates and dtype
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-a-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading a store
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#format-version-and-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format version and provenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serving-model-external" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serving model (external)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2187,38 +2203,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#format-description" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Format Description
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Format Description">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-file-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example File Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#channel-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Channel Types
+        Overview
       
     </span>
   </a>
@@ -2226,10 +2214,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#importer-implementation" class="md-nav__link">
+  <a href="#store-layout" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Importer Implementation
+        Store layout
       
     </span>
   </a>
@@ -2237,10 +2225,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#code-example" class="md-nav__link">
+  <a href="#level-0-vs-view" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Code Example
+        Level 0 vs view/*
       
     </span>
   </a>
@@ -2248,10 +2236,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#notes-and-limitations" class="md-nav__link">
+  <a href="#per-modality-rates-and-dtype" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Notes and Limitations
+        Per-modality rates and dtype
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-a-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading a store
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#format-version-and-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format version and provenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serving-model-external" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serving model (external)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default parameters
       
     </span>
   </a>
@@ -2278,66 +2310,191 @@
   
 
 
-<h1 id="trigno-format">Trigno Format<a class="headerlink" href="#trigno-format" title="Permanent link">&para;</a></h1>
-<p>The Delsys Trigno wireless EMG system exports data in a CSV format. This page describes the format and how EMGIO works with it.</p>
-<h2 id="format-description">Format Description<a class="headerlink" href="#format-description" title="Permanent link">&para;</a></h2>
-<p>Trigno CSV files typically have the following structure:</p>
-<ul>
-<li>A header section with metadata</li>
-<li>A data section with columns for each channel</li>
-<li>EMG and accelerometer data in separate columns</li>
-</ul>
-<h3 id="example-file-structure">Example File Structure<a class="headerlink" href="#example-file-structure" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a># Trigno Data File
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a># Date: 2023-05-01
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a># Time: 10:30:00
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a># Device: Trigno Wireless System
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a># ...additional metadata...
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>Time(s),EMG1,EMG2,EMG3,EMG4,ACC1_X,ACC1_Y,ACC1_Z,...
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>0.000,0.01,0.02,0.03,0.04,0.1,0.2,0.3,...
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>0.001,0.02,0.03,0.04,0.05,0.1,0.2,0.3,...
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>0.002,0.03,0.04,0.05,0.06,0.1,0.2,0.3,...
+<h1 id="zarr-serving-store">Zarr Serving Store<a class="headerlink" href="#zarr-serving-store" title="Permanent link">&para;</a></h1>
+<p>EMGIO can export a recording to a biosigIO Zarr serving store: a single, cloud-native store that serves three downstream jobs from one conversion, namely fast interactive viewing on thin clients, edge and batch inference, and training-time streaming. This page documents the store contract and the serving model so the consumers of the store (a web viewer, an inference service, a training loader, a batch converter) can read it correctly. Those consumers are built elsewhere; EMGIO only produces and reads the store.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The store is a sharded Zarr version 3 (v3) store with one group per (modality, native rate) pair. Level 0 of every group is the anti-aliased inference signal, resampled to a per-modality canonical rate, with a min/max view pyramid above it for rendering.</p>
+<p>The store is a derived serving copy, not an archive. The Brain Imaging Data Structure (BIDS) dataset, and the European Data Format (EDF) files alongside it, remain the authoritative source of truth and the citable artifact. The Zarr store is reproducible from them, and the downsampling parameters are recorded in the store attributes so the derivation is documented.</p>
+<p>Zarr is an optional dependency (the <code>zarr</code> extra, which installs zarr v3) and is imported lazily. Install it with one of:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>zarr<span class="w">        </span><span class="c1"># development install</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;emgio[zarr]&#39;</span><span class="w">   </span><span class="c1"># existing environment</span>
 </code></pre></div>
-<h2 id="channel-types">Channel Types<a class="headerlink" href="#channel-types" title="Permanent link">&para;</a></h2>
-<p>EMGIO recognizes the following channel types in Trigno CSV files:</p>
-<ul>
-<li><strong>EMG</strong> - Electromyography channels (typically in μV or mV)</li>
-<li><strong>ACC</strong> - Accelerometer channels (typically in g)</li>
-</ul>
-<h2 id="importer-implementation">Importer Implementation<a class="headerlink" href="#importer-implementation" title="Permanent link">&para;</a></h2>
-<p>The Trigno importer in EMGIO (<code>emgio.importers.trigno</code>) processes these files by:</p>
-<ol>
-<li>Reading the header section to extract metadata</li>
-<li>Parsing the data section as a pandas DataFrame</li>
-<li>Identifying channel types based on naming conventions</li>
-<li>Setting appropriate units and sampling frequencies for each channel</li>
-</ol>
-<h2 id="code-example">Code Example<a class="headerlink" href="#code-example" title="Permanent link">&para;</a></h2>
+<p>Write a store with <code>Recording.to_zarr</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Load data from Trigno CSV file</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;data.csv&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;trigno&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Print identified channel types</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">channel_types</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_channel_types</span><span class="p">()</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identified channel types: </span><span class="si">{</span><span class="n">channel_types</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Get EMG channels</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">emg_channels</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_channels_by_type</span><span class="p">(</span><span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;EMG channels: </span><span class="si">{</span><span class="n">emg_channels</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Get accelerometer channels</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">acc_channels</span> <span class="o">=</span> <span class="n">emg</span><span class="o">.</span><span class="n">get_channels_by_type</span><span class="p">(</span><span class="s1">&#39;ACC&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ACC channels: </span><span class="si">{</span><span class="n">acc_channels</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.edf&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Defaults: int16 storage, per-modality rate caps, min/max view pyramid</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">store_path</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">store_path</span><span class="p">)</span>  <span class="c1"># &#39;recording.zarr&#39;</span>
 </code></pre></div>
-<h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
+<h2 id="store-layout">Store layout<a class="headerlink" href="#store-layout" title="Permanent link">&para;</a></h2>
+<p>One Zarr v3 root group holds the whole recording. Both the writer and the reader honor this layout:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/                              root group
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  attrs: biosigio_version, format=&quot;biosigio-zarr&quot;, format_version,
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>         source_format, modality_rates, dtype, view_downsample,
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>         anti_alias_filter, channel_groups, recording_metadata, created_utc
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  &lt;modality&gt;_&lt;rate&gt;hz/         one group per (modality, native rate)
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    attrs: modality, rate, original_rate, n_channels, n_samples, channels[]
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    0                          (n_ch, n_time) level-0 signal, sharded
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>      attrs: level=0, rate, downsample_factor=1, kind=&quot;signal&quot;,
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>             usable_for_inference, scale[], offset[],
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>             physical_formula=&quot;physical = digital * scale + offset&quot;
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    view/                      min/max render pyramid (not sharded)
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>      1, 2, ...                (2, n_ch, n_time_L), axis0 = [min, max]
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        attrs: level, downsample_factor, rate_effective,
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>               kind=&quot;minmax_envelope&quot;, usable_for_inference=false
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>  events/
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    onset (f64), duration (f64), code (i32)
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>    attrs: label_map {code: description}, n_events
+</code></pre></div>
+<p>The group name encodes the served (target) rate, not the source rate, for example <code>eeg_250hz</code> even when the source was recorded at 500 Hz. The two rates are both kept in the group attributes:</p>
 <ul>
-<li>Trigno systems can have different sampling rates for EMG and accelerometer channels</li>
-<li>The importer automatically detects the sampling rate from the time column</li>
-<li>Column names may vary between different Trigno system versions</li>
-<li>Some metadata may be missing depending on the export settings </li>
+<li><code>group.attrs['rate']</code> is the served target rate (the rate of level 0).</li>
+<li><code>group.attrs['original_rate']</code> is the integer-rounded native rate used as the grouping key.</li>
+<li>Each entry in <code>group.attrs['channels'][].original_rate</code> is the true per-channel acquisition rate as a float, so a non-integer source rate (for example 511.7 Hz) is preserved even though the group key rounds it (metadata loss is data loss).</li>
 </ul>
+<p>The level-0 array carries the per-channel <code>scale</code> and <code>offset</code>. Reconstruct physical units with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>physical = digital * scale + offset
+</code></pre></div>
+<p>Per-channel metadata lives in each group's <code>channels</code> attribute, one object per channel with these keys:</p>
+<p><code>label</code>, <code>channel_type</code>, <code>modality</code>, <code>unit</code>, <code>prefilter</code>, <code>original_rate</code>, <code>target_rate</code>, <code>anti_aliased</code>, <code>usable_for_inference</code>, <code>scale</code>, <code>offset</code>, <code>row_index</code>.</p>
+<p>The <code>row_index</code> maps a channel to its row in the <code>(n_ch, n_time)</code> level-0 array.</p>
+<h2 id="level-0-vs-view">Level 0 vs view/*<a class="headerlink" href="#level-0-vs-view" title="Permanent link">&para;</a></h2>
+<p>The two array tiers exist for different jobs and are downsampled by deliberately different rules:</p>
+<ul>
+<li><strong>Level 0</strong> is the anti-aliased inference signal, one sample per time step at the group's canonical rate. Inference and training read this tier. Its <code>usable_for_inference</code> flag is <code>true</code> for groups that contain at least one continuous channel and <code>false</code> for a group made up entirely of discrete channels.</li>
+<li><strong>view/*</strong> are min/max render envelopes. Each level stores two values per downsample bin, the minimum and the maximum, on axis 0 (<code>[min, max]</code>). Envelopes preserve visible transients so brief spikes do not vanish when zoomed out, which is why they are nonlinear and are flagged <code>usable_for_inference=false</code>. Never train or run inference on the view tier.</li>
+</ul>
+<p>The two downsampling philosophies coexist on purpose: anti-aliased polyphase resampling for level 0, min/max binning for view/*.</p>
+<h2 id="per-modality-rates-and-dtype">Per-modality rates and dtype<a class="headerlink" href="#per-modality-rates-and-dtype" title="Permanent link">&para;</a></h2>
+<p><strong>Rate caps.</strong> Level 0 is resampled to <code>target = min(native, cap)</code> per modality, and the store never upsamples. The default caps are:</p>
+<table>
+<thead>
+<tr>
+<th>Modality</th>
+<th>Default cap (Hz)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EEG</td>
+<td>250</td>
+</tr>
+<tr>
+<td>MEG</td>
+<td>250</td>
+</tr>
+<tr>
+<td>iEEG (SEEG, ECoG, DBS)</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>EMG</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>Other (BEH, MISC, ...)</td>
+<td>native (no cap)</td>
+</tr>
+</tbody>
+</table>
+<p>A modality absent from the cap table keeps its native rate. Override the caps per call with the <code>modality_rates</code> argument:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Keep MEG high-gamma by raising its cap; EEG stays at the default</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">,</span> <span class="n">modality_rates</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;MEG&#39;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span> <span class="s1">&#39;EEG&#39;</span><span class="p">:</span> <span class="mi">250</span><span class="p">})</span>
+</code></pre></div>
+<p><strong>Storage dtype.</strong> The default <code>dtype="int16"</code> stores each channel with a per-channel <code>scale</code> and <code>offset</code> (half the bytes of float32; consumers cast on read). int16 cannot represent NaN or inf, so the exporter rejects non-finite samples rather than silently corrupting them; use <code>dtype="float32"</code> (lossless, and it keeps NaN) when a channel carries gaps:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Discrete channels.</strong> Trigger and clock channel types (<code>TRIG</code>, <code>SYSCLOCK</code>, <code>CTRL</code>) are resampled by nearest sample with no anti-alias filter so step edges survive, and they are flagged <code>usable_for_inference=false</code>.</p>
+<p><strong>Heterogeneous channels.</strong> Channels are grouped by (modality, native rate), so each array stays length-consistent. A common single-rate recording yields one group per modality; a genuinely mixed-rate source yields one group per rate, which is faithful rather than silently resampled together.</p>
+<h2 id="reading-a-store">Reading a store<a class="headerlink" href="#reading-a-store" title="Permanent link">&para;</a></h2>
+<p>Read a store back into a <code>Recording</code> with <code>Recording.from_file</code>. The <code>.zarr</code> extension is auto-detected, or pass <code>importer='zarr'</code> explicitly:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">emgio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># Extension-inferred</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># Explicit importer</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;zarr&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p>The importer reads level 0 of one group, applies the <code>physical = digital * scale + offset</code> dequantization, and restores channels, events, and recording metadata. The view pyramid is render-only and is never read here.</p>
+<p>Because the groups in a store can sit at different rates that cannot share EMGIO's single time grid, the importer reconstructs one group at a time. When a store holds a single group it is selected automatically; when it holds more than one, pass the <code>group=</code> selector by group name. Calling <code>from_file</code> on a multi-group store without <code>group=</code> raises an error that lists the available groups:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Multi-group store: choose which (modality, rate) group to reconstruct</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;zarr&#39;</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s1">&#39;eeg_250hz&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p>Reconstruction is at the store's canonical (possibly downsampled) level-0 rate, not the original full-rate signal, because the store is the serving copy and BIDS remains the source of truth.</p>
+<h2 id="format-version-and-provenance">Format version and provenance<a class="headerlink" href="#format-version-and-provenance" title="Permanent link">&para;</a></h2>
+<p>The root group attributes carry the format tag and version so a reader can recognize and version-check a store:</p>
+<ul>
+<li><code>format</code> is <code>"biosigio-zarr"</code>.</li>
+<li><code>format_version</code> is currently <code>2</code>. In version 2, <code>recording_metadata</code> is a native JSON object, with non-JSON-native values such as datetimes carried in typed envelopes, so a browser or zarrita reader can consume it without a second parse. Version 1 stored <code>recording_metadata</code> as a JSON string; the reader still accepts version 1 stores.</li>
+</ul>
+<p>A reader should reject a store whose <code>format_version</code> is newer than the one it supports rather than guess at an unknown layout. The EMGIO importer does exactly this: it raises if the store's version exceeds the version this build reads.</p>
+<h2 id="serving-model-external">Serving model (external)<a class="headerlink" href="#serving-model-external" title="Permanent link">&para;</a></h2>
+<p>The viewing, inference, training, and batch-conversion layers live outside EMGIO. EMGIO only writes and reads the store; the sections below summarize the intended serving model so those external consumers can be built against the same contract.</p>
+<p><strong>Reads need no backend.</strong> A Zarr v3 store is objects plus JSON, so a browser reader (zarrita) streams it directly from object storage over HTTPS using ranged GETs. The viewing path has no decode service.</p>
+<p><strong>Cross-Origin Resource Sharing (CORS) is the one hard requirement.</strong> The bucket must allow browser GET, HEAD, and Range requests, and expose the ETag and Content-Length headers.</p>
+<p><strong>A Content Delivery Network (CDN) is recommended for a public production viewer.</strong> A viewport pulls several small chunk objects; an edge CDN with HTTP/2 or HTTP/3 multiplexing shares one connection across those fetches, caches the small, shared coarse pyramid levels at the edge, and collapses request count and origin egress. The viewer code is identical with or without a CDN, since zarrita reads object URLs; ship on object storage plus CORS, then front it with a CDN by changing the base URL. The hot viewing path stays CDN-friendly because the view levels are not sharded.</p>
+<p><strong>Reader contracts</strong> for the three consumers:</p>
+<ul>
+<li><strong>Viewer:</strong> read the root and group attributes, pick the pyramid level whose <code>rate_effective</code> puts roughly one sample per screen pixel, fetch the chunks covering the viewport, and render the min/max band using each channel's <code>scale</code> and <code>offset</code>. At maximum zoom, read level 0 directly. Group the display by modality and overlay events from the <code>events</code> group.</li>
+<li><strong>Inference:</strong> read level 0 of the relevant group, apply scale and offset, and window the signal. Never read view/*. For a lower analysis rate, derive it on read from level 0 with an anti-aliased resample rather than persisting a third tier.</li>
+<li><strong>Training:</strong> iterate shards of level 0 sequentially, one object per shard and many windows per object, shuffling at the shard level plus a within-shard buffer.</li>
+</ul>
+<h2 id="default-parameters">Default parameters<a class="headerlink" href="#default-parameters" title="Permanent link">&para;</a></h2>
+<p>The exporter defaults follow the store specification. Override any of them as keyword arguments to <code>to_zarr</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modality_rates</code></td>
+<td>EEG 250, MEG 250, iEEG 1000, EMG 1000</td>
+<td>Per-modality canonical rate cap</td>
+</tr>
+<tr>
+<td><code>dtype</code></td>
+<td><code>int16</code></td>
+<td>Storage type; <code>float32</code> for lossless (keeps NaN)</td>
+</tr>
+<tr>
+<td><code>view_downsample</code></td>
+<td>4</td>
+<td>Time decimation factor between pyramid levels</td>
+</tr>
+<tr>
+<td><code>min_view_samples</code></td>
+<td>512</td>
+<td>Stop building pyramid levels at this length</td>
+</tr>
+<tr>
+<td><code>chunk_seconds</code></td>
+<td>4</td>
+<td>Random-access grain</td>
+</tr>
+<tr>
+<td><code>shard_seconds</code></td>
+<td>300</td>
+<td>Sequential-read grain, rounded to whole chunks</td>
+</tr>
+<tr>
+<td><code>compressor_level</code></td>
+<td>5</td>
+<td>zstd compression level (Blosc codec)</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># A lossless store with a shorter sequential-read grain</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">&#39;recording.zarr&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">,</span> <span class="n">shard_seconds</span><span class="o">=</span><span class="mi">120</span><span class="p">)</span>
+</code></pre></div>
 
 
 
