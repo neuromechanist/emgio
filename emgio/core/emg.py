@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -22,6 +22,9 @@ if enable_logging:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 else:
     logging.basicConfig(level=logging.CRITICAL)  # Effectively turns off most logging
+
+# Supported importer names (extension-inferred or passed explicitly to from_file).
+ImporterName = Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision"]
 
 
 class EMG:
@@ -85,7 +88,7 @@ class EMG:
         )
 
     @classmethod
-    def _infer_importer(cls, filepath: str) -> str:
+    def _infer_importer(cls, filepath: str) -> ImporterName:
         """
         Infer the importer to use based on the file extension.
         """
@@ -113,10 +116,7 @@ class EMG:
     def from_file(
         cls,
         filepath: str,
-        importer: Literal[
-            "trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision"
-        ]
-        | None = None,
+        importer: ImporterName | None = None,
         force_csv: bool = False,
         bids_channels: str = "auto",
         **kwargs,
@@ -462,8 +462,8 @@ class EMG:
         self,
         filepath: str,
         method: str = "both",
-        fft_noise_range: tuple = None,
-        svd_rank: int = None,
+        fft_noise_range: tuple | None = None,
+        svd_rank: int | None = None,
         precision_threshold: float = 0.01,
         format: Literal["auto", "edf", "bdf"] = "auto",
         bypass_analysis: bool | None = None,
@@ -475,7 +475,7 @@ class EMG:
         create_channels_tsv: bool = True,
         clip_outliers: bool | str = "auto",
         **kwargs,
-    ) -> str | None:
+    ) -> dict | None:
         """
         Export EMG data to EDF/BDF format, optionally including events.
 
@@ -621,7 +621,7 @@ class EMG:
 
         return verification_report_dict
 
-    def set_metadata(self, key: str, value: any) -> None:
+    def set_metadata(self, key: str, value: Any) -> None:
         """
         Set metadata value.
 
@@ -631,7 +631,7 @@ class EMG:
         """
         self.metadata[key] = value
 
-    def get_metadata(self, key: str) -> any:
+    def get_metadata(self, key: str) -> Any:
         """
         Get metadata value.
 
