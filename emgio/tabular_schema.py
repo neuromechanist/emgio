@@ -26,10 +26,11 @@ if TYPE_CHECKING:
     from .core.emg import Recording
 
 # Schema-metadata key + format tag/version, so a reader can recognize and
-# version-check a biosigIO tabular file.
+# version-check a biosigIO tabular file. (``FORMAT_VERSION`` mirrors the Zarr
+# exporter's constant name so the two serialization formats read in parallel.)
 METADATA_KEY = b"biosigio"
 FORMAT = "biosigio-tabular"
-VERSION = 1
+FORMAT_VERSION = 1
 
 
 def require_pyarrow():
@@ -101,11 +102,32 @@ def metadata_from_json(blob: str) -> dict:
     return json.loads(blob, object_hook=_json_object_hook)
 
 
+def metadata_to_mapping(metadata) -> dict:
+    """Encode metadata as a JSON-native dict (datetimes/numpy as typed envelopes).
+
+    Like :func:`metadata_to_json` but returns the parsed object rather than a
+    string, so it can be stored directly as a Zarr attribute that a browser /
+    zarrita reader can consume without a second JSON parse.
+    """
+    return json.loads(metadata_to_json(metadata))
+
+
+def metadata_from_mapping(obj) -> dict:
+    """Reconstruct metadata from either a mapping (new) or a JSON string (legacy).
+
+    Zarr stores < 0.6 wrote ``recording_metadata`` as a JSON string; 0.6+ stores
+    it as a native object. Accept both so older stores still round-trip.
+    """
+    if isinstance(obj, str):
+        return metadata_from_json(obj)
+    return json.loads(json.dumps(obj), object_hook=_json_object_hook)
+
+
 def recording_to_table(rec: Recording) -> pa.Table:
     """Build a pyarrow Table from a Recording (signals + biosigio metadata blob)."""
     pa = require_pyarrow()
     if rec.signals is None:
-        raise ValueError("No signals to serialize")
+        raise ValueError("No signals loaded")
 
     table = pa.Table.from_pandas(rec.signals, preserve_index=True)
     events = (
@@ -114,7 +136,7 @@ def recording_to_table(rec: Recording) -> pa.Table:
     blob = json.dumps(
         {
             "format": FORMAT,
-            "version": VERSION,
+            "version": FORMAT_VERSION,
             "metadata": dict(rec.metadata),
             "channels": {name: dict(info) for name, info in rec.channels.items()},
             "events": events,
@@ -138,10 +160,10 @@ def table_to_recording(table: pa.Table) -> Recording:
     meta = json.loads(blob, object_hook=_json_object_hook)
     if meta.get("format") != FORMAT:
         raise ValueError(f"Unexpected tabular format tag: {meta.get('format')!r}")
-    if meta.get("version") != VERSION:
+    if meta.get("version") != FORMAT_VERSION:
         raise ValueError(
             f"Unsupported biosigIO tabular schema version {meta.get('version')!r} "
-            f"(this build reads version {VERSION})."
+            f"(this build reads version {FORMAT_VERSION})."
         )
 
     rec = Recording()

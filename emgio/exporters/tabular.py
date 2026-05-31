@@ -8,7 +8,7 @@ optional dependency (the ``arrow`` extra), imported lazily.
 """
 
 from ..core.emg import Recording
-from ..tabular_schema import recording_to_table
+from ..tabular_schema import recording_to_table, require_pyarrow
 
 
 class TabularExporter:
@@ -16,8 +16,16 @@ class TabularExporter:
 
     @staticmethod
     def to_parquet(rec: Recording, filepath: str) -> str:
-        # recording_to_table calls require_pyarrow() (clear install hint) before
-        # we import the pyarrow.parquet submodule.
+        """Write ``rec`` to a self-describing biosigIO Parquet file.
+
+        Args:
+            rec: Source recording.
+            filepath: Output ``.parquet`` path.
+
+        Returns:
+            The written file path.
+        """
+        require_pyarrow()  # clear install hint before touching the pyarrow submodule
         table = recording_to_table(rec)
         import pyarrow.parquet as pq
 
@@ -26,6 +34,16 @@ class TabularExporter:
 
     @staticmethod
     def to_arrow(rec: Recording, filepath: str) -> str:
+        """Write ``rec`` to a biosigIO Arrow/Feather file (fast zero-copy IPC).
+
+        Args:
+            rec: Source recording.
+            filepath: Output ``.feather`` / ``.arrow`` path.
+
+        Returns:
+            The written file path.
+        """
+        require_pyarrow()
         table = recording_to_table(rec)
         import pyarrow.feather as feather
 

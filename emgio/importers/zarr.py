@@ -23,8 +23,8 @@ import numpy as np
 import pandas as pd
 
 from ..core.emg import Recording
-from ..exporters.zarr import FORMAT, require_zarr
-from ..tabular_schema import metadata_from_json
+from ..exporters.zarr import FORMAT, FORMAT_VERSION, require_zarr
+from ..tabular_schema import metadata_from_mapping
 from .base import BaseImporter
 
 
@@ -51,6 +51,18 @@ class ZarrImporter(BaseImporter):
             raise ValueError(
                 f"Not a biosigIO Zarr store: root 'format' is {root_attrs.get('format')!r}, "
                 f"expected {FORMAT!r}. Only stores written by emgio's Zarr exporter can be read."
+            )
+        # Accept an integral version (int, or a float like 2.0 from a hand-edited
+        # or non-Python writer); reject non-numeric or a newer store.
+        version = root_attrs.get("format_version", 1)
+        try:
+            is_supported = int(version) == version and int(version) <= FORMAT_VERSION
+        except (TypeError, ValueError):
+            is_supported = False
+        if not is_supported:
+            raise ValueError(
+                f"Unsupported biosigIO Zarr store version {version!r}; this build reads up to "
+                f"version {FORMAT_VERSION}. Upgrade emgio to read this store."
             )
 
         signal_groups = [name for name in root.keys() if name != "events"]
@@ -84,8 +96,9 @@ class ZarrImporter(BaseImporter):
         self._add_events(rec, root)
 
         meta_blob = root_attrs.get("recording_metadata")
-        if isinstance(meta_blob, str):
-            rec.metadata = metadata_from_json(meta_blob)
+        if meta_blob is not None:
+            # Accepts both a native object (v2) and a legacy JSON string (v1).
+            rec.metadata = metadata_from_mapping(meta_blob)
         rec.set_metadata("source_file", filepath)
         return rec
 

@@ -110,8 +110,8 @@ uv run mkdocs serve                                # Build docs
 ## Project-Specific Guidelines
 
 ### Supported Formats
-- **Import:** EEGLAB .set, Delsys Trigno, OTB, EDF/BDF(+), WFDB, CSV
-- **Export:** EDF/BDF(+) with automatic format selection
+- **Import:** EEGLAB .set, Delsys Trigno, OTB, EDF/BDF(+), WFDB, CSV, XDF, MEG (.fif/CTF .ds, via MNE), BrainVision (.vhdr, via MNE), proprietary electrophysiology (Intan/Blackrock/Spike2/Plexon/Micromed/Neuralynx, via python-neo), and the biosigIO serialization formats (Parquet/Arrow/Feather, Zarr)
+- **Export:** EDF/BDF(+) with automatic format selection; serialization and serving formats: Parquet and Arrow/Feather (lossless columnar, `arrow` extra), Zarr (cloud-native serving store, `zarr` extra)
 
 ### Key Classes
 - `Recording` (emgio/core) — main class for data handling

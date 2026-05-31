@@ -84,6 +84,9 @@ nav:
     - CSV: formats/csv.md
     - WFDB: formats/wfdb.md
     - XDF: formats/xdf.md
+  - Serialization & Serving:
+    - Overview (Parquet/Arrow/Zarr): formats/serialization.md
+    - Zarr Serving Store: formats/zarr.md
   - API Reference:
     - Recording Class: api/emg.md
     - Importers:
@@ -95,8 +98,12 @@ nav:
       - CSV Importer: api/importers/csv.md
       - WFDB Importer: api/importers/wfdb.md
       - XDF Importer: api/importers/xdf.md
+      - Tabular Importer (Parquet/Arrow): api/importers/tabular.md
+      - Zarr Importer: api/importers/zarr.md
     - Exporters:
       - EDF/BDF Exporter: api/exporters/edf.md
+      - Tabular Exporter (Parquet/Arrow): api/exporters/tabular.md
+      - Zarr Exporter: api/exporters/zarr.md
     - Analysis:
       - Verification: api/analysis/verification.md
     - Visualization:
@@ -109,6 +116,7 @@ nav:
     - Converting Jupyter Notebooks: examples/notebooks.md
     - WFDB Example: examples/wfdb.md
     - XDF Example: examples/xdf.md
+    - Serialization Round-Trip: examples/serialization.md
   - Contributing: contributing.md
 
 extra:

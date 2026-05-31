@@ -31,4 +31,6 @@ class TabularImporter(BaseImporter):
                 table = feather.read_table(filepath)
         except Exception as e:
             raise ValueError(f"Error reading tabular file {filepath}: {e}") from e
-        return table_to_recording(table)
+        rec = table_to_recording(table)
+        rec.set_metadata("source_file", filepath)
+        return rec
