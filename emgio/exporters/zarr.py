@@ -41,13 +41,14 @@ import numpy as np
 from scipy.signal import resample_poly
 
 from ..core.emg import Recording
-from ..tabular_schema import metadata_to_json
+from ..tabular_schema import metadata_to_mapping
 from ..version import __version__ as _BIOSIGIO_VERSION
 
 # Format tag/version for the root attrs, so a reader can recognize and
-# version-check a biosigIO Zarr store.
+# version-check a biosigIO Zarr store. v2 stores ``recording_metadata`` as a
+# native JSON object (v1 stored it as a JSON string); the reader accepts both.
 FORMAT = "biosigio-zarr"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 # Per-modality canonical inference rate (Hz). target = min(native, cap); a
 # modality absent from this map keeps its native rate.
@@ -407,9 +408,10 @@ class ZarrExporter:
                 "view_downsample": view_downsample,
                 "anti_alias_filter": "scipy.signal.resample_poly (polyphase FIR)",
                 "channel_groups": written_groups,
-                # Lossless JSON (datetimes/numpy survive), shared with the tabular
-                # schema, instead of a lossy str() dump.
-                "recording_metadata": metadata_to_json(rec.metadata),
+                # Native JSON object (datetimes/numpy as typed envelopes), shared
+                # with the tabular schema, so a browser/zarrita reader can consume
+                # it directly without a second parse and without a lossy str() dump.
+                "recording_metadata": metadata_to_mapping(rec.metadata),
                 "created_utc": _dt.datetime.now(_dt.UTC).isoformat(),
                 "note": (
                     "Derived serving copy. level 0 of each group is the anti-aliased "

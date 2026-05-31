@@ -33,6 +33,10 @@ The documentation including installation instructions, examples, and API referen
   
 - Export to standardized formats:
   - EDF/BDF(+) with channels.tsv metadata (automatically selects format based on signal properties, preserves annotations)
+
+- Serialization & serving (see [docs](https://neuromechanist.github.io/emgio/formats/serialization/)):
+  - Parquet and Arrow/Feather: lossless columnar round-trip (analytics, fast IPC); requires the `arrow` extra
+  - Zarr: cloud-native serving store (one store serves viewing, inference, and training), a derived downsampled copy; requires the `zarr` extra
   
 - Data manipulation:
   - Channel selection

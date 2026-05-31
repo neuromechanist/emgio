@@ -41,6 +41,10 @@ EMGIO simplifies this process by providing a standardized interface for loading,
   - Smart handling of precision requirements
   - BIDS-compatible metadata formatting
   - Annotation export (EDF+/BDF+)
+
+- **Serialization & serving** (see [Serialization & Serving](formats/serialization.md)):
+  - Parquet and Arrow/Feather: lossless columnar round-trip (analytics, fast IPC); `arrow` extra
+  - Zarr: cloud-native serving store (viewing, inference, and training from one store), a derived downsampled copy; `zarr` extra
   
 - **Data manipulation**:
   - Channel selection

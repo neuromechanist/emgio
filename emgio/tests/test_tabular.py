@@ -48,11 +48,15 @@ def test_tabular_roundtrip_is_lossless(tmp_path, ext, method):
     assert rt.events["onset"].dtype == np.float64
 
     # Recording metadata preserved with TYPES intact (e.g. startdate stays a
-    # datetime, not silently coerced to a string).
+    # datetime, not silently coerced to a string). source_file is the exception:
+    # like every importer, TabularImporter resets it to the path it just read.
     for key, value in rec.metadata.items():
+        if key == "source_file":
+            continue
         assert key in rt.metadata, f"metadata key {key!r} dropped"
         assert type(rt.metadata[key]) is type(value), f"metadata[{key!r}] type changed"
         assert rt.metadata[key] == value, f"metadata[{key!r}] value changed"
+    assert rt.metadata["source_file"] == str(out)
 
 
 @requires_emg

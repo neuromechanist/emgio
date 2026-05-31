@@ -94,6 +94,19 @@ Key contract points:
 - **`physical = digital * scale + offset`**, per channel, when `dtype="int16"`. For `float32` the scale is 1 and offset is 0.
 - **Events** are stored as onset, duration, and an integer code per event, with a portable code to label map. This stays compact when there are many events with few unique labels.
 
+### Implementation notes (as shipped in emgio 0.6.0)
+
+These clarify the contract to match the reference implementation (`emgio/exporters/zarr.py`, `emgio/importers/zarr.py`). Readers built to this PRD should rely on them:
+
+- **`format_version` is `2`** (`format = "biosigio-zarr"`). Readers should accept a version less than or equal to the one they know and reject a newer one. Version 2 stores `recording_metadata` as a **native JSON object** (directly readable by a browser/zarrita client); version 1 stored it as a JSON string. Both encode non-JSON values (datetime, date, numpy) as typed envelopes `{"__biosigio_type__": "datetime"|"date", "value": ...}`; a reader detects and decodes these.
+- **Group directory names encode the TARGET (served) rate**, not the native rate (e.g. a 500 Hz native EEG group is named `eeg_250hz`). Address groups by the names in the root `channel_groups` attribute, never by reconstructing from a native rate. The native rate is recovered from the group `original_rate` attribute.
+- **`original_rate` has two scopes:** the group-level `original_rate` is the integer-rounded grouping key, while the per-channel `channels[].original_rate` is the true (possibly fractional) acquisition rate. Use the per-channel value for exact provenance.
+- **The `level 0` array also carries an `anti_aliased` boolean** (group-level summary; true if any channel was anti-alias resampled) in addition to the per-channel `channels[].anti_aliased`.
+- **`usable_for_inference` on `level 0`** is true for groups with at least one continuous channel and **false for a group composed solely of discrete channels** (TRIG/SYSCLOCK/CTRL).
+- **`int16` storage rejects non-finite samples** (NaN/inf) with a clear error; use `dtype="float32"` to preserve NaN gaps. A reader can therefore assume an `int16` store has no NaN.
+- **Resampling and grouping operate on rates rounded to the nearest integer Hz**, so for a fractional acquisition rate the effective polyphase ratio is approximate (the exact native rate is preserved in `channels[].original_rate`).
+- The root carries one extra free-text `note` attribute (human-readable provenance); readers may ignore it.
+
 ---
 
 ## 5. Signal-processing requirements

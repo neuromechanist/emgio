@@ -110,7 +110,9 @@ class Recording:
         """
         Infer the importer to use based on the file extension.
         """
-        extension = os.path.splitext(filepath)[1].lower()
+        # rstrip path separators so a Zarr store passed as a directory with a
+        # trailing slash (e.g. "rec.zarr/") still resolves by its ".zarr" suffix.
+        extension = os.path.splitext(filepath.rstrip("/\\"))[1].lower()
         if extension in {".edf", ".bdf"}:
             return "edf"
         elif extension in {".set"}:
@@ -246,6 +248,11 @@ class Recording:
 
         # Create importer instance and load data
         emg = importer_class().load(filepath, **kwargs)
+
+        # Record provenance: which format this recording came from. setdefault so a
+        # re-imported serialization file (tabular/zarr) keeps the ORIGINAL
+        # source_format restored from its metadata rather than being relabeled.
+        emg.metadata.setdefault("source_format", importer)
 
         # In a BIDS layout, the sibling _channels.tsv is the authoritative source
         # of per-channel type/units; apply it over the importer's header/label
@@ -729,8 +736,8 @@ class Recording:
         """
         from ..exporters.zarr import ZarrExporter
 
-        if self.signals is None:
-            raise ValueError("No signals loaded")
+        # The empty-signal guard lives once, in ZarrExporter.export ("No signals
+        # loaded"), matching the tabular path; no duplicate guard here.
         return ZarrExporter.export(self, filepath, **kwargs)
 
     def set_metadata(self, key: str, value: Any) -> None:
