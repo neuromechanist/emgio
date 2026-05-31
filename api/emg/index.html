@@ -2687,7 +2687,7 @@
 
 
 <h3 id="emgio.core.emg.EMG.from_file" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">force_csv</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">force_csv</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">bids_channels</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -2713,6 +2713,10 @@
         Automatic import is supported for CSV/TXT files.
     force_csv: If True and importer is 'csv', forces using the generic CSV
               importer even if the file appears to match a specialized format.
+    bids_channels: When 'auto' (default), look for a sibling BIDS
+              _channels.tsv next to the file and apply its per-channel
+              type/units over the importer's inferred values. Pass 'off'
+              to disable.
     **kwargs: Additional arguments passed to the importer.
         For XDF files, useful kwargs include:
         - stream_names: List of stream names to import
@@ -2730,7 +2734,7 @@
 
 
 <h3 id="emgio.core.emg.EMG.add_channel" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">add_channel</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">,</span> <span class="n">physical_dimension</span><span class="p">,</span> <span class="n">prefilter</span><span class="o">=</span><span class="s1">&#39;n/a&#39;</span><span class="p">,</span> <span class="n">channel_type</span><span class="o">=</span><span class="s1">&#39;EMG&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">add_channel</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sample_frequency</span><span class="p">,</span> <span class="n">physical_dimension</span><span class="p">,</span> <span class="n">channel_type</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">modality</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prefilter</span><span class="o">=</span><span class="s1">&#39;n/a&#39;</span><span class="p">)</span></code>
 
 <a href="#emgio.core.emg.EMG.add_channel" class="headerlink" title="Permanent link">&para;</a></h3>
 
@@ -2743,8 +2747,12 @@
     data: Channel data
     sample_frequency: Sampling frequency in Hz (as per EDF specification)
     physical_dimension: Physical dimension/unit of measurement (as per EDF specification)
-    prefilter: Pre-filtering applied to the channel
-    channel_type: Channel type ('EMG', 'ACC', 'GYRO', etc.)</p>
+    channel_type: BIDS channel type ('EEG', 'EMG', 'ECG', 'ACC', 'SEEG', ...).
+        Required; validated against the modality vocabulary. There is no
+        default (a missing type must be explicit, e.g. 'OTHER'/'MISC').
+    modality: Coarse modality ('EEG', 'EMG', 'IEEG', 'MEG', 'BEH', 'MISC').
+        If None, it is inferred from <code>channel_type</code>.
+    prefilter: Pre-filtering applied to the channel (keyword-only).</p>
 
 
     </div>
@@ -2777,7 +2785,7 @@
 
 
 <h3 id="emgio.core.emg.EMG.select_channels" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">select_channels</span><span class="p">(</span><span class="n">channels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">channel_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">select_channels</span><span class="p">(</span><span class="n">channels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">channel_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">modality</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#emgio.core.emg.EMG.select_channels" class="headerlink" title="Permanent link">&para;</a></h3>
 
@@ -2897,7 +2905,7 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 
 
 <h3 id="emgio.core.emg.EMG.to_edf" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">to_edf</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precision_threshold</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">bypass_analysis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="o">=</span><span class="mf">1e-06</span><span class="p">,</span> <span class="n">verify_channel_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">events_df</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">create_channels_tsv</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">to_edf</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precision_threshold</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">bypass_analysis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verify_tolerance</span><span class="o">=</span><span class="mf">1e-06</span><span class="p">,</span> <span class="n">verify_channel_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">events_df</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">create_channels_tsv</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">clip_outliers</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
 
 <a href="#emgio.core.emg.EMG.to_edf" class="headerlink" title="Permanent link">&para;</a></h3>
 
@@ -2933,6 +2941,12 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
     events_df: Optional DataFrame with events ('onset', 'duration', 'description').
               If None, uses self.events. (This provides flexibility)
     create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)
+    clip_outliers: Singularity handling for the per-channel physical window.
+        'auto' (default) keeps the full range losslessly but clips rare extreme
+        outliers to a robust window only when keeping them would crater the bulk
+        signal's resolution at the chosen format (with a warning); True always
+        clips to the robust window; False never clips. See EDFExporter.export for
+        the advanced <code>outlier_sigmas</code> / <code>min_effective_bits</code> knobs.
     **kwargs: Additional arguments for the EDF exporter</p>
 <p>Returns:
     Union[str, None]: If verify is True, returns a string with verification results.
