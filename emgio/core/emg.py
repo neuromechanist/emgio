@@ -25,7 +25,7 @@ else:
 
 # Supported importer names (extension-inferred or passed explicitly to from_file).
 ImporterName = Literal[
-    "trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision", "tabular"
+    "trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision", "tabular", "neo"
 ]
 
 
@@ -117,6 +117,23 @@ class Recording:
             return "brainvision"
         elif extension in {".parquet", ".feather", ".arrow"}:
             return "tabular"
+        elif extension in {
+            ".rhd",
+            ".rhs",
+            ".ns1",
+            ".ns2",
+            ".ns3",
+            ".ns4",
+            ".ns5",
+            ".ns6",
+            ".smr",
+            ".smrx",
+            ".plx",
+            ".pl2",
+            ".trc",
+            ".ncs",
+        }:
+            return "neo"
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -145,6 +162,9 @@ class Recording:
                 - 'meg': MEG via MNE (.fif and CTF .ds; requires the 'meg' extra)
                 - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
                 - 'tabular': biosigIO Parquet/Arrow/Feather (requires the 'arrow' extra)
+                - 'neo': proprietary electrophysiology formats via python-neo
+                  (Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...;
+                  requires the 'neo' extra)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -176,6 +196,7 @@ class Recording:
             "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds)
             "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
             "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
+            "neo": "NeoImporter",  # proprietary ephys via python-neo
         }
 
         if importer not in importers:
@@ -191,7 +212,9 @@ class Recording:
                 "- xdf: XDF multi-stream format\n"
                 "- meg: MEG via MNE (.fif, CTF .ds)\n"
                 "- brainvision: BrainVision via MNE (.vhdr)\n"
-                "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)"
+                "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)\n"
+                "- neo: proprietary electrophysiology formats via python-neo "
+                "(Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...)"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic

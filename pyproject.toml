@@ -66,6 +66,12 @@ meg = [
 arrow = [
     "pyarrow>=14",
 ]
+# Proprietary electrophysiology acquisition formats (Intan, Blackrock, Spike2,
+# Plexon, Micromed, Neuralynx, ...) via python-neo. Install with
+# `uv sync --extra neo`.
+neo = [
+    "neo>=0.13",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -73,6 +79,7 @@ dev = [
     "ty",
     "mne>=1.6",
     "pyarrow>=14",
+    "neo>=0.13",
 ]
 docs = [
     "mkdocs>=1.6.0",
@@ -83,7 +90,7 @@ docs = [
     "mike>=2.1.0",
 ]
 all = [
-    "emgio[dev,docs,meg,arrow]",
+    "emgio[dev,docs,meg,arrow,neo]",
 ]
 
 [project.urls]
