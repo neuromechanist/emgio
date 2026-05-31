@@ -12,7 +12,7 @@ The `verification` module provides functions for verifying signal integrity afte
 
 ## Key Functions Summary
 
-- `compare_signals()`: Compare signals between two EMG objects using normalized metrics.
+- `compare_signals()`: Compare signals between two Recording objects using normalized metrics.
 - `report_verification_results()`: Generate a detailed report based on verification results.
 
 ## Usage Examples
@@ -20,15 +20,15 @@ The `verification` module provides functions for verifying signal integrity afte
 ### Comparing Signals
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.analysis.verification import compare_signals, report_verification_results
 
 # Load original EMG data
-emg_original = EMG.from_file("data.csv", importer="trigno")
+emg_original = Recording.from_file("data.csv", importer="trigno")
 
 # Export to EDF and reload
 emg_original.to_edf("exported_data")
-emg_reloaded = EMG.from_file("exported_data.edf")
+emg_reloaded = Recording.from_file("exported_data.edf")
 
 # Compare signals
 results = compare_signals(emg_original, emg_reloaded)

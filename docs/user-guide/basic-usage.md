@@ -4,25 +4,25 @@ EMGIO provides a unified interface for working with EMG data from various system
 
 ## Loading Data
 
-The main entry point for loading data is the `EMG.from_file()` method. This method automatically determines the correct importer based on the file extension, or you can specify the importer explicitly:
+The main entry point for loading data is the `Recording.from_file()` method. This method automatically determines the correct importer based on the file extension, or you can specify the importer explicitly:
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Automatic importer selection based on file extension
-emg = EMG.from_file('data.csv')  # Will use CSV importer for CSV files
-emg = EMG.from_file('data.edf')  # Will use EDF importer for EDF files
-emg = EMG.from_file('data.set')  # Will use EEGLAB importer for SET files
-emg = EMG.from_file('data.otb')  # Will use OTB importer for OTB files
-emg = EMG.from_file('data.hea')  # Will use WFDB importer for WFDB files
+emg = Recording.from_file('data.csv')  # Will use CSV importer for CSV files
+emg = Recording.from_file('data.edf')  # Will use EDF importer for EDF files
+emg = Recording.from_file('data.set')  # Will use EEGLAB importer for SET files
+emg = Recording.from_file('data.otb')  # Will use OTB importer for OTB files
+emg = Recording.from_file('data.hea')  # Will use WFDB importer for WFDB files
 
 # Explicit importer selection
-emg = EMG.from_file('data.csv', importer='trigno')
-emg = EMG.from_file('data.set', importer='eeglab')
-emg = EMG.from_file('data.otb+', importer='otb')
-emg = EMG.from_file('data.edf', importer='edf')
-emg = EMG.from_file('data.csv', importer='csv')  # Generic CSV importer
-emg = EMG.from_file('data.hea', importer='wfdb')  # WFDB importer
+emg = Recording.from_file('data.csv', importer='trigno')
+emg = Recording.from_file('data.set', importer='eeglab')
+emg = Recording.from_file('data.otb+', importer='otb')
+emg = Recording.from_file('data.edf', importer='edf')
+emg = Recording.from_file('data.csv', importer='csv')  # Generic CSV importer
+emg = Recording.from_file('data.hea', importer='wfdb')  # WFDB importer
 ```
 
 ### Automatic File Type Inference
@@ -45,7 +45,7 @@ For CSV files with specialized formats like Trigno, the generic CSV importer wil
 
 ```python
 # Force using the generic CSV importer even for specialized formats
-emg = EMG.from_file('trigno_data.csv', importer='csv', force_csv=True)
+emg = Recording.from_file('trigno_data.csv', importer='csv', force_csv=True)
 ```
 
 See the [Generic CSV Format](../formats/csv.md) documentation for more details on CSV import options.
@@ -107,7 +107,7 @@ import matplotlib.pyplot as plt
 
 # Export to EDF and reload
 emg_original.to_edf('output')
-emg_reloaded = EMG.from_file('output.edf')
+emg_reloaded = Recording.from_file('output.edf')
 
 # Compare signals
 results = compare_signals(emg_original, emg_reloaded)

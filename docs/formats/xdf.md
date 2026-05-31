@@ -46,10 +46,10 @@ if stream:
 Load all numeric streams from an XDF file:
 
 ```python
-from emgio.core.emg import EMG
+from emgio.core.emg import Recording
 
 # Load all numeric streams (excludes marker/string streams)
-emg = EMG.from_file('recording.xdf')
+emg = Recording.from_file('recording.xdf')
 ```
 
 ### Selective Loading
@@ -58,16 +58,16 @@ XDF files often contain many streams. You can select specific streams:
 
 ```python
 # Load only EMG streams
-emg = EMG.from_file('recording.xdf', stream_types=['EMG'])
+emg = Recording.from_file('recording.xdf', stream_types=['EMG'])
 
 # Load specific stream types
-emg = EMG.from_file('recording.xdf', stream_types=['EMG', 'EXG'])
+emg = Recording.from_file('recording.xdf', stream_types=['EMG', 'EXG'])
 
 # Load by stream name
-emg = EMG.from_file('recording.xdf', stream_names=['MyEMGDevice'])
+emg = Recording.from_file('recording.xdf', stream_names=['MyEMGDevice'])
 
 # Load by stream ID
-emg = EMG.from_file('recording.xdf', stream_ids=[1, 3])
+emg = Recording.from_file('recording.xdf', stream_ids=[1, 3])
 ```
 
 ## Multi-Stream Handling
@@ -80,7 +80,7 @@ When loading multiple streams with different sampling rates, EMGIO:
 
 ```python
 # Load EEG and EMG together (different sample rates)
-emg = EMG.from_file('recording.xdf', stream_types=['EEG', 'EMG'])
+emg = Recording.from_file('recording.xdf', stream_types=['EEG', 'EMG'])
 
 # Channels will be named like: "StreamName_ChannelLabel"
 print(list(emg.channels.keys()))
@@ -113,7 +113,7 @@ The XDF importer attempts to infer channel types from:
 
 ```python
 # Set default channel type for streams without explicit type info
-emg = EMG.from_file('recording.xdf', default_channel_type='EMG')
+emg = Recording.from_file('recording.xdf', default_channel_type='EMG')
 ```
 
 ## Metadata
@@ -127,7 +127,7 @@ Loaded XDF files include metadata such as:
 - `stream_types`: Types of all streams
 
 ```python
-emg = EMG.from_file('recording.xdf')
+emg = Recording.from_file('recording.xdf')
 print(emg.get_metadata('stream_names'))
 print(emg.get_metadata('stream_types'))
 ```
@@ -140,7 +140,7 @@ To preserve the original LSL timestamps, use the `include_timestamps` option:
 
 ```python
 # Load with timestamp preservation
-emg = EMG.from_file('recording.xdf', include_timestamps=True)
+emg = Recording.from_file('recording.xdf', include_timestamps=True)
 
 # Each stream gets a timestamp channel named "{stream_name}_LSL_timestamps"
 print(list(emg.channels.keys()))

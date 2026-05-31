@@ -1,17 +1,38 @@
 """The core class is `Recording`; `EMG` is a deprecated backward-compat alias.
 
 When the package handled only EMG the class was named `EMG`; it is now a
-modality-agnostic biosignal recording (EEG/EMG/iEEG/MEG/...) named `Recording`,
-with `EMG` retained as an alias so existing code keeps working. NO MOCKS.
+modality-agnostic biosignal recording (EEG/EMG/iEEG/MEG/...) named `Recording`.
+`EMG` still resolves to `Recording` but now emits a ``DeprecationWarning`` and
+will be removed in biosigio 1.0.0. NO MOCKS.
 """
 
+import warnings
+
 import numpy as np
+import pytest
 
-from emgio import EMG, Recording
+import emgio
+from emgio import Recording
 
 
-def test_emg_is_alias_of_recording():
+def test_emg_alias_resolves_to_recording_with_deprecation_warning():
+    with pytest.warns(DeprecationWarning, match="EMG.*deprecated"):
+        cls = emgio.EMG
+    assert cls is Recording
+
+
+def test_emg_from_core_module_also_warns():
+    with pytest.warns(DeprecationWarning, match="EMG.*deprecated"):
+        from emgio.core.emg import EMG
     assert EMG is Recording
+
+
+def test_emg_alias_is_still_constructible():
+    with pytest.warns(DeprecationWarning):
+        cls = emgio.EMG
+    rec = cls()
+    rec.add_channel("C", np.zeros(100), 100, "uV", "EMG")
+    assert isinstance(rec, Recording)
 
 
 def test_recording_is_the_canonical_class_name():
@@ -19,11 +40,12 @@ def test_recording_is_the_canonical_class_name():
     assert type(rec).__name__ == "Recording"
 
 
-def test_alias_works_for_construction_and_isinstance():
-    rec = Recording()
-    rec.add_channel("C", np.zeros(100), 100, "uV", "EMG")
-    via_alias = EMG()
-    via_alias.add_channel("C", np.zeros(100), 100, "uV", "EMG")
-    # Instances of one are instances of the other (same class).
-    assert isinstance(rec, EMG)
-    assert isinstance(via_alias, Recording)
+def test_recording_access_emits_no_warning():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert emgio.Recording is Recording
+
+
+def test_unknown_attribute_still_raises_attributeerror():
+    with pytest.raises(AttributeError):
+        _ = emgio.DoesNotExist

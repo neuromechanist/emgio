@@ -39,11 +39,11 @@ The OTB importer in EMGIO (`emgio.importers.otb`) works by:
 ## Code Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 
 # Load data from OTB file
-emg = EMG.from_file('data.otb+', importer='otb')
+emg = Recording.from_file('data.otb+', importer='otb')
 
 # Print device information
 print(f"Device: {emg.get_metadata('device')}")

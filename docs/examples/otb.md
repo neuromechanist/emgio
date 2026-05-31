@@ -6,11 +6,11 @@ This page provides examples for working with OTB+ files from OT Bioelettronica d
 
 ```python
 import matplotlib.pyplot as plt
-from emgio import EMG
+from emgio import Recording
 
 # Load OTB data
 data_path = 'path_to_your_otb_file.otb+'
-emg = EMG.from_file(data_path, importer='otb')
+emg = Recording.from_file(data_path, importer='otb')
 
 # Print device information
 print("\nDevice Information:")
@@ -50,14 +50,14 @@ plt.show()
 OTB files often contain multiple channel types. Here's how to work specifically with EMG channels:
 
 ```python
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Load OTB data
-emg = EMG.from_file('otb_data.otb+', importer='otb')
+emg = Recording.from_file('otb_data.otb+', importer='otb')
 
-# Create a new EMG object with only EMG channels
+# Create a new Recording object with only EMG channels
 emg_channels = emg.get_channels_by_type('EMG')
 
 if emg_channels:
@@ -125,15 +125,15 @@ else:
 When working with multiple recordings from the same experiment:
 
 ```python
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 
 # Load two OTB files
 file1 = 'session1.otb+'
 file2 = 'session2.otb+'
 
-emg1 = EMG.from_file(file1, importer='otb')
-emg2 = EMG.from_file(file2, importer='otb')
+emg1 = Recording.from_file(file1, importer='otb')
+emg2 = Recording.from_file(file2, importer='otb')
 
 # Add metadata to distinguish them
 emg1.set_metadata('session', '1')
@@ -187,10 +187,10 @@ if emg_channels:
 Converting OTB data to EDF/BDF format:
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load OTB data
-emg = EMG.from_file('data.otb+', importer='otb')
+emg = Recording.from_file('data.otb+', importer='otb')
 
 # Add metadata for export
 emg.set_metadata('subject', 'S001')

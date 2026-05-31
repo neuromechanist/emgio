@@ -93,15 +93,15 @@ The `load()` method must return a tuple of three elements:
 
 ## Registering a Custom Importer
 
-To make your custom importer available through `EMG.from_file()`, you need to register it:
+To make your custom importer available through `Recording.from_file()`, you need to register it:
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from my_module import MyCustomImporter
 
 # Register the importer with a name
-EMG.register_importer('my_format', MyCustomImporter)
+Recording.register_importer('my_format', MyCustomImporter)
 
 # Now you can use it
-emg = EMG.from_file('data.custom', importer='my_format')
+emg = Recording.from_file('data.custom', importer='my_format')
 ``` 

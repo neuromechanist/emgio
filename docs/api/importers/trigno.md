@@ -13,16 +13,16 @@ The `TrignoImporter` class is responsible for importing EMG data from Delsys Tri
 ## Usage Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.importers.trigno import TrignoImporter
 
-# Method 1: Using EMG.from_file (recommended)
-emg = EMG.from_file('data.csv', importer='trigno')
+# Method 1: Using Recording.from_file (recommended)
+emg = Recording.from_file('data.csv', importer='trigno')
 
 # Method 2: Using the importer directly
 importer = TrignoImporter('data.csv')
 signals, channels, metadata = importer.load()
-emg = EMG(signals, channels, metadata)
+emg = Recording(signals, channels, metadata)
 ```
 
 ## File Format Requirements

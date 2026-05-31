@@ -6,12 +6,12 @@ This page provides examples for working with EEGLAB `.set` files using EMGIO.
 
 ```python
 import os
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 
 # Load data from an EEGLAB .set file
 data_path = 'path_to_your_eeglab_file.set'
-emg = EMG.from_file(data_path, importer='eeglab')
+emg = Recording.from_file(data_path, importer='eeglab')
 
 # Print metadata
 print("\nMetadata:")
@@ -52,12 +52,12 @@ if emg_channels:
 EEGLAB files often contain event markers. Here's how to access and work with them:
 
 ```python
-from emgio import EMG
+from emgio import Recording
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Load EEGLAB data with events
-emg = EMG.from_file('data_with_events.set', importer='eeglab')
+emg = Recording.from_file('data_with_events.set', importer='eeglab')
 
 # Check if events exist in the metadata
 if 'event' in emg.metadata:
@@ -99,11 +99,11 @@ if 'event' in emg.metadata:
 EEGLAB can store continuous or epoched data. EMGIO can work with both:
 
 ```python
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 
 # Load epoched EEGLAB data
-emg = EMG.from_file('epoched_data.set', importer='eeglab')
+emg = Recording.from_file('epoched_data.set', importer='eeglab')
 
 # Check if data is epoched
 is_epoched = emg.get_metadata('trials', 1) > 1
@@ -163,10 +163,10 @@ if is_epoched:
 Converting EEGLAB data to EDF/BDF format:
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load EEGLAB data
-emg = EMG.from_file('data.set', importer='eeglab')
+emg = Recording.from_file('data.set', importer='eeglab')
 
 # Export all channels to EDF/BDF
 output_path = 'eeglab_all_channels'

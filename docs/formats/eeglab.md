@@ -42,10 +42,10 @@ The EEGLAB importer in EMGIO (`emgio.importers.eeglab`) works by:
 ## Code Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load data from EEGLAB .set file
-emg = EMG.from_file('data.set', importer='eeglab')
+emg = Recording.from_file('data.set', importer='eeglab')
 
 # Print metadata
 print(f"Subject: {emg.get_metadata('subject')}")

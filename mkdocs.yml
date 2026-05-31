@@ -85,7 +85,7 @@ nav:
     - WFDB: formats/wfdb.md
     - XDF: formats/xdf.md
   - API Reference:
-    - EMG Class: api/emg.md
+    - Recording Class: api/emg.md
     - Importers:
       - Base Importer: api/importers/base.md
       - Trigno Importer: api/importers/trigno.md

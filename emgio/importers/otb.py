@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from .base import BaseImporter
 
 
@@ -238,7 +238,7 @@ class OTBImporter(BaseImporter):
 
         return scaled_data, sampling_freq
 
-    def load(self, filepath: str) -> EMG:
+    def load(self, filepath: str) -> Recording:
         """
         Load EMG data from OTB/OTB+ file.
 
@@ -246,10 +246,10 @@ class OTBImporter(BaseImporter):
             filepath: Path to the OTB/OTB+ file
 
         Returns:
-            EMG: EMG object containing the loaded data
+            Recording: Recording object containing the loaded data
         """
-        # Create EMG object
-        emg = EMG()
+        # Create Recording object
+        emg = Recording()
         temp_dir = None
 
         try:
@@ -278,7 +278,7 @@ class OTBImporter(BaseImporter):
                 os.path.join(temp_dir, sig_files[0]), metadata
             )
 
-            # Add channels to EMG object
+            # Add channels to Recording object
             for ch_name, ch_info in metadata["channels"].items():
                 ch_idx = int(ch_name[2:]) - 1  # Extract channel number from 'CHx'
                 emg.add_channel(

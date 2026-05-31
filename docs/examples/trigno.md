@@ -6,12 +6,12 @@ This page demonstrates how to work with EMG data from the Delsys Trigno wireless
 
 ```python
 import os
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 
 # Load data from Trigno CSV file
 data_path = 'path_to_your_trigno_data.csv'
-emg = EMG.from_file(data_path, importer='trigno')
+emg = Recording.from_file(data_path, importer='trigno')
 
 # Print information about the loaded data
 print(f"Number of channels: {emg.get_n_channels()}")
@@ -87,8 +87,8 @@ If you have multiple recordings from the same experiment, you can load them sepa
 
 ```python
 # Load two recordings
-session1 = EMG.from_file('session1.csv', importer='trigno')
-session2 = EMG.from_file('session2.csv', importer='trigno')
+session1 = Recording.from_file('session1.csv', importer='trigno')
+session2 = Recording.from_file('session2.csv', importer='trigno')
 
 # Add metadata to distinguish them
 session1.set_metadata('session', '1')
@@ -121,13 +121,13 @@ Here's a complete workflow using Trigno data:
 
 ```python
 import os
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 import numpy as np
 
 # 1. Load the data
 data_path = 'trigno_recording.csv'
-emg = EMG.from_file(data_path, importer='trigno')
+emg = Recording.from_file(data_path, importer='trigno')
 
 # 2. Add metadata
 emg.set_metadata('subject', 'S001')

@@ -14,7 +14,7 @@ import numpy as np
 import pyedflib
 import pytest
 
-from emgio import EMG
+from emgio import Recording
 from emgio.exporters.edf import (
     _PHYS_FIELD_CHARS,
     _determine_scaling_factors,
@@ -198,7 +198,7 @@ def _export_reload(emg, tmp_path, **kw):
     out = tmp_path / "case.edf"
     emg.to_edf(str(out), **kw)
     written = out if out.exists() else out.with_suffix(".bdf")
-    return EMG.from_file(str(written), bids_channels="off"), written
+    return Recording.from_file(str(written), bids_channels="off"), written
 
 
 @pytest.mark.parametrize(
@@ -207,7 +207,7 @@ def _export_reload(emg, tmp_path, **kw):
 )
 def test_export_never_clips_within_header_window(tmp_path, amp, off, fmt):
     """Every reloaded sample lies inside the stored physical window (no overflow)."""
-    emg = EMG()
+    emg = Recording()
     emg.add_channel("S", _sine(amp=amp, off=off), 1000, "uV", "EMG")
     reloaded, written = _export_reload(emg, tmp_path, format=fmt, bypass_analysis=True)
     with pyedflib.EdfReader(str(written)) as r:
@@ -220,7 +220,7 @@ def test_export_never_clips_within_header_window(tmp_path, amp, off, fmt):
 
 @pytest.mark.parametrize("constant", [0.0, 1.0, -3.5])
 def test_export_constant_and_zero_channels(tmp_path, constant):
-    emg = EMG()
+    emg = Recording()
     emg.add_channel("C", np.full(2000, constant), 1000, "uV", "EMG")
     reloaded, _ = _export_reload(emg, tmp_path, format="bdf", bypass_analysis=True)
     assert np.allclose(reloaded.signals["C"].values, constant, atol=1e-3)
@@ -235,7 +235,7 @@ def test_singularity_protection_recovers_bulk(tmp_path):
     range and the bulk loses resolution. Auto must do at least as well, and meet
     the >0.99 bar that clipping is meant to protect.
     """
-    emg = EMG.from_file(str(EMG_FIXTURE))
+    emg = Recording.from_file(str(EMG_FIXTURE))
     ch = list(emg.channels)[0]
     base = emg.signals[ch].values.astype(float).copy()
     spike_idx = len(base) // 2
@@ -278,7 +278,7 @@ def test_export_rejects_unrepresentable_magnitude(tmp_path, fmt):
     that re-creates the #61 corruption), so the exporter must reject it loudly
     before writing, for BOTH formats (the physical field is 8 chars in each).
     """
-    emg = EMG()
+    emg = Recording()
     emg.add_channel("BIG", _sine(amp=2e7), 1000, "uV", "EMG")
     with pytest.raises(ValueError, match="cannot be stored in the EDF/BDF header"):
         emg.to_edf(str(tmp_path / "big.edf"), format=fmt, bypass_analysis=True, clip_outliers=False)
@@ -286,7 +286,7 @@ def test_export_rejects_unrepresentable_magnitude(tmp_path, fmt):
 
 def test_export_rejects_huge_positive_offset(tmp_path):
     """A large positive DC offset (~1.2e8) also overflows the 8-char field."""
-    emg = EMG()
+    emg = Recording()
     emg.add_channel("OFF", _sine(amp=1000.0) + 1.2e8, 1000, "uV", "EMG")
     with pytest.raises(ValueError, match="cannot be stored"):
         emg.to_edf(

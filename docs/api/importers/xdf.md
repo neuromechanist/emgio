@@ -15,11 +15,11 @@ The `XDFImporter` class handles importing data from XDF (Extensible Data Format)
 ### Basic Loading
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.importers.xdf import XDFImporter
 
-# Method 1: Using EMG.from_file (recommended)
-emg = EMG.from_file('recording.xdf')
+# Method 1: Using Recording.from_file (recommended)
+emg = Recording.from_file('recording.xdf')
 
 # Method 2: Using the importer directly
 importer = XDFImporter()
@@ -54,30 +54,30 @@ print(summary)
 
 ```python
 # Load only specific stream types
-emg = EMG.from_file('recording.xdf', stream_types=['EMG'])
+emg = Recording.from_file('recording.xdf', stream_types=['EMG'])
 
 # Load multiple types
-emg = EMG.from_file('recording.xdf', stream_types=['EMG', 'EEG'])
+emg = Recording.from_file('recording.xdf', stream_types=['EMG', 'EEG'])
 
 # Load by stream name
-emg = EMG.from_file('recording.xdf', stream_names=['MyEMGDevice'])
+emg = Recording.from_file('recording.xdf', stream_names=['MyEMGDevice'])
 
 # Load by stream ID
-emg = EMG.from_file('recording.xdf', stream_ids=[2])
+emg = Recording.from_file('recording.xdf', stream_ids=[2])
 ```
 
 ### Setting Default Channel Type
 
 ```python
 # For streams without explicit channel type metadata
-emg = EMG.from_file('recording.xdf', default_channel_type='EMG')
+emg = Recording.from_file('recording.xdf', default_channel_type='EMG')
 ```
 
 ### Preserving LSL Timestamps
 
 ```python
 # Include original LSL timestamps as additional channels
-emg = EMG.from_file('recording.xdf', include_timestamps=True)
+emg = Recording.from_file('recording.xdf', include_timestamps=True)
 
 # Each stream gets a "{stream_name}_LSL_timestamps" channel
 # Useful for synchronization with other LSL-recorded data
@@ -105,7 +105,7 @@ The XDF importer supports:
 
 ## Return Values
 
-The `load()` method returns an `EMG` object with:
+The `load()` method returns a `Recording` object with:
 
 ### Signals (pandas.DataFrame)
 - Time-indexed signal data

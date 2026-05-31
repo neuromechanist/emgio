@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from .base import BaseImporter
 
 
@@ -70,7 +70,7 @@ class TrignoImporter(BaseImporter):
 
         return channel_info
 
-    def load(self, filepath: str) -> EMG:
+    def load(self, filepath: str) -> Recording:
         """
         Load EMG data from Trigno CSV file.
 
@@ -78,10 +78,10 @@ class TrignoImporter(BaseImporter):
             filepath: Path to the Trigno CSV file
 
         Returns:
-            EMG: EMG object containing the loaded data
+            Recording: Recording object containing the loaded data
         """
-        # Create EMG object
-        emg = EMG()
+        # Create Recording object
+        emg = Recording()
 
         # Analyze file structure
         metadata_lines, data_start, header_line = self._analyze_csv_structure(filepath)
@@ -102,7 +102,7 @@ class TrignoImporter(BaseImporter):
         time_col = df.columns[0]  # First column is time
         df.set_index(time_col, inplace=True)
 
-        # Add channels to EMG object
+        # Add channels to Recording object
         for label in channel_labels:
             if label in channel_info:
                 info = channel_info[label]

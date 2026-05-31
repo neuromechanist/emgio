@@ -13,7 +13,7 @@ import pathlib
 
 import pytest
 
-from emgio import EMG
+from emgio import Recording
 
 # Anchor to the repo root (this file is at emgio/tests/) so the test does not
 # silently skip when pytest runs from a different working directory.
@@ -25,7 +25,7 @@ EEG_SET = (
 
 @pytest.mark.skipif(not EEG_SET.exists(), reason="EEG BIDS fixture missing")
 def test_eeglab_bids_eeg_fixture_imports():
-    emg = EMG.from_file(str(EEG_SET), importer="eeglab")
+    emg = Recording.from_file(str(EEG_SET), importer="eeglab")
 
     # All 64 channels imported with their real 10-10 montage labels.
     assert len(emg.channels) == 64

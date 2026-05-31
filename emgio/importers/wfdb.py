@@ -2,7 +2,7 @@ import os
 
 import wfdb
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 
 # import numpy as np # Keep commented out until needed
 # from typing import List, Dict # Keep commented out until needed
@@ -12,7 +12,7 @@ from .base import BaseImporter
 class WFDBImporter(BaseImporter):
     """Importer for WFDB format files."""
 
-    def load(self, filepath: str) -> EMG:
+    def load(self, filepath: str) -> Recording:
         """
         Load EMG data and annotations from WFDB files.
 
@@ -23,7 +23,7 @@ class WFDBImporter(BaseImporter):
             filepath: Path to the WFDB header file (.hea) or just the record name.
 
         Returns:
-            EMG: EMG object containing the loaded data and annotations.
+            Recording: Recording object containing the loaded data and annotations.
         """
         record_name = os.path.splitext(filepath)[0]
 
@@ -45,8 +45,8 @@ class WFDBImporter(BaseImporter):
             # physical=True ensures data is in physical units
             record = wfdb.rdrecord(record_name=record_name, sampfrom=0, sampto=None, physical=True)
 
-            # Create EMG object
-            emg = EMG()
+            # Create Recording object
+            emg = Recording()
 
             # Store metadata from header
             emg.set_metadata("source_file", filepath)
@@ -102,7 +102,7 @@ class WFDBImporter(BaseImporter):
                     record_name=record_name, extension="atr", sampfrom=0, sampto=None
                 )
 
-                # Add annotations to the EMG object
+                # Add annotations to the Recording object
                 # Assuming emg object has an `add_event` or `add_annotation` method
                 # The structure (onset, duration, description) is common
                 if hasattr(emg, "add_event") and callable(emg.add_event):

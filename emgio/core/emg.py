@@ -46,7 +46,8 @@ class Recording:
 
     Modality-agnostic container for EEG / EMG / iEEG / MEG / stim / marker data
     imported from any supported format. (``EMG`` is a deprecated alias of this
-    class kept for backward compatibility; prefer ``Recording``.)
+    class that still resolves to ``Recording`` but emits a ``DeprecationWarning``
+    and will be removed in biosigio 1.0.0; prefer ``Recording``.)
 
     Attributes:
         signals (pd.DataFrame): Raw signal data with time as index.
@@ -77,7 +78,7 @@ class Recording:
         plt_module=None,
     ):
         """
-        Plot EMG signals in a single plot with vertical offsets.
+        Plot signals in a single plot with vertical offsets.
 
         Args:
             channels: List of channels to plot. If None, plot all channels.
@@ -160,7 +161,7 @@ class Recording:
         **kwargs,
     ) -> "Recording":
         """
-        The method to create EMG object from file.
+        The method to create a Recording object from file.
 
         Args:
             filepath: Path to the input file
@@ -194,7 +195,7 @@ class Recording:
                 - stream_ids: List of stream IDs to import
 
         Returns:
-            EMG: New EMG object with loaded data
+            Recording: New Recording object with loaded data
         """
         if importer is None:
             importer = cls._infer_importer(filepath)
@@ -267,7 +268,7 @@ class Recording:
         modality: str | None = None,
     ) -> "Recording":
         """
-        Select specific channels from the data and return a new EMG object.
+        Select specific channels from the data and return a new Recording object.
 
         Args:
             channels: Channel name or list of channel names to select. If None and
@@ -277,7 +278,7 @@ class Recording:
                         channels of this type.
 
         Returns:
-            EMG: A new EMG object containing only the selected channels
+            Recording: A new Recording object containing only the selected channels
 
         Examples:
             # Select specific channels
@@ -330,7 +331,7 @@ class Recording:
             if not channels:
                 raise ValueError(f"None of the selected channels are of modality: {modality}")
 
-        # Create new EMG object
+        # Create new Recording object
         new_emg = Recording()
 
         # Copy selected signals and channels
@@ -358,7 +359,7 @@ class Recording:
         energy above the new Nyquist back into the band (aliasing); resample_poly
         removes that energy first, so no aliasing occurs.
 
-        Non-destructive: ``self`` is left untouched and a new EMG is returned,
+        Non-destructive: ``self`` is left untouched and a new Recording is returned,
         mirroring ``select_channels``'s copy semantics.
 
         Resampling factors come from the integer source/target rates:
@@ -374,7 +375,7 @@ class Recording:
                 detail and is out of scope for the low-res pipeline).
 
         Returns:
-            EMG: A new EMG with the resampled signals, each channel's
+            Recording: A new Recording with the resampled signals, each channel's
                 ``sample_frequency`` set to the achieved rate (source * up / down,
                 which equals ``target_rate`` for integer rates), and channel/recording
                 metadata and events preserved. Events are unchanged because their
@@ -530,7 +531,7 @@ class Recording:
         **kwargs,
     ) -> dict | None:
         """
-        Export EMG data to EDF/BDF format, optionally including events.
+        Export the recording to EDF/BDF format, optionally including events.
 
         Args:
             filepath: Path to save the EDF/BDF file
@@ -766,7 +767,7 @@ class Recording:
         prefilter: str = "n/a",
     ) -> None:
         """
-        Add a new channel to the EMG data.
+        Add a new channel to the recording.
 
         Args:
             label: Channel label or name (as per EDF specification)
@@ -842,7 +843,7 @@ class Recording:
 
     def add_event(self, onset: float, duration: float, description: str) -> None:
         """
-        Add an event/annotation to the EMG object.
+        Add an event/annotation to the recording.
 
         Args:
             onset: Event onset time in seconds.
@@ -863,7 +864,19 @@ class Recording:
         self.events = self.events.sort_values(by="onset").reset_index(drop=True)
 
 
-# Deprecated alias: the class was named ``EMG`` before it became modality-agnostic
-# (it now holds EEG/iEEG/MEG/EMG/...). Kept for backward compatibility; new code
-# should use ``Recording``. (Package rename emgio -> biosigio is tracked separately.)
-EMG = Recording
+# Deprecated alias. The class was named ``EMG`` before it became modality-agnostic
+# (it now holds EEG/iEEG/MEG/EMG/...). ``EMG`` still resolves to ``Recording`` via
+# this module ``__getattr__`` but emits a ``DeprecationWarning``; it will be removed
+# in biosigio 1.0.0. New code should use ``Recording``.
+def __getattr__(name: str):
+    if name == "EMG":
+        import warnings
+
+        warnings.warn(
+            "emgio.core.emg.EMG is a deprecated alias of Recording and will be "
+            "removed in biosigio 1.0.0; use Recording instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return Recording
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

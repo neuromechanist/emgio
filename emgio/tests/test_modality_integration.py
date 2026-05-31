@@ -10,7 +10,7 @@ import pathlib
 import numpy as np
 import pytest
 
-from emgio import EMG
+from emgio import Recording
 from emgio.core.modality import VALID_CHANNEL_TYPES
 from emgio.importers.csv import CSVImporter
 
@@ -20,13 +20,13 @@ XDF_FILE = _REPO / "examples/multi_stream_test.xdf"
 
 
 def test_add_channel_requires_channel_type():
-    emg = EMG()
+    emg = Recording()
     with pytest.raises(TypeError):
         emg.add_channel("C", np.zeros(10), 100, "uV")  # channel_type omitted
 
 
 def test_add_channel_validates_and_infers_modality():
-    emg = EMG()
+    emg = Recording()
     emg.add_channel("E1", np.zeros(10), 100, "uV", "eeg")  # case-insensitive
     assert emg.channels["E1"]["channel_type"] == "EEG"
     assert emg.channels["E1"]["modality"] == "EEG"
@@ -39,7 +39,7 @@ def test_add_channel_validates_and_infers_modality():
 
 
 def test_set_channel_and_modality_selectors():
-    emg = EMG()
+    emg = Recording()
     emg.add_channel("a", np.zeros(10), 100, "uV", "EEG")
     emg.add_channel("b", np.zeros(10), 100, "mV", "EMG")
 
@@ -60,7 +60,7 @@ def test_csv_time_column_is_not_an_invalid_type():
 
 @pytest.mark.skipif(not XDF_FILE.exists(), reason="XDF fixture missing")
 def test_xdf_channels_carry_valid_type_and_modality():
-    emg = EMG.from_file(str(XDF_FILE))
+    emg = Recording.from_file(str(XDF_FILE))
     assert len(emg.channels) > 0
     for info in emg.channels.values():
         # No raw/unvalidated LSL type strings leak through, and every channel
@@ -71,7 +71,7 @@ def test_xdf_channels_carry_valid_type_and_modality():
 
 @pytest.mark.skipif(not EEG_SET.exists(), reason="EEG BIDS fixture missing")
 def test_real_eeg_does_not_creep_to_emg():
-    emg = EMG.from_file(str(EEG_SET), importer="eeglab")
+    emg = Recording.from_file(str(EEG_SET), importer="eeglab")
     types = {info["channel_type"] for info in emg.channels.values()}
     # The headline bug: EEG data must not be silently relabelled EMG.
     assert "EMG" not in types

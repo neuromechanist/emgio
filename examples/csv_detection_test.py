@@ -9,7 +9,7 @@ This example shows:
 
 import os
 
-from emgio import EMG
+from emgio import Recording
 
 
 def test_format_detection():
@@ -27,7 +27,7 @@ def test_format_detection():
         try:
             # This should detect Trigno format and suggest using the Trigno importer
             print("Attempting to load Trigno CSV with generic CSV importer...")
-            EMG.from_file(trigno_csv, importer="csv")
+            Recording.from_file(trigno_csv, importer="csv")
             print("File loaded successfully (you shouldn't see this)")
         except ValueError as e:
             print(f"Format detection message: {str(e)}")
@@ -35,7 +35,7 @@ def test_format_detection():
         # Load with the specialized importer
         print("\nLoading with specialized Trigno importer...")
         try:
-            trigno_emg = EMG.from_file(trigno_csv, importer="trigno")
+            trigno_emg = Recording.from_file(trigno_csv, importer="trigno")
 
             # Print channel information from Trigno importer
             print("\nChannel Information (Trigno Importer):")
@@ -95,7 +95,7 @@ def test_format_detection():
                 },
             }
 
-            generic_emg = EMG.from_file(generic_csv, importer="csv", **csv_params)
+            generic_emg = Recording.from_file(generic_csv, importer="csv", **csv_params)
 
             # Print channel information
             print("\nChannel Information (Generic CSV):")

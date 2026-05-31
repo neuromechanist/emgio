@@ -20,13 +20,13 @@ for ch_name, ch_info in emg.channels.items():
 
 ## Selecting Channels by Name
 
-You can create a new EMG object with only the channels you specify:
+You can create a new Recording object with only the channels you specify:
 
 ```python
 # Select specific channels by name
 subset_emg = emg.select_channels(['EMG1', 'EMG2', 'ACC1'])
 
-# The original EMG object remains unchanged
+# The original Recording object remains unchanged
 print(f"Original channels: {len(emg.channels)}")
 print(f"Selected channels: {len(subset_emg.channels)}")
 ```
@@ -66,7 +66,7 @@ subset_emg = emg.select_channels(selected_channels)
 
 ## Working with Selected Channels
 
-After selecting channels, you can work with the new EMG object just like the original:
+After selecting channels, you can work with the new Recording object just like the original:
 
 ```python
 # Plot the selected channels
@@ -87,7 +87,7 @@ emg_channels = emg.get_channels_by_type('EMG')
 # Filter to only include those from a specific muscle group
 bicep_channels = [ch for ch in emg_channels if 'Bicep' in ch]
 
-# Create a new EMG object with just these channels
+# Create a new Recording object with just these channels
 bicep_emg = emg.select_channels(bicep_channels)
 ```
 

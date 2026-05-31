@@ -67,10 +67,10 @@ The EDF exporter in EMGIO (`emgio.exporters.edf`) also uses `pyedflib` to:
 ## Code Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Import from EDF file
-emg = EMG.from_file('input.edf', importer='edf')
+emg = Recording.from_file('input.edf', importer='edf')
 
 # Print basic information
 print(f"Number of channels: {emg.get_n_channels()}")

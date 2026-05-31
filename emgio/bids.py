@@ -3,7 +3,7 @@
 When a data file follows the BIDS layout, the authoritative per-channel
 metadata lives in a sibling ``*_channels.tsv`` (the ``type`` and ``units``
 columns), not in the data file's own headers. These helpers locate that sidecar
-and apply it to an :class:`~emgio.core.emg.EMG` object so imported channels get
+and apply it to an :class:`~emgio.core.emg.Recording` object so imported channels get
 their real BIDS types (e.g. ``SEEG``) instead of header/label guesses.
 """
 
@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 if TYPE_CHECKING:
-    from .core.emg import EMG
+    from .core.emg import Recording
 
 
 def _find_sidecar(data_filepath: str, kind: str) -> str | None:
@@ -58,7 +58,7 @@ def find_events_tsv(data_filepath: str) -> str | None:
     return _find_sidecar(data_filepath, "events")
 
 
-def apply_channels_tsv(emg: EMG, channels_tsv_path: str) -> int:
+def apply_channels_tsv(emg: Recording, channels_tsv_path: str) -> int:
     """Override per-channel ``type``/``units`` in ``emg`` from a ``_channels.tsv``.
 
     Rows are matched to channels by the ``name`` column; ``n/a`` and empty
@@ -66,7 +66,7 @@ def apply_channels_tsv(emg: EMG, channels_tsv_path: str) -> int:
     ``type`` is warned about and skipped rather than raising.
 
     Args:
-        emg: The EMG object to update in place.
+        emg: The Recording object to update in place.
         channels_tsv_path: Path to the BIDS ``_channels.tsv``.
 
     Returns:

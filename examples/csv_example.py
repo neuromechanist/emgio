@@ -12,7 +12,7 @@ The file contains unlabeled columns of EMG data with no header.
 
 import os
 
-from emgio import EMG
+from emgio import Recording
 
 
 def main():
@@ -59,13 +59,13 @@ def main():
         }
 
         # Create importer and load the data
-        emg = EMG.from_file(data_path, importer="csv", **csv_params)
+        emg = Recording.from_file(data_path, importer="csv", **csv_params)
 
         # Rename channels and set their types and units
         print("Renaming channels and setting metadata...")
 
-        # # Create a new EMG object with renamed channels
-        # new_emg = EMG()
+        # # Create a new Recording object with renamed channels
+        # new_emg = Recording()
 
         # # Copy metadata
         # for key, value in emg.metadata.items():

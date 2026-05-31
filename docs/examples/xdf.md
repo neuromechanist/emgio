@@ -53,10 +53,10 @@ if mocap:
 ## Loading All Numeric Data
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load all numeric streams (EEG, EMG, Mocap - excludes Markers)
-emg = EMG.from_file('examples/multi_stream_test.xdf')
+emg = Recording.from_file('examples/multi_stream_test.xdf')
 
 print(f"Total channels: {len(emg.channels)}")
 print(f"Channel names: {list(emg.channels.keys())}")
@@ -68,12 +68,12 @@ print(f"Channel names: {list(emg.channels.keys())}")
 
 ```python
 # Load only EMG data
-emg_data = EMG.from_file('examples/multi_stream_test.xdf', stream_types=['EMG'])
+emg_data = Recording.from_file('examples/multi_stream_test.xdf', stream_types=['EMG'])
 print(f"EMG channels: {list(emg_data.channels.keys())}")
 # Output: ['EMG_L', 'EMG_R']
 
 # Load EEG and EMG together
-combined = EMG.from_file('examples/multi_stream_test.xdf', stream_types=['EEG', 'EMG'])
+combined = Recording.from_file('examples/multi_stream_test.xdf', stream_types=['EEG', 'EMG'])
 print(f"Combined channels: {len(combined.channels)}")
 # Output: 10 (8 EEG + 2 EMG)
 ```
@@ -82,7 +82,7 @@ print(f"Combined channels: {len(combined.channels)}")
 
 ```python
 # Load specific streams by name
-emg_data = EMG.from_file('examples/multi_stream_test.xdf', stream_names=['TestEMG'])
+emg_data = Recording.from_file('examples/multi_stream_test.xdf', stream_names=['TestEMG'])
 ```
 
 ## Working with Multi-Rate Data
@@ -91,7 +91,7 @@ When loading streams with different sampling rates, they're resampled to a commo
 
 ```python
 # Load EEG (256 Hz) and EMG (2048 Hz)
-combined = EMG.from_file('examples/multi_stream_test.xdf', stream_types=['EEG', 'EMG'])
+combined = Recording.from_file('examples/multi_stream_test.xdf', stream_types=['EEG', 'EMG'])
 
 # Check the resulting sample rate (will be the highest: 2048 Hz)
 first_channel = list(combined.channels.keys())[0]
@@ -104,7 +104,7 @@ XDF files contain per-sample LSL timestamps. To preserve these for synchronizati
 
 ```python
 # Load with timestamp channels
-emg = EMG.from_file('examples/multi_stream_test.xdf',
+emg = Recording.from_file('examples/multi_stream_test.xdf',
                     stream_types=['EMG'],
                     include_timestamps=True)
 
@@ -124,7 +124,7 @@ After loading, export to EDF/BDF format:
 
 ```python
 # Load EMG streams with timestamps for synchronization
-emg = EMG.from_file('examples/multi_stream_test.xdf',
+emg = Recording.from_file('examples/multi_stream_test.xdf',
                     stream_types=['EMG'],
                     include_timestamps=True)
 
@@ -132,14 +132,14 @@ emg = EMG.from_file('examples/multi_stream_test.xdf',
 emg.to_edf('output_emg.edf')
 
 # Verify the export
-emg_reloaded = EMG.from_file('output_emg.edf')
+emg_reloaded = Recording.from_file('output_emg.edf')
 print(f"Exported channels: {list(emg_reloaded.channels.keys())}")
 ```
 
 ## Complete Workflow Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.importers.xdf import summarize_xdf
 
 # 1. Explore the file
@@ -151,7 +151,7 @@ emg_streams = summary.get_streams_by_type('EMG')
 print(f"Found {len(emg_streams)} EMG streams")
 
 # 3. Load selected data
-emg = EMG.from_file('recording.xdf', stream_types=['EMG'])
+emg = Recording.from_file('recording.xdf', stream_types=['EMG'])
 
 # 4. Check loaded data
 print(f"Channels: {list(emg.channels.keys())}")

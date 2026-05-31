@@ -8,7 +8,7 @@
 ## Architecture Map
 ```
 emgio/
-├── core/          # EMG main class — central data handling
+├── core/          # Recording main class — central data handling
 ├── importers/     # Format-specific import logic (Trigno, EDF/BDF, WFDB, EEGLAB, OTB, CSV)
 ├── exporters/     # Format-specific export (EDF/BDF(+) with auto format selection)
 ├── analysis/      # Signal analysis routines
@@ -114,7 +114,7 @@ uv run mkdocs serve                                # Build docs
 - **Export:** EDF/BDF(+) with automatic format selection
 
 ### Key Classes
-- `EMG` (emgio/core) — main class for data handling
+- `Recording` (emgio/core) — main class for data handling
 - Importers (emgio/importers) — format-specific import logic
 - Exporters (emgio/exporters) — format-specific export logic
 

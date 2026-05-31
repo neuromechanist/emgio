@@ -1,10 +1,10 @@
-# EMG Class API
+# Recording Class API
 
-The `EMG` class is the main class in EMGIO for working with EMG data. It encapsulates signals, channel information, and metadata, and provides methods for data manipulation and export.
+The `Recording` class is the main class in EMGIO for working with EMG data. It encapsulates signals, channel information, and metadata, and provides methods for data manipulation and export.
 
 ## Class Documentation
 
-::: emgio.core.emg.EMG
+::: emgio.core.emg.Recording
     handler: python
     options:
       show_root_heading: true
@@ -53,7 +53,7 @@ Details about the main attributes:
 ### Data Loading
 
 - `from_file()`: Load EMG data from a file (class method)
-- `from_dataframe()`: Create EMG object from a pandas DataFrame (class method)
+- `from_dataframe()`: Create Recording object from a pandas DataFrame (class method)
 
 ### Data Access
 
@@ -66,7 +66,7 @@ Details about the main attributes:
 
 ### Data Manipulation
 
-- `select_channels()`: Create a new EMG object with selected channels
+- `select_channels()`: Create a new Recording object with selected channels
 - `set_metadata()`: Set a single metadata field
 - `get_metadata()`: Get a single metadata field
 - `has_metadata()`: Check if a metadata field exists
@@ -84,23 +84,23 @@ Details about the main attributes:
 ### Loading Data
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load from file with automatic importer selection
-emg = EMG.from_file("data.otb+")
+emg = Recording.from_file("data.otb+")
 
 # Load with explicit importer
-emg = EMG.from_file("data.otb+", importer="otb")
+emg = Recording.from_file("data.otb+", importer="otb")
 
 # Load with explicit importer (.csv does not support automatic importer selection)
-emg = EMG.from_file("data.csv", importer='trigno')
+emg = Recording.from_file("data.csv", importer='trigno')
 ```
 
 ### Creating from DataFrame
 
 ```python
 import pandas as pd
-from emgio import EMG
+from emgio import Recording
 
 # Create a DataFrame with EMG data
 data = pd.DataFrame({
@@ -122,8 +122,8 @@ channels = {
     }
 }
 
-# Create EMG object
-emg = EMG.from_dataframe(data, channels=channels)
+# Create Recording object
+emg = Recording.from_dataframe(data, channels=channels)
 ```
 
 ### Selecting Channels
@@ -189,7 +189,7 @@ emg_original.to_edf('output', verify=True, verify_plot=True)
 
 # Manual verification (alternative approach)
 emg_original.to_edf('output')
-emg_reloaded = EMG.from_file('output.edf')
+emg_reloaded = Recording.from_file('output.edf')
 
 # Compare signals
 results = compare_signals(emg_original, emg_reloaded, tolerance=0.001)

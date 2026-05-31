@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 
 
 class BaseImporter(ABC):
     """Base class for EMG data importers."""
 
     @abstractmethod
-    def load(self, filepath: str) -> EMG:
+    def load(self, filepath: str) -> Recording:
         """
         Load EMG data from file.
 
@@ -15,6 +15,6 @@ class BaseImporter(ABC):
             filepath: Path to the input file
 
         Returns:
-            EMG: EMG object containing the loaded data
+            Recording: Recording object containing the loaded data
         """
         pass

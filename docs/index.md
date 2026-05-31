@@ -52,13 +52,13 @@ EMGIO simplifies this process by providing a standardized interface for loading,
 ## Quick Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 
 # Load data with automatic format detection, will issue an error to indicate use of the `trigno` importer
-emg = EMG.from_file('data.csv')  # Format detected from file extension
+emg = Recording.from_file('data.csv')  # Format detected from file extension
 
 # Load data with explicit importer
-emg = EMG.from_file('data.csv', importer='trigno')
+emg = Recording.from_file('data.csv', importer='trigno')
 
 # Plot specific channels
 emg.plot_signals(['EMG1', 'EMG2'])

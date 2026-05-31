@@ -9,7 +9,7 @@ This example shows how to:
 
 import os
 
-from emgio import EMG
+from emgio import Recording
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
 
     # Load the data using Trigno importer
     print("Loading EMG data...")
-    emg = EMG.from_file(data_path, importer="trigno")
+    emg = Recording.from_file(data_path, importer="trigno")
 
     # Print available channels
     print("\nAvailable channels:")
@@ -32,9 +32,11 @@ def main():
         print(f"  Sampling rate: {ch_info['sample_frequency']} Hz")
         print(f"  Dimension: {ch_info['physical_dimension']}")
 
-    # Select EMG channels only and create a new EMG object
+    # Select EMG channels only and create a new Recording object
     emg_channels = [ch for ch, info in emg.channels.items() if info["channel_type"] == "EMG"]
-    emg_only = emg.select_channels(emg_channels)  # Creates a new EMG object with only EMG channels
+    emg_only = emg.select_channels(
+        emg_channels
+    )  # Creates a new Recording object with only EMG channels
     # Original emg object remains unchanged with all channels
 
     # Plot the first 5 seconds of data with different configurations

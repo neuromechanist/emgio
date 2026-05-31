@@ -11,7 +11,7 @@ import pathlib
 import numpy as np
 import pytest
 
-from emgio import EMG
+from emgio import Recording
 
 pytest.importorskip("mne", reason="BrainVision import requires the optional 'meg' extra (mne)")
 
@@ -23,7 +23,7 @@ pytestmark = pytest.mark.skipif(not VHDR.exists(), reason="BrainVision fixture m
 
 @pytest.fixture(scope="module")
 def bv_emg():
-    return EMG.from_file(str(VHDR))
+    return Recording.from_file(str(VHDR))
 
 
 def test_brainvision_channels_and_units(bv_emg):
@@ -62,7 +62,7 @@ def test_brainvision_roundtrip_through_edf(bv_emg, tmp_path):
     out = tmp_path / "bv.edf"
     bv_emg.to_edf(str(out), format="bdf", bypass_analysis=True)
     written = out if out.exists() else out.with_suffix(".bdf")
-    reloaded = EMG.from_file(str(written), bids_channels="off")
+    reloaded = Recording.from_file(str(written), bids_channels="off")
     assert len(reloaded.channels) == len(bv_emg.channels)
     for ch in bv_emg.signals.columns:
         original = bv_emg.signals[ch].values.astype(float)

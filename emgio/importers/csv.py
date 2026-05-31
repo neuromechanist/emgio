@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from .base import BaseImporter
 
 
@@ -45,7 +45,7 @@ class CSVImporter(BaseImporter):
 
         return None
 
-    def load(self, filepath: str, force_generic: bool = False, **kwargs) -> EMG:
+    def load(self, filepath: str, force_generic: bool = False, **kwargs) -> Recording:
         """
         Load EMG data from a CSV file.
 
@@ -65,7 +65,7 @@ class CSVImporter(BaseImporter):
                 - metadata: Dict of additional metadata to include
 
         Returns:
-            EMG: EMG object containing the loaded data
+            Recording: Recording object containing the loaded data
 
         Raises:
             ValueError: If a specialized format is detected and force_generic is False
@@ -79,10 +79,10 @@ class CSVImporter(BaseImporter):
                     "trigno": (
                         "This file appears to be a Delsys Trigno CSV export. "
                         "For better metadata extraction and channel detection, use:\n\n"
-                        "emg = EMG.from_file(filepath, importer='trigno')\n\n"
+                        "recording = Recording.from_file(filepath, importer='trigno')\n\n"
                         "If you still want to use the generic CSV importer, set force_generic=True:\n"
                         "importer = CSVImporter()\n"
-                        "emg = importer.load(filepath, force_generic=True, **params)"
+                        "recording = importer.load(filepath, force_generic=True, **params)"
                     )
                     # Add more format-specific messages here as new importers are developed
                 }
@@ -203,8 +203,8 @@ class CSVImporter(BaseImporter):
                     "Please specify sample_frequency for proper time indexing."
                 )
 
-        # Create EMG object
-        emg = EMG()
+        # Create recording object
+        emg = Recording()
 
         # Add metadata
         emg.set_metadata("source_file", filepath)
@@ -245,7 +245,7 @@ class CSVImporter(BaseImporter):
                 # Default based on channel type
                 phys_dim = self._default_physical_dimension(ch_type)
 
-            # Add the channel to the EMG object
+            # Add the channel to the recording
             emg.add_channel(
                 label=column,
                 data=df[column].values,
@@ -424,12 +424,12 @@ class CSVImporter(BaseImporter):
         dimensions = {"EMG": "µV", "ACC": "g", "GYRO": "deg/s", "TIME": "s", "OTHER": "a.u."}
         return dimensions.get(channel_type, "a.u.")
 
-    def _print_metadata_reminder(self, emg: EMG) -> None:
+    def _print_metadata_reminder(self, emg: Recording) -> None:
         """
         Print a reminder to add metadata if essential information is missing.
 
         Args:
-            emg: EMG object to check
+            emg: Recording object to check
         """
         essential_metadata = ["subject", "device", "recording_date"]
         missing = [meta for meta in essential_metadata if meta not in emg.metadata]

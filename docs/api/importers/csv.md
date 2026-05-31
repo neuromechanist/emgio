@@ -13,16 +13,16 @@ The `CSVImporter` class is responsible for importing EMG and other physiological
 ## Usage Example
 
 ```python
-from emgio import EMG
+from emgio import Recording
 from emgio.importers.csv import CSVImporter
 
-# Method 1: Using EMG.from_file (recommended)
-emg = EMG.from_file('data.csv', importer='csv')
+# Method 1: Using Recording.from_file (recommended)
+emg = Recording.from_file('data.csv', importer='csv')
 
 # Method 2: Using the importer directly
 importer = CSVImporter('data.csv', has_header=True, delimiter=',')
 signals, channels, metadata = importer.load()
-emg = EMG(signals, channels, metadata)
+emg = Recording(signals, channels, metadata)
 ```
 
 ## Auto-Detection Features
@@ -78,14 +78,14 @@ The CSV importer uses pandas to:
 
 ```python
 # Load CSV with automatic format detection
-emg = EMG.from_file('data.csv', importer='csv')
+emg = Recording.from_file('data.csv', importer='csv')
 ```
 
 ### Headerless CSV with Custom Names
 
 ```python
 # Load headerless CSV with custom channel names
-emg = EMG.from_file('data.csv', importer='csv',
+emg = Recording.from_file('data.csv', importer='csv',
                    has_header=False,
                    sample_frequency=1000,  # Required since no time column
                    channel_names=['EMG_L', 'EMG_R', 'ACC_X'])
@@ -95,7 +95,7 @@ emg = EMG.from_file('data.csv', importer='csv',
 
 ```python
 # Specify channel types and physical dimensions
-emg = EMG.from_file('data.csv', importer='csv',
+emg = Recording.from_file('data.csv', importer='csv',
                    channel_types={
                        'EMG1': 'EMG',
                        'EMG2': 'EMG',

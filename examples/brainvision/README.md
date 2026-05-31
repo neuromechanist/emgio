@@ -13,8 +13,8 @@ Regenerate (requires `pybv` + the `meg` extra):
 
 ```python
 import numpy as np, pybv
-from emgio import EMG
-emg = EMG.from_file("examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set", importer="eeglab")
+from emgio import Recording
+emg = Recording.from_file("examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set", importer="eeglab")
 rate = 250
 chans = list(emg.signals.columns)[:8]
 data = emg.signals[chans].to_numpy()[: 5 * rate].T.astype(float)

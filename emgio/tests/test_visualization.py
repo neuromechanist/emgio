@@ -3,14 +3,14 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from emgio.core.emg import EMG
+from emgio.core.emg import Recording
 from emgio.visualization.static import plot_comparison, plot_signals
 
 
 @pytest.fixture
 def sample_emg():
-    """Create a sample EMG object for visualization testing."""
-    emg = EMG()
+    """Create a sample Recording object for visualization testing."""
+    emg = Recording()
 
     # Create sample data
     time = np.linspace(0, 1, 1000)  # 1 second at 1000Hz
@@ -28,9 +28,9 @@ def sample_emg():
 
 @pytest.fixture
 def emg_pair():
-    """Create a pair of EMG objects for comparison testing."""
-    emg_original = EMG()
-    emg_reloaded = EMG()
+    """Create a pair of Recording objects for comparison testing."""
+    emg_original = Recording()
+    emg_reloaded = Recording()
 
     # Create sample data
     time = np.linspace(0, 1, 1000)
@@ -138,8 +138,8 @@ def test_plot_signals_errors(sample_emg):
     with pytest.raises(ValueError):
         plot_signals(sample_emg, channels=["NonExistentChannel"])
 
-    # Test with empty EMG object
-    empty_emg = EMG()
+    # Test with empty Recording object
+    empty_emg = Recording()
     with pytest.raises(ValueError):
         plot_signals(empty_emg)
 
@@ -214,8 +214,8 @@ def test_plot_comparison_with_channel_map(emg_pair):
     """Test plot_comparison with channel mapping."""
     emg_original, emg_reloaded = emg_pair
 
-    # Create a reloaded EMG with different channel names
-    emg_renamed = EMG()
+    # Create a reloaded Recording with different channel names
+    emg_renamed = Recording()
     time = np.linspace(0, 1, 1000)
     signal1 = np.sin(2 * np.pi * 10 * time)
     signal2 = np.cos(2 * np.pi * 5 * time)
@@ -235,9 +235,9 @@ def test_plot_comparison_with_channel_map(emg_pair):
 
 def test_plot_comparison_no_common_channels():
     """Test plot_comparison with no common channels."""
-    # Create two EMG objects with completely different channels
-    emg1 = EMG()
-    emg2 = EMG()
+    # Create two Recording objects with completely different channels
+    emg1 = Recording()
+    emg2 = Recording()
 
     time = np.linspace(0, 1, 1000)
     signal1 = np.sin(2 * np.pi * 10 * time)
@@ -256,8 +256,8 @@ def test_plot_comparison_no_common_channels():
 
 def test_plot_comparison_different_lengths():
     """Test plot_comparison with signals of different lengths."""
-    emg1 = EMG()
-    emg2 = EMG()
+    emg1 = Recording()
+    emg2 = Recording()
 
     # Create signals with different lengths
     time1 = np.linspace(0, 1, 1000)
@@ -276,9 +276,9 @@ def test_plot_comparison_different_lengths():
 
 def test_plot_comparison_order_based():
     """Test plot_comparison with order-based matching."""
-    # Create two EMG objects with different channel names
-    emg1 = EMG()
-    emg2 = EMG()
+    # Create two Recording objects with different channel names
+    emg1 = Recording()
+    emg2 = Recording()
 
     time = np.linspace(0, 1, 1000)
     signal1 = np.sin(2 * np.pi * 10 * time)

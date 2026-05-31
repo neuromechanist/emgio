@@ -5,21 +5,21 @@ This page demonstrates how to use EMGIO's verification capabilities to ensure si
 ## Basic Verification Workflow
 
 ```python
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 from emgio.analysis.verification import compare_signals, report_verification_results
 
 # Load original data from a device-specific format
-emg_original = EMG.from_file('sample_data.csv', importer='trigno')
+emg_original = Recording.from_file('sample_data.csv', importer='trigno')
 # just keep the EMG channels
 emg_channels = [ch for ch, info in emg_original.channels.items() if info['channel_type'] == 'EMG']
-emg_original = emg_original.select_channels(emg_channels)  # Creates a new EMG object with only EMG channels
+emg_original = emg_original.select_channels(emg_channels)  # Creates a new Recording object with only EMG channels
 
 # Export to EDF (automatically selects EDF or BDF based on signal characteristics)
 emg_original.to_edf('exported_data')
 
 # Reload the exported data
-emg_reloaded = EMG.from_file('exported_data.edf')
+emg_reloaded = Recording.from_file('exported_data.edf')
 
 # Verify signals using the verification module
 results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
@@ -117,13 +117,13 @@ plt.show()
 ## Real-World Example: CSV to EDF Conversion
 
 ```python
-from emgio import EMG
+from emgio import Recording
 import matplotlib.pyplot as plt
 from emgio.analysis.verification import compare_signals, report_verification_results
 from emgio.visualization.static import plot_comparison
 
 # 1. Load original Trigno CSV data
-emg_trigno = EMG.from_file('trigno_data.csv', importer='trigno')
+emg_trigno = Recording.from_file('trigno_data.csv', importer='trigno')
 
 # 2. Export to EDF
 emg_trigno.to_edf('converted_data')
@@ -131,7 +131,7 @@ print(f"Data exported. Duration: {emg_trigno.get_duration():.2f}s, "
       f"Channels: {emg_trigno.get_n_channels()}")
 
 # 3. Reload from EDF
-emg_edf = EMG.from_file('converted_data.edf')
+emg_edf = Recording.from_file('converted_data.edf')
 print(f"Data reloaded. Duration: {emg_edf.get_duration():.2f}s, "
       f"Channels: {emg_edf.get_n_channels()}")
 

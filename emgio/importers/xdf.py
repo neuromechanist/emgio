@@ -12,7 +12,7 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from ..core.emg import EMG
+from ..core.emg import Recording
 from ..core.modality import infer_modality_from_channel_type, validate_channel_type
 from .base import BaseImporter
 
@@ -445,7 +445,7 @@ class XDFImporter(BaseImporter):
         include_timestamps: bool = False,
         reference_stream: str | None = None,
         max_memory_gb: float | None = None,
-    ) -> EMG:
+    ) -> Recording:
         """
         Load EMG data from an XDF file.
 
@@ -486,7 +486,7 @@ class XDFImporter(BaseImporter):
                           limit. Use summarize_xdf() to estimate memory needs.
 
         Returns:
-            EMG: EMG object containing the loaded data
+            Recording: Recording object containing the loaded data
 
         Raises:
             ValueError: If no matching streams found or file cannot be read
@@ -536,8 +536,8 @@ class XDFImporter(BaseImporter):
                     "No matching streams found. Use summarize_xdf() to explore the file."
                 )
 
-        # Create EMG object
-        emg = EMG()
+        # Create Recording object
+        emg = Recording()
 
         # Store metadata
         emg.set_metadata("source_file", filepath)
@@ -700,7 +700,7 @@ class XDFImporter(BaseImporter):
 
     def _load_streams(
         self,
-        emg: EMG,
+        emg: Recording,
         streams: list[dict],
         default_channel_type: str,
         include_timestamps: bool = False,
@@ -895,7 +895,7 @@ class XDFImporter(BaseImporter):
 
     def _load_synchronized_streams(
         self,
-        emg: EMG,
+        emg: Recording,
         streams: list[dict],
         default_channel_type: str,
         include_timestamps: bool = False,

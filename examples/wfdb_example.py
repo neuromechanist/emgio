@@ -2,7 +2,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from emgio.core.emg import EMG
+from emgio.core.emg import Recording
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
     # The importer automatically looks for a corresponding .atr file (e.g., 100.atr)
     # and loads annotations into the emg.events DataFrame if found.
     try:
-        emg = EMG.from_file(file_path, importer="wfdb")
+        emg = Recording.from_file(file_path, importer="wfdb")
     except ValueError as e:
         print(f"Error loading file: {e}")
         print("Ensure the 'wfdb' package is installed ('pip install wfdb')")

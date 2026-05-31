@@ -28,7 +28,7 @@ from collections.abc import Sequence
 from . import __version__
 from .analysis.verification import compare_signals
 from .bids import find_events_tsv
-from .core.emg import EMG
+from .core.emg import Recording
 from .core.modality import VALID_MODALITIES, infer_modality_from_channel_type
 
 logger = logging.getLogger("emgio.cli")
@@ -61,7 +61,7 @@ def _quiet_stdout():
         yield
 
 
-def _load_emg(path: str) -> EMG:
+def _load_emg(path: str) -> Recording:
     """Load a recording, mapping failures onto the exit-code contract."""
     if not os.path.exists(path):
         raise CliError(EXIT_INPUT, f"input not found: {path}")
@@ -69,7 +69,7 @@ def _load_emg(path: str) -> EMG:
         raise CliError(EXIT_INPUT, f"input is not a file: {path}")
     try:
         with _quiet_stdout():
-            return EMG.from_file(path)
+            return Recording.from_file(path)
     except ValueError as e:
         if "unsupported" in str(e).lower():
             raise CliError(EXIT_USAGE, str(e)) from e
@@ -84,11 +84,11 @@ def _is_unknown(info: dict) -> bool:
     return info.get("channel_type", "OTHER") in _UNKNOWN_CHANNEL_TYPES
 
 
-def _unknown_channels(emg: EMG) -> list[str]:
+def _unknown_channels(emg: Recording) -> list[str]:
     return [name for name, info in emg.channels.items() if _is_unknown(info)]
 
 
-def _apply_modality(emg: EMG, modality: str) -> None:
+def _apply_modality(emg: Recording, modality: str) -> None:
     """Fill the modality of UNKNOWN channels only; never override detected ones.
 
     Source-detected modalities win; omitting --modality (this is not called)
@@ -169,7 +169,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
     if args.verify:
         try:
             with _quiet_stdout():
-                reloaded = EMG.from_file(written)
+                reloaded = Recording.from_file(written)
             results = compare_signals(emg, reloaded, tolerance=args.verify_tolerance)
         except Exception as e:
             raise CliError(EXIT_RUNTIME, f"verify reload failed: {e}") from e
@@ -277,7 +277,7 @@ def cmd_info(args: argparse.Namespace) -> int:
 def cmd_lowres(args: argparse.Namespace) -> int:
     """Down-sample a recording and export a lightweight low-res EDF/BDF.
 
-    Thin wrapper: the anti-aliased resampling lives in ``EMG.resample`` and the
+    Thin wrapper: the anti-aliased resampling lives in ``Recording.resample`` and the
     scaling/format bracketing in the EDF exporter. ``--bits 16`` -> EDF (16-bit),
     ``--bits 24`` -> BDF (24-bit). Default is "double low-res": 16-bit + 100 Hz.
     """
@@ -289,7 +289,7 @@ def cmd_lowres(args: argparse.Namespace) -> int:
     source_rate = max(rates) if rates else 0.0
 
     # Skip the resample step when the source is already at or below the target
-    # rate; up-sampling is out of scope (and EMG.resample would refuse it).
+    # rate; up-sampling is out of scope (and Recording.resample would refuse it).
     if source_rate <= args.rate:
         print(
             f"note: source rate {source_rate} Hz already <= target {args.rate} Hz; "

@@ -26,7 +26,7 @@ emgio/
 ├── emgio/              # Main package directory
 │   ├── __init__.py     # Package initialization
 │   ├── core/           # Core functionality
-│   │   ├── emg.py      # Main EMG class
+│   │   ├── emg.py      # Main Recording class
 │   ├── importers/      # Data import modules
 │   │   ├── base.py     # Base importer class
 │   │   ├── trigno.py   # Trigno importer
@@ -66,7 +66,7 @@ Example test:
 
 ```python
 def test_channel_selection():
-    # Create a test EMG object
+    # Create a test Recording object
     ...
     
     # Run the function being tested

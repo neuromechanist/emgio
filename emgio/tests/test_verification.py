@@ -4,14 +4,14 @@ import numpy as np
 import pytest
 
 from ..analysis.verification import compare_signals, report_verification_results
-from ..core.emg import EMG
+from ..core.emg import Recording
 
 
 @pytest.fixture
 def sample_emg_pair():
-    """Create a pair of EMG objects with identical data for testing."""
-    emg_original = EMG()
-    emg_reloaded = EMG()
+    """Create a pair of Recording objects with identical data for testing."""
+    emg_original = Recording()
+    emg_reloaded = Recording()
 
     # Add identical channels
     time = np.linspace(0, 1, 1000)  # 1 second at 1000Hz
@@ -29,9 +29,9 @@ def sample_emg_pair():
 
 @pytest.fixture
 def sample_emg_pair_different():
-    """Create a pair of EMG objects with slightly different data."""
-    emg_original = EMG()
-    emg_reloaded = EMG()
+    """Create a pair of Recording objects with slightly different data."""
+    emg_original = Recording()
+    emg_reloaded = Recording()
 
     # Add slightly different channels
     time = np.linspace(0, 1, 1000)
@@ -53,9 +53,9 @@ def sample_emg_pair_different():
 
 @pytest.fixture
 def sample_emg_pair_renamed():
-    """Create a pair of EMG objects with same data but different channel names."""
-    emg_original = EMG()
-    emg_reloaded = EMG()
+    """Create a pair of Recording objects with same data but different channel names."""
+    emg_original = Recording()
+    emg_reloaded = Recording()
 
     # Add channels with different names but identical data
     time = np.linspace(0, 1, 1000)
@@ -73,9 +73,9 @@ def sample_emg_pair_renamed():
 
 @pytest.fixture
 def sample_emg_pair_different_lengths():
-    """Create a pair of EMG objects with different signal lengths."""
-    emg_original = EMG()
-    emg_reloaded = EMG()
+    """Create a pair of Recording objects with different signal lengths."""
+    emg_original = Recording()
+    emg_reloaded = Recording()
 
     # Add channels with different lengths
     time1 = np.linspace(0, 1, 1000)
@@ -163,8 +163,8 @@ def test_compare_signals_different_lengths(sample_emg_pair_different_lengths):
 
 def test_compare_signals_empty_intersection():
     """Test compare_signals with no common channels."""
-    emg1 = EMG()
-    emg2 = EMG()
+    emg1 = Recording()
+    emg2 = Recording()
 
     # Add completely different channels
     time = np.linspace(0, 1, 1000)
@@ -184,8 +184,8 @@ def test_compare_signals_empty_intersection():
 
 def test_compare_signals_invalid_channel_map():
     """Test compare_signals with invalid channel map."""
-    emg1 = EMG()
-    emg2 = EMG()
+    emg1 = Recording()
+    emg2 = Recording()
 
     time = np.linspace(0, 1, 1000)
     signal = np.sin(2 * np.pi * 10 * time)
@@ -202,8 +202,8 @@ def test_compare_signals_invalid_channel_map():
 
 def test_compare_signals_with_constant_signal():
     """Test compare_signals with constant signals (zero range)."""
-    emg1 = EMG()
-    emg2 = EMG()
+    emg1 = Recording()
+    emg2 = Recording()
 
     # Add constant signals to both
     const_signal = np.ones(1000)
