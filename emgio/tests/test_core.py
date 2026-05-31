@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pandas as pd
+import pyedflib
 import pytest
 
 from ..core.emg import EMG
@@ -513,16 +514,32 @@ def test_to_edf_bypass_analysis_defaulting(sample_emg, tmp_path, capsys):
     sample_emg.to_edf(str(tmp_path / "c.edf"), format="auto", bypass_analysis=True)
     assert "Summary skipped" not in capsys.readouterr().out
 
+    # Forced BDF mirrors forced EDF: bypass by default, analyze when bypass=False.
+    sample_emg.to_edf(str(tmp_path / "d.bdf"), format="bdf", bypass_analysis=None)
+    assert "Summary skipped as signal analysis was bypassed." in capsys.readouterr().out
+    sample_emg.to_edf(str(tmp_path / "e.bdf"), format="bdf", bypass_analysis=False)
+    assert "Recommended Format:" in capsys.readouterr().out
 
-def test_to_edf_external_events_do_not_mutate_object(sample_emg, tmp_path):
-    """An external events_df is exported without altering the EMG object's events."""
+
+def test_to_edf_external_events_are_written_and_object_untouched(sample_emg, tmp_path):
+    """The external events_df (not self.events) is what reaches the file, and the
+    EMG object's own events are left intact.
+
+    Forwarding is verified by reading the EDF+ annotations back with pyedflib
+    directly (emgio's own annotation read-back is pending #47).
+    """
     sample_emg.add_event(onset=0.1, duration=0.0, description="Marker 1")
     sample_emg.add_event(onset=0.5, duration=0.2, description="Activity")
     external = pd.DataFrame([{"onset": 0.3, "duration": 0.1, "description": "External"}])
-    sample_emg.to_edf(
-        str(tmp_path / "ev.edf"), format="edf", bypass_analysis=True, events_df=external
-    )
+    out = tmp_path / "ev.edf"
+    sample_emg.to_edf(str(out), format="edf", bypass_analysis=True, events_df=external)
+
     assert len(sample_emg.events) == 2  # self.events untouched
+
+    with pyedflib.EdfReader(str(out)) as reader:
+        descriptions = list(reader.readAnnotations()[2])
+    assert "External" in descriptions
+    assert "Marker 1" not in descriptions and "Activity" not in descriptions
 
 
 def test_to_edf_empty_raises(empty_emg, tmp_path):

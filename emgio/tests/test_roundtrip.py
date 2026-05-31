@@ -146,7 +146,10 @@ def test_roundtrip_preserves_signal_values(case):
         compared += 1
         ptp = float(np.ptp(original))
         if ptp <= _CONST_PTP or np.std(original) == 0.0:
-            nrmse = float(np.sqrt(np.mean((original - roundtripped) ** 2)) / (ptp or 1.0))
+            # Near-constant channel: normalize by 1.0 (raw RMSE), never by the
+            # tiny ptp, which would blow a single-LSB error up past tolerance.
+            divisor = ptp if ptp > _CONST_PTP else 1.0
+            nrmse = float(np.sqrt(np.mean((original - roundtripped) ** 2)) / divisor)
             assert nrmse < case.tolerance, f"{case.name}:{ch} near-constant nrmse {nrmse:.3g}"
             continue
         corr = float(np.corrcoef(original, roundtripped)[0, 1])
