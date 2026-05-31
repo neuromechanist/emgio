@@ -61,7 +61,7 @@ class MEGImporter(BaseImporter):
         except ImportError as e:
             raise ImportError(
                 "MEG import requires MNE-Python, an optional dependency. Install it with: "
-                "uv pip install 'emgio[meg]'  (or: pip install mne)."
+                "uv sync --extra meg  (or, for an existing install, uv pip install 'emgio[meg]')."
             ) from e
         return mne
 

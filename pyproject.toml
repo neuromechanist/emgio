@@ -77,7 +77,7 @@ docs = [
     "mike>=2.1.0",
 ]
 all = [
-    "emgio[dev,docs]",
+    "emgio[dev,docs,meg]",
 ]
 
 [project.urls]
