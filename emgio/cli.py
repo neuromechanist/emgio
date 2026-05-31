@@ -274,6 +274,55 @@ def cmd_info(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_lowres(args: argparse.Namespace) -> int:
+    """Down-sample a recording and export a lightweight low-res EDF/BDF.
+
+    Thin wrapper: the anti-aliased resampling lives in ``EMG.resample`` and the
+    scaling/format bracketing in the EDF exporter. ``--bits 16`` -> EDF (16-bit),
+    ``--bits 24`` -> BDF (24-bit). Default is "double low-res": 16-bit + 100 Hz.
+    """
+    emg = _load_emg(args.input)
+    if args.modality:
+        _apply_modality(emg, args.modality)
+
+    rates = sorted({float(i["sample_frequency"]) for i in emg.channels.values()})
+    source_rate = max(rates) if rates else 0.0
+
+    # Skip the resample step when the source is already at or below the target
+    # rate; up-sampling is out of scope (and EMG.resample would refuse it).
+    if source_rate <= args.rate:
+        print(
+            f"note: source rate {source_rate} Hz already <= target {args.rate} Hz; "
+            "exporting without resampling",
+            file=sys.stderr,
+        )
+    else:
+        try:
+            emg = emg.resample(args.rate)
+        except ValueError as e:
+            raise CliError(EXIT_RUNTIME, f"resample failed: {e}") from e
+
+    fmt = "edf" if args.bits == 16 else "bdf"
+    try:
+        with _quiet_stdout():
+            emg.to_edf(
+                args.output,
+                format=fmt,
+                create_channels_tsv=not args.no_channels_tsv,
+                bypass_analysis=True,
+            )
+    except CliError:
+        raise
+    except Exception as e:
+        raise CliError(EXIT_RUNTIME, f"lowres export failed: {e}") from e
+
+    written = _written_path(args.output)
+    if not os.path.exists(written):
+        raise CliError(EXIT_RUNTIME, f"lowres produced no output for {args.output}")
+    logger.info("wrote %s", written)
+    return EXIT_OK
+
+
 # --------------------------------------------------------------------------- #
 # Parser
 # --------------------------------------------------------------------------- #
@@ -320,6 +369,27 @@ def build_parser() -> argparse.ArgumentParser:
     p_info.add_argument("input", help="input recording (any supported format)")
     p_info.add_argument("--json", action="store_true", help="emit JSON to stdout")
     p_info.set_defaults(func=cmd_info)
+
+    p_lowres = sub.add_parser(
+        "lowres", help="down-sample (anti-aliased) and export a lightweight EDF/BDF"
+    )
+    p_lowres.add_argument("input", help="input recording (any supported format)")
+    p_lowres.add_argument("output", help="output .edf/.bdf path")
+    p_lowres.add_argument(
+        "--rate", type=float, default=100.0, help="target sample rate in Hz (default: 100)"
+    )
+    p_lowres.add_argument(
+        "--bits",
+        type=int,
+        choices=[16, 24],
+        default=16,
+        help="output bit depth: 16 -> EDF, 24 -> BDF (default: 16)",
+    )
+    p_lowres.add_argument("--modality", help="fill UNKNOWN channels' modality (never overrides)")
+    p_lowres.add_argument(
+        "--no-channels-tsv", action="store_true", help="do not write a BIDS channels.tsv"
+    )
+    p_lowres.set_defaults(func=cmd_lowres)
 
     return parser
 

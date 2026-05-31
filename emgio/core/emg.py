@@ -282,6 +282,107 @@ class EMG:
             self.metadata = new_emg.metadata
             return self
 
+    def resample(self, target_rate: float) -> "EMG":
+        """Return a NEW, anti-aliased down-sampled copy of this recording.
+
+        Low-resolution demos need a smaller, lighter recording; this rebuilds the
+        uniform signal grid at ``target_rate`` using a polyphase resampler
+        (``scipy.signal.resample_poly``), which applies a Kaiser-windowed sinc
+        anti-alias FIR before decimation. A naive stride-decimation would fold
+        energy above the new Nyquist back into the band (aliasing); resample_poly
+        removes that energy first, so no aliasing occurs.
+
+        Non-destructive: ``self`` is left untouched and a new EMG is returned,
+        mirroring ``select_channels``'s copy semantics.
+
+        Resampling factors come from the integer source/target rates:
+        ``g = gcd(int(src), int(target)); up = int(target)//g; down = int(src)//g``
+        and ``resample_poly(x, up, down)`` runs once, vectorized over all channels
+        along ``axis=0``.
+
+        Args:
+            target_rate: Desired sampling rate in Hz. Must be <= the source rate
+                (this is a DOWN-sampling helper). A target equal to the source
+                returns an unchanged copy; a target above it raises ``ValueError``
+                rather than silently up-sampling (up-sampling cannot recover
+                detail and is out of scope for the low-res pipeline).
+
+        Returns:
+            EMG: A new EMG with the resampled signals, each channel's
+                ``sample_frequency`` set to ``target_rate``, and channel/recording
+                metadata and events preserved. Events are unchanged because their
+                onsets/durations are in SECONDS, which stay valid under any rate
+                change (only the per-sample grid shrinks, not wall-clock time).
+
+        Raises:
+            ValueError: If no signals are loaded, if channels do not share a single
+                ``sample_frequency`` (emgio stores one uniform grid; mixed-rate
+                resampling is out of scope), or if ``target_rate`` exceeds the
+                source rate.
+        """
+        from math import gcd
+
+        from scipy.signal import resample_poly
+
+        if self.signals is None:
+            raise ValueError("No signals loaded")
+
+        if target_rate <= 0:
+            raise ValueError(f"target_rate must be positive, got {target_rate}")
+
+        # emgio stores all channels on one uniform-length grid; a per-channel rate
+        # mix is out of scope here, matching the exporter's single-rate guard.
+        distinct_rates = {info["sample_frequency"] for info in self.channels.values()}
+        if len(distinct_rates) > 1:
+            raise ValueError(
+                "Resampling requires a single sampling rate across all channels, but "
+                f"multiple were found: {sorted(distinct_rates)} Hz. emgio stores one "
+                "uniform grid; resample each rate group separately."
+            )
+
+        source_rate = float(next(iter(distinct_rates)))
+
+        # Down-sampling only: refuse to up-sample/alias; an equal rate is a no-op
+        # copy so callers can resample unconditionally without special-casing.
+        if target_rate > source_rate:
+            raise ValueError(
+                f"target_rate {target_rate} Hz exceeds source rate {source_rate} Hz; "
+                "resample() only down-samples (low-res). Up-sampling is out of scope."
+            )
+
+        new_emg = EMG()
+        new_emg.channels = {ch: info.copy() for ch, info in self.channels.items()}
+        new_emg.metadata = self.metadata.copy()
+        # Onsets/durations are in SECONDS, so they remain valid after the grid
+        # changes; copy them through unchanged.
+        new_emg.events = self.events.copy() if self.events is not None else self.events
+
+        if target_rate == source_rate:
+            # No grid change: copy signals through untouched (fresh RangeIndex for
+            # consistency with the resampled path).
+            new_emg.signals = self.signals.copy().reset_index(drop=True)
+            return new_emg
+
+        # Rational resampling factors from the integer rates.
+        src_i = int(round(source_rate))
+        tgt_i = int(round(target_rate))
+        g = gcd(src_i, tgt_i)
+        up = tgt_i // g
+        down = src_i // g
+
+        columns = list(self.signals.columns)
+        data = self.signals.to_numpy(dtype=float)
+        # resample_poly over axis=0 resamples every channel column at once with the
+        # shared anti-alias FIR.
+        resampled = resample_poly(data, up, down, axis=0)
+
+        new_emg.signals = pd.DataFrame(resampled, columns=columns)
+        new_emg.signals.index = pd.RangeIndex(len(new_emg.signals))
+        for info in new_emg.channels.values():
+            info["sample_frequency"] = target_rate
+
+        return new_emg
+
     def get_channel_types(self) -> list[str]:
         """
         Get list of unique channel types in the data.
