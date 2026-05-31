@@ -199,7 +199,10 @@ class EDFImporter(BaseImporter):
                 emg.channels[signal_info["label"]].update(channel_metadata)
 
             # Read EDF+/BDF+ annotations into events so they survive the
-            # import->export->import round-trip (issue #47).
+            # import->export->import round-trip (issue #47). Assigned directly
+            # (not via add_event) for a single sort; _read_annotations already
+            # returns the same schema add_event produces (float64 onset/duration,
+            # sorted by onset). Left as the empty __init__ frame when none exist.
             events = self._read_annotations(edf_reader)
             if not events.empty:
                 emg.events = events
