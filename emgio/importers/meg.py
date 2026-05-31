@@ -116,8 +116,9 @@ class MEGImporter(BaseImporter):
         emg.set_metadata("number_of_signals", len(raw.ch_names))
 
         # MEG files routinely carry 300+ channels; adding them one at a time
-        # fragments the DataFrame (an expected, benign pandas PerformanceWarning),
-        # so suppress it here and de-fragment once after the bulk add.
+        # fragments the DataFrame (a pandas PerformanceWarning). Suppress it here
+        # and de-fragment after the bulk add; the root-cause add_channel perf
+        # drift is tracked in #66.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=pd.errors.PerformanceWarning)
             for i, name in enumerate(raw.ch_names):
