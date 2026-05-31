@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pyedflib
 
 from ..core.emg import EMG
@@ -109,6 +110,38 @@ class EDFImporter(BaseImporter):
 
         return signal_data, signal_info
 
+    def _read_annotations(self, edf_reader: pyedflib.EdfReader) -> pd.DataFrame:
+        """Read EDF+/BDF+ annotations (events) into an events DataFrame.
+
+        pyedflib parses the dedicated annotations channel and returns parallel
+        arrays of onsets (seconds), durations (seconds), and descriptions.
+        Plain EDF (no annotations) yields empty arrays. Descriptions may be
+        bytes or str depending on the pyedflib version; both are handled, and
+        empty placeholder annotations are skipped.
+
+        Returns:
+            pd.DataFrame: events with float64 ``onset``/``duration`` and string
+            ``description``, sorted by onset (matching :meth:`EMG.add_event`).
+        """
+        onsets, durations, descriptions = edf_reader.readAnnotations()
+        rows = []
+        for onset, duration, description in zip(onsets, durations, descriptions, strict=False):
+            text = (
+                description.decode("utf-8", "replace")
+                if isinstance(description, bytes)
+                else str(description)
+            )
+            if text == "":
+                continue  # skip empty placeholder annotations
+            rows.append((float(onset), float(duration), text))
+
+        events = pd.DataFrame(rows, columns=["onset", "duration", "description"])
+        if not events.empty:
+            events = events.sort_values(by="onset").reset_index(drop=True)
+            events["onset"] = events["onset"].astype("float64")
+            events["duration"] = events["duration"].astype("float64")
+        return events
+
     def load(self, filepath: str) -> EMG:
         """
         Load EMG data from EDF/EDF+/BDF file.
@@ -164,6 +197,15 @@ class EDFImporter(BaseImporter):
                     "transducer": signal_info["transducer"],
                 }
                 emg.channels[signal_info["label"]].update(channel_metadata)
+
+            # Read EDF+/BDF+ annotations into events so they survive the
+            # import->export->import round-trip (issue #47). Assigned directly
+            # (not via add_event) for a single sort; _read_annotations already
+            # returns the same schema add_event produces (float64 onset/duration,
+            # sorted by onset). Left as the empty __init__ frame when none exist.
+            events = self._read_annotations(edf_reader)
+            if not events.empty:
+                emg.events = events
 
             return emg
 

@@ -472,3 +472,71 @@ def test_edf_metadata_extraction(sample_edf_file):
         key in emg.metadata
         for key in ["startdate", "equipment", "technician", "recording_additional"]
     )
+
+
+def test_edf_no_annotations_yields_empty_events(sample_edf_file):
+    """An EDF+ file with no annotations imports with an empty events frame (#47).
+
+    (``sample_edf_file`` is EDF+: pyedflib's EdfWriter defaults to FILETYPE_EDFPLUS.)
+    """
+    emg = EDFImporter().load(sample_edf_file)
+    assert emg.events is not None
+    assert emg.events.empty
+
+
+def test_edf_plain_format_has_no_events(tmp_path):
+    """A true plain EDF (FILETYPE_EDF, no annotation channel) yields empty events."""
+    path = str(tmp_path / "plain.edf")
+    writer = pyedflib.EdfWriter(path, 1, file_type=pyedflib.FILETYPE_EDF)
+    writer.setSignalHeaders(
+        [
+            {
+                "label": "EMG1",
+                "dimension": "uV",
+                "sample_frequency": 100,
+                "physical_max": 1.0,
+                "physical_min": -1.0,
+                "digital_max": 32767,
+                "digital_min": -32768,
+                "prefilter": "n/a",
+                "transducer": "EMG sensor",
+            }
+        ]
+    )
+    writer.writeSamples([np.sin(2 * np.pi * 5 * np.arange(500) / 100)])
+    writer.close()
+
+    emg = EDFImporter().load(path)
+    assert emg.events.empty
+
+
+def test_edf_annotation_readback(tmp_path):
+    """EDF+ annotations are read back into events, sorted, with exact text (#47)."""
+    path = str(tmp_path / "annotated.edf")
+    writer = pyedflib.EdfWriter(path, 1, file_type=pyedflib.FILETYPE_EDFPLUS)
+    writer.setSignalHeaders(
+        [
+            {
+                "label": "EMG1",
+                "dimension": "uV",
+                "sample_frequency": 100,
+                "physical_max": 1.0,
+                "physical_min": -1.0,
+                "digital_max": 32767,
+                "digital_min": -32768,
+                "prefilter": "n/a",
+                "transducer": "EMG sensor",
+            }
+        ]
+    )
+    writer.writeSamples([np.sin(2 * np.pi * 5 * np.arange(500) / 100)])
+    # Write out of order to prove the importer sorts by onset.
+    writer.writeAnnotation(2.0, 0.5, "stim_offset")
+    writer.writeAnnotation(0.5, 0.0, "stim_onset")
+    writer.close()
+
+    emg = EDFImporter().load(path)
+    assert list(emg.events["description"]) == ["stim_onset", "stim_offset"]
+    assert np.allclose(emg.events["onset"].to_numpy(), [0.5, 2.0], atol=1e-3)
+    assert np.allclose(emg.events["duration"].to_numpy(), [0.0, 0.5], atol=1e-3)
+    assert emg.events["onset"].dtype == np.float64

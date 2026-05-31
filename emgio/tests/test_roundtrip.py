@@ -180,14 +180,12 @@ def test_meg_fif_import_unsupported():
         EMG.from_file(str(meg))
 
 
-@pytest.mark.xfail(reason="EDF+ annotation read-back pending #47", strict=True)
 def test_event_roundtrip_through_edf(tmp_path):
-    """Events exported as EDF+ annotations should survive reimport.
+    """Events exported as EDF+ annotations survive a real reimport (issue #47).
 
-    Events are added explicitly here (rather than relying on import, which does
-    not yet read EDF+ annotations) so this exercises export-write -> reimport.
-    It fails today because the EDF importer drops annotations on read; #47 adds
-    read-back and flips this to pass.
+    Events are added explicitly (the source fixture has none) so this exercises
+    export-write -> annotation read-back. Onset/duration are checked within EDF+'s
+    representable precision; descriptions must match exactly.
     """
     fixture = BIDS / "emg/sub-01/emg/sub-01_task-isometric10percentmvc_run-01_emg.edf"
     if not fixture.exists():
@@ -197,5 +195,9 @@ def test_event_roundtrip_through_edf(tmp_path):
     emg.add_event(onset=1.0, duration=0.2, description="m2")
     out = tmp_path / "ev.edf"
     emg.to_edf(str(out), format="edf", bypass_analysis=True)
+
     reloaded = EMG.from_file(str(out), bids_channels="off")
     assert len(reloaded.events) == 2
+    assert list(reloaded.events["description"]) == ["m1", "m2"]
+    assert np.allclose(reloaded.events["onset"].to_numpy(), [0.5, 1.0], atol=1e-3)
+    assert np.allclose(reloaded.events["duration"].to_numpy(), [0.0, 0.2], atol=1e-3)
