@@ -1,11 +1,22 @@
 name: Documentation
 
 on:
+  # Only build/deploy docs when docs sources change, not on code-only changes.
+  # (Docstring edits that should refresh API pages: add 'biosigio/**' here.)
   push:
     branches:
       - main
-  # Run on every PR regardless of base so stacked/epic PRs get their own CI.
+    paths:
+      - 'docs/**'
+      - '**.md'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
   pull_request:
+    paths:
+      - 'docs/**'
+      - '**.md'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
 
 permissions:
   contents: write
