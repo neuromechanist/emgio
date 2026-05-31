@@ -27,9 +27,13 @@ else:
 ImporterName = Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision"]
 
 
-class EMG:
+class Recording:
     """
-    Core EMG class for handling EMG data and metadata.
+    Core biosignal recording: signals + channels + events + metadata.
+
+    Modality-agnostic container for EEG / EMG / iEEG / MEG / stim / marker data
+    imported from any supported format. (``EMG`` is a deprecated alias of this
+    class kept for backward compatibility; prefer ``Recording``.)
 
     Attributes:
         signals (pd.DataFrame): Raw signal data with time as index.
@@ -40,7 +44,7 @@ class EMG:
     """
 
     def __init__(self):
-        """Initialize an empty EMG object."""
+        """Initialize an empty recording."""
         self.signals = None
         self.metadata = {}
         self.channels = {}
@@ -120,7 +124,7 @@ class EMG:
         force_csv: bool = False,
         bids_channels: str = "auto",
         **kwargs,
-    ) -> "EMG":
+    ) -> "Recording":
         """
         The method to create EMG object from file.
 
@@ -215,7 +219,7 @@ class EMG:
         inplace: bool = False,
         *,
         modality: str | None = None,
-    ) -> "EMG":
+    ) -> "Recording":
         """
         Select specific channels from the data and return a new EMG object.
 
@@ -281,7 +285,7 @@ class EMG:
                 raise ValueError(f"None of the selected channels are of modality: {modality}")
 
         # Create new EMG object
-        new_emg = EMG()
+        new_emg = Recording()
 
         # Copy selected signals and channels
         new_emg.signals = self.signals[channels].copy()
@@ -298,7 +302,7 @@ class EMG:
             self.metadata = new_emg.metadata
             return self
 
-    def resample(self, target_rate: float) -> "EMG":
+    def resample(self, target_rate: float) -> "Recording":
         """Return a NEW, anti-aliased down-sampled copy of this recording.
 
         Low-resolution demos need a smaller, lighter recording; this rebuilds the
@@ -367,7 +371,7 @@ class EMG:
                 "resample() only down-samples (low-res). Up-sampling is out of scope."
             )
 
-        new_emg = EMG()
+        new_emg = Recording()
         new_emg.channels = {ch: info.copy() for ch, info in self.channels.items()}
         new_emg.metadata = self.metadata.copy()
         # Onsets/durations are in SECONDS, so they remain valid after the grid
@@ -591,7 +595,7 @@ class EMG:
             logging.info(f"Verification requested. Reloading exported file: {filepath}")
             try:
                 # Reload the exported file
-                reloaded_emg = EMG.from_file(filepath, importer="edf")
+                reloaded_emg = Recording.from_file(filepath, importer="edf")
 
                 logging.info("Comparing original signals with reloaded signals...")
                 # Compare signals using the imported function
@@ -753,3 +757,9 @@ class EMG:
             self.events = pd.concat([self.events, new_event], ignore_index=True)
         # Sort events by onset time for consistency
         self.events = self.events.sort_values(by="onset").reset_index(drop=True)
+
+
+# Deprecated alias: the class was named ``EMG`` before it became modality-agnostic
+# (it now holds EEG/iEEG/MEG/EMG/...). Kept for backward compatibility; new code
+# should use ``Recording``. (Package rename emgio -> biosigio is tracked separately.)
+EMG = Recording

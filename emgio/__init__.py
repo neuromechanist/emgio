@@ -1,8 +1,19 @@
-"""EMGIO: A Python package for EMG data import/export and manipulation."""
+"""emgio (evolving into biosigIO): import/export biosignal recordings across formats.
 
-from .core.emg import EMG
+The core class is :class:`Recording` (modality-agnostic: EEG/EMG/iEEG/MEG/...).
+``EMG`` is a deprecated alias of ``Recording`` kept for backward compatibility.
+"""
+
+from .core.emg import EMG, Recording
 from .exporters.edf import EDFExporter
 from .importers.trigno import TrignoImporter
 from .version import __version__, __version_info__
 
-__all__ = ["EMG", "TrignoImporter", "EDFExporter", "__version__", "__version_info__"]
+__all__ = [
+    "Recording",
+    "EMG",
+    "TrignoImporter",
+    "EDFExporter",
+    "__version__",
+    "__version_info__",
+]
