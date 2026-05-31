@@ -344,6 +344,7 @@ class EMG:
         verify_plot: bool = False,
         events_df: pd.DataFrame | None = None,
         create_channels_tsv: bool = True,
+        clip_outliers: bool | str = "auto",
         **kwargs,
     ) -> str | None:
         """
@@ -377,6 +378,12 @@ class EMG:
             events_df: Optional DataFrame with events ('onset', 'duration', 'description').
                       If None, uses self.events. (This provides flexibility)
             create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)
+            clip_outliers: Singularity handling for the per-channel physical window.
+                'auto' (default) keeps the full range losslessly but clips rare extreme
+                outliers to a robust window only when keeping them would crater the bulk
+                signal's resolution at the chosen format (with a warning); True always
+                clips to the robust window; False never clips. See EDFExporter.export for
+                the advanced ``outlier_sigmas`` / ``min_effective_bits`` knobs.
             **kwargs: Additional arguments for the EDF exporter
 
         Returns:
@@ -441,6 +448,7 @@ class EMG:
             "bypass_analysis": final_bypass_analysis,
             "events_df": events_to_export,  # Pass the events dataframe
             "create_channels_tsv": create_channels_tsv,
+            "clip_outliers": clip_outliers,
             **kwargs,
         }
 

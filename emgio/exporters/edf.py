@@ -1,5 +1,7 @@
+import math
 import os
 import warnings
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, InvalidOperation
 from typing import Literal
 
 import numpy as np
@@ -10,230 +12,192 @@ from ..analysis.signal import analyze_signal, determine_format_suitability
 from ..core.emg import EMG
 from ..core.modality import to_bids_channels_tsv_type
 
+# EDF and BDF share the same 256-byte-per-signal header layout: physical_min and
+# physical_max each occupy an 8-character ASCII field in BOTH formats (BDF's gain
+# is the 24-bit digital sample, not a wider physical field). pyedflib truncates a
+# physical value whose str() exceeds this, so the character budget is always 8.
+_PHYS_FIELD_CHARS = 8
 
-def _format_physical_value(value: float, max_chars: int) -> tuple:
+
+def _fit_physical_bound(value: float, *, round_up: bool, max_chars: int = _PHYS_FIELD_CHARS):
+    """Round a physical bound OUTWARD to fit the EDF/BDF 8-char header field.
+
+    pyedflib stores physical_min/physical_max as short ASCII and truncates any
+    value whose ``str()`` exceeds 8 characters, while any sample outside
+    [physical_min, physical_max] is saturated (clipped) on write. To guarantee
+    the stored window always brackets the signal we round AWAY from the data:
+    ``round_up=True`` returns the smallest representable value ``>= value`` (use
+    for physical_max); ``round_up=False`` returns the largest ``<= value`` (use
+    for physical_min). The result's ``str()`` fits ``max_chars`` whenever the
+    magnitude is representable; an integer part with more than ``max_chars`` digits
+    (|value| >= 1e8, or >= 1e7 once a sign is added) cannot fit, so the tightest
+    outward value is returned and the exporter rejects it with a clear unit-rescale
+    error rather than letting pyedflib truncate it. Containment (the bracket) always
+    holds. Because the digital range is mapped onto [physical_min, physical_max],
+    outward rounding is an affine rescale of the reconstruction and barely affects
+    correlation; clipping (which this prevents) is what destroys signal fidelity.
     """
-    Format a physical value to fit within EDF character limits.
+    if value == 0 or not math.isfinite(value):
+        return 0.0
+    rounding = ROUND_CEILING if round_up else ROUND_FLOOR
+    dec = Decimal(repr(float(value)))
+    exponent = dec.adjusted()  # power of ten of the most-significant digit
+    # Prefer the most significant figures that still fit (tightest bracket),
+    # stepping down to coarser rounding until the str() fits the field.
+    for sig in range(max_chars, 0, -1):
+        quantum = Decimal(1).scaleb(exponent - sig + 1)
+        try:
+            rounded = dec.quantize(quantum, rounding=rounding)
+        except InvalidOperation:
+            continue
+        out = int(rounded) if rounded == rounded.to_integral_value() else float(rounded)
+        # float() can land one ULP on the wrong side of the decimal; if so, take
+        # one more whole quantum outward so the bracket invariant always holds.
+        if round_up and out < value:
+            out = float(rounded + quantum)
+        elif not round_up and out > value:
+            out = float(rounded - quantum)
+        if len(str(out)) <= max_chars:
+            return out
+    # Extreme magnitude (more integer digits than the field holds): fall back to
+    # a single significant figure, still rounded outward.
+    quantum = Decimal(1).scaleb(exponent)
+    rounded = dec.quantize(quantum, rounding=rounding)
+    return int(rounded) if rounded == rounded.to_integral_value() else float(rounded)
 
-    Args:
-        value: Physical value to format
-        max_chars: Maximum number of characters allowed
 
-    Returns:
-        tuple: (formatted_value, formatted_string)
+# Tight percentile band used as the robust window only for a (near-)constant
+# bulk, where the median absolute deviation is zero and cannot define a scale.
+_CONSTANT_BULK_PERCENTILES = (0.1, 99.9)
+
+
+def _resolve_physical_window(
+    signal: np.ndarray,
+    use_bdf: bool,
+    clip_outliers,
+    outlier_sigmas: float,
+    min_effective_bits: float,
+) -> tuple:
+    """Decide the physical window [lo, hi] the header bounds will bracket.
+
+    EDF/BDF map the whole digital range onto [physical_min, physical_max], so a
+    single extreme outlier inflates the range and starves the bulk signal of
+    quantization levels. The robust window is the min/max of the *inliers* -
+    samples within ``outlier_sigmas`` robust standard deviations
+    (1.4826 x median-absolute-deviation) of the median - so only genuine
+    singularities fall outside it, not a fixed fraction of legitimate samples.
+    For a (near-)constant bulk the MAD is zero, so a tight percentile band is
+    used instead, which still isolates sparse spikes on a flat channel.
+
+    - ``clip_outliers=False``: always the full data range (purely lossless).
+    - ``clip_outliers="auto"`` (default): the full range, UNLESS keeping it would
+      push the bulk below ``min_effective_bits`` of resolution at the chosen
+      format, in which case the singular outliers are clipped to the robust
+      window so the recording survives.
+    - ``clip_outliers=True``: clip to the robust window whenever any sample lies
+      outside it (a no-op when there are no outliers).
+
+    Returns ``(lo, hi, n_clipped, max_excursion)``; ``n_clipped`` counts the
+    samples that will saturate and ``max_excursion`` is how far the worst one
+    lies beyond the window (both only for the caller's warning/report).
     """
-    # Handle NaN values
-    if np.isnan(value):
-        return 0.0, "0"
+    finite = signal[np.isfinite(signal)]
+    if finite.size == 0:
+        return 0.0, 0.0, 0, 0.0
+    smin = float(np.min(finite))
+    smax = float(np.max(finite))
+    full_range = smax - smin
+    if clip_outliers is False or full_range <= 0.0:
+        return smin, smax, 0, 0.0
 
-    # For zero or very small values, return as is
-    if abs(value) < 1e-6:
-        return 0.0, "0"
-
-    # For values close to integers, handle as integers
-    try:
-        if abs((value - round(value)) / value) < 1e-6:
-            value = int(round(value))  # Convert to integer
-            scale = 1
-            while True:
-                value_str = str(value)
-                if len(value_str) <= max_chars:
-                    return value, value_str
-                # Integer division to reduce digits
-                scale *= 10
-                value = value // 10
-    except (ValueError, ZeroDivisionError):
-        # Handle any other numerical issues
-        return 0.0, "0"
-
-    # For decimal numbers
-    if abs(value) < 1:
-        # Use scientific notation with reduced precision
-        for precision in range(6, 0, -1):
-            formatted = f"{value:.{precision}e}"
-            if len(formatted) <= max_chars:
-                return float(formatted), formatted
-        # If still too long, return minimal representation
-        return float(f"{value:.1e}"), f"{value:.1e}"
+    median = float(np.median(finite))
+    mad = float(np.median(np.abs(finite - median)))
+    if mad > 0.0:
+        threshold = outlier_sigmas * 1.4826 * mad
+        inliers = finite[np.abs(finite - median) <= threshold]
+        if inliers.size == 0:
+            inliers = finite
+        lo, hi = float(np.min(inliers)), float(np.max(inliers))
     else:
-        # For larger decimals, try fixed point first
-        scale = 1
-        scaled_value = value
-        while True:
-            # Try without any changes
-            formatted = f"{scaled_value}"
-            if len(formatted) <= max_chars:
-                return float(formatted), formatted
-            # If that doesn't work, scale down
-            scale *= 10
-            scaled_value = value / scale
-            # If we've scaled down a lot and still not fitting, switch to scientific
-            if scale > 1e9:
-                for precision in range(4, 0, -1):
-                    formatted = f"{value:.{precision}e}"
-                    if len(formatted) <= max_chars:
-                        return float(formatted), formatted
-                return float(f"{value:.1e}"), f"{value:.1e}"
+        lo, hi = (float(v) for v in np.percentile(finite, _CONSTANT_BULK_PERCENTILES))
+    core_range = hi - lo
+    if core_range <= 0.0:
+        return smin, smax, 0, 0.0
+
+    bits = 24 if use_bdf else 16
+    # Effective bits the bulk would retain if the full range were kept: every
+    # doubling of full/core range costs one bit of bulk resolution.
+    eff_bits_full = bits - math.log2(full_range / core_range) if full_range > core_range else bits
+    if clip_outliers == "auto" and eff_bits_full >= min_effective_bits:
+        return smin, smax, 0, 0.0  # the format absorbs the range; stay lossless
+
+    n_clipped = int(np.count_nonzero((finite < lo) | (finite > hi)))
+    if n_clipped == 0:
+        return smin, smax, 0, 0.0  # nothing actually outside the window
+    max_excursion = max(smax - hi, lo - smin, 0.0)
+    return lo, hi, n_clipped, float(max_excursion)
 
 
 def _determine_scaling_factors(
     signal_min: float, signal_max: float, use_bdf: bool = False
 ) -> tuple:
-    """
-    Calculate optimal scaling factors for EDF/BDF signal conversion.
-    Automatically scales values to fit format character limits.
+    """Compute EDF/BDF header scaling for a physical window [signal_min, signal_max].
+
+    Returns ``(physical_min, physical_max, digital_min, digital_max,
+    scaling_factor)``. physical_min/physical_max are rounded OUTWARD to the
+    8-char header field so the stored window always brackets the input window;
+    this is what stops pyedflib from saturating (clipping) the signal, which was
+    the source of the per-channel corruption in issue #61. The caller chooses the
+    window (full range by default, or a robust window when clipping genuine
+    outliers via :func:`_resolve_physical_window`). ``scaling_factor`` is
+    informational only: pyedflib derives its own digitization from the
+    physical/digital ranges and ignores this value.
 
     Args:
-        signal_min: Minimum value of the signal
-        signal_max: Maximum value of the signal
-        use_bdf: Whether to use BDF (24-bit) format
+        signal_min: Minimum physical value the window must contain.
+        signal_max: Maximum physical value the window must contain.
+        use_bdf: Whether to use BDF (24-bit) digital range.
 
     Returns:
         tuple: (physical_min, physical_max, digital_min, digital_max, scaling_factor)
     """
-    # Handle NaN values
-    if np.isnan(signal_min) or np.isnan(signal_max):
-        signal_min = -1e-6 if np.isnan(signal_min) else signal_min
-        signal_max = 1e-6 if np.isnan(signal_max) else signal_max
-
+    if np.isnan(signal_min):
+        signal_min = -1e-6
+    if np.isnan(signal_max):
+        signal_max = 1e-6
     if signal_min > signal_max:
         signal_min, signal_max = signal_max, signal_min
 
-    # Set digital range based on format
     if use_bdf:
         digital_min, digital_max = -8388608, 8388607  # 24-bit
-        max_chars = 12
     else:
         digital_min, digital_max = -32768, 32767  # 16-bit
-        max_chars = 8
-
-    # Handle special cases
-    if np.isclose(signal_min, signal_max):
-        if np.isclose(signal_min, 0):
-            # For zero signal, use minimal range around zero
-            # Use small values that will scale well with typical EMG signals
-            signal_min, signal_max = -1e-6, 1e-6
-        else:
-            # For constant non-zero signal, create range around the value
-            # Use a percentage of the value to maintain scale
-            margin = abs(signal_min) * 0.01  # 1% margin
-            signal_min -= margin
-            signal_max += margin
-            # Don't normalize constant signals - this preserves test behavior
-            return signal_min, signal_max, digital_min, digital_max, digital_max * 1.0
-
-    # Ensure physical range is never too small
-    physical_range = signal_max - signal_min
-    if abs(physical_range) < np.finfo(float).eps * 1e3:
-        # If range is effectively zero, create a minimal range
-        # Scale it relative to the signal magnitude
-        base = max(abs(signal_min), abs(signal_max), 1e-6)
-        physical_range = base * 1e-6
-        signal_max = signal_min + physical_range
-        # Ensure we have a valid range for scaling
-        if physical_range == 0:
-            physical_range = 1e-6
-
-    # For high dynamic range signals, preserve the original range
-    # This is critical for maintaining the dynamic range in the exported file
-    if (signal_max - signal_min) > 1e5 or (signal_max / max(abs(signal_min), 1e-10)) > 1e5:
-        # High dynamic range detected - preserve it for BDF format
-        if use_bdf:
-            # For BDF, we can handle the full range directly
-            # Just ensure the values fit within character limits
-            signal_min, _ = _format_physical_value(signal_min, max_chars)
-            signal_max, _ = _format_physical_value(signal_max, max_chars)
-
-            digital_range = digital_max - digital_min
-            physical_range = signal_max - signal_min
-
-            # Calculate scaling factor to use full digital range
-            scaling_factor = digital_range / physical_range
-
-            return signal_min, signal_max, digital_min, digital_max, scaling_factor
-
-    # Only normalize extreme values that would cause problems with EDF/BDF format
-    # This preserves the original scaling for most signals while handling extreme cases
-    if (
-        abs(signal_min) > 1e6
-        or abs(signal_max) > 1e6
-        or abs(signal_min) < 1e-6
-        or abs(signal_max) < 1e-6
-    ):
-        # For extreme values, normalize to a reasonable range
-        # But preserve the original ratio between min and max
-        ratio = abs(signal_max / signal_min) if signal_min != 0 else 1.0
-
-        if ratio > 1e6 and not use_bdf:  # Very large ratio, use a more balanced range for EDF only
-            signal_min = -1.0
-            signal_max = 1.0
-        else:  # Preserve ratio but scale to reasonable values
-            if abs(signal_min) > 1e6 or abs(signal_max) > 1e6:  # Too large
-                scale_factor = max(abs(signal_min), abs(signal_max)) / 1000.0
-                signal_min /= scale_factor
-                signal_max /= scale_factor
-            elif abs(signal_min) < 1e-6 or abs(signal_max) < 1e-6:  # Too small
-                scale_factor = 1e-3 / max(abs(signal_min), abs(signal_max))
-                signal_min *= scale_factor
-                signal_max *= scale_factor
-
-    # Format values to fit character limits
-    signal_min, _ = _format_physical_value(signal_min, max_chars)
-    signal_max, _ = _format_physical_value(signal_max, max_chars)
-
     digital_range = digital_max - digital_min
-    physical_range = signal_max - signal_min
 
-    # Calculate scaling factor
-    # We use slightly less than the full range to prevent overflow at boundaries
-    scaling_factor = (digital_range - 1) / physical_range
+    if np.isclose(signal_min, signal_max):
+        if np.isclose(signal_min, 0.0):
+            # Zero signal: minimal symmetric range around zero.
+            phys_min, phys_max = -1e-6, 1e-6
+        else:
+            # Constant non-zero signal: a 1% margin on each side keeps a valid,
+            # signal-scaled range that brackets the value.
+            margin = abs(signal_min) * 0.01
+            phys_min = _fit_physical_bound(signal_min - margin, round_up=False)
+            phys_max = _fit_physical_bound(signal_max + margin, round_up=True)
+    else:
+        phys_min = _fit_physical_bound(signal_min, round_up=False)
+        phys_max = _fit_physical_bound(signal_max, round_up=True)
 
-    return signal_min, signal_max, digital_min, digital_max, scaling_factor
+    # Guarantee a strictly positive physical range (pyedflib requires
+    # physical_min != physical_max), widening outward if rounding collapsed it.
+    if not phys_min < phys_max:
+        bump = max(abs(phys_min), abs(phys_max), 1e-6) * 1e-3
+        phys_max = _fit_physical_bound(phys_min + bump, round_up=True)
+        if not phys_min < phys_max:
+            phys_max = phys_min + bump
 
-
-def _calculate_precision_loss(
-    signal: np.ndarray, scaling_factor: float, digital_min: int, digital_max: int
-) -> float:
-    """
-    Calculate precision loss when scaling signal to digital values.
-
-    Args:
-        signal: Original signal values
-        scaling_factor: Scaling factor to convert to digital values
-        digital_min: Minimum digital value
-        digital_max: Maximum digital value
-
-    Returns:
-        float: Maximum relative precision loss as percentage
-    """
-    # Convert to integers (simulating digitization)
-    scaled = np.round(signal * scaling_factor)
-    digital_values = np.clip(scaled, digital_min, digital_max)
-    reconstructed = digital_values / scaling_factor
-
-    # Calculate relative error
-    abs_diff = np.abs(signal - reconstructed)
-    abs_signal = np.abs(signal)
-
-    # Avoid division by zero and very small values
-    eps = np.finfo(np.float32).eps
-    nonzero_mask = abs_signal > eps * 1e3
-    if not np.any(nonzero_mask):
-        return 0.0
-    # Make the first and last five sample zero, to compensate for diff (technically, only first and last one is enough)
-    nonzero_mask[0:5] = False
-    nonzero_mask[-5:] = False
-
-    relative_errors = np.zeros_like(signal)
-    relative_errors[nonzero_mask] = abs_diff[nonzero_mask] / abs_signal[nonzero_mask]
-
-    # Convert to percentage and ensure we detect small losses
-    max_loss = float(np.max(relative_errors) * 100)
-    if max_loss < np.finfo(np.float32).eps and np.any(abs_diff > 0):
-        # If we have any difference but relative error is too small to measure,
-        # return a small but non-zero value
-        return 1e-6
-    return max_loss
+    scaling_factor = (digital_range - 1) / (phys_max - phys_min)
+    return phys_min, phys_max, digital_min, digital_max, scaling_factor
 
 
 def summarize_channels(channels: dict, signals: dict, analyses: dict) -> str:
@@ -321,6 +285,9 @@ class EDFExporter:
         bypass_analysis: bool = False,
         events_df: pd.DataFrame | None = None,
         create_channels_tsv: bool = True,
+        clip_outliers: bool | str = "auto",
+        outlier_sigmas: float = 8.0,
+        min_effective_bits: float = 10.0,
         **kwargs,
     ) -> None:
         """
@@ -347,6 +314,22 @@ class EDFExporter:
                      Columns should include 'onset', 'duration', 'description'.
                      If None or empty, no annotations are written.
             create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)
+            clip_outliers: Singularity handling for the per-channel physical window.
+                'auto' (default): keep the full data range losslessly, but clip rare
+                extreme outliers to a robust percentile window ONLY when keeping them
+                would drop the bulk signal below ``min_effective_bits`` of resolution
+                at the chosen format (a loud warning reports what was clipped). True:
+                always clip to the robust window. False: never clip (full range,
+                lossless even if a single outlier starves the bulk of resolution).
+            outlier_sigmas: Robust z-score threshold for the inlier window: samples
+                within ``outlier_sigmas`` x 1.4826 x median-absolute-deviation of the
+                median are inliers; the window is their min/max so only genuine
+                singularities are clipped (default 8.0).
+            min_effective_bits: Resolution floor (in bits) the bulk signal must keep
+                under 'auto'; outliers are clipped only if the full range would push
+                it below this (default 10.0, ~60 dB). Kept low so BDF's 24-bit range
+                preserves moderate outliers losslessly and only true singularities
+                (or forced/low-res EDF) trigger clipping.
             **kwargs: Additional arguments for the exporter
         """
         if emg.signals is None:
@@ -358,7 +341,6 @@ class EDFExporter:
         # Initialize format decision variables
         use_bdf = False
         bdf_reason = ""
-        format_decision_made = False
 
         # --- Format Decision and Bypass Check ---
         if bypass_analysis and format.lower() == "auto":
@@ -366,7 +348,6 @@ class EDFExporter:
 
         if format.lower() == "bdf":
             use_bdf = True
-            format_decision_made = True
             if not bypass_analysis:
                 print("\nUser specified BDF format (24-bit).")
             else:
@@ -374,7 +355,6 @@ class EDFExporter:
                 pass  # logging.log(logging.CRITICAL, "Skipping analysis, using specified BDF format.")
         elif format.lower() == "edf":
             use_bdf = False
-            format_decision_made = True
             if not bypass_analysis:
                 print("\nUser specified EDF format (16-bit).")
             else:
@@ -489,24 +469,55 @@ class EDFExporter:
                 signal = emg.signals[ch_name].values
                 ch_info = emg.channels[ch_name]
 
-                # Get signal min/max for scaling factor calculation (no copy needed)
-                # Handle edge case of empty or all-NaN signals
+                # Resolve the physical window the bounds will bracket. Handle the
+                # empty/all-NaN edge case, then choose the window (full range, or a
+                # robust window when 'auto'/True clips genuine singularities).
                 if signal.size == 0 or np.all(np.isnan(signal)):
                     warnings.warn(
                         f"Channel '{ch_name}' has an empty or all-NaN signal. "
                         "Using default min/max of 0.0 for scaling.",
                         stacklevel=2,
                     )
-                    signal_min = 0.0
-                    signal_max = 0.0
+                    win_lo, win_hi, n_clipped, max_excursion = 0.0, 0.0, 0, 0.0
                 else:
-                    signal_min = float(np.nanmin(signal))
-                    signal_max = float(np.nanmax(signal))
+                    win_lo, win_hi, n_clipped, max_excursion = _resolve_physical_window(
+                        signal, use_bdf, clip_outliers, outlier_sigmas, min_effective_bits
+                    )
+                    if n_clipped > 0:
+                        unit = ch_info["physical_dimension"]
+                        warnings.warn(
+                            f"Channel '{ch_name}': {n_clipped} outlier sample(s) "
+                            f"({100.0 * n_clipped / signal.size:.4f}%) will saturate to the "
+                            f"robust window [{win_lo:.6g}, {win_hi:.6g}] {unit}, preserving "
+                            f"{24 if use_bdf else 16}-bit resolution for the bulk signal "
+                            f"(max excursion {max_excursion:.6g} {unit}). "
+                            "Pass clip_outliers=False to keep the full range instead.",
+                            stacklevel=2,
+                        )
 
-                # Calculate scaling factors for header based on the chosen format (use_bdf)
-                phys_min, phys_max, dig_min, dig_max, scale_factor = _determine_scaling_factors(
-                    signal_min, signal_max, use_bdf=use_bdf
+                # Calculate scaling factors for header based on the chosen format (use_bdf).
+                # physical_min/max are rounded outward to bracket the window, so pyedflib
+                # never silently clips the bulk signal (issue #61).
+                # scaling_factor is informational (pyedflib derives its own from the
+                # physical/digital ranges); the bounds are what matter for fidelity.
+                phys_min, phys_max, dig_min, dig_max, _scaling = _determine_scaling_factors(
+                    win_lo, win_hi, use_bdf=use_bdf
                 )
+
+                # EDF/BDF store physical_min/max as 8-char ASCII. A magnitude needing
+                # more digits (|value| >= 1e8, or >= 1e7 once a sign is added) cannot be
+                # represented: pyedflib would truncate it and silently scale the channel
+                # by powers of ten (reintroducing the #61 corruption) or abort the write.
+                # Fail loudly here instead, before any bytes are written, with the only
+                # real remedy - rescale the channel to a coarser unit.
+                if len(str(phys_min)) > _PHYS_FIELD_CHARS or len(str(phys_max)) > _PHYS_FIELD_CHARS:
+                    raise ValueError(
+                        f"Channel '{ch_name}': physical range [{phys_min}, {phys_max}] "
+                        f"{ch_info['physical_dimension']} needs more than {_PHYS_FIELD_CHARS} "
+                        "characters and cannot be stored in the EDF/BDF header without corrupting "
+                        "the values. Rescale this channel to a coarser unit (e.g. uV -> mV -> V) "
+                        "so the magnitude fits."
+                    )
 
                 # Prepare channel header dictionary
                 ch_dict = {
