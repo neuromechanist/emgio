@@ -20,10 +20,13 @@ class BrainVisionImporter(BaseImporter):
     def _read_events(self, raw) -> pd.DataFrame:
         """Read .vmrk markers (MNE annotations) into an events DataFrame."""
         annotations = raw.annotations
+        # strict=True: the three arrays come from one Annotations object and are
+        # co-length by MNE's contract; a mismatch is a bug we want surfaced, not
+        # silently truncated.
         rows = [
             (float(onset), float(duration), str(description))
             for onset, duration, description in zip(
-                annotations.onset, annotations.duration, annotations.description, strict=False
+                annotations.onset, annotations.duration, annotations.description, strict=True
             )
         ]
         evt = pd.DataFrame(rows, columns=["onset", "duration", "description"])

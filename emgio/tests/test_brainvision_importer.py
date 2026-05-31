@@ -45,6 +45,18 @@ def test_brainvision_markers_become_events(bv_emg):
     assert all(bv_emg.events["description"].str.contains("Stimulus"))
 
 
+def test_brainvision_no_markers_gives_empty_events():
+    """A recording with no .vmrk markers must not crash; events stay empty."""
+    import mne
+
+    from emgio.importers.brainvision import BrainVisionImporter
+
+    raw = mne.io.read_raw_brainvision(str(VHDR), preload=True, verbose="ERROR")
+    raw.set_annotations(mne.Annotations(onset=[], duration=[], description=[]))
+    events = BrainVisionImporter()._read_events(raw)
+    assert events.empty
+
+
 def test_brainvision_roundtrip_through_edf(bv_emg, tmp_path):
     """Channels survive an EDF/BDF export + reimport (r > 0.99)."""
     out = tmp_path / "bv.edf"
