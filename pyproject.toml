@@ -72,6 +72,11 @@ arrow = [
 neo = [
     "neo>=0.13",
 ]
+# Sharded Zarr v3 serving store (viewing + inference + training from one store).
+# Install with `uv sync --extra zarr`.
+zarr = [
+    "zarr>=3",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -80,6 +85,7 @@ dev = [
     "mne>=1.6",
     "pyarrow>=14",
     "neo>=0.13",
+    "zarr>=3",
 ]
 docs = [
     "mkdocs>=1.6.0",
@@ -90,7 +96,7 @@ docs = [
     "mike>=2.1.0",
 ]
 all = [
-    "emgio[dev,docs,meg,arrow,neo]",
+    "emgio[dev,docs,meg,arrow,neo,zarr]",
 ]
 
 [project.urls]

@@ -25,7 +25,18 @@ else:
 
 # Supported importer names (extension-inferred or passed explicitly to from_file).
 ImporterName = Literal[
-    "trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision", "tabular", "neo"
+    "trigno",
+    "otb",
+    "eeglab",
+    "edf",
+    "csv",
+    "wfdb",
+    "xdf",
+    "meg",
+    "brainvision",
+    "tabular",
+    "neo",
+    "zarr",
 ]
 
 
@@ -134,6 +145,8 @@ class Recording:
             ".ncs",
         }:
             return "neo"
+        elif extension == ".zarr":
+            return "zarr"
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -165,6 +178,7 @@ class Recording:
                 - 'neo': proprietary electrophysiology formats via python-neo
                   (Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...;
                   requires the 'neo' extra)
+                - 'zarr': biosigIO Zarr serving store (requires the 'zarr' extra)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -197,6 +211,7 @@ class Recording:
             "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
             "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
             "neo": "NeoImporter",  # proprietary ephys via python-neo
+            "zarr": "ZarrImporter",  # biosigIO Zarr serving store
         }
 
         if importer not in importers:
@@ -214,7 +229,8 @@ class Recording:
                 "- brainvision: BrainVision via MNE (.vhdr)\n"
                 "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)\n"
                 "- neo: proprietary electrophysiology formats via python-neo "
-                "(Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...)"
+                "(Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...)\n"
+                "- zarr: biosigIO Zarr serving store (.zarr)"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
@@ -691,6 +707,30 @@ class Recording:
         from ..exporters.tabular import TabularExporter
 
         return TabularExporter.to_arrow(self, filepath)
+
+    def to_zarr(self, filepath: str, **kwargs) -> str:
+        """Export to a sharded Zarr v3 serving store with a min/max view pyramid.
+
+        Writes one cloud-native store that serves viewing, inference, and training
+        from a single conversion: ``level 0`` of each ``(modality, rate)`` group is
+        the anti-aliased, per-modality-resampled inference signal, with a min/max
+        render pyramid above it (flagged not-for-inference). A derived serving copy,
+        not the archival source (BIDS/EDF stay authoritative). Requires the ``zarr``
+        extra (zarr v3). See :class:`~emgio.exporters.zarr.ZarrExporter` for the
+        tuning knobs (``modality_rates``, ``dtype``, chunk/shard sizing, ...).
+
+        Args:
+            filepath: Output store path (``.zarr`` appended if missing).
+            **kwargs: Forwarded to :meth:`ZarrExporter.export`.
+
+        Returns:
+            str: The written store path.
+        """
+        from ..exporters.zarr import ZarrExporter
+
+        if self.signals is None:
+            raise ValueError("No signals loaded")
+        return ZarrExporter.export(self, filepath, **kwargs)
 
     def set_metadata(self, key: str, value: Any) -> None:
         """

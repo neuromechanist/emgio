@@ -86,6 +86,21 @@ def _json_object_hook(d: dict) -> Any:
     return d
 
 
+def metadata_to_json(metadata) -> str:
+    """Serialize recording metadata to a JSON string, lossless for datetimes/numpy.
+
+    Shared canonical encoding (also used by the Zarr store's root attrs) so every
+    biosigIO format records metadata the same way and round-trips types intact,
+    rather than silently ``str()``-ifying values (metadata loss is data loss).
+    """
+    return json.dumps(dict(metadata), default=_json_default)
+
+
+def metadata_from_json(blob: str) -> dict:
+    """Inverse of :func:`metadata_to_json` (reconstructs datetimes etc.)."""
+    return json.loads(blob, object_hook=_json_object_hook)
+
+
 def recording_to_table(rec: Recording) -> pa.Table:
     """Build a pyarrow Table from a Recording (signals + biosigio metadata blob)."""
     pa = require_pyarrow()
