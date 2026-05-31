@@ -40,9 +40,10 @@ EXIT_USAGE = 2
 EXIT_INPUT = 3
 EXIT_RUNTIME = 4
 
-# A channel whose modality resolves to one of these is "unknown": --modality
-# may fill it, and info/verify warn-list it.
-_UNKNOWN_MODALITIES = frozenset({"OTHER", "MISC", "", None})
+# A channel is "unknown" when its type is the importer's unrecognized default
+# (``OTHER``): --modality may fill it, and info/verify warn-list it. Modality is
+# NOT a usable marker here -- ECG/EOG/ACC/TRIG all legitimately resolve to MISC.
+_UNKNOWN_CHANNEL_TYPES = frozenset({"OTHER", "", None})
 
 
 class CliError(Exception):
@@ -80,7 +81,7 @@ def _load_emg(path: str) -> EMG:
 
 
 def _is_unknown(info: dict) -> bool:
-    return info.get("modality") in _UNKNOWN_MODALITIES or info.get("channel_type") == "OTHER"
+    return info.get("channel_type", "OTHER") in _UNKNOWN_CHANNEL_TYPES
 
 
 def _unknown_channels(emg: EMG) -> list[str]:
@@ -166,9 +167,12 @@ def cmd_convert(args: argparse.Namespace) -> int:
     logger.info("wrote %s", written)
 
     if args.verify:
-        with _quiet_stdout():
-            reloaded = EMG.from_file(written)
-        results = compare_signals(emg, reloaded, tolerance=args.verify_tolerance)
+        try:
+            with _quiet_stdout():
+                reloaded = EMG.from_file(written)
+            results = compare_signals(emg, reloaded, tolerance=args.verify_tolerance)
+        except Exception as e:
+            raise CliError(EXIT_RUNTIME, f"verify reload failed: {e}") from e
         if not _all_identical(results):
             differing = [
                 k for k, v in results.items() if k != "channel_summary" and not v["is_identical"]
@@ -329,7 +333,12 @@ def _configure_logging(verbose: int, quiet: bool) -> None:
         level = logging.INFO
     else:
         level = logging.WARNING
-    logging.basicConfig(level=level, stream=sys.stderr, format="%(levelname)s: %(message)s")
+    # force=True overrides any root config already installed at import time
+    # (e.g. emgio.core.emg calls basicConfig on import), so -v/-q actually apply
+    # and CLI diagnostics reach stderr.
+    logging.basicConfig(
+        level=level, stream=sys.stderr, format="%(levelname)s: %(message)s", force=True
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:

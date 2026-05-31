@@ -11,14 +11,18 @@ import pathlib
 import shutil
 import subprocess
 
+import numpy as np
 import pytest
 
-from emgio import __version__
+from emgio import EMG, __version__
 from emgio.cli import (
     EXIT_INPUT,
     EXIT_OK,
+    EXIT_RUNTIME,
     EXIT_USAGE,
     EXIT_VERIFY_FAILED,
+    _apply_modality,
+    _is_unknown,
     main,
 )
 
@@ -94,9 +98,16 @@ def test_verify_identical_passes():
 @requires_emg
 def test_verify_mismatch_fails(tmp_path):
     out = tmp_path / "eeg.edf"
-    main(["convert", str(EEG), str(out)])
+    assert main(["convert", str(EEG), str(out)]) == EXIT_OK
     written = out if out.exists() else out.with_suffix(".bdf")
     assert main(["verify", str(EMG_EDF), str(written)]) == EXIT_VERIFY_FAILED
+
+
+def test_corrupt_file_is_runtime_error(tmp_path):
+    """A file with a known extension but invalid content -> runtime error (4)."""
+    bad = tmp_path / "f.edf"
+    bad.write_bytes(b"\x00" * 16)  # valid extension, garbage content
+    assert main(["info", str(bad)]) == EXIT_RUNTIME
 
 
 @requires_emg
@@ -105,6 +116,23 @@ def test_verify_json_payload(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["passed"] is True
     assert "channels" in payload and payload["channels"]
+
+
+def test_is_unknown_uses_channel_type_not_modality():
+    """Only an OTHER type is unknown; ECG/EOG/ACC are detected though MISC-modality."""
+    assert _is_unknown({"channel_type": "OTHER", "modality": "MISC"}) is True
+    assert _is_unknown({"channel_type": "ECG", "modality": "MISC"}) is False
+    assert _is_unknown({"channel_type": "EEG", "modality": "EEG"}) is False
+
+
+def test_apply_modality_fills_only_unknown_channels():
+    """--modality fills OTHER-typed channels but leaves detected ones untouched."""
+    emg = EMG()
+    emg.add_channel("X", np.zeros(100), 100, "uV", "OTHER")
+    emg.add_channel("ECG1", np.zeros(100), 100, "uV", "ECG")
+    _apply_modality(emg, "EEG")
+    assert emg.channels["X"]["modality"] == "EEG"  # unknown -> filled
+    assert emg.channels["ECG1"]["modality"] == "MISC"  # detected -> untouched
 
 
 def test_missing_input_is_input_error():
