@@ -52,8 +52,14 @@ class ZarrImporter(BaseImporter):
                 f"Not a biosigIO Zarr store: root 'format' is {root_attrs.get('format')!r}, "
                 f"expected {FORMAT!r}. Only stores written by emgio's Zarr exporter can be read."
             )
+        # Accept an integral version (int, or a float like 2.0 from a hand-edited
+        # or non-Python writer); reject non-numeric or a newer store.
         version = root_attrs.get("format_version", 1)
-        if not isinstance(version, int) or version > FORMAT_VERSION:
+        try:
+            is_supported = int(version) == version and int(version) <= FORMAT_VERSION
+        except (TypeError, ValueError):
+            is_supported = False
+        if not is_supported:
             raise ValueError(
                 f"Unsupported biosigIO Zarr store version {version!r}; this build reads up to "
                 f"version {FORMAT_VERSION}. Upgrade emgio to read this store."

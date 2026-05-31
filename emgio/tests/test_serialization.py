@@ -119,6 +119,12 @@ def test_empty_recording_to_parquet_unified_message(tmp_path):
         Recording().to_parquet(str(tmp_path / "x.parquet"))
 
 
+def test_empty_recording_to_arrow_unified_message(tmp_path):
+    pytest.importorskip("pyarrow")
+    with pytest.raises(ValueError, match="No signals loaded"):
+        Recording().to_arrow(str(tmp_path / "x.feather"))
+
+
 def test_empty_recording_to_zarr_unified_message(tmp_path):
     pytest.importorskip("zarr")
     with pytest.raises(ValueError, match="No signals loaded"):
