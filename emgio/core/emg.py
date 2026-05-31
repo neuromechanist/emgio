@@ -104,6 +104,8 @@ class EMG:
             return "xdf"
         elif extension in {".fif", ".ds"}:
             return "meg"
+        elif extension in {".vhdr"}:
+            return "brainvision"
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -111,7 +113,9 @@ class EMG:
     def from_file(
         cls,
         filepath: str,
-        importer: Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg"]
+        importer: Literal[
+            "trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision"
+        ]
         | None = None,
         force_csv: bool = False,
         bids_channels: str = "auto",
@@ -131,6 +135,7 @@ class EMG:
                 - 'wfdb': Waveform Database (WFDB)
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
                 - 'meg': MEG via MNE (.fif and CTF .ds; requires the 'meg' extra)
+                - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -160,6 +165,7 @@ class EMG:
             "wfdb": "WFDBImporter",  # Waveform Database format
             "xdf": "XDFImporter",  # XDF multi-stream format
             "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds)
+            "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
         }
 
         if importer not in importers:
@@ -173,7 +179,8 @@ class EMG:
                 "- csv: Generic CSV/Text files\n"
                 "- wfdb: Waveform Database\n"
                 "- xdf: XDF multi-stream format\n"
-                "- meg: MEG via MNE (.fif, CTF .ds)"
+                "- meg: MEG via MNE (.fif, CTF .ds)\n"
+                "- brainvision: BrainVision via MNE (.vhdr)"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
