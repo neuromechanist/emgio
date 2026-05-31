@@ -309,7 +309,8 @@ class EMG:
 
         Returns:
             EMG: A new EMG with the resampled signals, each channel's
-                ``sample_frequency`` set to ``target_rate``, and channel/recording
+                ``sample_frequency`` set to the achieved rate (source * up / down,
+                which equals ``target_rate`` for integer rates), and channel/recording
                 metadata and events preserved. Events are unchanged because their
                 onsets/durations are in SECONDS, which stay valid under any rate
                 change (only the per-sample grid shrinks, not wall-clock time).
@@ -370,6 +371,20 @@ class EMG:
         up = tgt_i // g
         down = src_i // g
 
+        # The achieved rate is exactly source * up / down. Store THAT, not the
+        # requested float, so the metadata can never disagree with the data (a
+        # non-integer or odd target snaps to the nearest achievable rational rate;
+        # warn so the caller knows). This avoids silently writing e.g. 99.5 Hz
+        # onto a grid that resample_poly actually produced at 100 Hz.
+        actual_rate = source_rate * up / down
+        if abs(actual_rate - target_rate) > 1e-9:
+            logging.warning(
+                "Requested resample to %g Hz; nearest achievable rational rate is "
+                "%g Hz, which is what is stored on the channels.",
+                target_rate,
+                actual_rate,
+            )
+
         columns = list(self.signals.columns)
         data = self.signals.to_numpy(dtype=float)
         # resample_poly over axis=0 resamples every channel column at once with the
@@ -379,7 +394,7 @@ class EMG:
         new_emg.signals = pd.DataFrame(resampled, columns=columns)
         new_emg.signals.index = pd.RangeIndex(len(new_emg.signals))
         for info in new_emg.channels.values():
-            info["sample_frequency"] = target_rate
+            info["sample_frequency"] = actual_rate
 
         return new_emg
 

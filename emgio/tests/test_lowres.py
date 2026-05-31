@@ -7,6 +7,7 @@ back into the band. NO MOCKS: real fixtures and a real synthetic-signal FFT.
 """
 
 import pathlib
+from math import ceil, gcd
 
 import numpy as np
 import pytest
@@ -39,7 +40,9 @@ def test_resample_eeg_250_to_100_structure():
     rs = emg.resample(100)
 
     assert _rates(rs) == {100}, "every channel must report the new rate"
-    assert rs.signals.shape[0] == round(n_old * 100 / 250)
+    # resample_poly output length is ceil(n * up / down), not round(n * ratio).
+    g = gcd(250, 100)
+    assert rs.signals.shape[0] == ceil(n_old * (100 // g) / (250 // g))
     assert len(rs.channels) == n_channels, "channel count preserved"
     assert set(rs.signals.columns) == set(emg.signals.columns), "channel names preserved"
     assert len(rs.events) == n_events, "events preserved"
@@ -193,6 +196,21 @@ def test_resample_above_source_raises():
     emg = EMG.from_file(str(EEG), importer="eeglab")
     with pytest.raises(ValueError, match="exceeds source rate"):
         emg.resample(500)
+
+
+def test_resample_non_integer_target_stores_actual_rate():
+    """A non-integer target snaps to the achievable rational rate and stores THAT.
+
+    Guards against silent metadata corruption: 256 Hz -> requested 100.4 Hz uses
+    integer factors up=25/down=64 -> achieves exactly 100.0 Hz, which must be what
+    is written to the channels (not the requested 100.4).
+    """
+    emg = EMG()
+    rng = np.random.default_rng(0)
+    emg.add_channel("X", rng.standard_normal(2560), 256, "uV", "EEG")
+    rs = emg.resample(100.4)
+    assert _rates(rs) == {100.0}  # the ACHIEVED rate, never the requested 100.4
+    assert 100.4 not in _rates(rs)
 
 
 def test_resample_mixed_rate_raises():
