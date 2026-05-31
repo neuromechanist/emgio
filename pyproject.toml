@@ -61,12 +61,18 @@ biosigio = "emgio.cli:main"
 meg = [
     "mne>=1.6",
 ]
+# Parquet + Arrow/Feather serialization (analytics, fast IPC). Install with
+# `uv sync --extra arrow`. Zarr will get its own extra in a later phase.
+arrow = [
+    "pyarrow>=14",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.14",
     "ty",
     "mne>=1.6",
+    "pyarrow>=14",
 ]
 docs = [
     "mkdocs>=1.6.0",
@@ -77,7 +83,7 @@ docs = [
     "mike>=2.1.0",
 ]
 all = [
-    "emgio[dev,docs,meg]",
+    "emgio[dev,docs,meg,arrow]",
 ]
 
 [project.urls]
