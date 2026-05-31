@@ -179,6 +179,9 @@ def plot_comparison(
     """
     # Removed local import: from emgio.core.emg import EMG
 
+    if emg_original.signals is None or emg_reloaded.signals is None:
+        raise ValueError("Both EMG objects must have signals loaded to plot a comparison")
+
     original_channel_names = set(emg_original.signals.columns)
     reloaded_channel_names = set(emg_reloaded.signals.columns)
 

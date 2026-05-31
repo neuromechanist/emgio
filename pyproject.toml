@@ -91,6 +91,11 @@ Changelog = "https://github.com/neuromechanist/emgio/releases"
 where = ["."]
 include = ["emgio*"]
 
+[tool.ty.src]
+# Type-check the shipped package strictly; tests are exercised by running them,
+# so gating their typing adds churn for little value (see #43).
+exclude = ["emgio/tests/**"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

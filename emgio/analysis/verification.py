@@ -40,6 +40,8 @@ def compare_signals(
     # Removed local import: from emgio.core.emg import EMG
 
     results = {}
+    if emg_original.signals is None or emg_reloaded.signals is None:
+        raise ValueError("No signals loaded in one or both EMG objects to compare")
     original_channels = set(emg_original.signals.columns)
     reloaded_channels = set(emg_reloaded.signals.columns)
 
