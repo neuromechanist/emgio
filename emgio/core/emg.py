@@ -24,7 +24,9 @@ else:
     logging.basicConfig(level=logging.CRITICAL)  # Effectively turns off most logging
 
 # Supported importer names (extension-inferred or passed explicitly to from_file).
-ImporterName = Literal["trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision"]
+ImporterName = Literal[
+    "trigno", "otb", "eeglab", "edf", "csv", "wfdb", "xdf", "meg", "brainvision", "tabular"
+]
 
 
 class Recording:
@@ -113,6 +115,8 @@ class Recording:
             return "meg"
         elif extension in {".vhdr"}:
             return "brainvision"
+        elif extension in {".parquet", ".feather", ".arrow"}:
+            return "tabular"
         else:
             raise ValueError(f"Unsupported file extension: {extension}")
 
@@ -140,6 +144,7 @@ class Recording:
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
                 - 'meg': MEG via MNE (.fif and CTF .ds; requires the 'meg' extra)
                 - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
+                - 'tabular': biosigIO Parquet/Arrow/Feather (requires the 'arrow' extra)
                 If None, the importer will be inferred from the file extension.
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
@@ -170,6 +175,7 @@ class Recording:
             "xdf": "XDFImporter",  # XDF multi-stream format
             "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds)
             "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
+            "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
         }
 
         if importer not in importers:
@@ -184,7 +190,8 @@ class Recording:
                 "- wfdb: Waveform Database\n"
                 "- xdf: XDF multi-stream format\n"
                 "- meg: MEG via MNE (.fif, CTF .ds)\n"
-                "- brainvision: BrainVision via MNE (.vhdr)"
+                "- brainvision: BrainVision via MNE (.vhdr)\n"
+                "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)"
             )
 
         # If using CSV importer and force_csv is set, pass it as force_generic
@@ -627,6 +634,40 @@ class Recording:
                 }
 
         return verification_report_dict
+
+    def to_parquet(self, filepath: str) -> str:
+        """Export to a self-describing biosigIO Parquet file.
+
+        Signals are stored as a columnar table (channels = columns, time index
+        preserved); channels/events/metadata travel in the file's schema metadata,
+        so ``Recording.from_file`` round-trips it losslessly. Great for analytics
+        (DuckDB/Polars/pandas/Spark). Requires the ``arrow`` extra (pyarrow).
+
+        Args:
+            filepath: Output ``.parquet`` path.
+
+        Returns:
+            str: The written file path.
+        """
+        from ..exporters.tabular import TabularExporter
+
+        return TabularExporter.to_parquet(self, filepath)
+
+    def to_arrow(self, filepath: str) -> str:
+        """Export to a biosigIO Arrow/Feather file (fast zero-copy IPC).
+
+        Same self-describing schema as :meth:`to_parquet`; round-trips via
+        ``Recording.from_file``. Requires the ``arrow`` extra (pyarrow).
+
+        Args:
+            filepath: Output ``.feather`` / ``.arrow`` path.
+
+        Returns:
+            str: The written file path.
+        """
+        from ..exporters.tabular import TabularExporter
+
+        return TabularExporter.to_arrow(self, filepath)
 
     def set_metadata(self, key: str, value: Any) -> None:
         """
