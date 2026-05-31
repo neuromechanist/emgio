@@ -17,7 +17,7 @@ from emgio import Recording
 
 zarr = pytest.importorskip("zarr", reason="Zarr serving format requires the optional 'zarr' extra")
 
-from emgio.exporters.zarr import _resample_channel  # noqa: E402
+from emgio.exporters.zarr import _DISCRETE_TYPES, _resample_channel  # noqa: E402
 
 _REPO = pathlib.Path(__file__).resolve().parents[2]
 EMG_EDF = _REPO / "examples/bids/emg/sub-01/emg/sub-01_task-isometric10percentmvc_run-01_emg.edf"
@@ -104,6 +104,31 @@ def test_zarr_discrete_channel_nearest_not_inference(tmp_path):
     assert chan["channel_type"] == "TRIG"
     assert chan["anti_aliased"] is False
     assert chan["usable_for_inference"] is False
+    # A group of only discrete channels must not be flagged inference-usable.
+    assert root[name]["0"].attrs["usable_for_inference"] is False
+
+
+def test_zarr_int16_rejects_non_finite(tmp_path):
+    """NaN/inf would silently decode to a midrange int16 value, so int16 export rejects it."""
+    data = np.sin(np.arange(1000) / 5.0)
+    data[100] = np.nan
+    rec = Recording()
+    rec.add_channel("C1", data, 250, "uV", "EEG")
+    with pytest.raises(ValueError, match="non-finite"):
+        rec.to_zarr(str(tmp_path / "r"))  # dtype="int16" default
+
+
+def test_zarr_float32_preserves_nan(tmp_path):
+    """float32 storage represents NaN, so the gap survives the round-trip."""
+    data = np.sin(np.arange(1000) / 5.0)
+    data[100:110] = np.nan
+    rec = Recording()
+    rec.add_channel("C1", data, 250, "uV", "EEG")
+
+    rt = Recording.from_file(rec.to_zarr(str(tmp_path / "r"), dtype="float32"))
+    got = rt.signals["C1"].to_numpy()
+    assert np.array_equal(np.isnan(got), np.isnan(data))
+    assert np.allclose(got[~np.isnan(got)], data[~np.isnan(data)])
 
 
 def test_zarr_events_roundtrip(tmp_path):
@@ -174,7 +199,10 @@ def test_zarr_real_emg_fixture_exports_and_reconstructs(tmp_path):
     label = list(rt.channels)[0]
     native = rec.channels[label]["sample_frequency"]
     target = rt.channels[label]["sample_frequency"]
-    expected = _resample_channel(rec.signals[label].to_numpy(), native, target, discrete=False)
+    ctype = str(rec.channels[label].get("channel_type", "")).upper()
+    expected = _resample_channel(
+        rec.signals[label].to_numpy(), native, target, discrete=ctype in _DISCRETE_TYPES
+    )
     got = rt.signals[label].to_numpy()
     n = min(len(expected), len(got))
     assert np.corrcoef(expected[:n], got[:n])[0, 1] > 0.99

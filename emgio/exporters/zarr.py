@@ -123,6 +123,9 @@ def _quantize_int16(block: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarr
     """Map a (n_ch, n_time) float block to int16 with per-channel scale/offset.
 
     ``physical = digital * scale + offset``. A constant channel gets scale=1.
+    Non-finite samples (NaN/inf) cannot be represented in int16 and would
+    silently decode to a midrange value, so they are rejected here rather than
+    corrupted -- use ``dtype="float32"`` (which preserves NaN) to keep them.
     """
     n_ch = block.shape[0]
     scale = np.ones(n_ch, dtype=np.float64)
@@ -131,10 +134,16 @@ def _quantize_int16(block: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarr
     digital_span = _INT16_MAX - _INT16_MIN
     for i in range(n_ch):
         row = block[i]
-        pmin = float(np.nanmin(row)) if row.size else 0.0
-        pmax = float(np.nanmax(row)) if row.size else 0.0
-        if not np.isfinite(pmin) or not np.isfinite(pmax) or pmax == pmin:
-            offset[i] = pmin if np.isfinite(pmin) else 0.0
+        if row.size and not np.all(np.isfinite(row)):
+            raise ValueError(
+                f"Channel index {i} has non-finite (NaN/inf) samples, which int16 storage "
+                "cannot represent without silently corrupting them. Use dtype='float32' "
+                "(preserves NaN) or mask/interpolate the samples before exporting."
+            )
+        pmin = float(np.min(row)) if row.size else 0.0
+        pmax = float(np.max(row)) if row.size else 0.0
+        if pmax == pmin:  # constant (or empty) channel: store the constant in offset
+            offset[i] = pmin
             out[i] = 0
             continue
         s = (pmax - pmin) / digital_span
@@ -269,7 +278,9 @@ class ZarrExporter:
                         "modality": modality,
                         "unit": info.get("physical_dimension", "n/a"),
                         "prefilter": info.get("prefilter", "n/a"),
-                        "original_rate": float(native_rate),
+                        # The true per-channel rate, not the rounded group key, so a
+                        # non-integer acquisition rate is not lost (metadata loss is data loss).
+                        "original_rate": float(info["sample_frequency"]),
                         "target_rate": float(target_rate),
                         "anti_aliased": bool((not discrete) and target_rate < native_rate),
                         "usable_for_inference": (not discrete),
@@ -292,7 +303,14 @@ class ZarrExporter:
             gname = f"{modality.lower()}_{int(round(target_rate))}hz"
             # Disambiguate the rare collision of two native rates -> same target.
             if gname in written_groups:
-                gname = f"{gname}_from{int(native_rate)}"
+                candidate = f"{gname}_from{int(native_rate)}"
+                if candidate in written_groups:
+                    raise ValueError(
+                        f"Zarr group name collision: {candidate!r} is already used. Three or more "
+                        f"native rates in modality {modality!r} map to the same target rate; "
+                        "split the recording or widen the modality rate cap."
+                    )
+                gname = candidate
             written_groups.append(gname)
             grp = root.create_group(gname)
             grp.attrs.update(
@@ -323,7 +341,8 @@ class ZarrExporter:
                     "downsample_factor": 1,
                     "kind": "signal",
                     "anti_aliased": any(m["anti_aliased"] for m in chan_meta),
-                    "usable_for_inference": True,
+                    # A group of only discrete channels is not inference-usable.
+                    "usable_for_inference": any(m["usable_for_inference"] for m in chan_meta),
                     "scale": scale.tolist(),
                     "offset": offset.tolist(),
                     "physical_formula": "physical = digital * scale + offset",
