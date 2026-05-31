@@ -7,7 +7,7 @@ from .base import BaseImporter
 class TrignoImporter(BaseImporter):
     """Importer for Delsys Trigno EMG system data."""
 
-    def _analyze_csv_structure(self, csv_path: str) -> tuple[list[str], int, str]:
+    def _analyze_csv_structure(self, csv_path: str) -> tuple[list[str], int, str | None]:
         """
         Analyze the CSV file structure to identify metadata and data sections.
 

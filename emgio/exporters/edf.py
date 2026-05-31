@@ -279,8 +279,8 @@ class EDFExporter:
         filepath: str,
         precision_threshold: float = 0.01,
         method: str = "both",
-        fft_noise_range: tuple = None,
-        svd_rank: int = None,
+        fft_noise_range: tuple | None = None,
+        svd_rank: int | None = None,
         format: Literal["auto", "edf", "bdf"] = "auto",
         bypass_analysis: bool = False,
         events_df: pd.DataFrame | None = None,
@@ -289,7 +289,7 @@ class EDFExporter:
         outlier_sigmas: float = 8.0,
         min_effective_bits: float = 10.0,
         **kwargs,
-    ) -> None:
+    ) -> str:
         """
         Export EMG data to EDF/BDF format with optional BIDS-compliant channels.tsv file.
 
