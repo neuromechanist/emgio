@@ -8,7 +8,7 @@ optional dependency (the ``arrow`` extra), imported lazily.
 """
 
 from ..core.emg import Recording
-from ..tabular_schema import recording_to_table, require_pyarrow
+from ..tabular_schema import recording_to_table
 
 
 class TabularExporter:
@@ -16,16 +16,18 @@ class TabularExporter:
 
     @staticmethod
     def to_parquet(rec: Recording, filepath: str) -> str:
-        require_pyarrow()
+        # recording_to_table calls require_pyarrow() (clear install hint) before
+        # we import the pyarrow.parquet submodule.
+        table = recording_to_table(rec)
         import pyarrow.parquet as pq
 
-        pq.write_table(recording_to_table(rec), filepath)
+        pq.write_table(table, filepath)
         return filepath
 
     @staticmethod
     def to_arrow(rec: Recording, filepath: str) -> str:
-        require_pyarrow()
+        table = recording_to_table(rec)
         import pyarrow.feather as feather
 
-        feather.write_feather(recording_to_table(rec), filepath)
+        feather.write_feather(table, filepath)
         return filepath

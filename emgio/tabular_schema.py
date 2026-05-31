@@ -13,6 +13,7 @@ pyarrow is an optional dependency (``arrow`` extra), imported lazily.
 
 from __future__ import annotations
 
+import datetime
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -46,13 +47,43 @@ def require_pyarrow():
     return pyarrow
 
 
+# Marks a JSON object that encodes a non-JSON-native value (e.g. a datetime) so
+# it can be reconstructed to its original type on read, instead of silently
+# degrading to a string.
+_TYPE_KEY = "__biosigio_type__"
+
+
 def _json_default(obj: Any):
-    """Make numpy scalars/arrays JSON-serializable; fall back to str."""
+    """Encode non-JSON-native values losslessly; RAISE rather than silently coerce.
+
+    datetimes/dates become a typed envelope (reconstructed by ``_json_object_hook``)
+    and numpy scalars/arrays become their Python equivalents. Anything else raises
+    a TypeError so unexpected metadata is surfaced, never silently str()-ified
+    (metadata loss is data loss).
+    """
+    if isinstance(obj, datetime.datetime):
+        return {_TYPE_KEY: "datetime", "value": obj.isoformat()}
+    if isinstance(obj, datetime.date):
+        return {_TYPE_KEY: "date", "value": obj.isoformat()}
     if isinstance(obj, np.generic):
         return obj.item()
     if isinstance(obj, np.ndarray):
         return obj.tolist()
-    return str(obj)
+    raise TypeError(
+        f"Object of type {type(obj).__name__!r} in recording metadata is not JSON-"
+        "serializable and cannot be stored in the biosigIO tabular schema; convert "
+        "it to a primitive (or datetime) before exporting."
+    )
+
+
+def _json_object_hook(d: dict) -> Any:
+    """Reconstruct typed envelopes written by :func:`_json_default`."""
+    kind = d.get(_TYPE_KEY)
+    if kind == "datetime":
+        return datetime.datetime.fromisoformat(d["value"])
+    if kind == "date":
+        return datetime.date.fromisoformat(d["value"])
+    return d
 
 
 def recording_to_table(rec: Recording) -> pa.Table:
@@ -89,9 +120,14 @@ def table_to_recording(table: pa.Table) -> Recording:
             "Not a biosigIO tabular file: missing the 'biosigio' schema metadata. "
             "Only files written by emgio's Parquet/Arrow exporter can be imported."
         )
-    meta = json.loads(blob)
+    meta = json.loads(blob, object_hook=_json_object_hook)
     if meta.get("format") != FORMAT:
         raise ValueError(f"Unexpected tabular format tag: {meta.get('format')!r}")
+    if meta.get("version") != VERSION:
+        raise ValueError(
+            f"Unsupported biosigIO tabular schema version {meta.get('version')!r} "
+            f"(this build reads version {VERSION})."
+        )
 
     rec = Recording()
     rec.signals = table.to_pandas()  # restores the preserved (time) index

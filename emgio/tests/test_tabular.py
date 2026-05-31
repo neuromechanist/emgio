@@ -47,6 +47,13 @@ def test_tabular_roundtrip_is_lossless(tmp_path, ext, method):
     assert np.allclose(rt.events["onset"].to_numpy(), [0.5, 1.0])
     assert rt.events["onset"].dtype == np.float64
 
+    # Recording metadata preserved with TYPES intact (e.g. startdate stays a
+    # datetime, not silently coerced to a string).
+    for key, value in rec.metadata.items():
+        assert key in rt.metadata, f"metadata key {key!r} dropped"
+        assert type(rt.metadata[key]) is type(value), f"metadata[{key!r}] type changed"
+        assert rt.metadata[key] == value, f"metadata[{key!r}] value changed"
+
 
 @requires_emg
 def test_tabular_explicit_importer_and_no_modality_creep(tmp_path):
@@ -58,6 +65,27 @@ def test_tabular_explicit_importer_and_no_modality_creep(tmp_path):
     # The reconstructed object is a Recording with the same channel set.
     assert isinstance(rt, Recording)
     assert set(rt.channels) == set(rec.channels)
+
+
+def test_tabular_roundtrip_with_no_events(tmp_path):
+    """A recording with no events round-trips to an empty (typed) events frame."""
+    rec = Recording()
+    rec.add_channel("C1", np.sin(np.arange(500) / 10.0), 100, "uV", "EEG")
+    out = tmp_path / "noevents.parquet"
+    rec.to_parquet(str(out))
+    rt = Recording.from_file(str(out))
+    assert rt.events.empty
+    assert list(rt.events.columns) == ["onset", "duration", "description"]
+    assert np.array_equal(rec.signals.to_numpy(), rt.signals.to_numpy())
+
+
+def test_non_serializable_metadata_raises(tmp_path):
+    """Unexpected non-primitive metadata must raise, not be silently str()-ified."""
+    rec = Recording()
+    rec.add_channel("C1", np.zeros(10), 100, "uV", "EEG")
+    rec.set_metadata("weird", object())  # not JSON/datetime/numpy serializable
+    with pytest.raises(TypeError, match="not JSON-"):
+        rec.to_parquet(str(tmp_path / "x.parquet"))
 
 
 def test_plain_parquet_is_rejected(tmp_path):
