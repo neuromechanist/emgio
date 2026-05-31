@@ -13,7 +13,7 @@ from ..analysis.signal import analyze_signal_fft as _analyze_signal_fft
 from ..analysis.signal import analyze_signal_svd as _analyze_signal_svd
 from ..analysis.signal import find_elbow_point as _find_elbow_point
 from ..core.emg import EMG
-from ..exporters.edf import EDFExporter, _calculate_precision_loss, _determine_scaling_factors
+from ..exporters.edf import EDFExporter, _determine_scaling_factors
 
 
 @pytest.fixture
@@ -164,27 +164,6 @@ def test_determine_scaling_factors():
     phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(0.0, 0.0)
     assert phys_min == -1.0e-6  # Small range around zero
     assert phys_max == 1.0e-6
-
-
-def test_calculate_precision_loss():
-    """Test precision loss calculation."""
-    # Create test signal
-    signal = np.array([-1.0, -0.5, 0.0, 0.5, 1.0])
-
-    # Test with scaling that maps to full 16-bit range
-    scaling_factor = (32767 - (-32768) - 1) / (1.0 - (-1.0))
-    loss = _calculate_precision_loss(signal, scaling_factor, -32768, 32767)
-    assert loss < 0.01  # Minimal loss expected
-
-    # Test with reduced scaling (some loss)
-    scaling_factor_half = scaling_factor / 2.0
-    loss = _calculate_precision_loss(signal, scaling_factor_half, -32768, 32767)
-    assert loss > 0.0  # Should have some loss
-
-    # Test with zero signal
-    signal = np.zeros(5)
-    loss = _calculate_precision_loss(signal, scaling_factor, -32768, 32767)
-    assert loss == 0.0
 
 
 def test_edf_export(sample_emg):

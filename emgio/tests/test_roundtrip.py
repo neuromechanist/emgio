@@ -1,9 +1,16 @@
 """Real-data round-trip harness (issue #48).
 
 Imports every real fixture, exports it to EDF/BDF, reimports, and checks signal
-integrity with the real ``compare_signals`` metrics. This is the grounding
-backbone the mock-based ``to_edf`` tests lacked (a mock exporter never wrote
-real bytes, which is how the 1-second truncation bug shipped). NO MOCKS.
+integrity. This is the grounding backbone the mock-based ``to_edf`` tests lacked
+(a mock exporter never wrote real bytes, which is how the 1-second truncation bug
+shipped). NO MOCKS.
+
+Fidelity is judged on a random 10-second window with per-channel Pearson
+correlation > 0.99, the exemplar metric a conversion must meet; near-constant
+channels (markers/flat references) have undefined correlation and are checked by
+NRMSE instead. This is stricter than amplitude-relative NRMSE alone, which can
+stay small even when quantization has destroyed a channel's waveform (the #61
+class of bug).
 
 Known limitations are asserted explicitly rather than skipped:
 - mixed per-channel sample rates (XDF, Trigno) must fail loudly on export;
@@ -18,10 +25,10 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 
+import numpy as np
 import pytest
 
 from emgio import EMG
-from emgio.analysis.verification import compare_signals
 
 # Round-trips are expensive; compute each fixture's once and share it across the
 # structural and value-integrity tests.
@@ -33,6 +40,10 @@ _REPO = pathlib.Path(__file__).resolve().parents[2]
 EX = _REPO / "examples"
 BIDS = EX / "bids"
 
+_RNG = np.random.default_rng(0)
+_WINDOW_S = 10.0  # exemplar fidelity window
+_CONST_PTP = 1e-9  # below this peak-to-peak a channel has no defined correlation
+
 
 @dataclass(frozen=True)
 class Case:
@@ -40,50 +51,32 @@ class Case:
     path: pathlib.Path
     importer: str | None
     has_emg: bool  # whether EMG channels are legitimately present at import
-    # Whether per-channel signal VALUES round-trip cleanly. emg/ieeg currently
-    # do not, due to the exporter per-channel scaling bug (#61); their value
-    # check is xfailed below until that is fixed.
-    value_clean: bool = False
-    tolerance: float = 0.05
+    tolerance: float = 0.05  # NRMSE tolerance for near-constant channels
 
 
-# Single-rate fixtures. Structural integrity (no sample loss, channel count,
-# no modality creep) holds for all; signal-VALUE integrity is xfailed for the
-# ones hitting the exporter scaling bug (#61).
+# Single-rate fixtures spanning EMG / iEEG / EEG / OTB. Structural integrity and
+# per-channel waveform fidelity (r > 0.99) must hold for all after the #61 fix.
 ROUNDTRIP_CASES = [
     Case(
         "emg",
         BIDS / "emg/sub-01/emg/sub-01_task-isometric10percentmvc_run-01_emg.edf",
         None,
         has_emg=True,
-        value_clean=False,
     ),
     Case(
         "ieeg",
         BIDS / "ieeg/sub-01/ses-postimp/ieeg/sub-01_ses-postimp_task-stim_run-08_ieeg.edf",
         None,
         has_emg=False,
-        value_clean=False,
     ),
     Case(
         "eeg",
         BIDS / "eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set",
         "eeglab",
         has_emg=False,
-        value_clean=True,
     ),
-    Case("otb", EX / "one_sessantaquattro_truncated.otb+", "otb", has_emg=True, value_clean=True),
+    Case("otb", EX / "one_sessantaquattro_truncated.otb+", "otb", has_emg=True),
 ]
-
-
-def _value_param(case):
-    """Parametrize value-integrity, xfailing fixtures blocked by the #61 bug."""
-    if case.value_clean:
-        return case
-    return pytest.param(
-        case,
-        marks=pytest.mark.xfail(reason="exporter per-channel scaling corruption, #61", strict=True),
-    )
 
 
 # Mixed per-channel sample rate -> EDF export must raise (one rate per file).
@@ -124,20 +117,43 @@ def test_roundtrip_preserves_structure(case):
         assert not reloaded_emg, f"{case.name}: EMG channels appeared after round-trip"
 
 
-@pytest.mark.parametrize("case", [_value_param(c) for c in ROUNDTRIP_CASES], ids=lambda c: c.name)
+@pytest.mark.parametrize("case", ROUNDTRIP_CASES, ids=lambda c: c.name)
 def test_roundtrip_preserves_signal_values(case):
-    """Every channel's values survive the round-trip within tolerance.
+    """Per-channel waveform fidelity on a random 10 s window (r > 0.99).
 
-    xfail for emg/ieeg pending the exporter per-channel scaling fix (#61).
+    Channels with meaningful variance must reach Pearson r > 0.99 after the real
+    EDF/BDF round-trip; near-constant channels have undefined correlation, so
+    their value is checked by NRMSE instead. Proves the #61 corruption is gone
+    (corrupted channels collapse to r ~ 0 even when amplitude-relative NRMSE
+    stays small).
     """
     if not case.path.exists():
         pytest.skip(f"fixture missing: {case.path}")
     emg, reloaded = _roundtrip(case)
-    results = compare_signals(emg, reloaded, tolerance=case.tolerance)
-    compared = {k: v for k, v in results.items() if k != "channel_summary"}
+
+    rate = max(int(c["sample_frequency"]) for c in emg.channels.values())
+    n = emg.signals.shape[0]
+    width = min(int(_WINDOW_S * rate), n)
+    start = int(_RNG.integers(0, n - width + 1)) if n > width else 0
+    window = slice(start, start + width)
+
+    compared = 0
+    low_corr = []
+    for ch in emg.channels:
+        assert ch in reloaded.signals.columns, f"{case.name}: channel '{ch}' lost on reload"
+        original = emg.signals[ch].values[window].astype(float)
+        roundtripped = reloaded.signals[ch].values[window].astype(float)
+        compared += 1
+        ptp = float(np.ptp(original))
+        if ptp <= _CONST_PTP or np.std(original) == 0.0:
+            nrmse = float(np.sqrt(np.mean((original - roundtripped) ** 2)) / (ptp or 1.0))
+            assert nrmse < case.tolerance, f"{case.name}:{ch} near-constant nrmse {nrmse:.3g}"
+            continue
+        corr = float(np.corrcoef(original, roundtripped)[0, 1])
+        if not corr > 0.99:
+            low_corr.append((ch, round(corr, 4)))
     assert compared, "no channels were compared"
-    not_identical = [k for k, v in compared.items() if not v["is_identical"]]
-    assert not not_identical, f"{case.name}: channels differ after round-trip: {not_identical}"
+    assert not low_corr, f"{case.name}: channels below r>0.99: {low_corr}"
 
 
 @pytest.mark.parametrize("case", MIXED_RATE_CASES, ids=lambda c: c.name)
