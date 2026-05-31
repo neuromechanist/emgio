@@ -4,7 +4,7 @@ The `CSVImporter` class is responsible for importing EMG and other physiological
 
 ## Class Documentation
 
-::: emgio.importers.csv
+::: biosigio.importers.csv
     options:
       show_root_heading: true
       show_source: true
@@ -13,8 +13,8 @@ The `CSVImporter` class is responsible for importing EMG and other physiological
 ## Usage Example
 
 ```python
-from emgio import Recording
-from emgio.importers.csv import CSVImporter
+from biosigio import Recording
+from biosigio.importers.csv import CSVImporter
 
 # Method 1: Using Recording.from_file (recommended)
 emg = Recording.from_file('data.csv', importer='csv')

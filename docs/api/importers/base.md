@@ -1,10 +1,10 @@
 # Base Importer
 
-The `BaseImporter` class is the abstract base class for all importers in EMGIO. It defines the interface that all specific importers must implement.
+The `BaseImporter` class is the abstract base class for all importers in biosigIO. It defines the interface that all specific importers must implement.
 
 ## Class Documentation
 
-::: emgio.importers.base
+::: biosigio.importers.base
     options:
       show_root_heading: true
       show_source: true
@@ -15,7 +15,7 @@ The `BaseImporter` class is the abstract base class for all importers in EMGIO. 
 To create a custom importer for a new format, you should inherit from `BaseImporter` and implement its abstract methods:
 
 ```python
-from emgio.importers.base import BaseImporter
+from biosigio.importers.base import BaseImporter
 import pandas as pd
 
 class MyCustomImporter(BaseImporter):
@@ -96,7 +96,7 @@ The `load()` method must return a tuple of three elements:
 To make your custom importer available through `Recording.from_file()`, you need to register it:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 from my_module import MyCustomImporter
 
 # Register the importer with a name

@@ -1,10 +1,19 @@
 name: Tests
 
 on:
+  # Skip the test matrix for docs-only changes (a mixed code+docs change still runs).
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'mkdocs.yml'
   # Run on every PR regardless of base so stacked/epic PRs get their own CI.
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'mkdocs.yml'
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -36,7 +45,7 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        uv run pytest --cov=emgio --cov-report=xml
+        uv run pytest --cov=biosigio --cov-report=xml
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5

@@ -4,7 +4,7 @@ The `TrignoImporter` class is responsible for importing EMG data from Delsys Tri
 
 ## Class Documentation
 
-::: emgio.importers.trigno
+::: biosigio.importers.trigno
     options:
       show_root_heading: true
       show_source: true
@@ -13,8 +13,8 @@ The `TrignoImporter` class is responsible for importing EMG data from Delsys Tri
 ## Usage Example
 
 ```python
-from emgio import Recording
-from emgio.importers.trigno import TrignoImporter
+from biosigio import Recording
+from biosigio.importers.trigno import TrignoImporter
 
 # Method 1: Using Recording.from_file (recommended)
 emg = Recording.from_file('data.csv', importer='trigno')

@@ -1,8 +1,8 @@
-site_name: EMGIO Documentation
-site_description: Documentation for EMGIO - EMG data import/export and manipulation
+site_name: biosigIO Documentation
+site_description: Documentation for biosigIO - EMG data import/export and manipulation
 site_author: Seyed (Yahya) Shirazi
-repo_url: https://github.com/neuromechanist/emgio
-repo_name: neuromechanist/emgio
+repo_url: https://github.com/neuromechanist/biosigio
+repo_name: neuromechanist/biosigio
 
 theme:
   name: material
@@ -84,6 +84,9 @@ nav:
     - CSV: formats/csv.md
     - WFDB: formats/wfdb.md
     - XDF: formats/xdf.md
+    - MEG (.fif / CTF .ds): formats/meg.md
+    - BrainVision: formats/brainvision.md
+    - Proprietary electrophysiology (Neo): formats/neo.md
   - Serialization & Serving:
     - Overview (Parquet/Arrow/Zarr): formats/serialization.md
     - Zarr Serving Store: formats/zarr.md
@@ -98,6 +101,9 @@ nav:
       - CSV Importer: api/importers/csv.md
       - WFDB Importer: api/importers/wfdb.md
       - XDF Importer: api/importers/xdf.md
+      - MEG Importer: api/importers/meg.md
+      - BrainVision Importer: api/importers/brainvision.md
+      - Neo Importer: api/importers/neo.md
       - Tabular Importer (Parquet/Arrow): api/importers/tabular.md
       - Zarr Importer: api/importers/zarr.md
     - Exporters:

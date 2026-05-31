@@ -1,6 +1,6 @@
 # WFDB Format
 
-EMGIO supports loading data stored in the Waveform Database (WFDB) format, commonly used for physiological signals like ECG and EMG, especially in datasets available on PhysioNet.
+biosigIO supports loading data stored in the Waveform Database (WFDB) format, commonly used for physiological signals like ECG and EMG, especially in datasets available on PhysioNet.
 
 ## File Structure
 
@@ -15,7 +15,7 @@ Loading WFDB data typically involves three files sharing the same base name (e.g
 To load a WFDB record, provide the path to the **header (`.hea`) file** or just the base record name (if the files are in the current directory or the path is configured) to `Recording.from_file`:
 
 ```python
-from emgio.core.emg import Recording
+from biosigio.core.emg import Recording
 
 # Load using the header file path
 emg = Recording.from_file('path/to/your/record.hea')
@@ -24,7 +24,7 @@ emg = Recording.from_file('path/to/your/record.hea')
 # emg = Recording.from_file('record')
 ```
 
-EMGIO uses the `wfdb` library (PyPI package `wfdb`) internally. It ships as a core dependency, so no separate installation is required.
+biosigIO uses the `wfdb` library (PyPI package `wfdb`) internally. It ships as a core dependency, so no separate installation is required.
 
 ## Annotation Handling
 

@@ -1,26 +1,29 @@
-# EMGIO
+# biosigIO
 
-[![PyPI version](https://badge.fury.io/py/emgio.svg)](https://badge.fury.io/py/emgio)
-[![Tests](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/emgio/actions/workflows/tests.yml)
-[![codecov](https://codecov.io/gh/neuromechanist/emgio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/emgio)
+[![PyPI version](https://badge.fury.io/py/biosigio.svg)](https://badge.fury.io/py/biosigio)
+[![Tests](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/neuromechanist/biosigio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/biosigio)
 
-A Python package for EMG data import/export and manipulation. This package provides a unified interface for working with EMG data from various systems (Trigno, EEGLAB, OTB, etc) and exporting to standardized formats like EDF and BDF with harmonized metadata.
+A Python package for biosignal import/export and manipulation across modalities (EEG, EMG, iEEG, MEG, and behavioral/marker streams). biosigIO provides a unified `Recording` interface for loading data from many acquisition systems and archives (EEGLAB, Delsys Trigno, OTB, EDF/BDF, WFDB, XDF, MEG/CTF and BrainVision via MNE, and proprietary electrophysiology such as Intan/Blackrock via python-neo) and exporting it to standardized and serving formats (EDF/BDF, Parquet, Arrow, Zarr) with harmonized metadata.
 
 The determination of the EDF/BDF format is based on the dynamic range of the data. If the data is within the range of 16-bit integers (~90dB), the EDF format is used. Otherwise, the BDF format is used. This is to ensure that the data is stored in the most efficient format possible. This determination is made automatically using SVD decomposition and/or FFT to determine the dynamic range of the data. (Alternatively, the user can override the format selection by explicitly indicating their desired format).
 
 ## Documentation
 
-The documentation including installation instructions, examples, and API reference is available at [https://neuromechanist.github.io/emgio/](https://neuromechanist.github.io/emgio/).
+The documentation including installation instructions, examples, and API reference is available at [https://neuromechanist.github.io/biosigio/](https://neuromechanist.github.io/biosigio/).
 
 ## Features
 
-- Import EMG data from multiple systems:
+- Import biosignal recordings from many systems and archives:
   - EEGLAB set files (supported)
   - Delsys Trigno (supported)
   - OTB Systems (supported)
   - EDF/BDF(+) (supported, including annotations)
   - WFDB (supported, including annotations)
   - XDF/Lab Streaming Layer (supported, multi-stream)
+  - MEG: `.fif` and CTF `.ds` via MNE (supported; `meg` extra)
+  - BrainVision `.vhdr` via MNE (supported; `meg` extra)
+  - Proprietary electrophysiology via python-neo: Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx (supported; `neo` extra)
   - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
   
@@ -34,7 +37,7 @@ The documentation including installation instructions, examples, and API referen
 - Export to standardized formats:
   - EDF/BDF(+) with channels.tsv metadata (automatically selects format based on signal properties, preserves annotations)
 
-- Serialization & serving (see [docs](https://neuromechanist.github.io/emgio/formats/serialization/)):
+- Serialization & serving (see [docs](https://neuromechanist.github.io/biosigio/formats/serialization/)):
   - Parquet and Arrow/Feather: lossless columnar round-trip (analytics, fast IPC); requires the `arrow` extra
   - Zarr: cloud-native serving store (one store serves viewing, inference, and training), a derived downsampled copy; requires the `zarr` extra
   
@@ -47,21 +50,21 @@ The documentation including installation instructions, examples, and API referen
 
 ## Installation
 
-EMGIO uses [UV](https://docs.astral.sh/uv/) for Python environment and package management.
+biosigIO uses [UV](https://docs.astral.sh/uv/) for Python environment and package management.
 
 ### From PyPI (recommended)
 
 ```bash
-uv pip install emgio
+uv pip install biosigio
 ```
 
-(If your own project is uv-managed, use `uv add emgio` to track it as a dependency.)
+(If your own project is uv-managed, use `uv add biosigio` to track it as a dependency.)
 
 ### From source
 
 ```bash
-git clone https://github.com/neuromechanist/emgio.git
-cd emgio
+git clone https://github.com/neuromechanist/biosigio.git
+cd biosigio
 uv pip install .
 ```
 
@@ -70,7 +73,7 @@ uv pip install .
 ### Basic Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Load data with automatic format detection
 emg = Recording.from_file('data.csv')  # Format detected from file extension
@@ -125,8 +128,8 @@ subject = emg.get_metadata('subject')
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/neuromechanist/emgio.git
-cd emgio
+git clone https://github.com/neuromechanist/biosigio.git
+cd biosigio
 ```
 
 2. Install for development (editable install with dev dependencies):

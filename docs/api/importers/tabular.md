@@ -6,7 +6,7 @@ from the self-describing `biosigio` schema blob. Requires the `arrow` extra.
 
 ## Module Documentation
 
-::: emgio.importers.tabular
+::: biosigio.importers.tabular
     options:
       show_root_heading: true
       show_source: true
@@ -15,7 +15,7 @@ from the self-describing `biosigio` schema blob. Requires the `arrow` extra.
 ## Usage Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Auto-detected by extension, or force importer="tabular"
 rec = Recording.from_file("out.parquet")

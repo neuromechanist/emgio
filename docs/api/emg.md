@@ -1,10 +1,10 @@
 # Recording Class API
 
-The `Recording` class is the main class in EMGIO for working with EMG data. It encapsulates signals, channel information, and metadata, and provides methods for data manipulation and export.
+The `Recording` class is the main class in biosigIO for working with EMG data. It encapsulates signals, channel information, and metadata, and provides methods for data manipulation and export.
 
 ## Class Documentation
 
-::: emgio.core.emg.Recording
+::: biosigio.core.emg.Recording
     handler: python
     options:
       show_root_heading: true
@@ -84,7 +84,7 @@ Details about the main attributes:
 ### Loading Data
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Load from file with automatic importer selection
 emg = Recording.from_file("data.otb+")
@@ -100,7 +100,7 @@ emg = Recording.from_file("data.csv", importer='trigno')
 
 ```python
 import pandas as pd
-from emgio import Recording
+from biosigio import Recording
 
 # Create a DataFrame with EMG data
 data = pd.DataFrame({
@@ -173,8 +173,8 @@ emg.plot_signals(
 ### Verification
 
 ```python
-from emgio.analysis.verification import compare_signals, report_verification_results
-from emgio.visualization.static import plot_comparison
+from biosigio.analysis.verification import compare_signals, report_verification_results
+from biosigio.visualization.static import plot_comparison
 import matplotlib.pyplot as plt
 
 # Export with built-in verification

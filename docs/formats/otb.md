@@ -1,6 +1,6 @@
 # OTB Format
 
-OTB/OTB+ is a data format developed by OT Bioelettronica for storing multi-channel electrophysiological data. EMGIO provides support for importing data from OTB+ files.
+OTB/OTB+ is a data format developed by OT Bioelettronica for storing multi-channel electrophysiological data. biosigIO provides support for importing data from OTB+ files.
 
 ## Format Description
 
@@ -28,7 +28,7 @@ The OTB+ format consists of:
 
 ## Importer Implementation
 
-The OTB importer in EMGIO (`emgio.importers.otb`) works by:
+The OTB importer in biosigIO (`biosigio.importers.otb`) works by:
 
 1. Reading the binary OTB+ file header to extract metadata
 2. Parsing the data section and arranging it into a structured format
@@ -39,7 +39,7 @@ The OTB importer in EMGIO (`emgio.importers.otb`) works by:
 ## Code Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
 
 # Load data from OTB file
@@ -82,9 +82,9 @@ OTB files can contain various channel types:
 - Channel naming conventions may vary between devices
 - Sampling rates can be different for different channel types
 - Some OTB+ files may contain additional proprietary information
-- The EMGIO importer preserves as much metadata as possible from the original file
+- The biosigIO importer preserves as much metadata as possible from the original file
 
 ## References
 
 - OT Bioelettronica: [https://otbioelettronica.it/](https://otbioelettronica.it/)
-- The OTB importer in EMGIO is based on the MATLAB import functions provided by OT Bioelettronica 
+- The OTB importer in biosigIO is based on the MATLAB import functions provided by OT Bioelettronica 

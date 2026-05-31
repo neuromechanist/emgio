@@ -1,5 +1,5 @@
 """
-Example script demonstrating how to use the EMGIO package with CSV EMG data.
+Example script demonstrating how to use the biosigIO package with CSV EMG data.
 This example shows how to:
 1. Load data from a generic CSV/Text file
 2. Define channel information for unlabeled data
@@ -12,7 +12,7 @@ The file contains unlabeled columns of EMG data with no header.
 
 import os
 
-from emgio import Recording
+from biosigio import Recording
 
 
 def main():

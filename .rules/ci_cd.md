@@ -44,7 +44,7 @@ jobs:
     - name: Lint
       run: uv run ruff check .
     - name: Test
-      run: uv run pytest --cov=emgio --cov-report=xml
+      run: uv run pytest --cov=biosigio --cov-report=xml
 ```
 
 ## Key Practices (Think About Pipeline Flow)

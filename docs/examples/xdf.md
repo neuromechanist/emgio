@@ -7,7 +7,7 @@ This example demonstrates how to work with XDF files from Lab Streaming Layer (L
 XDF files often contain multiple streams. Before loading, explore what's available:
 
 ```python
-from emgio.importers.xdf import summarize_xdf
+from biosigio.importers.xdf import summarize_xdf
 
 # Summarize all streams in the file
 summary = summarize_xdf('examples/multi_stream_test.xdf')
@@ -53,7 +53,7 @@ if mocap:
 ## Loading All Numeric Data
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Load all numeric streams (EEG, EMG, Mocap - excludes Markers)
 emg = Recording.from_file('examples/multi_stream_test.xdf')
@@ -139,8 +139,8 @@ print(f"Exported channels: {list(emg_reloaded.channels.keys())}")
 ## Complete Workflow Example
 
 ```python
-from emgio import Recording
-from emgio.importers.xdf import summarize_xdf
+from biosigio import Recording
+from biosigio.importers.xdf import summarize_xdf
 
 # 1. Explore the file
 summary = summarize_xdf('recording.xdf')

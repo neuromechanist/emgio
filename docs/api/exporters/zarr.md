@@ -10,7 +10,7 @@ serving model.
 
 ## Module Documentation
 
-::: emgio.exporters.zarr
+::: biosigio.exporters.zarr
     options:
       show_root_heading: true
       show_source: true
@@ -19,7 +19,7 @@ serving model.
 ## Usage Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 rec = Recording.from_file("data.edf")
 rec.to_zarr("out.zarr")                 # int16 by default (per-channel scale/offset)

@@ -27,14 +27,14 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 
 # Paths - configured via environment variables or defaults
 # SOURCE_XDF: Path to a large multi-stream XDF file to extract from
-_source_xdf_str = os.environ.get("EMGIO_SOURCE_XDF", "")
+_source_xdf_str = os.environ.get("biosigIO_SOURCE_XDF", "")
 SOURCE_XDF = Path(_source_xdf_str) if _source_xdf_str else None
 # OUTPUT_XDF: Where to save the test file (default: examples/multi_stream_test.xdf)
 OUTPUT_XDF = Path(
-    os.environ.get("EMGIO_OUTPUT_XDF", str(PROJECT_ROOT / "examples" / "multi_stream_test.xdf"))
+    os.environ.get("biosigIO_OUTPUT_XDF", str(PROJECT_ROOT / "examples" / "multi_stream_test.xdf"))
 )
 # LABRECORDER_CLI: Path to LabRecorderCLI executable
-_labrecorder_str = os.environ.get("EMGIO_LABRECORDER_CLI", "")
+_labrecorder_str = os.environ.get("biosigIO_LABRECORDER_CLI", "")
 LABRECORDER_CLI = Path(_labrecorder_str) if _labrecorder_str else None
 
 # Duration to extract (seconds)
@@ -47,20 +47,20 @@ def _validate_paths():
 
     if SOURCE_XDF is None:
         errors.append(
-            "SOURCE_XDF not set. Set EMGIO_SOURCE_XDF environment variable to a valid XDF file path."
+            "SOURCE_XDF not set. Set biosigIO_SOURCE_XDF environment variable to a valid XDF file path."
         )
     elif not SOURCE_XDF.exists():
         errors.append(
-            f"SOURCE_XDF file not found: {SOURCE_XDF}. Check EMGIO_SOURCE_XDF environment variable."
+            f"SOURCE_XDF file not found: {SOURCE_XDF}. Check biosigIO_SOURCE_XDF environment variable."
         )
 
     if LABRECORDER_CLI is None:
         errors.append(
-            "LABRECORDER_CLI not set. Set EMGIO_LABRECORDER_CLI environment variable to LabRecorderCLI path."
+            "LABRECORDER_CLI not set. Set biosigIO_LABRECORDER_CLI environment variable to LabRecorderCLI path."
         )
     elif not LABRECORDER_CLI.exists():
         errors.append(
-            f"LABRECORDER_CLI not found: {LABRECORDER_CLI}. Check EMGIO_LABRECORDER_CLI environment variable."
+            f"LABRECORDER_CLI not found: {LABRECORDER_CLI}. Check biosigIO_LABRECORDER_CLI environment variable."
         )
 
     if errors:
@@ -68,8 +68,8 @@ def _validate_paths():
         for err in errors:
             print(f"  - {err}")
         print("\nExample:")
-        print("  export EMGIO_SOURCE_XDF=/path/to/source.xdf")
-        print("  export EMGIO_LABRECORDER_CLI=/path/to/LabRecorderCLI")
+        print("  export biosigIO_SOURCE_XDF=/path/to/source.xdf")
+        print("  export biosigIO_LABRECORDER_CLI=/path/to/LabRecorderCLI")
         return False
 
     return True
@@ -286,7 +286,7 @@ def main():
         print(f"File size: {OUTPUT_XDF.stat().st_size / 1024:.1f} KB")
 
         # Load and verify
-        from emgio.importers.xdf import summarize_xdf
+        from biosigio.importers.xdf import summarize_xdf
 
         summary = summarize_xdf(str(OUTPUT_XDF))
         print(f"\nVerification:\n{summary}")

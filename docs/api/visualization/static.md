@@ -1,10 +1,10 @@
 # Static Visualization API
 
-The `static` module in `emgio.visualization` provides functions for static plotting of EMG data. These functions are primarily used internally by the `Recording` class methods but can also be called directly for advanced customization.
+The `static` module in `biosigio.visualization` provides functions for static plotting of EMG data. These functions are primarily used internally by the `Recording` class methods but can also be called directly for advanced customization.
 
 ## Module Documentation
 
-::: emgio.visualization.static
+::: biosigio.visualization.static
     options:
       show_root_heading: true
       show_source: true
@@ -22,8 +22,8 @@ While these functions are typically accessed through the `Recording` class metho
 ### Plotting Signals Directly
 
 ```python
-from emgio import Recording
-from emgio.visualization.static import plot_signals
+from biosigio import Recording
+from biosigio.visualization.static import plot_signals
 
 # Load EMG data
 emg = Recording.from_file("data.csv", importer="trigno")
@@ -45,8 +45,8 @@ plot_signals(
 ### Plotting Comparison Directly
 
 ```python
-from emgio import Recording
-from emgio.visualization.static import plot_comparison
+from biosigio import Recording
+from biosigio.visualization.static import plot_comparison
 
 # Load original and reloaded EMG data
 emg_original = Recording.from_file("original.csv", importer="trigno")

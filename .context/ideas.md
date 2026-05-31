@@ -1,4 +1,4 @@
-# EMGIO Design Ideas
+# biosigIO Design Ideas
 
 ## Purpose
 Capture high-level concepts, design decisions, and architectural ideas for EMG data handling.

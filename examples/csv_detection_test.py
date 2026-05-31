@@ -2,14 +2,14 @@
 Example script demonstrating the CSV format detection feature.
 
 This example shows:
-1. How EMGIO detects specialized CSV formats
+1. How biosigIO detects specialized CSV formats
 2. How the detection mechanism improves the user experience
 3. The benefits of specialized importers for structured formats
 """
 
 import os
 
-from emgio import Recording
+from biosigio import Recording
 
 
 def test_format_detection():

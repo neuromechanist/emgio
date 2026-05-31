@@ -1,12 +1,12 @@
 # OTB Examples
 
-This page provides examples for working with OTB+ files from OT Bioelettronica devices using EMGIO.
+This page provides examples for working with OTB+ files from OT Bioelettronica devices using biosigIO.
 
 ## Basic OTB Example
 
 ```python
 import matplotlib.pyplot as plt
-from emgio import Recording
+from biosigio import Recording
 
 # Load OTB data
 data_path = 'path_to_your_otb_file.otb+'
@@ -50,7 +50,7 @@ plt.show()
 OTB files often contain multiple channel types. Here's how to work specifically with EMG channels:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -125,7 +125,7 @@ else:
 When working with multiple recordings from the same experiment:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 import matplotlib.pyplot as plt
 
 # Load two OTB files
@@ -187,7 +187,7 @@ if emg_channels:
 Converting OTB data to EDF/BDF format:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Load OTB data
 emg = Recording.from_file('data.otb+', importer='otb')

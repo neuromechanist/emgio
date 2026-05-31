@@ -1,5 +1,5 @@
 """
-Example script demonstrating how to use the EMGIO package with Trigno EMG data.
+Example script demonstrating how to use the biosigIO package with Trigno EMG data.
 This example shows how to:
 1. Load data from a Trigno CSV file
 2. Select specific channels
@@ -9,7 +9,7 @@ This example shows how to:
 
 import os
 
-from emgio import Recording
+from biosigio import Recording
 
 
 def main():

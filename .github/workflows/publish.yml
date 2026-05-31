@@ -64,8 +64,8 @@ jobs:
 
     - name: Test import
       run: |
-        uv run python -c "import emgio; print(f'EMGIO version: {emgio.__version__}')"
-        uv run python -c "from emgio import EMG; print('EMG class imported successfully')"
+        uv run python -c "import biosigio; print(f'biosigIO version: {biosigio.__version__}')"
+        uv run python -c "from biosigio import Recording; print('Recording class imported successfully')"
 
   publish-testpypi:
     needs: [build, test-install]
@@ -73,7 +73,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/emgio
+      url: https://test.pypi.org/p/biosigio
     permissions:
       id-token: write
     steps:
@@ -95,7 +95,7 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'published'
     environment:
       name: pypi
-      url: https://pypi.org/p/emgio
+      url: https://pypi.org/p/biosigio
     permissions:
       id-token: write
     steps:

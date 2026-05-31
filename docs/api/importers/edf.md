@@ -4,7 +4,7 @@ The `EDFImporter` class is responsible for importing EMG and other physiological
 
 ## Class Documentation
 
-::: emgio.importers.edf
+::: biosigio.importers.edf
     options:
       show_root_heading: true
       show_source: true
@@ -13,8 +13,8 @@ The `EDFImporter` class is responsible for importing EMG and other physiological
 ## Usage Example
 
 ```python
-from emgio import Recording
-from emgio.importers.edf import EDFImporter
+from biosigio import Recording
+from biosigio.importers.edf import EDFImporter
 
 # Method 1: Using Recording.from_file (recommended)
 emg = Recording.from_file('data.edf', importer='edf')  # Works for both .edf and .bdf
@@ -79,10 +79,10 @@ The `load()` method returns a tuple of:
 The EDF importer uses the `pyedflib` package to:
 
 1. Read the EDF/BDF file header to extract metadata
-2. Extract channel information and convert to EMGIO's format
+2. Extract channel information and convert to biosigIO's format
 3. Load the signal data, applying appropriate scaling
 4. Handle annotations if present
-5. Convert the data to a pandas DataFrame for use with EMGIO
+5. Convert the data to a pandas DataFrame for use with biosigIO
 
 ## Working with Annotations
 

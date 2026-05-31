@@ -1,6 +1,6 @@
 # EDF/BDF Format
 
-EDF (European Data Format) and BDF (BioSemi Data Format) are standard formats for storing multichannel biological and physical signals. EMGIO supports both importing from and exporting to these formats.
+EDF (European Data Format) and BDF (BioSemi Data Format) are standard formats for storing multichannel biological and physical signals. biosigIO supports both importing from and exporting to these formats.
 
 ## Format Description
 
@@ -35,9 +35,9 @@ Both formats consist of:
    
 2. **Data Records**: Contains the actual signal data, organized in blocks.
 
-## EMGIO's Approach to EDF/BDF
+## biosigIO's Approach to EDF/BDF
 
-EMGIO can both import from and export to EDF/BDF formats. When exporting, EMGIO automatically determines which format to use based on the dynamic range of the data:
+biosigIO can both import from and export to EDF/BDF formats. When exporting, biosigIO automatically determines which format to use based on the dynamic range of the data:
 
 - If the signal's dynamic range is within 16-bit resolution (~90dB), it uses EDF
 - If the signal requires greater precision, it uses BDF
@@ -48,16 +48,16 @@ This determination is made using:
 
 ## Importer Implementation
 
-The EDF importer in EMGIO (`emgio.importers.edf`) uses the `pyedflib` package to:
+The EDF importer in biosigIO (`biosigio.importers.edf`) uses the `pyedflib` package to:
 
 1. Read the EDF/BDF file header to extract metadata
 2. Load the signal data for all channels
-3. Convert channel information to EMGIO's format
+3. Convert channel information to biosigIO's format
 4. Handle different sampling rates across channels
 
 ## Exporter Implementation
 
-The EDF exporter in EMGIO (`emgio.exporters.edf`) also uses `pyedflib` to:
+The EDF exporter in biosigIO (`biosigio.exporters.edf`) also uses `pyedflib` to:
 
 1. Automatically determine whether to use EDF or BDF based on signal characteristics
 2. Generate appropriate header information
@@ -67,7 +67,7 @@ The EDF exporter in EMGIO (`emgio.exporters.edf`) also uses `pyedflib` to:
 ## Code Example
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Import from EDF file
 emg = Recording.from_file('input.edf', importer='edf')
@@ -117,7 +117,7 @@ The verification process:
 ## Notes and Limitations
 
 - The BIDS-compatible channels.tsv sidecar file includes detailed channel information
-- Annotations in EDF files are preserved in EMGIO's metadata
-- When importing from EDF, EMGIO attempts to identify channel types based on labels and signal characteristics
-- When exporting to EDF/BDF, EMGIO automatically handles scaling to maximize precision
+- Annotations in EDF files are preserved in biosigIO's metadata
+- When importing from EDF, biosigIO attempts to identify channel types based on labels and signal characteristics
+- When exporting to EDF/BDF, biosigIO automatically handles scaling to maximize precision
 - EDF has limitations on channel naming (maximum 16 characters)

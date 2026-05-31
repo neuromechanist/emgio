@@ -1,41 +1,41 @@
 # Installation
 
-EMGIO uses [UV](https://docs.astral.sh/uv/) for Python environment and package
-management. There are several ways to install EMGIO depending on your needs.
+biosigIO uses [UV](https://docs.astral.sh/uv/) for Python environment and package
+management. There are several ways to install biosigIO depending on your needs.
 
 ## From PyPI (Recommended)
 
-The easiest way to install EMGIO is from PyPI:
+The easiest way to install biosigIO is from PyPI:
 
 ```bash
-uv pip install emgio
+uv pip install biosigio
 ```
 
-If your own project is uv-managed, use `uv add emgio` instead to track it as a dependency.
+If your own project is uv-managed, use `uv add biosigio` instead to track it as a dependency.
 
 ## From GitHub Repository
 
 To install the latest development version directly from GitHub:
 
 ```bash
-uv pip install "git+https://github.com/neuromechanist/emgio.git"
+uv pip install "git+https://github.com/neuromechanist/biosigio.git"
 ```
 
 Or clone and install:
 
 ```bash
-git clone https://github.com/neuromechanist/emgio.git
-cd emgio
+git clone https://github.com/neuromechanist/biosigio.git
+cd biosigio
 uv pip install .
 ```
 
 ## Development Installation
 
-For development purposes, install EMGIO in editable mode with dev dependencies:
+For development purposes, install biosigIO in editable mode with dev dependencies:
 
 ```bash
-git clone https://github.com/neuromechanist/emgio.git
-cd emgio
+git clone https://github.com/neuromechanist/biosigio.git
+cd biosigio
 uv sync --extra dev
 ```
 
@@ -43,22 +43,22 @@ This allows you to modify the source code and see the changes without reinstalli
 
 ## Optional Dependencies
 
-EMGIO provides optional dependency groups:
+biosigIO provides optional dependency groups:
 
 ```bash
 # Development tools (pytest, ruff, coverage)
-uv pip install "emgio[dev]"
+uv pip install "biosigio[dev]"
 
 # Documentation tools (mkdocs, mkdocstrings)
-uv pip install "emgio[docs]"
+uv pip install "biosigio[docs]"
 
 # All optional dependencies
-uv pip install "emgio[all]"
+uv pip install "biosigio[all]"
 ```
 
 ## Dependencies
 
-EMGIO has the following core dependencies:
+biosigIO has the following core dependencies:
 
 | Dependency    | Purpose                | Minimum Version |
 |---------------|------------------------|-----------------|
@@ -70,11 +70,11 @@ EMGIO has the following core dependencies:
 | wfdb          | WFDB format support    | >=4.0.0         |
 | pyxdf         | XDF/LSL format support | >=1.16.0        |
 
-These dependencies are automatically installed when you install EMGIO.
+These dependencies are automatically installed when you install biosigIO.
 
 ## Python Version
 
-EMGIO requires Python 3.11 or later. We test on Python 3.11, 3.12, 3.13, and 3.14.
+biosigIO requires Python 3.11 or later. We test on Python 3.11, 3.12, 3.13, and 3.14.
 
 ## Testing
 
@@ -87,11 +87,11 @@ uv run pytest
 
 ## Verifying Installation
 
-Verify that EMGIO is correctly installed:
+Verify that biosigIO is correctly installed:
 
 ```python
-import emgio
-print(emgio.__version__)
+import biosigio
+print(biosigio.__version__)
 ```
 
 You should see the version number (e.g., `0.2.2` or later) without any errors.

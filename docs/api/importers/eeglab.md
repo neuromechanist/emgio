@@ -4,7 +4,7 @@ The `EEGLABImporter` class is responsible for importing EMG (and other biopotent
 
 ## Class Documentation
 
-::: emgio.importers.eeglab
+::: biosigio.importers.eeglab
     options:
       show_root_heading: true
       show_source: true
@@ -13,8 +13,8 @@ The `EEGLABImporter` class is responsible for importing EMG (and other biopotent
 ## Usage Example
 
 ```python
-from emgio import Recording
-from emgio.importers.eeglab import EEGLABImporter
+from biosigio import Recording
+from biosigio.importers.eeglab import EEGLABImporter
 
 # Method 1: Using Recording.from_file (recommended)
 emg = Recording.from_file('data.set', importer='eeglab')

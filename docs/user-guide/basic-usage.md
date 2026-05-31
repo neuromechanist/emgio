@@ -1,13 +1,13 @@
 # Basic Usage
 
-EMGIO provides a unified interface for working with EMG data from various systems. This page covers the core functionality that's common across all supported data formats.
+biosigIO provides a unified interface for working with EMG data from various systems. This page covers the core functionality that's common across all supported data formats.
 
 ## Loading Data
 
 The main entry point for loading data is the `Recording.from_file()` method. This method automatically determines the correct importer based on the file extension, or you can specify the importer explicitly:
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 # Automatic importer selection based on file extension
 emg = Recording.from_file('data.csv')  # Will use CSV importer for CSV files
@@ -27,7 +27,7 @@ emg = Recording.from_file('data.hea', importer='wfdb')  # WFDB importer
 
 ### Automatic File Type Inference
 
-EMGIO automatically infers the appropriate importer based on file extension:
+biosigIO automatically infers the appropriate importer based on file extension:
 
 | Extension | Default Importer |
 |-----------|------------------|
@@ -37,7 +37,7 @@ EMGIO automatically infers the appropriate importer based on file extension:
 | `.otb`, `.otb+` | `otb` (OTB importer) |
 | `.hea` | `wfdb` (WFDB importer) |
 
-Additionally, for CSV files, EMGIO includes specialized format detection that can identify formats like Trigno CSV exports and suggest the appropriate specialized importer.
+Additionally, for CSV files, biosigIO includes specialized format detection that can identify formats like Trigno CSV exports and suggest the appropriate specialized importer.
 
 ### Special Case: CSV Files
 
@@ -67,7 +67,7 @@ device = emg.get_metadata('device')
 
 ## Plotting Signals
 
-EMGIO provides methods to visualize the EMG signals:
+biosigIO provides methods to visualize the EMG signals:
 
 ```python
 # Plot all channels
@@ -93,7 +93,7 @@ emg.plot_signals(
 
 ## Verifying Signal Integrity
 
-When exporting and reimporting data, you might want to verify that the signals remain intact. EMGIO provides two ways to verify signal integrity:
+When exporting and reimporting data, you might want to verify that the signals remain intact. biosigIO provides two ways to verify signal integrity:
 
 ```python
 # Method 1: Integrated verification during export
@@ -101,8 +101,8 @@ When exporting and reimporting data, you might want to verify that the signals r
 verification_results = emg_original.to_edf('output', verify=True)
 
 # Method 2: Manual verification with more control
-from emgio.analysis.verification import compare_signals, report_verification_results
-from emgio.visualization.static import plot_comparison
+from biosigio.analysis.verification import compare_signals, report_verification_results
+from biosigio.visualization.static import plot_comparison
 import matplotlib.pyplot as plt
 
 # Export to EDF and reload
@@ -123,7 +123,7 @@ For more detailed information about signal verification, see the [Signal Verific
 
 ## Exporting Data
 
-EMGIO can export data to EDF/BDF formats:
+biosigIO can export data to EDF/BDF formats:
 
 ```python
 # Export to EDF or BDF (format selected automatically)
@@ -146,6 +146,6 @@ emg.to_edf('output', method='both')  # Use both methods (default)
 After mastering these basics, you might want to explore:
 
 - [Channel Selection](channel-selection.md) - Learn how to select and manipulate channels
-- [EDF/BDF Format Selection](edf-bdf-selection.md) - Understanding how EMGIO selects the appropriate format
-- [Metadata Handling](metadata.md) - Working with metadata in EMGIO
+- [EDF/BDF Format Selection](edf-bdf-selection.md) - Understanding how biosigIO selects the appropriate format
+- [Metadata Handling](metadata.md) - Working with metadata in biosigIO
 - [Signal Verification](verification.md) - Verifying signal integrity after export/import operations

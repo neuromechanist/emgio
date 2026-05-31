@@ -1,13 +1,13 @@
 # Serialization & Serving Formats
 
-Besides EDF/BDF, emgio can serialize a `Recording` to three columnar or array
+Besides EDF/BDF, biosigio can serialize a `Recording` to three columnar or array
 formats: Parquet, Arrow/Feather, and Zarr. Each carries enough information to be
 read back without any side files, and all of them round-trip through the same
 entry point, `Recording.from_file`, which auto-detects the format from the file
 extension (`.parquet`, `.feather`, `.arrow`, `.zarr`).
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 rec = Recording.from_file('recording.edf')
 
@@ -87,8 +87,8 @@ These formats are not part of the core install; install the matching extra.
 
 | Format | Extra | Install |
 |--------|-------|---------|
-| Parquet, Arrow/Feather | `arrow` (pyarrow) | `uv sync --extra arrow` or `pip install 'emgio[arrow]'` |
-| Zarr | `zarr` (zarr v3) | `uv sync --extra zarr` or `pip install 'emgio[zarr]'` |
+| Parquet, Arrow/Feather | `arrow` (pyarrow) | `uv sync --extra arrow` or `pip install 'biosigio[arrow]'` |
+| Zarr | `zarr` (zarr v3) | `uv sync --extra zarr` or `pip install 'biosigio[zarr]'` |
 
 If the extra is missing, the exporter and importer raise an `ImportError` with
 the exact install command, so you never get a partial or silent failure.
@@ -98,7 +98,7 @@ the exact install command, so you never get a partial or silent failure.
 ### Parquet
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 rec = Recording.from_file('recording.edf')
 rec.to_parquet('recording.parquet')
@@ -110,7 +110,7 @@ restored = Recording.from_file('recording.parquet')
 ### Arrow/Feather
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 rec = Recording.from_file('recording.edf')
 rec.to_arrow('recording.feather')
@@ -121,7 +121,7 @@ restored = Recording.from_file('recording.feather')
 ### Zarr
 
 ```python
-from emgio import Recording
+from biosigio import Recording
 
 rec = Recording.from_file('recording.edf')
 rec.to_zarr('recording.zarr')

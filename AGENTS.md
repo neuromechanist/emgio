@@ -1,4 +1,4 @@
-# EMGIO Instructions
+# biosigIO Instructions
 
 ## Project Context
 **Purpose:** A Python package for electromyography (EMG) data import/export and manipulation, with a unified interface across various EMG systems.
@@ -7,7 +7,7 @@
 
 ## Architecture Map
 ```
-emgio/
+biosigio/
 ├── core/          # Recording main class — central data handling
 ├── importers/     # Format-specific import logic (Trigno, EDF/BDF, WFDB, EEGLAB, OTB, CSV)
 ├── exporters/     # Format-specific export (EDF/BDF(+) with auto format selection)
@@ -21,7 +21,7 @@ emgio/
 ```bash
 uv sync --extra dev          # Install package (editable) + dev dependencies
 uv run pytest                # Run tests
-uv run pytest --cov=emgio    # Run tests with coverage
+uv run pytest --cov=biosigio    # Run tests with coverage
 uv sync --extra docs         # Install docs dependencies
 uv run mkdocs serve          # Build/serve documentation
 ```
@@ -102,7 +102,7 @@ uv run mkdocs serve          # Build/serve documentation
 
 ## Quick Commands
 ```bash
-uv run pytest --cov=emgio                          # Run tests with coverage
+uv run pytest --cov=biosigio                          # Run tests with coverage
 uv run ruff check --fix . && uv run ruff format .  # Lint + format
 uv run mkdocs serve                                # Build docs
 ```
@@ -114,9 +114,9 @@ uv run mkdocs serve                                # Build docs
 - **Export:** EDF/BDF(+) with automatic format selection; serialization and serving formats: Parquet and Arrow/Feather (lossless columnar, `arrow` extra), Zarr (cloud-native serving store, `zarr` extra)
 
 ### Key Classes
-- `Recording` (emgio/core) — main class for data handling
-- Importers (emgio/importers) — format-specific import logic
-- Exporters (emgio/exporters) — format-specific export logic
+- `Recording` (biosigio/core) — main class for data handling
+- Importers (biosigio/importers) — format-specific import logic
+- Exporters (biosigio/exporters) — format-specific export logic
 
 ### Testing Requirements
 - Test each importer with real data files
@@ -125,7 +125,7 @@ uv run mkdocs serve                                # Build docs
 - Validate signal integrity
 
 ### Documentation Site
-- https://neuromechanist.github.io/emgio/
+- https://neuromechanist.github.io/biosigio/
 - Update docs/ when adding features; include API documentation
 
 ---

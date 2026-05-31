@@ -2,10 +2,10 @@ import logging
 import os
 import sys
 
-from emgio.core.emg import Recording
+from biosigio.core.emg import Recording
 
 # Add the project root to the Python path
-# This allows importing emgio even if it's not installed
+# This allows importing biosigio even if it's not installed
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 

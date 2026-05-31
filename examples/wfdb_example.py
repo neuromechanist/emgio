@@ -2,7 +2,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from emgio.core.emg import Recording
+from biosigio.core.emg import Recording
 
 
 def main():
