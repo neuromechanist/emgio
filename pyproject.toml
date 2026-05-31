@@ -56,11 +56,17 @@ dependencies = [
 biosigio = "emgio.cli:main"
 
 [project.optional-dependencies]
+# MEG (.fif/CTF .ds) and BrainVision (.vhdr) import are backed by MNE, kept out
+# of the core deps (MNE is heavy). Install with `uv sync --extra meg`.
+meg = [
+    "mne>=1.6",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.14",
     "ty",
+    "mne>=1.6",
 ]
 docs = [
     "mkdocs>=1.6.0",
