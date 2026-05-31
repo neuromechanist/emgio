@@ -4,18 +4,18 @@
 [![Tests](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/neuromechanist/biosigio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/biosigio)
 
-biosigIO is a Python package for EMG data import/export and manipulation. It provides a unified interface for working with EMG data from various systems and exporting to standardized formats with harmonized metadata.
+biosigIO is a Python package for biosignal import/export and manipulation across modalities (EEG, EMG, iEEG, MEG, and behavioral/marker streams). It provides a unified `Recording` interface for working with data from many acquisition systems and archives and exporting it to standardized and serving formats with harmonized metadata.
 
 ## Why biosigIO?
 
-Working with EMG data across multiple recording systems can be challenging due to:
+Working with biosignal data across multiple recording systems can be challenging due to:
 
 - Different file formats
 - Varied metadata structures
 - Inconsistent channel naming
 - Diverse sampling rates and filtering
 
-biosigIO simplifies this process by providing a standardized interface for loading, manipulating, and exporting EMG data regardless of the original source.
+biosigIO simplifies this process by providing a standardized interface for loading, manipulating, and exporting biosignal data regardless of the original source.
 
 ## Key Features
 
@@ -26,6 +26,9 @@ biosigIO simplifies this process by providing a standardized interface for loadi
   - EDF/BDF(+) (supported, including annotations)
   - WFDB (supported, including annotations)
   - XDF/Lab Streaming Layer (supported, multi-stream)
+  - MEG: `.fif` and CTF `.ds` via MNE (supported; `meg` extra)
+  - BrainVision `.vhdr` via MNE (supported; `meg` extra)
+  - Proprietary electrophysiology via python-neo: Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx (supported; `neo` extra)
   - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
   

@@ -4,7 +4,7 @@
 [![Tests](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/neuromechanist/biosigio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/biosigio)
 
-A Python package for EMG data import/export and manipulation. This package provides a unified interface for working with EMG data from various systems (Trigno, EEGLAB, OTB, etc) and exporting to standardized formats like EDF and BDF with harmonized metadata.
+A Python package for biosignal import/export and manipulation across modalities (EEG, EMG, iEEG, MEG, and behavioral/marker streams). biosigIO provides a unified `Recording` interface for loading data from many acquisition systems and archives (EEGLAB, Delsys Trigno, OTB, EDF/BDF, WFDB, XDF, MEG/CTF and BrainVision via MNE, and proprietary electrophysiology such as Intan/Blackrock via python-neo) and exporting it to standardized and serving formats (EDF/BDF, Parquet, Arrow, Zarr) with harmonized metadata.
 
 The determination of the EDF/BDF format is based on the dynamic range of the data. If the data is within the range of 16-bit integers (~90dB), the EDF format is used. Otherwise, the BDF format is used. This is to ensure that the data is stored in the most efficient format possible. This determination is made automatically using SVD decomposition and/or FFT to determine the dynamic range of the data. (Alternatively, the user can override the format selection by explicitly indicating their desired format).
 
@@ -14,13 +14,16 @@ The documentation including installation instructions, examples, and API referen
 
 ## Features
 
-- Import EMG data from multiple systems:
+- Import biosignal recordings from many systems and archives:
   - EEGLAB set files (supported)
   - Delsys Trigno (supported)
   - OTB Systems (supported)
   - EDF/BDF(+) (supported, including annotations)
   - WFDB (supported, including annotations)
   - XDF/Lab Streaming Layer (supported, multi-stream)
+  - MEG: `.fif` and CTF `.ds` via MNE (supported; `meg` extra)
+  - BrainVision `.vhdr` via MNE (supported; `meg` extra)
+  - Proprietary electrophysiology via python-neo: Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx (supported; `neo` extra)
   - Generic CSV (supported with auto-detection)
   - Noraxon (planned)
   
