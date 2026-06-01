@@ -13,10 +13,10 @@
       
       
       
-        <link rel="prev" href="../csv/">
+        <link rel="prev" href="../../cli/">
       
       
-        <link rel="next" href="../xdf/">
+        <link rel="next" href="../../bids/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>WFDB Importer - biosigIO Documentation</title>
+        <title>Modality Vocabulary - biosigIO Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#wfdb-importer" class="md-skip">
+        <a href="#modality-vocabulary" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              WFDB Importer
+              Modality Vocabulary
             
           </span>
         </div>
@@ -1153,10 +1153,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../core/modality/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modality Vocabulary
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1172,6 +1199,142 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#module-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#biosigio.core.modality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        modality
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="modality">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.VALID_CHANNEL_TYPES" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VALID_CHANNEL_TYPES
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.VALID_MODALITIES" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VALID_MODALITIES
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality._BIDS_CHANNELS_TSV_TYPES" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _BIDS_CHANNELS_TSV_TYPES
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality._CHANNEL_TYPE_TO_MODALITY" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _CHANNEL_TYPE_TO_MODALITY
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.infer_modality_from_channel_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        infer_modality_from_channel_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.to_bids_channels_tsv_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_bids_channels_tsv_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.validate_channel_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_channel_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.validate_modality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_modality
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1237,10 +1400,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1274,11 +1435,13 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
         
           
           <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
@@ -1299,7 +1462,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1317,7 +1480,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../base/" class="md-nav__link">
+      <a href="../../importers/base/" class="md-nav__link">
         
   
   
@@ -1345,7 +1508,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../trigno/" class="md-nav__link">
+      <a href="../../importers/trigno/" class="md-nav__link">
         
   
   
@@ -1373,7 +1536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../eeglab/" class="md-nav__link">
+      <a href="../../importers/eeglab/" class="md-nav__link">
         
   
   
@@ -1401,7 +1564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../otb/" class="md-nav__link">
+      <a href="../../importers/otb/" class="md-nav__link">
         
   
   
@@ -1429,7 +1592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../edf/" class="md-nav__link">
+      <a href="../../importers/edf/" class="md-nav__link">
         
   
   
@@ -1457,7 +1620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../csv/" class="md-nav__link">
+      <a href="../../importers/csv/" class="md-nav__link">
         
   
   
@@ -1482,37 +1645,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    WFDB Importer
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../importers/wfdb/" class="md-nav__link">
         
   
   
@@ -1528,54 +1664,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#biosigio.importers.wfdb.WFDBImporter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        WFDBImporter
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="WFDBImporter">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#biosigio.importers.wfdb.WFDBImporter.load" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        load
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1588,7 +1676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../xdf/" class="md-nav__link">
+      <a href="../../importers/xdf/" class="md-nav__link">
         
   
   
@@ -1616,7 +1704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../meg/" class="md-nav__link">
+      <a href="../../importers/meg/" class="md-nav__link">
         
   
   
@@ -1644,7 +1732,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../brainvision/" class="md-nav__link">
+      <a href="../../importers/brainvision/" class="md-nav__link">
         
   
   
@@ -1672,7 +1760,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../neo/" class="md-nav__link">
+      <a href="../../importers/neo/" class="md-nav__link">
         
   
   
@@ -1700,7 +1788,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tabular/" class="md-nav__link">
+      <a href="../../importers/tabular/" class="md-nav__link">
         
   
   
@@ -1728,7 +1816,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../zarr/" class="md-nav__link">
+      <a href="../../importers/zarr/" class="md-nav__link">
         
   
   
@@ -2473,22 +2561,110 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#biosigio.importers.wfdb.WFDBImporter" class="md-nav__link">
+  <a href="#module-documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        WFDBImporter
+        Module Documentation
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="WFDBImporter">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#biosigio.core.modality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        modality
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="modality">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#biosigio.importers.wfdb.WFDBImporter.load" class="md-nav__link">
+  <a href="#biosigio.core.modality.VALID_CHANNEL_TYPES" class="md-nav__link">
     <span class="md-ellipsis">
       
-        load
+        VALID_CHANNEL_TYPES
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.VALID_MODALITIES" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VALID_MODALITIES
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality._BIDS_CHANNELS_TSV_TYPES" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _BIDS_CHANNELS_TSV_TYPES
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality._CHANNEL_TYPE_TO_MODALITY" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _CHANNEL_TYPE_TO_MODALITY
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.infer_modality_from_channel_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        infer_modality_from_channel_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.to_bids_channels_tsv_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_bids_channels_tsv_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.validate_channel_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_channel_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biosigio.core.modality.validate_modality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_modality
       
     </span>
   </a>
@@ -2520,28 +2696,38 @@
   
 
 
-<h1 id="wfdb-importer">WFDB Importer<a class="headerlink" href="#wfdb-importer" title="Permanent link">&para;</a></h1>
+<h1 id="modality-vocabulary">Modality Vocabulary<a class="headerlink" href="#modality-vocabulary" title="Permanent link">&para;</a></h1>
+<p>The modality vocabulary backs the per-channel <code>channel_type</code> / <code>modality</code>
+contract used by <code>Recording.add_channel</code> and <code>set_channel</code>: it validates channel
+types and coarse modalities (EEG, EMG, IEEG, MEG, BEH, MISC) and maps types to
+BIDS <code>channels.tsv</code> values.</p>
+<h2 id="module-documentation">Module Documentation<a class="headerlink" href="#module-documentation" title="Permanent link">&para;</a></h2>
 
 
-<div class="doc doc-object doc-class">
+<div class="doc doc-object doc-module">
 
 
 
-<h2 id="biosigio.importers.wfdb.WFDBImporter" class="doc doc-heading">
-            <code>biosigio.importers.wfdb.WFDBImporter</code>
+<h2 id="biosigio.core.modality" class="doc doc-heading">
+            <code>biosigio.core.modality</code>
 
 
-<a href="#biosigio.importers.wfdb.WFDBImporter" class="headerlink" title="Permanent link">&para;</a></h2>
-
+<a href="#biosigio.core.modality" class="headerlink" title="Permanent link">&para;</a></h2>
 
     <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="BaseImporter (biosigio.importers.base.BaseImporter)" href="../base/#biosigio.importers.base.BaseImporter">BaseImporter</a></code></p>
 
-
-
-        <p>Importer for WFDB format files.</p>
-
+        <p>BIDS-aligned channel-type and modality vocabularies for biosignal data.</p>
+<p>This module is the single source of truth for the two-axis model that replaces
+the historical single <code>channel_type</code> string:</p>
+<ul>
+<li><code>channel_type</code>: the fine-grained <code>Brain Imaging Data Structure (BIDS)
+  &lt;https://bids-specification.readthedocs.io/&gt;</code>_ channel <code>type</code>
+  (e.g. <code>EEG</code>, <code>EMG</code>, <code>ECG</code>, <code>ACC</code>).</li>
+<li><code>modality</code>: the coarse recording modality (<code>EEG</code>, <code>EMG</code>, <code>IEEG</code>,
+  <code>MEG</code>, <code>BEH</code>, <code>MISC</code>).</li>
+</ul>
+<p>There is no silent default; callers must provide an explicit channel type, and
+unknown values raise rather than being relabelled.</p>
 
 
 
@@ -2560,29 +2746,323 @@
 
 
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="biosigio.core.modality.VALID_CHANNEL_TYPES" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">VALID_CHANNEL_TYPES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s1">&#39;EEG&#39;</span><span class="p">,</span> <span class="s1">&#39;SEEG&#39;</span><span class="p">,</span> <span class="s1">&#39;ECOG&#39;</span><span class="p">,</span> <span class="s1">&#39;DBS&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGMAG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGGRADAXIAL&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGGRADPLANAR&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFMAG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFGRADAXIAL&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFGRADPLANAR&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG&#39;</span><span class="p">,</span> <span class="s1">&#39;ECG&#39;</span><span class="p">,</span> <span class="s1">&#39;EKG&#39;</span><span class="p">,</span> <span class="s1">&#39;EOG&#39;</span><span class="p">,</span> <span class="s1">&#39;VEOG&#39;</span><span class="p">,</span> <span class="s1">&#39;HEOG&#39;</span><span class="p">,</span> <span class="s1">&#39;REF&#39;</span><span class="p">,</span> <span class="s1">&#39;TRIG&#39;</span><span class="p">,</span> <span class="s1">&#39;MISC&#39;</span><span class="p">,</span> <span class="s1">&#39;OTHER&#39;</span><span class="p">,</span> <span class="s1">&#39;ACC&#39;</span><span class="p">,</span> <span class="s1">&#39;GYRO&#39;</span><span class="p">,</span> <span class="s1">&#39;QUAT&#39;</span><span class="p">,</span> <span class="s1">&#39;CTRL&#39;</span><span class="p">,</span> <span class="s1">&#39;MAGN&#39;</span><span class="p">,</span> <span class="s1">&#39;RESP&#39;</span><span class="p">,</span> <span class="s1">&#39;GSR&#39;</span><span class="p">,</span> <span class="s1">&#39;TEMP&#39;</span><span class="p">,</span> <span class="s1">&#39;PPG&#39;</span><span class="p">,</span> <span class="s1">&#39;SYSCLOCK&#39;</span><span class="p">})</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#biosigio.core.modality.VALID_CHANNEL_TYPES" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="biosigio.core.modality.VALID_MODALITIES" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">VALID_MODALITIES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s1">&#39;EEG&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG&#39;</span><span class="p">,</span> <span class="s1">&#39;IEEG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEG&#39;</span><span class="p">,</span> <span class="s1">&#39;BEH&#39;</span><span class="p">,</span> <span class="s1">&#39;MISC&#39;</span><span class="p">})</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#biosigio.core.modality.VALID_MODALITIES" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="biosigio.core.modality._BIDS_CHANNELS_TSV_TYPES" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_BIDS_CHANNELS_TSV_TYPES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s1">&#39;EEG&#39;</span><span class="p">,</span> <span class="s1">&#39;SEEG&#39;</span><span class="p">,</span> <span class="s1">&#39;ECOG&#39;</span><span class="p">,</span> <span class="s1">&#39;DBS&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGMAG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGGRADAXIAL&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGGRADPLANAR&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFMAG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFGRADAXIAL&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFGRADPLANAR&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG&#39;</span><span class="p">,</span> <span class="s1">&#39;ECG&#39;</span><span class="p">,</span> <span class="s1">&#39;EKG&#39;</span><span class="p">,</span> <span class="s1">&#39;EOG&#39;</span><span class="p">,</span> <span class="s1">&#39;VEOG&#39;</span><span class="p">,</span> <span class="s1">&#39;HEOG&#39;</span><span class="p">,</span> <span class="s1">&#39;REF&#39;</span><span class="p">,</span> <span class="s1">&#39;TRIG&#39;</span><span class="p">,</span> <span class="s1">&#39;MISC&#39;</span><span class="p">,</span> <span class="s1">&#39;RESP&#39;</span><span class="p">,</span> <span class="s1">&#39;GSR&#39;</span><span class="p">,</span> <span class="s1">&#39;TEMP&#39;</span><span class="p">,</span> <span class="s1">&#39;PPG&#39;</span><span class="p">,</span> <span class="s1">&#39;SYSCLOCK&#39;</span><span class="p">})</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#biosigio.core.modality._BIDS_CHANNELS_TSV_TYPES" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="biosigio.core.modality._CHANNEL_TYPE_TO_MODALITY" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_CHANNEL_TYPE_TO_MODALITY</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EEG&#39;</span><span class="p">:</span> <span class="s1">&#39;EEG&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG&#39;</span><span class="p">:</span> <span class="s1">&#39;EMG&#39;</span><span class="p">,</span> <span class="s1">&#39;SEEG&#39;</span><span class="p">:</span> <span class="s1">&#39;IEEG&#39;</span><span class="p">,</span> <span class="s1">&#39;ECOG&#39;</span><span class="p">:</span> <span class="s1">&#39;IEEG&#39;</span><span class="p">,</span> <span class="s1">&#39;DBS&#39;</span><span class="p">:</span> <span class="s1">&#39;IEEG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGMAG&#39;</span><span class="p">:</span> <span class="s1">&#39;MEG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGGRADAXIAL&#39;</span><span class="p">:</span> <span class="s1">&#39;MEG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGGRADPLANAR&#39;</span><span class="p">:</span> <span class="s1">&#39;MEG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFMAG&#39;</span><span class="p">:</span> <span class="s1">&#39;MEG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFGRADAXIAL&#39;</span><span class="p">:</span> <span class="s1">&#39;MEG&#39;</span><span class="p">,</span> <span class="s1">&#39;MEGREFGRADPLANAR&#39;</span><span class="p">:</span> <span class="s1">&#39;MEG&#39;</span><span class="p">}</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#biosigio.core.modality._CHANNEL_TYPE_TO_MODALITY" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
 
 
 
 <div class="doc doc-object doc-function">
 
 
-<h3 id="biosigio.importers.wfdb.WFDBImporter.load" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">load</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span></code>
+<h3 id="biosigio.core.modality.infer_modality_from_channel_type" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span></code>
 
-<a href="#biosigio.importers.wfdb.WFDBImporter.load" class="headerlink" title="Permanent link">&para;</a></h3>
+<a href="#biosigio.core.modality.infer_modality_from_channel_type" class="headerlink" title="Permanent link">&para;</a></h3>
 
 
     <div class="doc doc-contents ">
 
-        <p>Load EMG data and annotations from WFDB files.</p>
-<p>Assumes annotation files (.atr) share the same base name as the record file
-and are located in the same directory.</p>
+        <p>Derive the coarse modality for a channel type.</p>
+<p>The mapping is deterministic: neural types map to EEG/IEEG/MEG, <code>EMG</code> maps
+to EMG, and every other valid type (ECG, EOG, ACC, TRIG, ...) maps to MISC.</p>
 <p>Args:
-    filepath: Path to the WFDB header file (.hea) or just the record name.</p>
+    channel_type: A channel type string (case-insensitive); validated first.</p>
 <p>Returns:
-    Recording: Recording object containing the loaded data and annotations.</p>
+    One of :data:<code>VALID_MODALITIES</code>.</p>
+<p>Raises:
+    ValueError: If <code>channel_type</code> is not a known type.</p>
 
 
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>biosigio/core/modality.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-166">166</a></span>
+<span class="normal"><a href="#__codelineno-0-167">167</a></span>
+<span class="normal"><a href="#__codelineno-0-168">168</a></span>
+<span class="normal"><a href="#__codelineno-0-169">169</a></span>
+<span class="normal"><a href="#__codelineno-0-170">170</a></span>
+<span class="normal"><a href="#__codelineno-0-171">171</a></span>
+<span class="normal"><a href="#__codelineno-0-172">172</a></span>
+<span class="normal"><a href="#__codelineno-0-173">173</a></span>
+<span class="normal"><a href="#__codelineno-0-174">174</a></span>
+<span class="normal"><a href="#__codelineno-0-175">175</a></span>
+<span class="normal"><a href="#__codelineno-0-176">176</a></span>
+<span class="normal"><a href="#__codelineno-0-177">177</a></span>
+<span class="normal"><a href="#__codelineno-0-178">178</a></span>
+<span class="normal"><a href="#__codelineno-0-179">179</a></span>
+<span class="normal"><a href="#__codelineno-0-180">180</a></span>
+<span class="normal"><a href="#__codelineno-0-181">181</a></span>
+<span class="normal"><a href="#__codelineno-0-182">182</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-166" name="__codelineno-0-166"></a><span class="k">def</span><span class="w"> </span><span class="nf">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-0-167" name="__codelineno-0-167"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Derive the coarse modality for a channel type.</span>
+<a id="__codelineno-0-168" name="__codelineno-0-168"></a>
+<a id="__codelineno-0-169" name="__codelineno-0-169"></a><span class="sd">    The mapping is deterministic: neural types map to EEG/IEEG/MEG, ``EMG`` maps</span>
+<a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="sd">    to EMG, and every other valid type (ECG, EOG, ACC, TRIG, ...) maps to MISC.</span>
+<a id="__codelineno-0-171" name="__codelineno-0-171"></a>
+<a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="sd">        channel_type: A channel type string (case-insensitive); validated first.</span>
+<a id="__codelineno-0-174" name="__codelineno-0-174"></a>
+<a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="sd">        One of :data:`VALID_MODALITIES`.</span>
+<a id="__codelineno-0-177" name="__codelineno-0-177"></a>
+<a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="sd">        ValueError: If ``channel_type`` is not a known type.</span>
+<a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a>    <span class="n">ct</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
+<a id="__codelineno-0-182" name="__codelineno-0-182"></a>    <span class="k">return</span> <span class="n">_CHANNEL_TYPE_TO_MODALITY</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ct</span><span class="p">,</span> <span class="s2">&quot;MISC&quot;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="biosigio.core.modality.to_bids_channels_tsv_type" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_bids_channels_tsv_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span></code>
+
+<a href="#biosigio.core.modality.to_bids_channels_tsv_type" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Map an biosigio channel type to a BIDS <code>channels.tsv</code> <code>type</code> value.</p>
+<p>Genuine BIDS electrophysiology/physiology types pass through; device-domain
+types (ACC, GYRO, QUAT, CTRL, MAGN) and <code>OTHER</code> map to <code>MISC</code>.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>biosigio/core/modality.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-156">156</a></span>
+<span class="normal"><a href="#__codelineno-0-157">157</a></span>
+<span class="normal"><a href="#__codelineno-0-158">158</a></span>
+<span class="normal"><a href="#__codelineno-0-159">159</a></span>
+<span class="normal"><a href="#__codelineno-0-160">160</a></span>
+<span class="normal"><a href="#__codelineno-0-161">161</a></span>
+<span class="normal"><a href="#__codelineno-0-162">162</a></span>
+<span class="normal"><a href="#__codelineno-0-163">163</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-156" name="__codelineno-0-156"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_bids_channels_tsv_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-0-157" name="__codelineno-0-157"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Map an biosigio channel type to a BIDS ``channels.tsv`` ``type`` value.</span>
+<a id="__codelineno-0-158" name="__codelineno-0-158"></a>
+<a id="__codelineno-0-159" name="__codelineno-0-159"></a><span class="sd">    Genuine BIDS electrophysiology/physiology types pass through; device-domain</span>
+<a id="__codelineno-0-160" name="__codelineno-0-160"></a><span class="sd">    types (ACC, GYRO, QUAT, CTRL, MAGN) and ``OTHER`` map to ``MISC``.</span>
+<a id="__codelineno-0-161" name="__codelineno-0-161"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-162" name="__codelineno-0-162"></a>    <span class="n">ct</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
+<a id="__codelineno-0-163" name="__codelineno-0-163"></a>    <span class="k">return</span> <span class="n">ct</span> <span class="k">if</span> <span class="n">ct</span> <span class="ow">in</span> <span class="n">_BIDS_CHANNELS_TSV_TYPES</span> <span class="k">else</span> <span class="s2">&quot;MISC&quot;</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="biosigio.core.modality.validate_channel_type" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span></code>
+
+<a href="#biosigio.core.modality.validate_channel_type" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Normalize and validate a channel type against :data:<code>VALID_CHANNEL_TYPES</code>.</p>
+<p>Args:
+    channel_type: A channel type string (case-insensitive).</p>
+<p>Returns:
+    The canonical uppercase channel type.</p>
+<p>Raises:
+    ValueError: If <code>channel_type</code> is empty, <code>n/a</code>, or not a known type.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>biosigio/core/modality.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-78"> 78</a></span>
+<span class="normal"><a href="#__codelineno-0-79"> 79</a></span>
+<span class="normal"><a href="#__codelineno-0-80"> 80</a></span>
+<span class="normal"><a href="#__codelineno-0-81"> 81</a></span>
+<span class="normal"><a href="#__codelineno-0-82"> 82</a></span>
+<span class="normal"><a href="#__codelineno-0-83"> 83</a></span>
+<span class="normal"><a href="#__codelineno-0-84"> 84</a></span>
+<span class="normal"><a href="#__codelineno-0-85"> 85</a></span>
+<span class="normal"><a href="#__codelineno-0-86"> 86</a></span>
+<span class="normal"><a href="#__codelineno-0-87"> 87</a></span>
+<span class="normal"><a href="#__codelineno-0-88"> 88</a></span>
+<span class="normal"><a href="#__codelineno-0-89"> 89</a></span>
+<span class="normal"><a href="#__codelineno-0-90"> 90</a></span>
+<span class="normal"><a href="#__codelineno-0-91"> 91</a></span>
+<span class="normal"><a href="#__codelineno-0-92"> 92</a></span>
+<span class="normal"><a href="#__codelineno-0-93"> 93</a></span>
+<span class="normal"><a href="#__codelineno-0-94"> 94</a></span>
+<span class="normal"><a href="#__codelineno-0-95"> 95</a></span>
+<span class="normal"><a href="#__codelineno-0-96"> 96</a></span>
+<span class="normal"><a href="#__codelineno-0-97"> 97</a></span>
+<span class="normal"><a href="#__codelineno-0-98"> 98</a></span>
+<span class="normal"><a href="#__codelineno-0-99"> 99</a></span>
+<span class="normal"><a href="#__codelineno-0-100">100</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-78" name="__codelineno-0-78"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize and validate a channel type against :data:`VALID_CHANNEL_TYPES`.</span>
+<a id="__codelineno-0-80" name="__codelineno-0-80"></a>
+<a id="__codelineno-0-81" name="__codelineno-0-81"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-82" name="__codelineno-0-82"></a><span class="sd">        channel_type: A channel type string (case-insensitive).</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83"></a>
+<a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-85" name="__codelineno-0-85"></a><span class="sd">        The canonical uppercase channel type.</span>
+<a id="__codelineno-0-86" name="__codelineno-0-86"></a>
+<a id="__codelineno-0-87" name="__codelineno-0-87"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-88" name="__codelineno-0-88"></a><span class="sd">        ValueError: If ``channel_type`` is empty, ``n/a``, or not a known type.</span>
+<a id="__codelineno-0-89" name="__codelineno-0-89"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-90" name="__codelineno-0-90"></a>    <span class="n">ct</span> <span class="o">=</span> <span class="n">channel_type</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+<a id="__codelineno-0-91" name="__codelineno-0-91"></a>    <span class="k">if</span> <span class="n">ct</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;N/A&quot;</span><span class="p">,</span> <span class="s2">&quot;NA&quot;</span><span class="p">):</span>
+<a id="__codelineno-0-92" name="__codelineno-0-92"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-93" name="__codelineno-0-93"></a>            <span class="s2">&quot;channel_type &#39;n/a&#39; is not allowed; use &#39;OTHER&#39; or &#39;MISC&#39; for an unknown type.&quot;</span>
+<a id="__codelineno-0-94" name="__codelineno-0-94"></a>        <span class="p">)</span>
+<a id="__codelineno-0-95" name="__codelineno-0-95"></a>    <span class="k">if</span> <span class="n">ct</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">VALID_CHANNEL_TYPES</span><span class="p">:</span>
+<a id="__codelineno-0-96" name="__codelineno-0-96"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-97" name="__codelineno-0-97"></a>            <span class="sa">f</span><span class="s2">&quot;Unknown channel_type </span><span class="si">{</span><span class="n">channel_type</span><span class="si">!r}</span><span class="s2">. Valid channel types: &quot;</span>
+<a id="__codelineno-0-98" name="__codelineno-0-98"></a>            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">VALID_CHANNEL_TYPES</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-0-99" name="__codelineno-0-99"></a>        <span class="p">)</span>
+<a id="__codelineno-0-100" name="__codelineno-0-100"></a>    <span class="k">return</span> <span class="n">ct</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="biosigio.core.modality.validate_modality" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span></code>
+
+<a href="#biosigio.core.modality.validate_modality" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Normalize and validate a modality against :data:<code>VALID_MODALITIES</code>.</p>
+<p>Args:
+    modality: A modality string (case-insensitive).</p>
+<p>Returns:
+    The canonical uppercase modality.</p>
+<p>Raises:
+    ValueError: If <code>modality</code> is not a known modality.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>biosigio/core/modality.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-103">103</a></span>
+<span class="normal"><a href="#__codelineno-0-104">104</a></span>
+<span class="normal"><a href="#__codelineno-0-105">105</a></span>
+<span class="normal"><a href="#__codelineno-0-106">106</a></span>
+<span class="normal"><a href="#__codelineno-0-107">107</a></span>
+<span class="normal"><a href="#__codelineno-0-108">108</a></span>
+<span class="normal"><a href="#__codelineno-0-109">109</a></span>
+<span class="normal"><a href="#__codelineno-0-110">110</a></span>
+<span class="normal"><a href="#__codelineno-0-111">111</a></span>
+<span class="normal"><a href="#__codelineno-0-112">112</a></span>
+<span class="normal"><a href="#__codelineno-0-113">113</a></span>
+<span class="normal"><a href="#__codelineno-0-114">114</a></span>
+<span class="normal"><a href="#__codelineno-0-115">115</a></span>
+<span class="normal"><a href="#__codelineno-0-116">116</a></span>
+<span class="normal"><a href="#__codelineno-0-117">117</a></span>
+<span class="normal"><a href="#__codelineno-0-118">118</a></span>
+<span class="normal"><a href="#__codelineno-0-119">119</a></span>
+<span class="normal"><a href="#__codelineno-0-120">120</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-103" name="__codelineno-0-103"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-0-104" name="__codelineno-0-104"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize and validate a modality against :data:`VALID_MODALITIES`.</span>
+<a id="__codelineno-0-105" name="__codelineno-0-105"></a>
+<a id="__codelineno-0-106" name="__codelineno-0-106"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-107" name="__codelineno-0-107"></a><span class="sd">        modality: A modality string (case-insensitive).</span>
+<a id="__codelineno-0-108" name="__codelineno-0-108"></a>
+<a id="__codelineno-0-109" name="__codelineno-0-109"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-110" name="__codelineno-0-110"></a><span class="sd">        The canonical uppercase modality.</span>
+<a id="__codelineno-0-111" name="__codelineno-0-111"></a>
+<a id="__codelineno-0-112" name="__codelineno-0-112"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-113" name="__codelineno-0-113"></a><span class="sd">        ValueError: If ``modality`` is not a known modality.</span>
+<a id="__codelineno-0-114" name="__codelineno-0-114"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-115" name="__codelineno-0-115"></a>    <span class="n">m</span> <span class="o">=</span> <span class="n">modality</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+<a id="__codelineno-0-116" name="__codelineno-0-116"></a>    <span class="k">if</span> <span class="n">m</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">VALID_MODALITIES</span><span class="p">:</span>
+<a id="__codelineno-0-117" name="__codelineno-0-117"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-118" name="__codelineno-0-118"></a>            <span class="sa">f</span><span class="s2">&quot;Unknown modality </span><span class="si">{</span><span class="n">modality</span><span class="si">!r}</span><span class="s2">. Valid modalities: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">VALID_MODALITIES</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-0-119" name="__codelineno-0-119"></a>        <span class="p">)</span>
+<a id="__codelineno-0-120" name="__codelineno-0-120"></a>    <span class="k">return</span> <span class="n">m</span>
+</code></pre></div></td></tr></table></div>
+            </details>
     </div>
 
 </div>
