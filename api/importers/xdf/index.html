@@ -5019,7 +5019,7 @@ imported from any supported format.</p>
 <a id="__codelineno-0-91" name="__codelineno-0-91"></a><span class="sd">        &quot;&quot;&quot;</span>
 <a id="__codelineno-0-92" name="__codelineno-0-92"></a>        <span class="c1"># Delegate to the static plotting function in visualization module</span>
 <a id="__codelineno-0-93" name="__codelineno-0-93"></a>        <span class="n">static_plot_signals</span><span class="p">(</span>
-<a id="__codelineno-0-94" name="__codelineno-0-94"></a>            <span class="n">emg_object</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-94" name="__codelineno-0-94"></a>            <span class="n">rec_object</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a>            <span class="n">channels</span><span class="o">=</span><span class="n">channels</span><span class="p">,</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a>            <span class="n">time_range</span><span class="o">=</span><span class="n">time_range</span><span class="p">,</span>
 <a id="__codelineno-0-97" name="__codelineno-0-97"></a>            <span class="n">offset_scale</span><span class="o">=</span><span class="n">offset_scale</span><span class="p">,</span>
@@ -5173,12 +5173,12 @@ imported from any supported format.</p>
 <a id="__codelineno-0-245" name="__codelineno-0-245"></a>        <span class="n">importer_class</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">importer_module</span><span class="p">,</span> <span class="n">importers</span><span class="p">[</span><span class="n">importer</span><span class="p">])</span>
 <a id="__codelineno-0-246" name="__codelineno-0-246"></a>
 <a id="__codelineno-0-247" name="__codelineno-0-247"></a>        <span class="c1"># Create importer instance and load data</span>
-<a id="__codelineno-0-248" name="__codelineno-0-248"></a>        <span class="n">emg</span> <span class="o">=</span> <span class="n">importer_class</span><span class="p">()</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a>        <span class="n">rec</span> <span class="o">=</span> <span class="n">importer_class</span><span class="p">()</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 <a id="__codelineno-0-249" name="__codelineno-0-249"></a>
 <a id="__codelineno-0-250" name="__codelineno-0-250"></a>        <span class="c1"># Record provenance: which format this recording came from. setdefault so a</span>
 <a id="__codelineno-0-251" name="__codelineno-0-251"></a>        <span class="c1"># re-imported serialization file (tabular/zarr) keeps the ORIGINAL</span>
 <a id="__codelineno-0-252" name="__codelineno-0-252"></a>        <span class="c1"># source_format restored from its metadata rather than being relabeled.</span>
-<a id="__codelineno-0-253" name="__codelineno-0-253"></a>        <span class="n">emg</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;source_format&quot;</span><span class="p">,</span> <span class="n">importer</span><span class="p">)</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;source_format&quot;</span><span class="p">,</span> <span class="n">importer</span><span class="p">)</span>
 <a id="__codelineno-0-254" name="__codelineno-0-254"></a>
 <a id="__codelineno-0-255" name="__codelineno-0-255"></a>        <span class="c1"># In a BIDS layout, the sibling _channels.tsv is the authoritative source</span>
 <a id="__codelineno-0-256" name="__codelineno-0-256"></a>        <span class="c1"># of per-channel type/units; apply it over the importer&#39;s header/label</span>
@@ -5188,9 +5188,9 @@ imported from any supported format.</p>
 <a id="__codelineno-0-260" name="__codelineno-0-260"></a>
 <a id="__codelineno-0-261" name="__codelineno-0-261"></a>            <span class="n">channels_tsv</span> <span class="o">=</span> <span class="n">find_channels_tsv</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
 <a id="__codelineno-0-262" name="__codelineno-0-262"></a>            <span class="k">if</span> <span class="n">channels_tsv</span><span class="p">:</span>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a>                <span class="n">apply_channels_tsv</span><span class="p">(</span><span class="n">emg</span><span class="p">,</span> <span class="n">channels_tsv</span><span class="p">)</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a>                <span class="n">apply_channels_tsv</span><span class="p">(</span><span class="n">rec</span><span class="p">,</span> <span class="n">channels_tsv</span><span class="p">)</span>
 <a id="__codelineno-0-264" name="__codelineno-0-264"></a>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a>        <span class="k">return</span> <span class="n">emg</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a>        <span class="k">return</span> <span class="n">rec</span>
 <a id="__codelineno-0-266" name="__codelineno-0-266"></a>
 <a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">select_channels</span><span class="p">(</span>
 <a id="__codelineno-0-268" name="__codelineno-0-268"></a>        <span class="bp">self</span><span class="p">,</span>
@@ -5215,13 +5215,13 @@ imported from any supported format.</p>
 <a id="__codelineno-0-287" name="__codelineno-0-287"></a>
 <a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">        Examples:</span>
 <a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">            # Select specific channels</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">            new_emg = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;])</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">            new_rec = rec.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;])</span>
 <a id="__codelineno-0-291" name="__codelineno-0-291"></a>
 <a id="__codelineno-0-292" name="__codelineno-0-292"></a><span class="sd">            # Select all EMG channels</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a><span class="sd">            emg_only = emg.select_channels(channel_type=&#39;EMG&#39;)</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a><span class="sd">            emg_only = rec.select_channels(channel_type=&#39;EMG&#39;)</span>
 <a id="__codelineno-0-294" name="__codelineno-0-294"></a>
 <a id="__codelineno-0-295" name="__codelineno-0-295"></a><span class="sd">            # Select specific EMG channels only, this example does not select ACC channels</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a><span class="sd">            emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=&#39;EMG&#39;)</span>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a><span class="sd">            emg_subset = rec.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=&#39;EMG&#39;)</span>
 <a id="__codelineno-0-297" name="__codelineno-0-297"></a><span class="sd">        &quot;&quot;&quot;</span>
 <a id="__codelineno-0-298" name="__codelineno-0-298"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-299" name="__codelineno-0-299"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
@@ -5265,21 +5265,21 @@ imported from any supported format.</p>
 <a id="__codelineno-0-337" name="__codelineno-0-337"></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;None of the selected channels are of modality: </span><span class="si">{</span><span class="n">modality</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-338" name="__codelineno-0-338"></a>
 <a id="__codelineno-0-339" name="__codelineno-0-339"></a>        <span class="c1"># Create new Recording object</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>        <span class="n">new_emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>        <span class="n">new_rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
 <a id="__codelineno-0-341" name="__codelineno-0-341"></a>
 <a id="__codelineno-0-342" name="__codelineno-0-342"></a>        <span class="c1"># Copy selected signals and channels</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">channels</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<a id="__codelineno-0-344" name="__codelineno-0-344"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">ch</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">}</span>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">channels</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">ch</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">}</span>
 <a id="__codelineno-0-345" name="__codelineno-0-345"></a>
 <a id="__codelineno-0-346" name="__codelineno-0-346"></a>        <span class="c1"># Copy metadata</span>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a>
 <a id="__codelineno-0-349" name="__codelineno-0-349"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a>            <span class="k">return</span> <span class="n">new_emg</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a>            <span class="k">return</span> <span class="n">new_rec</span>
 <a id="__codelineno-0-351" name="__codelineno-0-351"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">new_emg</span><span class="o">.</span><span class="n">channels</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">new_emg</span><span class="o">.</span><span class="n">metadata</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">new_rec</span><span class="o">.</span><span class="n">channels</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">new_rec</span><span class="o">.</span><span class="n">metadata</span>
 <a id="__codelineno-0-355" name="__codelineno-0-355"></a>            <span class="k">return</span> <span class="bp">self</span>
 <a id="__codelineno-0-356" name="__codelineno-0-356"></a>
 <a id="__codelineno-0-357" name="__codelineno-0-357"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">resample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_rate</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Recording&quot;</span><span class="p">:</span>
@@ -5351,18 +5351,18 @@ imported from any supported format.</p>
 <a id="__codelineno-0-423" name="__codelineno-0-423"></a>                <span class="s2">&quot;resample() only down-samples (low-res). Up-sampling is out of scope.&quot;</span>
 <a id="__codelineno-0-424" name="__codelineno-0-424"></a>            <span class="p">)</span>
 <a id="__codelineno-0-425" name="__codelineno-0-425"></a>
-<a id="__codelineno-0-426" name="__codelineno-0-426"></a>        <span class="n">new_emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
-<a id="__codelineno-0-427" name="__codelineno-0-427"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">ch</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-<a id="__codelineno-0-428" name="__codelineno-0-428"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-426" name="__codelineno-0-426"></a>        <span class="n">new_rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
+<a id="__codelineno-0-427" name="__codelineno-0-427"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">ch</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<a id="__codelineno-0-428" name="__codelineno-0-428"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <a id="__codelineno-0-429" name="__codelineno-0-429"></a>        <span class="c1"># Onsets/durations are in SECONDS, so they remain valid after the grid</span>
 <a id="__codelineno-0-430" name="__codelineno-0-430"></a>        <span class="c1"># changes; copy them through unchanged.</span>
-<a id="__codelineno-0-431" name="__codelineno-0-431"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span>
+<a id="__codelineno-0-431" name="__codelineno-0-431"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span>
 <a id="__codelineno-0-432" name="__codelineno-0-432"></a>
 <a id="__codelineno-0-433" name="__codelineno-0-433"></a>        <span class="k">if</span> <span class="n">target_rate</span> <span class="o">==</span> <span class="n">source_rate</span><span class="p">:</span>
 <a id="__codelineno-0-434" name="__codelineno-0-434"></a>            <span class="c1"># No grid change: copy signals through untouched (fresh RangeIndex for</span>
 <a id="__codelineno-0-435" name="__codelineno-0-435"></a>            <span class="c1"># consistency with the resampled path).</span>
-<a id="__codelineno-0-436" name="__codelineno-0-436"></a>            <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-437" name="__codelineno-0-437"></a>            <span class="k">return</span> <span class="n">new_emg</span>
+<a id="__codelineno-0-436" name="__codelineno-0-436"></a>            <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-437" name="__codelineno-0-437"></a>            <span class="k">return</span> <span class="n">new_rec</span>
 <a id="__codelineno-0-438" name="__codelineno-0-438"></a>
 <a id="__codelineno-0-439" name="__codelineno-0-439"></a>        <span class="c1"># Rational resampling factors from the integer rates.</span>
 <a id="__codelineno-0-440" name="__codelineno-0-440"></a>        <span class="n">src_i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">source_rate</span><span class="p">))</span>
@@ -5391,12 +5391,12 @@ imported from any supported format.</p>
 <a id="__codelineno-0-463" name="__codelineno-0-463"></a>        <span class="c1"># shared anti-alias FIR.</span>
 <a id="__codelineno-0-464" name="__codelineno-0-464"></a>        <span class="n">resampled</span> <span class="o">=</span> <span class="n">resample_poly</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">up</span><span class="p">,</span> <span class="n">down</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-465" name="__codelineno-0-465"></a>
-<a id="__codelineno-0-466" name="__codelineno-0-466"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">resampled</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
-<a id="__codelineno-0-467" name="__codelineno-0-467"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">RangeIndex</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span><span class="p">))</span>
-<a id="__codelineno-0-468" name="__codelineno-0-468"></a>        <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">new_emg</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+<a id="__codelineno-0-466" name="__codelineno-0-466"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">resampled</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+<a id="__codelineno-0-467" name="__codelineno-0-467"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">RangeIndex</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span><span class="p">))</span>
+<a id="__codelineno-0-468" name="__codelineno-0-468"></a>        <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">new_rec</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
 <a id="__codelineno-0-469" name="__codelineno-0-469"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">&quot;sample_frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">actual_rate</span>
 <a id="__codelineno-0-470" name="__codelineno-0-470"></a>
-<a id="__codelineno-0-471" name="__codelineno-0-471"></a>        <span class="k">return</span> <span class="n">new_emg</span>
+<a id="__codelineno-0-471" name="__codelineno-0-471"></a>        <span class="k">return</span> <span class="n">new_rec</span>
 <a id="__codelineno-0-472" name="__codelineno-0-472"></a>
 <a id="__codelineno-0-473" name="__codelineno-0-473"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_channel_types</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <a id="__codelineno-0-474" name="__codelineno-0-474"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -5575,12 +5575,12 @@ imported from any supported format.</p>
 <a id="__codelineno-0-647" name="__codelineno-0-647"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification requested. Reloading exported file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-648" name="__codelineno-0-648"></a>            <span class="k">try</span><span class="p">:</span>
 <a id="__codelineno-0-649" name="__codelineno-0-649"></a>                <span class="c1"># Reload the exported file</span>
-<a id="__codelineno-0-650" name="__codelineno-0-650"></a>                <span class="n">reloaded_emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s2">&quot;edf&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-650" name="__codelineno-0-650"></a>                <span class="n">reloaded_rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s2">&quot;edf&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-651" name="__codelineno-0-651"></a>
 <a id="__codelineno-0-652" name="__codelineno-0-652"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Comparing original signals with reloaded signals...&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-653" name="__codelineno-0-653"></a>                <span class="c1"># Compare signals using the imported function</span>
 <a id="__codelineno-0-654" name="__codelineno-0-654"></a>                <span class="n">verification_results</span> <span class="o">=</span> <span class="n">compare_signals</span><span class="p">(</span>
-<a id="__codelineno-0-655" name="__codelineno-0-655"></a>                    <span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_emg</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">verify_tolerance</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span>
+<a id="__codelineno-0-655" name="__codelineno-0-655"></a>                    <span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_rec</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">verify_tolerance</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span>
 <a id="__codelineno-0-656" name="__codelineno-0-656"></a>                <span class="p">)</span>
 <a id="__codelineno-0-657" name="__codelineno-0-657"></a>
 <a id="__codelineno-0-658" name="__codelineno-0-658"></a>                <span class="c1"># Generate and log report using the imported function</span>
@@ -5593,7 +5593,7 @@ imported from any supported format.</p>
 <a id="__codelineno-0-665" name="__codelineno-0-665"></a>                <span class="n">compared_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">verification_results</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">&quot;channel_summary&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-666" name="__codelineno-0-666"></a>
 <a id="__codelineno-0-667" name="__codelineno-0-667"></a>                <span class="k">if</span> <span class="n">verify_plot</span> <span class="ow">and</span> <span class="n">compared_count</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">comparison_mode</span> <span class="o">!=</span> <span class="s2">&quot;failed&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-668" name="__codelineno-0-668"></a>                    <span class="n">plot_comparison</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_emg</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span><span class="p">)</span>
+<a id="__codelineno-0-668" name="__codelineno-0-668"></a>                    <span class="n">plot_comparison</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_rec</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span><span class="p">)</span>
 <a id="__codelineno-0-669" name="__codelineno-0-669"></a>                <span class="k">elif</span> <span class="n">verify_plot</span><span class="p">:</span>
 <a id="__codelineno-0-670" name="__codelineno-0-670"></a>                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
 <a id="__codelineno-0-671" name="__codelineno-0-671"></a>                        <span class="s2">&quot;Skipping verification plot: No channels were successfully compared.&quot;</span>
@@ -6338,12 +6338,12 @@ imported from any supported format.</p>
 <a id="__codelineno-0-245" name="__codelineno-0-245"></a>    <span class="n">importer_class</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">importer_module</span><span class="p">,</span> <span class="n">importers</span><span class="p">[</span><span class="n">importer</span><span class="p">])</span>
 <a id="__codelineno-0-246" name="__codelineno-0-246"></a>
 <a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="c1"># Create importer instance and load data</span>
-<a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="n">emg</span> <span class="o">=</span> <span class="n">importer_class</span><span class="p">()</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="n">rec</span> <span class="o">=</span> <span class="n">importer_class</span><span class="p">()</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 <a id="__codelineno-0-249" name="__codelineno-0-249"></a>
 <a id="__codelineno-0-250" name="__codelineno-0-250"></a>    <span class="c1"># Record provenance: which format this recording came from. setdefault so a</span>
 <a id="__codelineno-0-251" name="__codelineno-0-251"></a>    <span class="c1"># re-imported serialization file (tabular/zarr) keeps the ORIGINAL</span>
 <a id="__codelineno-0-252" name="__codelineno-0-252"></a>    <span class="c1"># source_format restored from its metadata rather than being relabeled.</span>
-<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="n">emg</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;source_format&quot;</span><span class="p">,</span> <span class="n">importer</span><span class="p">)</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="n">rec</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;source_format&quot;</span><span class="p">,</span> <span class="n">importer</span><span class="p">)</span>
 <a id="__codelineno-0-254" name="__codelineno-0-254"></a>
 <a id="__codelineno-0-255" name="__codelineno-0-255"></a>    <span class="c1"># In a BIDS layout, the sibling _channels.tsv is the authoritative source</span>
 <a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="c1"># of per-channel type/units; apply it over the importer&#39;s header/label</span>
@@ -6353,9 +6353,9 @@ imported from any supported format.</p>
 <a id="__codelineno-0-260" name="__codelineno-0-260"></a>
 <a id="__codelineno-0-261" name="__codelineno-0-261"></a>        <span class="n">channels_tsv</span> <span class="o">=</span> <span class="n">find_channels_tsv</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
 <a id="__codelineno-0-262" name="__codelineno-0-262"></a>        <span class="k">if</span> <span class="n">channels_tsv</span><span class="p">:</span>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a>            <span class="n">apply_channels_tsv</span><span class="p">(</span><span class="n">emg</span><span class="p">,</span> <span class="n">channels_tsv</span><span class="p">)</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a>            <span class="n">apply_channels_tsv</span><span class="p">(</span><span class="n">rec</span><span class="p">,</span> <span class="n">channels_tsv</span><span class="p">)</span>
 <a id="__codelineno-0-264" name="__codelineno-0-264"></a>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="k">return</span> <span class="n">emg</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="k">return</span> <span class="n">rec</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -6874,7 +6874,7 @@ sample period).</p>
 <a id="__codelineno-0-91" name="__codelineno-0-91"></a><span class="sd">    &quot;&quot;&quot;</span>
 <a id="__codelineno-0-92" name="__codelineno-0-92"></a>    <span class="c1"># Delegate to the static plotting function in visualization module</span>
 <a id="__codelineno-0-93" name="__codelineno-0-93"></a>    <span class="n">static_plot_signals</span><span class="p">(</span>
-<a id="__codelineno-0-94" name="__codelineno-0-94"></a>        <span class="n">emg_object</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-94" name="__codelineno-0-94"></a>        <span class="n">rec_object</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a>        <span class="n">channels</span><span class="o">=</span><span class="n">channels</span><span class="p">,</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a>        <span class="n">time_range</span><span class="o">=</span><span class="n">time_range</span><span class="p">,</span>
 <a id="__codelineno-0-97" name="__codelineno-0-97"></a>        <span class="n">offset_scale</span><span class="o">=</span><span class="n">offset_scale</span><span class="p">,</span>
@@ -7120,18 +7120,18 @@ along <code>axis=0</code>.</p>
 <a id="__codelineno-0-423" name="__codelineno-0-423"></a>            <span class="s2">&quot;resample() only down-samples (low-res). Up-sampling is out of scope.&quot;</span>
 <a id="__codelineno-0-424" name="__codelineno-0-424"></a>        <span class="p">)</span>
 <a id="__codelineno-0-425" name="__codelineno-0-425"></a>
-<a id="__codelineno-0-426" name="__codelineno-0-426"></a>    <span class="n">new_emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
-<a id="__codelineno-0-427" name="__codelineno-0-427"></a>    <span class="n">new_emg</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">ch</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-<a id="__codelineno-0-428" name="__codelineno-0-428"></a>    <span class="n">new_emg</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-426" name="__codelineno-0-426"></a>    <span class="n">new_rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
+<a id="__codelineno-0-427" name="__codelineno-0-427"></a>    <span class="n">new_rec</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">ch</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<a id="__codelineno-0-428" name="__codelineno-0-428"></a>    <span class="n">new_rec</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <a id="__codelineno-0-429" name="__codelineno-0-429"></a>    <span class="c1"># Onsets/durations are in SECONDS, so they remain valid after the grid</span>
 <a id="__codelineno-0-430" name="__codelineno-0-430"></a>    <span class="c1"># changes; copy them through unchanged.</span>
-<a id="__codelineno-0-431" name="__codelineno-0-431"></a>    <span class="n">new_emg</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span>
+<a id="__codelineno-0-431" name="__codelineno-0-431"></a>    <span class="n">new_rec</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span>
 <a id="__codelineno-0-432" name="__codelineno-0-432"></a>
 <a id="__codelineno-0-433" name="__codelineno-0-433"></a>    <span class="k">if</span> <span class="n">target_rate</span> <span class="o">==</span> <span class="n">source_rate</span><span class="p">:</span>
 <a id="__codelineno-0-434" name="__codelineno-0-434"></a>        <span class="c1"># No grid change: copy signals through untouched (fresh RangeIndex for</span>
 <a id="__codelineno-0-435" name="__codelineno-0-435"></a>        <span class="c1"># consistency with the resampled path).</span>
-<a id="__codelineno-0-436" name="__codelineno-0-436"></a>        <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-437" name="__codelineno-0-437"></a>        <span class="k">return</span> <span class="n">new_emg</span>
+<a id="__codelineno-0-436" name="__codelineno-0-436"></a>        <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-437" name="__codelineno-0-437"></a>        <span class="k">return</span> <span class="n">new_rec</span>
 <a id="__codelineno-0-438" name="__codelineno-0-438"></a>
 <a id="__codelineno-0-439" name="__codelineno-0-439"></a>    <span class="c1"># Rational resampling factors from the integer rates.</span>
 <a id="__codelineno-0-440" name="__codelineno-0-440"></a>    <span class="n">src_i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">source_rate</span><span class="p">))</span>
@@ -7160,12 +7160,12 @@ along <code>axis=0</code>.</p>
 <a id="__codelineno-0-463" name="__codelineno-0-463"></a>    <span class="c1"># shared anti-alias FIR.</span>
 <a id="__codelineno-0-464" name="__codelineno-0-464"></a>    <span class="n">resampled</span> <span class="o">=</span> <span class="n">resample_poly</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">up</span><span class="p">,</span> <span class="n">down</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-465" name="__codelineno-0-465"></a>
-<a id="__codelineno-0-466" name="__codelineno-0-466"></a>    <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">resampled</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
-<a id="__codelineno-0-467" name="__codelineno-0-467"></a>    <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">RangeIndex</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span><span class="p">))</span>
-<a id="__codelineno-0-468" name="__codelineno-0-468"></a>    <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">new_emg</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+<a id="__codelineno-0-466" name="__codelineno-0-466"></a>    <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">resampled</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+<a id="__codelineno-0-467" name="__codelineno-0-467"></a>    <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">RangeIndex</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span><span class="p">))</span>
+<a id="__codelineno-0-468" name="__codelineno-0-468"></a>    <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">new_rec</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
 <a id="__codelineno-0-469" name="__codelineno-0-469"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">&quot;sample_frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">actual_rate</span>
 <a id="__codelineno-0-470" name="__codelineno-0-470"></a>
-<a id="__codelineno-0-471" name="__codelineno-0-471"></a>    <span class="k">return</span> <span class="n">new_emg</span>
+<a id="__codelineno-0-471" name="__codelineno-0-471"></a>    <span class="k">return</span> <span class="n">new_rec</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -7194,12 +7194,12 @@ along <code>axis=0</code>.</p>
     Recording: A new Recording object containing only the selected channels</p>
 <p>Examples:
     # Select specific channels
-    new_emg = emg.select_channels(['EMG1', 'ACC1'])</p>
+    new_rec = rec.select_channels(['EMG1', 'ACC1'])</p>
 <div class="highlight"><pre><span></span><code># Select all EMG channels
-emg_only = emg.select_channels(channel_type=&#39;EMG&#39;)
+emg_only = rec.select_channels(channel_type=&#39;EMG&#39;)
 
 # Select specific EMG channels only, this example does not select ACC channels
-emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=&#39;EMG&#39;)
+emg_subset = rec.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=&#39;EMG&#39;)
 </code></pre></div>
 
 
@@ -7316,13 +7316,13 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <a id="__codelineno-0-287" name="__codelineno-0-287"></a>
 <a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">    Examples:</span>
 <a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">        # Select specific channels</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">        new_emg = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;])</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">        new_rec = rec.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;])</span>
 <a id="__codelineno-0-291" name="__codelineno-0-291"></a>
 <a id="__codelineno-0-292" name="__codelineno-0-292"></a><span class="sd">        # Select all EMG channels</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a><span class="sd">        emg_only = emg.select_channels(channel_type=&#39;EMG&#39;)</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a><span class="sd">        emg_only = rec.select_channels(channel_type=&#39;EMG&#39;)</span>
 <a id="__codelineno-0-294" name="__codelineno-0-294"></a>
 <a id="__codelineno-0-295" name="__codelineno-0-295"></a><span class="sd">        # Select specific EMG channels only, this example does not select ACC channels</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a><span class="sd">        emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=&#39;EMG&#39;)</span>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a><span class="sd">        emg_subset = rec.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=&#39;EMG&#39;)</span>
 <a id="__codelineno-0-297" name="__codelineno-0-297"></a><span class="sd">    &quot;&quot;&quot;</span>
 <a id="__codelineno-0-298" name="__codelineno-0-298"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-299" name="__codelineno-0-299"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No signals loaded&quot;</span><span class="p">)</span>
@@ -7366,21 +7366,21 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <a id="__codelineno-0-337" name="__codelineno-0-337"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;None of the selected channels are of modality: </span><span class="si">{</span><span class="n">modality</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-338" name="__codelineno-0-338"></a>
 <a id="__codelineno-0-339" name="__codelineno-0-339"></a>    <span class="c1"># Create new Recording object</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="n">new_emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="n">new_rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
 <a id="__codelineno-0-341" name="__codelineno-0-341"></a>
 <a id="__codelineno-0-342" name="__codelineno-0-342"></a>    <span class="c1"># Copy selected signals and channels</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">channels</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="n">new_emg</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">ch</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">}</span>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">channels</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="n">new_rec</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">ch</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">}</span>
 <a id="__codelineno-0-345" name="__codelineno-0-345"></a>
 <a id="__codelineno-0-346" name="__codelineno-0-346"></a>    <span class="c1"># Copy metadata</span>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a>    <span class="n">new_emg</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a>    <span class="n">new_rec</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a>
 <a id="__codelineno-0-349" name="__codelineno-0-349"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a>        <span class="k">return</span> <span class="n">new_emg</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a>        <span class="k">return</span> <span class="n">new_rec</span>
 <a id="__codelineno-0-351" name="__codelineno-0-351"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">new_emg</span><span class="o">.</span><span class="n">signals</span>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">new_emg</span><span class="o">.</span><span class="n">channels</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">new_emg</span><span class="o">.</span><span class="n">metadata</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">new_rec</span><span class="o">.</span><span class="n">signals</span>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">new_rec</span><span class="o">.</span><span class="n">channels</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">new_rec</span><span class="o">.</span><span class="n">metadata</span>
 <a id="__codelineno-0-355" name="__codelineno-0-355"></a>        <span class="k">return</span> <span class="bp">self</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -7942,12 +7942,12 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <a id="__codelineno-0-647" name="__codelineno-0-647"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Verification requested. Reloading exported file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-648" name="__codelineno-0-648"></a>        <span class="k">try</span><span class="p">:</span>
 <a id="__codelineno-0-649" name="__codelineno-0-649"></a>            <span class="c1"># Reload the exported file</span>
-<a id="__codelineno-0-650" name="__codelineno-0-650"></a>            <span class="n">reloaded_emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s2">&quot;edf&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-650" name="__codelineno-0-650"></a>            <span class="n">reloaded_rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s2">&quot;edf&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-651" name="__codelineno-0-651"></a>
 <a id="__codelineno-0-652" name="__codelineno-0-652"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Comparing original signals with reloaded signals...&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-653" name="__codelineno-0-653"></a>            <span class="c1"># Compare signals using the imported function</span>
 <a id="__codelineno-0-654" name="__codelineno-0-654"></a>            <span class="n">verification_results</span> <span class="o">=</span> <span class="n">compare_signals</span><span class="p">(</span>
-<a id="__codelineno-0-655" name="__codelineno-0-655"></a>                <span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_emg</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">verify_tolerance</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span>
+<a id="__codelineno-0-655" name="__codelineno-0-655"></a>                <span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_rec</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">verify_tolerance</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span>
 <a id="__codelineno-0-656" name="__codelineno-0-656"></a>            <span class="p">)</span>
 <a id="__codelineno-0-657" name="__codelineno-0-657"></a>
 <a id="__codelineno-0-658" name="__codelineno-0-658"></a>            <span class="c1"># Generate and log report using the imported function</span>
@@ -7960,7 +7960,7 @@ emg_subset = emg.select_channels([&#39;EMG1&#39;, &#39;ACC1&#39;], channel_type=
 <a id="__codelineno-0-665" name="__codelineno-0-665"></a>            <span class="n">compared_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">verification_results</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">&quot;channel_summary&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-666" name="__codelineno-0-666"></a>
 <a id="__codelineno-0-667" name="__codelineno-0-667"></a>            <span class="k">if</span> <span class="n">verify_plot</span> <span class="ow">and</span> <span class="n">compared_count</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">comparison_mode</span> <span class="o">!=</span> <span class="s2">&quot;failed&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-668" name="__codelineno-0-668"></a>                <span class="n">plot_comparison</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_emg</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span><span class="p">)</span>
+<a id="__codelineno-0-668" name="__codelineno-0-668"></a>                <span class="n">plot_comparison</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reloaded_rec</span><span class="p">,</span> <span class="n">channel_map</span><span class="o">=</span><span class="n">verify_channel_map</span><span class="p">)</span>
 <a id="__codelineno-0-669" name="__codelineno-0-669"></a>            <span class="k">elif</span> <span class="n">verify_plot</span><span class="p">:</span>
 <a id="__codelineno-0-670" name="__codelineno-0-670"></a>                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
 <a id="__codelineno-0-671" name="__codelineno-0-671"></a>                    <span class="s2">&quot;Skipping verification plot: No channels were successfully compared.&quot;</span>
@@ -8162,10 +8162,10 @@ import of specific streams by name, type, or ID.</p>
     &gt;&gt;&gt;
     &gt;&gt;&gt; # Import specific streams (only loads selected streams)
     &gt;&gt;&gt; importer = XDFImporter()
-    &gt;&gt;&gt; emg = importer.load("recording.xdf", stream_names=["EMG_stream"])
+    &gt;&gt;&gt; rec = importer.load("recording.xdf", stream_names=["EMG_stream"])
     &gt;&gt;&gt;
     &gt;&gt;&gt; # Or import by type
-    &gt;&gt;&gt; emg = importer.load("recording.xdf", stream_types=["EMG", "EXG"])</p>
+    &gt;&gt;&gt; rec = importer.load("recording.xdf", stream_types=["EMG", "EXG"])</p>
 
 
 
@@ -8768,10 +8768,10 @@ import of specific streams by name, type, or ID.</p>
 <a id="__codelineno-0-428" name="__codelineno-0-428"></a><span class="sd">        &gt;&gt;&gt;</span>
 <a id="__codelineno-0-429" name="__codelineno-0-429"></a><span class="sd">        &gt;&gt;&gt; # Import specific streams (only loads selected streams)</span>
 <a id="__codelineno-0-430" name="__codelineno-0-430"></a><span class="sd">        &gt;&gt;&gt; importer = XDFImporter()</span>
-<a id="__codelineno-0-431" name="__codelineno-0-431"></a><span class="sd">        &gt;&gt;&gt; emg = importer.load(&quot;recording.xdf&quot;, stream_names=[&quot;EMG_stream&quot;])</span>
+<a id="__codelineno-0-431" name="__codelineno-0-431"></a><span class="sd">        &gt;&gt;&gt; rec = importer.load(&quot;recording.xdf&quot;, stream_names=[&quot;EMG_stream&quot;])</span>
 <a id="__codelineno-0-432" name="__codelineno-0-432"></a><span class="sd">        &gt;&gt;&gt;</span>
 <a id="__codelineno-0-433" name="__codelineno-0-433"></a><span class="sd">        &gt;&gt;&gt; # Or import by type</span>
-<a id="__codelineno-0-434" name="__codelineno-0-434"></a><span class="sd">        &gt;&gt;&gt; emg = importer.load(&quot;recording.xdf&quot;, stream_types=[&quot;EMG&quot;, &quot;EXG&quot;])</span>
+<a id="__codelineno-0-434" name="__codelineno-0-434"></a><span class="sd">        &gt;&gt;&gt; rec = importer.load(&quot;recording.xdf&quot;, stream_types=[&quot;EMG&quot;, &quot;EXG&quot;])</span>
 <a id="__codelineno-0-435" name="__codelineno-0-435"></a><span class="sd">    &quot;&quot;&quot;</span>
 <a id="__codelineno-0-436" name="__codelineno-0-436"></a>
 <a id="__codelineno-0-437" name="__codelineno-0-437"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span>
@@ -8877,24 +8877,24 @@ import of specific streams by name, type, or ID.</p>
 <a id="__codelineno-0-537" name="__codelineno-0-537"></a>                <span class="p">)</span>
 <a id="__codelineno-0-538" name="__codelineno-0-538"></a>
 <a id="__codelineno-0-539" name="__codelineno-0-539"></a>        <span class="c1"># Create Recording object</span>
-<a id="__codelineno-0-540" name="__codelineno-0-540"></a>        <span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
+<a id="__codelineno-0-540" name="__codelineno-0-540"></a>        <span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
 <a id="__codelineno-0-541" name="__codelineno-0-541"></a>
 <a id="__codelineno-0-542" name="__codelineno-0-542"></a>        <span class="c1"># Store metadata</span>
-<a id="__codelineno-0-543" name="__codelineno-0-543"></a>        <span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;source_file&quot;</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
-<a id="__codelineno-0-544" name="__codelineno-0-544"></a>        <span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="s2">&quot;XDF&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-545" name="__codelineno-0-545"></a>        <span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;stream_count&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_streams</span><span class="p">))</span>
+<a id="__codelineno-0-543" name="__codelineno-0-543"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;source_file&quot;</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
+<a id="__codelineno-0-544" name="__codelineno-0-544"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="s2">&quot;XDF&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-545" name="__codelineno-0-545"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;stream_count&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_streams</span><span class="p">))</span>
 <a id="__codelineno-0-546" name="__codelineno-0-546"></a>
 <a id="__codelineno-0-547" name="__codelineno-0-547"></a>        <span class="k">if</span> <span class="n">sync_streams</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_streams</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-548" name="__codelineno-0-548"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_load_synchronized_streams</span><span class="p">(</span>
-<a id="__codelineno-0-549" name="__codelineno-0-549"></a>                <span class="n">emg</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span>
+<a id="__codelineno-0-549" name="__codelineno-0-549"></a>                <span class="n">rec</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span>
 <a id="__codelineno-0-550" name="__codelineno-0-550"></a>            <span class="p">)</span>
 <a id="__codelineno-0-551" name="__codelineno-0-551"></a>        <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-552" name="__codelineno-0-552"></a>            <span class="c1"># Load streams (uses highest sample rate as reference unless specified)</span>
 <a id="__codelineno-0-553" name="__codelineno-0-553"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_load_streams</span><span class="p">(</span>
-<a id="__codelineno-0-554" name="__codelineno-0-554"></a>                <span class="n">emg</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span>
+<a id="__codelineno-0-554" name="__codelineno-0-554"></a>                <span class="n">rec</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span>
 <a id="__codelineno-0-555" name="__codelineno-0-555"></a>            <span class="p">)</span>
 <a id="__codelineno-0-556" name="__codelineno-0-556"></a>
-<a id="__codelineno-0-557" name="__codelineno-0-557"></a>        <span class="k">return</span> <span class="n">emg</span>
+<a id="__codelineno-0-557" name="__codelineno-0-557"></a>        <span class="k">return</span> <span class="n">rec</span>
 <a id="__codelineno-0-558" name="__codelineno-0-558"></a>
 <a id="__codelineno-0-559" name="__codelineno-0-559"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_build_select_streams</span><span class="p">(</span>
 <a id="__codelineno-0-560" name="__codelineno-0-560"></a>        <span class="bp">self</span><span class="p">,</span>
@@ -9040,7 +9040,7 @@ import of specific streams by name, type, or ID.</p>
 <a id="__codelineno-0-700" name="__codelineno-0-700"></a>
 <a id="__codelineno-0-701" name="__codelineno-0-701"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_load_streams</span><span class="p">(</span>
 <a id="__codelineno-0-702" name="__codelineno-0-702"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-703" name="__codelineno-0-703"></a>        <span class="n">emg</span><span class="p">:</span> <span class="n">Recording</span><span class="p">,</span>
+<a id="__codelineno-0-703" name="__codelineno-0-703"></a>        <span class="n">rec</span><span class="p">:</span> <span class="n">Recording</span><span class="p">,</span>
 <a id="__codelineno-0-704" name="__codelineno-0-704"></a>        <span class="n">streams</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span>
 <a id="__codelineno-0-705" name="__codelineno-0-705"></a>        <span class="n">default_channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <a id="__codelineno-0-706" name="__codelineno-0-706"></a>        <span class="n">include_timestamps</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -9196,7 +9196,7 @@ import of specific streams by name, type, or ID.</p>
 <a id="__codelineno-0-856" name="__codelineno-0-856"></a>                <span class="n">ch_type</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">ch_info</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">])</span>
 <a id="__codelineno-0-857" name="__codelineno-0-857"></a>            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
 <a id="__codelineno-0-858" name="__codelineno-0-858"></a>                <span class="n">ch_type</span> <span class="o">=</span> <span class="s2">&quot;OTHER&quot;</span>
-<a id="__codelineno-0-859" name="__codelineno-0-859"></a>            <span class="n">emg</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-859" name="__codelineno-0-859"></a>            <span class="n">rec</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
 <a id="__codelineno-0-860" name="__codelineno-0-860"></a>                <span class="s2">&quot;sample_frequency&quot;</span><span class="p">:</span> <span class="n">ch_info</span><span class="p">[</span><span class="s2">&quot;srate&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">ch_info</span><span class="p">[</span><span class="s2">&quot;srate&quot;</span><span class="p">]</span> <span class="k">else</span> <span class="n">base_srate</span><span class="p">,</span>
 <a id="__codelineno-0-861" name="__codelineno-0-861"></a>                <span class="s2">&quot;physical_dimension&quot;</span><span class="p">:</span> <span class="n">ch_info</span><span class="p">[</span><span class="s2">&quot;unit&quot;</span><span class="p">],</span>
 <a id="__codelineno-0-862" name="__codelineno-0-862"></a>                <span class="s2">&quot;prefilter&quot;</span><span class="p">:</span> <span class="s2">&quot;n/a&quot;</span><span class="p">,</span>
@@ -9222,7 +9222,7 @@ import of specific streams by name, type, or ID.</p>
 <a id="__codelineno-0-882" name="__codelineno-0-882"></a>
 <a id="__codelineno-0-883" name="__codelineno-0-883"></a>                <span class="n">df</span><span class="p">[</span><span class="n">ts_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">resampled_ts</span>
 <a id="__codelineno-0-884" name="__codelineno-0-884"></a>
-<a id="__codelineno-0-885" name="__codelineno-0-885"></a>                <span class="n">emg</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">ts_label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-885" name="__codelineno-0-885"></a>                <span class="n">rec</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">ts_label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
 <a id="__codelineno-0-886" name="__codelineno-0-886"></a>                    <span class="s2">&quot;sample_frequency&quot;</span><span class="p">:</span> <span class="n">ts_info</span><span class="p">[</span><span class="s2">&quot;srate&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">ts_info</span><span class="p">[</span><span class="s2">&quot;srate&quot;</span><span class="p">]</span> <span class="k">else</span> <span class="n">base_srate</span><span class="p">,</span>
 <a id="__codelineno-0-887" name="__codelineno-0-887"></a>                    <span class="s2">&quot;physical_dimension&quot;</span><span class="p">:</span> <span class="s2">&quot;s&quot;</span><span class="p">,</span>  <span class="c1"># seconds</span>
 <a id="__codelineno-0-888" name="__codelineno-0-888"></a>                    <span class="s2">&quot;prefilter&quot;</span><span class="p">:</span> <span class="s2">&quot;n/a&quot;</span><span class="p">,</span>
@@ -9230,12 +9230,12 @@ import of specific streams by name, type, or ID.</p>
 <a id="__codelineno-0-890" name="__codelineno-0-890"></a>                    <span class="s2">&quot;modality&quot;</span><span class="p">:</span> <span class="s2">&quot;MISC&quot;</span><span class="p">,</span>
 <a id="__codelineno-0-891" name="__codelineno-0-891"></a>                <span class="p">}</span>
 <a id="__codelineno-0-892" name="__codelineno-0-892"></a>
-<a id="__codelineno-0-893" name="__codelineno-0-893"></a>        <span class="n">emg</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">df</span>
-<a id="__codelineno-0-894" name="__codelineno-0-894"></a>        <span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;srate&quot;</span><span class="p">,</span> <span class="n">base_srate</span><span class="p">)</span>
+<a id="__codelineno-0-893" name="__codelineno-0-893"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">df</span>
+<a id="__codelineno-0-894" name="__codelineno-0-894"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;srate&quot;</span><span class="p">,</span> <span class="n">base_srate</span><span class="p">)</span>
 <a id="__codelineno-0-895" name="__codelineno-0-895"></a>
 <a id="__codelineno-0-896" name="__codelineno-0-896"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_load_synchronized_streams</span><span class="p">(</span>
 <a id="__codelineno-0-897" name="__codelineno-0-897"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-898" name="__codelineno-0-898"></a>        <span class="n">emg</span><span class="p">:</span> <span class="n">Recording</span><span class="p">,</span>
+<a id="__codelineno-0-898" name="__codelineno-0-898"></a>        <span class="n">rec</span><span class="p">:</span> <span class="n">Recording</span><span class="p">,</span>
 <a id="__codelineno-0-899" name="__codelineno-0-899"></a>        <span class="n">streams</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span>
 <a id="__codelineno-0-900" name="__codelineno-0-900"></a>        <span class="n">default_channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <a id="__codelineno-0-901" name="__codelineno-0-901"></a>        <span class="n">include_timestamps</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -9248,7 +9248,7 @@ import of specific streams by name, type, or ID.</p>
 <a id="__codelineno-0-908" name="__codelineno-0-908"></a><span class="sd">        Currently, pyxdf handles clock synchronization during file loading,</span>
 <a id="__codelineno-0-909" name="__codelineno-0-909"></a><span class="sd">        so this delegates to _load_streams without additional processing.</span>
 <a id="__codelineno-0-910" name="__codelineno-0-910"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-911" name="__codelineno-0-911"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_load_streams</span><span class="p">(</span><span class="n">emg</span><span class="p">,</span> <span class="n">streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span><span class="p">)</span>
+<a id="__codelineno-0-911" name="__codelineno-0-911"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_load_streams</span><span class="p">(</span><span class="n">rec</span><span class="p">,</span> <span class="n">streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span><span class="p">)</span>
 <a id="__codelineno-0-912" name="__codelineno-0-912"></a>
 <a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_extract_channel_info</span><span class="p">(</span>
 <a id="__codelineno-0-914" name="__codelineno-0-914"></a>        <span class="bp">self</span><span class="p">,</span>
@@ -9615,24 +9615,24 @@ are loaded.</p>
 <a id="__codelineno-0-537" name="__codelineno-0-537"></a>            <span class="p">)</span>
 <a id="__codelineno-0-538" name="__codelineno-0-538"></a>
 <a id="__codelineno-0-539" name="__codelineno-0-539"></a>    <span class="c1"># Create Recording object</span>
-<a id="__codelineno-0-540" name="__codelineno-0-540"></a>    <span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
+<a id="__codelineno-0-540" name="__codelineno-0-540"></a>    <span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
 <a id="__codelineno-0-541" name="__codelineno-0-541"></a>
 <a id="__codelineno-0-542" name="__codelineno-0-542"></a>    <span class="c1"># Store metadata</span>
-<a id="__codelineno-0-543" name="__codelineno-0-543"></a>    <span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;source_file&quot;</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
-<a id="__codelineno-0-544" name="__codelineno-0-544"></a>    <span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="s2">&quot;XDF&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-545" name="__codelineno-0-545"></a>    <span class="n">emg</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;stream_count&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_streams</span><span class="p">))</span>
+<a id="__codelineno-0-543" name="__codelineno-0-543"></a>    <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;source_file&quot;</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
+<a id="__codelineno-0-544" name="__codelineno-0-544"></a>    <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="s2">&quot;XDF&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-545" name="__codelineno-0-545"></a>    <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">&quot;stream_count&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_streams</span><span class="p">))</span>
 <a id="__codelineno-0-546" name="__codelineno-0-546"></a>
 <a id="__codelineno-0-547" name="__codelineno-0-547"></a>    <span class="k">if</span> <span class="n">sync_streams</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_streams</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-548" name="__codelineno-0-548"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_load_synchronized_streams</span><span class="p">(</span>
-<a id="__codelineno-0-549" name="__codelineno-0-549"></a>            <span class="n">emg</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span>
+<a id="__codelineno-0-549" name="__codelineno-0-549"></a>            <span class="n">rec</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span>
 <a id="__codelineno-0-550" name="__codelineno-0-550"></a>        <span class="p">)</span>
 <a id="__codelineno-0-551" name="__codelineno-0-551"></a>    <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-552" name="__codelineno-0-552"></a>        <span class="c1"># Load streams (uses highest sample rate as reference unless specified)</span>
 <a id="__codelineno-0-553" name="__codelineno-0-553"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_load_streams</span><span class="p">(</span>
-<a id="__codelineno-0-554" name="__codelineno-0-554"></a>            <span class="n">emg</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span>
+<a id="__codelineno-0-554" name="__codelineno-0-554"></a>            <span class="n">rec</span><span class="p">,</span> <span class="n">selected_streams</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="p">,</span> <span class="n">reference_stream</span>
 <a id="__codelineno-0-555" name="__codelineno-0-555"></a>        <span class="p">)</span>
 <a id="__codelineno-0-556" name="__codelineno-0-556"></a>
-<a id="__codelineno-0-557" name="__codelineno-0-557"></a>    <span class="k">return</span> <span class="n">emg</span>
+<a id="__codelineno-0-557" name="__codelineno-0-557"></a>    <span class="k">return</span> <span class="n">rec</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -11039,11 +11039,11 @@ the actual time series data to be loaded.</p>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">biosigio.importers.xdf</span><span class="w"> </span><span class="kn">import</span> <span class="n">XDFImporter</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Method 1: Using Recording.from_file (recommended)</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">)</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Method 2: Using the importer directly</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">importer</span> <span class="o">=</span> <span class="n">XDFImporter</span><span class="p">()</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">importer</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">importer</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="exploring-file-contents">Exploring File Contents<a class="headerlink" href="#exploring-file-contents" title="Permanent link">&para;</a></h3>
 <p>Before loading, explore what streams are available:</p>
@@ -11067,24 +11067,24 @@ the actual time series data to be loaded.</p>
 </code></pre></div>
 <h3 id="selective-stream-loading">Selective Stream Loading<a class="headerlink" href="#selective-stream-loading" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Load only specific stream types</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">stream_types</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EMG&#39;</span><span class="p">])</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">stream_types</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EMG&#39;</span><span class="p">])</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Load multiple types</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">stream_types</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EMG&#39;</span><span class="p">,</span> <span class="s1">&#39;EEG&#39;</span><span class="p">])</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">stream_types</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EMG&#39;</span><span class="p">,</span> <span class="s1">&#39;EEG&#39;</span><span class="p">])</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Load by stream name</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">stream_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;MyEMGDevice&#39;</span><span class="p">])</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">stream_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;MyEMGDevice&#39;</span><span class="p">])</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
 <a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Load by stream ID</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">stream_ids</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">stream_ids</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
 </code></pre></div>
 <h3 id="setting-default-channel-type">Setting Default Channel Type<a class="headerlink" href="#setting-default-channel-type" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># For streams without explicit channel type metadata</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="o">=</span><span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">default_channel_type</span><span class="o">=</span><span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="preserving-lsl-timestamps">Preserving LSL Timestamps<a class="headerlink" href="#preserving-lsl-timestamps" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Include original LSL timestamps as additional channels</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.xdf&#39;</span><span class="p">,</span> <span class="n">include_timestamps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Each stream gets a &quot;{stream_name}_LSL_timestamps&quot; channel</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Useful for synchronization with other LSL-recorded data</span>

@@ -2544,22 +2544,22 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">biosigio.core.emg</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Load using the header file path (extension auto-detected)</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">emg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;path/to/your/record.hea&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;path/to/your/record.hea&#39;</span><span class="p">)</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Or load using just the base name (no extension); pass importer explicitly</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># emg = Recording.from_file(&#39;record&#39;, importer=&#39;wfdb&#39;)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># rec = Recording.from_file(&#39;record&#39;, importer=&#39;wfdb&#39;)</span>
 </code></pre></div>
 <p>biosigIO uses the <code>wfdb</code> library (PyPI package <code>wfdb</code>) internally. It ships as a core dependency, so no separate installation is required.</p>
 <h2 id="annotation-handling">Annotation Handling<a class="headerlink" href="#annotation-handling" title="Permanent link">&para;</a></h2>
 <p>If an annotation file (e.g., <code>record.atr</code>) exists in the same directory and shares the same base name as the header file, the <code>WFDBImporter</code> will <strong>automatically load</strong> these annotations.</p>
-<p>Loaded annotations are stored in the <code>emg.events</code> pandas DataFrame with the following columns:</p>
+<p>Loaded annotations are stored in the <code>rec.events</code> pandas DataFrame with the following columns:</p>
 <ul>
 <li><code>onset</code>: The time of the event in seconds from the start of the recording.</li>
 <li><code>duration</code>: The duration of the event in seconds (typically 0 for standard WFDB point annotations).</li>
 <li><code>description</code>: A string describing the event, usually derived from the WFDB annotation symbol (e.g., <code>"WFDB Annotation: N"</code>).</li>
 </ul>
 <p>See the <a href="../../user-guide/metadata/#annotations-events">Metadata Handling</a> guide for more details on accessing and working with the <code>events</code> DataFrame.</p>
-<p>If the annotation file is not found, a message will be stored in the <code>emg.metadata['annotation_status']</code> field. </p>
+<p>If the annotation file is not found, a message will be stored in the <code>rec.metadata['annotation_status']</code> field. </p>
 
 
 

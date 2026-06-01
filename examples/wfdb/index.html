@@ -2541,11 +2541,11 @@
 <li><strong>Import <code>Recording</code>:</strong> The core class is imported.</li>
 <li><strong>Define Path:</strong> The path to the WFDB header file (<code>.hea</code>) is specified.</li>
 <li><strong>Load Data:</strong> <code>Recording.from_file()</code> is called with the header file path. biosigIO infers the importer (<code>'wfdb'</code>) based on the <code>.hea</code> extension (this could also be explicitly set using <code>importer='wfdb'</code>). The importer reads the header, data, and automatically looks for <code>100.atr</code> to load annotations.</li>
-<li><strong>Access Metadata:</strong> Basic metadata like <code>record_name</code> and <code>sampling_frequency</code> are accessed using <code>emg.get_metadata()</code>.</li>
-<li><strong>Access Channels:</strong> Information about the loaded channels (<code>MLII</code>, <code>V5</code>) is iterated through <code>emg.channels</code>.</li>
-<li><strong>Access Annotations:</strong> The script checks if the <code>emg.events</code> DataFrame is populated. If the <code>.atr</code> file was loaded successfully, it prints the first and last few annotations.</li>
-<li><strong>Plotting:</strong> A short segment of the first channel is plotted using <code>emg.plot_signals()</code>.</li>
-<li><strong>Exporting:</strong> The loaded data (including annotations) is exported to both EDF+ and BDF+ formats using <code>emg.to_edf()</code>. The presence of annotations is noted in the output.</li>
+<li><strong>Access Metadata:</strong> Basic metadata like <code>record_name</code> and <code>sampling_frequency</code> are accessed using <code>rec.get_metadata()</code>.</li>
+<li><strong>Access Channels:</strong> Information about the loaded channels (<code>MLII</code>, <code>V5</code>) is iterated through <code>rec.channels</code>.</li>
+<li><strong>Access Annotations:</strong> The script checks if the <code>rec.events</code> DataFrame is populated. If the <code>.atr</code> file was loaded successfully, it prints the first and last few annotations.</li>
+<li><strong>Plotting:</strong> A short segment of the first channel is plotted using <code>rec.plot_signals()</code>.</li>
+<li><strong>Exporting:</strong> The loaded data (including annotations) is exported to both EDF+ and BDF+ formats using <code>rec.to_edf()</code>. The presence of annotations is noted in the output.</li>
 </ol>
 <h2 id="running-the-example">Running the Example<a class="headerlink" href="#running-the-example" title="Permanent link">&para;</a></h2>
 <ol>
