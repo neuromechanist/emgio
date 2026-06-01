@@ -2700,7 +2700,7 @@
 <ul>
 <li><strong>EDF/BDF:</strong> Annotations stored in the EDF+/BDF+ annotation channel are automatically loaded into <code>emg.events</code> by the <code>EDFImporter</code>.</li>
 <li><strong>WFDB:</strong> Annotations stored in a corresponding <code>.atr</code> (or similar) file are automatically loaded into <code>emg.events</code> by the <code>WFDBImporter</code> when loading the <code>.hea</code> file.</li>
-<li><strong>EEGLAB <code>.set</code>:</strong> EEGLAB events are read by the <code>EEGLABImporter</code> and stored under the metadata key <code>events</code> (i.e. <code>emg.get_metadata('events')</code>), as a list of event dictionaries, rather than in the <code>emg.events</code> DataFrame.</li>
+<li><strong>EEGLAB <code>.set</code>:</strong> EEGLAB events are loaded into <code>emg.events</code> by the <code>EEGLABImporter</code>; the event latency/duration (samples) are converted to onset/duration in seconds and the event <code>type</code> becomes the description.</li>
 <li><strong>Other Formats:</strong> For formats that don't have standardized annotation support within the file (like CSV, Trigno, OTB), annotations are typically not loaded automatically. You may need to load them from a separate file and add them manually.</li>
 </ul>
 <p><strong>Accessing Annotations:</strong></p>

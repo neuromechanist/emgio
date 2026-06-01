@@ -2678,7 +2678,7 @@
 <li>Extracting the EEG structure with signal data and metadata</li>
 <li>Converting channel information to biosigIO's channel format</li>
 <li>Creating appropriate metadata dictionary</li>
-<li>Storing parsed event markers under the <code>events</code> metadata key</li>
+<li>Loading event markers into the recording's <code>events</code> table (onset/duration in seconds)</li>
 </ol>
 <h2 id="code-example">Code Example<a class="headerlink" href="#code-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">biosigio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
@@ -2710,7 +2710,7 @@
 <h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Only pre-v7.3 (non-HDF5) <code>.set</code> files are supported, via <code>scipy.io.loadmat</code>; MATLAB v7.3/HDF5 <code>.set</code> files are not supported</li>
-<li>Event markers are preserved under the <code>events</code> metadata key (access with <code>emg.get_metadata('events')</code>)</li>
+<li>Event markers are loaded into the <code>events</code> table (<code>rec.events</code>): EEGLAB event latency/duration (samples) are converted to onset/duration in seconds and the event <code>type</code> becomes the description</li>
 <li>Channel locations (if available) are preserved in the channel information</li>
 <li>Some EEGLAB-specific information may not be fully preserved in the conversion</li>
 <li>Time information is properly handled to maintain accurate timing in the imported data </li>
