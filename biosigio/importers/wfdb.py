@@ -46,21 +46,21 @@ class WFDBImporter(BaseImporter):
             record = wfdb.rdrecord(record_name=record_name, sampfrom=0, sampto=None, physical=True)
 
             # Create Recording object
-            emg = Recording()
+            rec = Recording()
 
             # Store metadata from header
-            emg.set_metadata("source_file", filepath)
-            emg.set_metadata("record_name", record.record_name)
-            emg.set_metadata("sampling_frequency", record.fs)  # Store overall sampling frequency
+            rec.set_metadata("source_file", filepath)
+            rec.set_metadata("record_name", record.record_name)
+            rec.set_metadata("sampling_frequency", record.fs)  # Store overall sampling frequency
             if record.base_date and record.base_time:
-                emg.set_metadata("startdate", record.base_date)
-                emg.set_metadata("starttime", record.base_time)
+                rec.set_metadata("startdate", record.base_date)
+                rec.set_metadata("starttime", record.base_time)
             if record.comments:
-                emg.set_metadata("comments", "\n".join(record.comments))
+                rec.set_metadata("comments", "\n".join(record.comments))
 
             # Add channels
             for i, sig_name in enumerate(record.sig_name):
-                emg.add_channel(
+                rec.add_channel(
                     label=sig_name,
                     data=record.p_signal[:, i],
                     sample_frequency=record.fs,  # Use record's fs, assuming uniform sampling
@@ -93,7 +93,7 @@ class WFDBImporter(BaseImporter):
                 # Filter out None values before updating
                 filtered_metadata = {k: v for k, v in channel_metadata.items() if v is not None}
                 if filtered_metadata:  # Only update if there is metadata to add
-                    emg.channels[sig_name].update(filtered_metadata)
+                    rec.channels[sig_name].update(filtered_metadata)
 
             # Read annotations if available (look for .atr file by default)
             # Note: wfdb-python automatically searches common annotation extensions
@@ -103,9 +103,9 @@ class WFDBImporter(BaseImporter):
                 )
 
                 # Add annotations to the Recording object
-                # Assuming emg object has an `add_event` or `add_annotation` method
+                # Assuming rec object has an `add_event` or `add_annotation` method
                 # The structure (onset, duration, description) is common
-                if hasattr(emg, "add_event") and callable(emg.add_event):
+                if hasattr(rec, "add_event") and callable(rec.add_event):
                     # Map WFDB annotations to events
                     # Use annotation symbols as descriptions, sample indices as onsets
                     for i, symbol in enumerate(annotation.symbol):
@@ -113,13 +113,13 @@ class WFDBImporter(BaseImporter):
                         description = f"WFDB Annotation: {symbol}"
                         # WFDB annotations are typically point events (zero duration)
                         duration_sec = 0
-                        emg.add_event(
+                        rec.add_event(
                             onset=onset_sec, duration=duration_sec, description=description
                         )
 
                 else:
                     # Fallback: Store raw annotation data in metadata if no specific method exists
-                    emg.set_metadata(
+                    rec.set_metadata(
                         "wfdb_annotations",
                         {
                             "sample": annotation.sample.tolist(),
@@ -134,12 +134,12 @@ class WFDBImporter(BaseImporter):
 
             except FileNotFoundError:
                 # This specific FileNotFoundError means the .atr file is missing, which is okay.
-                emg.set_metadata("annotation_status", "Annotation file (.atr) not found.")
+                rec.set_metadata("annotation_status", "Annotation file (.atr) not found.")
             except Exception as ann_e:
                 # Other errors during annotation reading are warnings/metadata entries
-                emg.set_metadata("annotation_error", f"Error reading annotations: {str(ann_e)}")
+                rec.set_metadata("annotation_error", f"Error reading annotations: {str(ann_e)}")
 
-            return emg
+            return rec
 
         except FileNotFoundError as fnf_e:
             # This might occur if rdrecord itself can't find the .dat file

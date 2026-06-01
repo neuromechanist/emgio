@@ -11,29 +11,29 @@ import matplotlib.pyplot as plt
 
 # Load data from Trigno CSV file
 data_path = 'path_to_your_trigno_data.csv'
-emg = Recording.from_file(data_path, importer='trigno')
+rec = Recording.from_file(data_path, importer='trigno')
 
 # Print information about the loaded data
-print(f"Number of channels: {emg.get_n_channels()}")
-print(f"Number of samples: {emg.get_n_samples()}")
+print(f"Number of channels: {rec.get_n_channels()}")
+print(f"Number of samples: {rec.get_n_samples()}")
 # Trigno recordings are often mixed-rate (EMG vs ACC/GYRO), so a single overall
 # sampling frequency may not exist. get_sampling_frequency() raises ValueError in
 # that case; read the per-channel rate from channels[ch]['sample_frequency'] instead.
 try:
-    print(f"Sampling frequency: {emg.get_sampling_frequency()} Hz")
+    print(f"Sampling frequency: {rec.get_sampling_frequency()} Hz")
 except ValueError:
     print("Mixed per-channel sampling rates (see per-channel rates below)")
-print(f"Recording duration: {emg.get_duration()} seconds")
+print(f"Recording duration: {rec.get_duration()} seconds")
 
 # List available channels
 print("\nAvailable channels:")
-for ch_name, ch_info in emg.channels.items():
+for ch_name, ch_info in rec.channels.items():
     print(f"- {ch_name} ({ch_info['channel_type']})")
     print(f"  Sampling rate: {ch_info['sample_frequency']} Hz")
     print(f"  Dimension: {ch_info['physical_dimension']}")
 
 # Plot EMG signals
-emg.plot_signals(time_range=(0, 5), title="Raw EMG Signals")
+rec.plot_signals(time_range=(0, 5), title="Raw EMG Signals")
 plt.tight_layout()
 plt.show()
 ```
@@ -44,18 +44,18 @@ Trigno systems often record both EMG and accelerometer data. You can separate th
 
 ```python
 # Get EMG channels
-emg_channels = emg.get_channels_by_type('EMG')
+emg_channels = rec.get_channels_by_type('EMG')
 print(f"EMG channels: {emg_channels}")
 
 # Create EMG-only object
-emg_only = emg.select_channels(emg_channels)
+emg_only = rec.select_channels(emg_channels)
 
 # Get accelerometer channels
-acc_channels = emg.get_channels_by_type('ACC')
+acc_channels = rec.get_channels_by_type('ACC')
 print(f"ACC channels: {acc_channels}")
 
 # Create ACC-only object
-acc_only = emg.select_channels(acc_channels)
+acc_only = rec.select_channels(acc_channels)
 
 # Plot EMG and ACC signals separately (each call manages its own figure)
 emg_only.plot_signals(time_range=(0, 5), title="EMG Signals")
@@ -72,13 +72,13 @@ a common rate) before export; exporting a mixed-rate recording raises a
 
 ```python
 # Export only EMG channels (a single-rate subset)
-emg_only = emg.select_channels(channel_type='EMG')
+emg_only = rec.select_channels(channel_type='EMG')
 output_path = 'trigno_emg_only'
 emg_only.to_edf(output_path)  # Format (EDF/BDF) will be selected automatically
 print(f"Exported EMG channels to: {output_path}")
 
 # Accelerometer channels have a different rate, so export them separately
-acc_only = emg.select_channels(channel_type='ACC')
+acc_only = rec.select_channels(channel_type='ACC')
 acc_only.to_edf('trigno_acc_only')
 print("Exported ACC channels to: trigno_acc_only")
 ```
@@ -121,14 +121,14 @@ import numpy as np
 
 # 1. Load the data
 data_path = 'trigno_recording.csv'
-emg = Recording.from_file(data_path, importer='trigno')
+rec = Recording.from_file(data_path, importer='trigno')
 
 # 2. Add metadata
-emg.set_metadata('subject', 'S001')
-emg.set_metadata('condition', 'reaching')
+rec.set_metadata('subject', 'S001')
+rec.set_metadata('condition', 'reaching')
 
 # 3. Select only EMG channels
-emg_only = emg.select_channels(channel_type='EMG')
+emg_only = rec.select_channels(channel_type='EMG')
 
 # The EMG-only subset has a single rate, so get_sampling_frequency() is safe here
 # (the full mixed-rate recording would raise ValueError).

@@ -17,10 +17,10 @@ from biosigio import Recording
 from biosigio.importers.eeglab import EEGLABImporter
 
 # Method 1: Using Recording.from_file (recommended)
-emg = Recording.from_file('data.set', importer='eeglab')
+rec = Recording.from_file('data.set', importer='eeglab')
 
 # Method 2: Using the importer directly
-emg = EEGLABImporter().load('data.set')
+rec = EEGLABImporter().load('data.set')
 ```
 
 ## File Format Support

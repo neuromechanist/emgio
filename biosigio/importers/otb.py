@@ -249,7 +249,7 @@ class OTBImporter(BaseImporter):
             Recording: Recording object containing the loaded data
         """
         # Create Recording object
-        emg = Recording()
+        rec = Recording()
         temp_dir = None
 
         try:
@@ -281,7 +281,7 @@ class OTBImporter(BaseImporter):
             # Add channels to Recording object
             for ch_name, ch_info in metadata["channels"].items():
                 ch_idx = int(ch_name[2:]) - 1  # Extract channel number from 'CHx'
-                emg.add_channel(
+                rec.add_channel(
                     label=ch_name,
                     data=data[ch_idx],
                     sample_frequency=ch_info["sample_frequency"],
@@ -291,9 +291,9 @@ class OTBImporter(BaseImporter):
                 )
 
             # Add metadata
-            emg.set_metadata("source_file", filepath)
-            emg.set_metadata("device", metadata["device"]["name"])
-            emg.set_metadata("signal_resolution", metadata["device"]["ad_bits"])
+            rec.set_metadata("source_file", filepath)
+            rec.set_metadata("device", metadata["device"]["name"])
+            rec.set_metadata("signal_resolution", metadata["device"]["ad_bits"])
 
         finally:
             # Clean up temporary directory
@@ -305,4 +305,4 @@ class OTBImporter(BaseImporter):
                 except Exception as e:
                     print(f"Warning: Failed to clean up temp directory {temp_dir}: {str(e)}")
 
-        return emg
+        return rec

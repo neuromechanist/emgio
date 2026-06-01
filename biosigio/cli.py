@@ -84,11 +84,11 @@ def _is_unknown(info: dict) -> bool:
     return info.get("channel_type", "OTHER") in _UNKNOWN_CHANNEL_TYPES
 
 
-def _unknown_channels(emg: Recording) -> list[str]:
-    return [name for name, info in emg.channels.items() if _is_unknown(info)]
+def _unknown_channels(rec: Recording) -> list[str]:
+    return [name for name, info in rec.channels.items() if _is_unknown(info)]
 
 
-def _apply_modality(emg: Recording, modality: str) -> None:
+def _apply_modality(rec: Recording, modality: str) -> None:
     """Fill the modality of UNKNOWN channels only; never override detected ones.
 
     Source-detected modalities win; omitting --modality (this is not called)
@@ -100,7 +100,7 @@ def _apply_modality(emg: Recording, modality: str) -> None:
             EXIT_USAGE,
             f"unknown --modality '{modality}'; choose one of {sorted(VALID_MODALITIES)}",
         )
-    for info in emg.channels.values():
+    for info in rec.channels.values():
         if _is_unknown(info):
             info["modality"] = canonical
 
@@ -140,17 +140,17 @@ def _written_path(requested: str) -> str:
 
 
 def cmd_convert(args: argparse.Namespace) -> int:
-    emg = _load_emg(args.input)
+    rec = _load_emg(args.input)
     if args.modality:
-        _apply_modality(emg, args.modality)
+        _apply_modality(rec, args.modality)
 
-    unknown = _unknown_channels(emg)
+    unknown = _unknown_channels(rec)
     if unknown:
         logger.warning("channels with unknown modality: %s", ", ".join(unknown))
 
     try:
         with _quiet_stdout():
-            emg.to_edf(
+            rec.to_edf(
                 args.output,
                 format=args.format,
                 create_channels_tsv=not args.no_channels_tsv,
@@ -170,7 +170,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
         try:
             with _quiet_stdout():
                 reloaded = Recording.from_file(written)
-            results = compare_signals(emg, reloaded, tolerance=args.verify_tolerance)
+            results = compare_signals(rec, reloaded, tolerance=args.verify_tolerance)
         except Exception as e:
             raise CliError(EXIT_RUNTIME, f"verify reload failed: {e}") from e
         if not _all_identical(results):
@@ -224,14 +224,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 
 def cmd_info(args: argparse.Namespace) -> int:
-    emg = _load_emg(args.input)
-    rates = sorted({float(i["sample_frequency"]) for i in emg.channels.values()})
-    n_samples = int(emg.signals.shape[0]) if emg.signals is not None else 0
+    rec = _load_emg(args.input)
+    rates = sorted({float(i["sample_frequency"]) for i in rec.channels.values()})
+    n_samples = int(rec.signals.shape[0]) if rec.signals is not None else 0
     max_rate = max(rates) if rates else 0.0
     duration = round(n_samples / max_rate, 6) if max_rate else 0.0
-    n_events = int(len(emg.events)) if emg.events is not None else 0
+    n_events = int(len(rec.events)) if rec.events is not None else 0
     events_tsv = find_events_tsv(args.input)
-    unknown = _unknown_channels(emg)
+    unknown = _unknown_channels(rec)
 
     channels = [
         {
@@ -242,7 +242,7 @@ def cmd_info(args: argparse.Namespace) -> int:
             "sample_frequency": float(info["sample_frequency"]),
             "unit": info.get("physical_dimension"),
         }
-        for name, info in emg.channels.items()
+        for name, info in rec.channels.items()
     ]
 
     if unknown:
@@ -281,11 +281,11 @@ def cmd_lowres(args: argparse.Namespace) -> int:
     scaling/format bracketing in the EDF exporter. ``--bits 16`` -> EDF (16-bit),
     ``--bits 24`` -> BDF (24-bit). Default is "double low-res": 16-bit + 100 Hz.
     """
-    emg = _load_emg(args.input)
+    rec = _load_emg(args.input)
     if args.modality:
-        _apply_modality(emg, args.modality)
+        _apply_modality(rec, args.modality)
 
-    rates = sorted({float(i["sample_frequency"]) for i in emg.channels.values()})
+    rates = sorted({float(i["sample_frequency"]) for i in rec.channels.values()})
     source_rate = max(rates) if rates else 0.0
 
     # Skip the resample step when the source is already at or below the target
@@ -298,14 +298,14 @@ def cmd_lowres(args: argparse.Namespace) -> int:
         )
     else:
         try:
-            emg = emg.resample(args.rate)
+            rec = rec.resample(args.rate)
         except ValueError as e:
             raise CliError(EXIT_RUNTIME, f"resample failed: {e}") from e
 
     fmt = "edf" if args.bits == 16 else "bdf"
     try:
         with _quiet_stdout():
-            emg.to_edf(
+            rec.to_edf(
                 args.output,
                 format=fmt,
                 create_channels_tsv=not args.no_channels_tsv,

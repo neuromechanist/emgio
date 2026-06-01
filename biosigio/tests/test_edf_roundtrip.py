@@ -20,15 +20,15 @@ OTB_FIXTURE = os.path.join(EXAMPLE_DIR, "one_sessantaquattro_truncated.otb+")
 @pytest.mark.parametrize("fmt", ["edf", "bdf"])
 def test_export_preserves_full_recording_length(tmp_path, fmt):
     """A multi-second recording must round-trip without losing samples."""
-    emg = Recording.from_file(OTB_FIXTURE, importer="otb")
-    first = emg.signals.columns[0]
-    n_in = len(emg.signals[first])
-    samples_per_record = emg.channels[first]["sample_frequency"]
+    rec = Recording.from_file(OTB_FIXTURE, importer="otb")
+    first = rec.signals.columns[0]
+    n_in = len(rec.signals[first])
+    samples_per_record = rec.channels[first]["sample_frequency"]
     # The fixture must be longer than one data record, or it cannot expose the bug.
     assert n_in > samples_per_record
 
     out = tmp_path / f"roundtrip.{fmt}"
-    emg.to_edf(str(out), format=fmt, bypass_analysis=True)
+    rec.to_edf(str(out), format=fmt, bypass_analysis=True)
 
     reloaded = Recording.from_file(str(out))
     n_out = len(reloaded.signals[reloaded.signals.columns[0]])
@@ -46,10 +46,10 @@ def test_export_preserves_full_recording_length(tmp_path, fmt):
 )
 def test_export_rejects_mixed_sample_rates(tmp_path):
     """Mixed per-channel sample rates must fail loudly, not write a corrupt file."""
-    emg = Recording.from_file(
+    rec = Recording.from_file(
         os.path.join(EXAMPLE_DIR, "truncated_trigno_sample.csv"), importer="trigno"
     )
-    rates = {int(emg.channels[c]["sample_frequency"]) for c in emg.channels}
+    rates = {int(rec.channels[c]["sample_frequency"]) for c in rec.channels}
     assert len(rates) > 1, "fixture must have mixed rates to exercise the guard"
     with pytest.raises(ValueError, match="single sampling rate"):
-        emg.to_edf(str(tmp_path / "mixed.edf"), format="edf", bypass_analysis=True)
+        rec.to_edf(str(tmp_path / "mixed.edf"), format="edf", bypass_analysis=True)

@@ -59,19 +59,19 @@ You can control the format selection process when exporting:
 
 ```python
 # Use both methods (default)
-emg.to_edf('output', method='both')
+rec.to_edf('output', method='both')
 
 # Use only SVD analysis
-emg.to_edf('output', method='svd', svd_rank=None)  # Auto threshold
-emg.to_edf('output', method='svd', svd_rank=5)     # Manual threshold
+rec.to_edf('output', method='svd', svd_rank=None)  # Auto threshold
+rec.to_edf('output', method='svd', svd_rank=5)     # Manual threshold
 
 # Use only FFT analysis
-emg.to_edf('output', method='fft', fft_noise_range=None)    # Auto range
-emg.to_edf('output', method='fft', fft_noise_range=(0.1, 10))  # Manual range
+rec.to_edf('output', method='fft', fft_noise_range=None)    # Auto range
+rec.to_edf('output', method='fft', fft_noise_range=(0.1, 10))  # Manual range
 
 # Force a specific format
-emg.to_edf('output', format='edf')  # Force EDF (16-bit)
-emg.to_edf('output', format='bdf')  # Force BDF (24-bit)
+rec.to_edf('output', format='edf')  # Force EDF (16-bit)
+rec.to_edf('output', format='bdf')  # Force BDF (24-bit)
 ```
 
 ## Understanding the Output

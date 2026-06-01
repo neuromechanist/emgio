@@ -15,13 +15,13 @@ biosigIO provides a flexible CSV importer that can handle a wide variety of CSV-
 from biosigio import Recording
 
 # Basic usage (automatic format detection)
-emg = Recording.from_file('data.csv')
+rec = Recording.from_file('data.csv')
 
 # Force using the generic CSV importer even if specialized format is detected
-emg = Recording.from_file('data.csv', importer='csv', force_csv=True)
+rec = Recording.from_file('data.csv', importer='csv', force_csv=True)
 
 # Specify custom parameters
-emg = Recording.from_file('data.csv', importer='csv', 
+rec = Recording.from_file('data.csv', importer='csv', 
                    sample_frequency=1000,  # Required if no time column
                    has_header=True,        # Whether file has header row
                    delimiter=',',          # Column delimiter
@@ -57,7 +57,7 @@ The CSV importer accepts many customization parameters:
 # 0.001,0.2,0.3,0.4
 # ...
 
-emg = Recording.from_file('data.csv', importer='csv')
+rec = Recording.from_file('data.csv', importer='csv')
 ```
 
 ### Headerless CSV with Custom Names
@@ -68,7 +68,7 @@ emg = Recording.from_file('data.csv', importer='csv')
 # 0.2,0.3,0.4
 # ...
 
-emg = Recording.from_file('data.csv', importer='csv',
+rec = Recording.from_file('data.csv', importer='csv',
                     has_header=False,
                     sample_frequency=1000,  # Required since no time column
                     channel_names=['EMG_L', 'EMG_R', 'ACC_X'])
@@ -77,7 +77,7 @@ emg = Recording.from_file('data.csv', importer='csv',
 ### Setting Channel Types and Units
 
 ```python
-emg = Recording.from_file('data.csv', importer='csv',
+rec = Recording.from_file('data.csv', importer='csv',
                     channel_types={
                         'EMG1': 'EMG',
                         'EMG2': 'EMG',
@@ -94,12 +94,12 @@ emg = Recording.from_file('data.csv', importer='csv',
 
 ```python
 # Only load columns 0 and 2
-emg = Recording.from_file('data.csv', importer='csv',
+rec = Recording.from_file('data.csv', importer='csv',
                     columns=[0, 2],
                     sample_frequency=1000)
 
 # Only load columns named 'EMG1' and 'ACC1'
-emg = Recording.from_file('data.csv', importer='csv',
+rec = Recording.from_file('data.csv', importer='csv',
                     columns=['EMG1', 'ACC1'])
 ```
 

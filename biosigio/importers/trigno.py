@@ -81,7 +81,7 @@ class TrignoImporter(BaseImporter):
             Recording: Recording object containing the loaded data
         """
         # Create Recording object
-        emg = Recording()
+        rec = Recording()
 
         # Analyze file structure
         metadata_lines, data_start, header_line = self._analyze_csv_structure(filepath)
@@ -117,7 +117,7 @@ class TrignoImporter(BaseImporter):
                 else:
                     ch_type = "OTHER"
 
-                emg.add_channel(
+                rec.add_channel(
                     label=label,
                     data=df[label].values,
                     sample_frequency=info["sample_frequency"],
@@ -126,7 +126,7 @@ class TrignoImporter(BaseImporter):
                 )
 
         # Add file metadata
-        emg.set_metadata("source_file", filepath)
-        emg.set_metadata("device", "Delsys Trigno")
+        rec.set_metadata("source_file", filepath)
+        rec.set_metadata("device", "Delsys Trigno")
 
-        return emg
+        return rec

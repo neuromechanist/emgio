@@ -45,20 +45,20 @@ The EEGLAB importer in biosigIO (`biosigio.importers.eeglab`) works by:
 from biosigio import Recording
 
 # Load data from EEGLAB .set file
-emg = Recording.from_file('data.set', importer='eeglab')
+rec = Recording.from_file('data.set', importer='eeglab')
 
 # Print metadata
-print(f"Subject: {emg.get_metadata('subject')}")
-print(f"Condition: {emg.get_metadata('condition')}")
-print(f"Sampling rate: {emg.get_metadata('srate')} Hz")
+print(f"Subject: {rec.get_metadata('subject')}")
+print(f"Condition: {rec.get_metadata('condition')}")
+print(f"Sampling rate: {rec.get_metadata('srate')} Hz")
 
 # Print channel information
-print(f"Number of channels: {emg.get_n_channels()}")
-channel_types = emg.get_channel_types()
+print(f"Number of channels: {rec.get_n_channels()}")
+channel_types = rec.get_channel_types()
 print(f"Channel types: {channel_types}")
 
 # Plot data
-emg.plot_signals(time_range=(0, 5))
+rec.plot_signals(time_range=(0, 5))
 ```
 
 ## Channel Type Mapping

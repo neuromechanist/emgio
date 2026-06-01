@@ -22,17 +22,17 @@ IEEG = (
 
 @pytest.mark.skipif(not IEEG.exists(), reason="iEEG BIDS fixture missing")
 def test_channels_tsv_assigns_seeg_types():
-    emg = Recording.from_file(str(IEEG))
-    assert {info["channel_type"] for info in emg.channels.values()} == {"SEEG"}
-    assert {info["modality"] for info in emg.channels.values()} == {"IEEG"}
+    rec = Recording.from_file(str(IEEG))
+    assert {info["channel_type"] for info in rec.channels.values()} == {"SEEG"}
+    assert {info["modality"] for info in rec.channels.values()} == {"IEEG"}
 
 
 @pytest.mark.skipif(not IEEG.exists(), reason="iEEG BIDS fixture missing")
 def test_bids_channels_off_falls_back_to_header_inference():
-    emg = Recording.from_file(str(IEEG), bids_channels="off")
+    rec = Recording.from_file(str(IEEG), bids_channels="off")
     # Without the sidecar the EDF header cannot supply SEEG; assert the sidecar
     # was not consulted rather than pinning the exact inferred type.
-    assert "SEEG" not in {info["channel_type"] for info in emg.channels.values()}
+    assert "SEEG" not in {info["channel_type"] for info in rec.channels.values()}
 
 
 @pytest.mark.skipif(not IEEG.exists(), reason="iEEG BIDS fixture missing")

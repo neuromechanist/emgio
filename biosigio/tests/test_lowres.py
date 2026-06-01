@@ -25,41 +25,41 @@ requires_emg = pytest.mark.skipif(not EMG_EDF.exists(), reason="EMG fixture miss
 _CONST_PTP = 1e-9  # below this peak-to-peak a channel has no defined correlation
 
 
-def _rates(emg: Recording) -> set:
-    return {info["sample_frequency"] for info in emg.channels.values()}
+def _rates(rec: Recording) -> set:
+    return {info["sample_frequency"] for info in rec.channels.values()}
 
 
 @requires_eeg
 def test_resample_eeg_250_to_100_structure():
     """250 -> 100 Hz: new rate on all channels, expected sample count, channels/events kept."""
-    emg = Recording.from_file(str(EEG), importer="eeglab")
-    n_old = emg.signals.shape[0]
-    n_channels = len(emg.channels)
-    n_events = len(emg.events)
+    rec = Recording.from_file(str(EEG), importer="eeglab")
+    n_old = rec.signals.shape[0]
+    n_channels = len(rec.channels)
+    n_events = len(rec.events)
 
-    rs = emg.resample(100)
+    rs = rec.resample(100)
 
     assert _rates(rs) == {100}, "every channel must report the new rate"
     # resample_poly output length is ceil(n * up / down), not round(n * ratio).
     g = gcd(250, 100)
     assert rs.signals.shape[0] == ceil(n_old * (100 // g) / (250 // g))
     assert len(rs.channels) == n_channels, "channel count preserved"
-    assert set(rs.signals.columns) == set(emg.signals.columns), "channel names preserved"
+    assert set(rs.signals.columns) == set(rec.signals.columns), "channel names preserved"
     assert len(rs.events) == n_events, "events preserved"
 
     # Non-destructive: the source is untouched.
-    assert emg.signals.shape[0] == n_old
-    assert _rates(emg) == {250}
+    assert rec.signals.shape[0] == n_old
+    assert _rates(rec) == {250}
 
 
 @requires_eeg
 def test_resample_preserves_channel_and_recording_metadata():
     """Channel type/modality/units/prefilter and recording metadata survive."""
-    emg = Recording.from_file(str(EEG), importer="eeglab")
-    emg.set_metadata("subject", "sub-01")
-    rs = emg.resample(100)
+    rec = Recording.from_file(str(EEG), importer="eeglab")
+    rec.set_metadata("subject", "sub-01")
+    rs = rec.resample(100)
 
-    for ch, info in emg.channels.items():
+    for ch, info in rec.channels.items():
         new = rs.channels[ch]
         assert new["channel_type"] == info["channel_type"]
         assert new["modality"] == info["modality"]
@@ -80,9 +80,9 @@ def test_resample_anti_aliasing_removes_above_nyquist():
     t = np.arange(int(fs * 10)) / fs
     signal = np.sin(2 * np.pi * 5 * t) + np.sin(2 * np.pi * 80 * t)
 
-    emg = Recording()
-    emg.add_channel("S", signal, fs, "uV", "EEG")
-    rs = emg.resample(100)
+    rec = Recording()
+    rec.add_channel("S", signal, fs, "uV", "EEG")
+    rs = rec.resample(100)
 
     y = rs.signals["S"].to_numpy()
     assert _rates(rs) == {100}
@@ -102,8 +102,8 @@ def test_resample_anti_aliasing_removes_above_nyquist():
 @requires_eeg
 def test_resample_roundtrip_through_edf():
     """resample(100) -> EDF export -> reload: 100 Hz, per-channel r > 0.99 on 10 s."""
-    emg = Recording.from_file(str(EEG), importer="eeglab")
-    rs = emg.resample(100)
+    rec = Recording.from_file(str(EEG), importer="eeglab")
+    rs = rec.resample(100)
 
     import tempfile
 
@@ -166,8 +166,8 @@ def test_cli_lowres_default_is_double_lowres(tmp_path):
 @requires_emg
 def test_cli_lowres_skips_when_already_low(tmp_path, capsys):
     """Source already <= target rate: export without resampling, with a stderr note."""
-    emg = Recording.from_file(str(EMG_EDF))
-    source_rate = max(_rates(emg))
+    rec = Recording.from_file(str(EMG_EDF))
+    source_rate = max(_rates(rec))
     target = source_rate + 100.0  # guarantee source <= target
 
     out = tmp_path / "skip.edf"
@@ -176,26 +176,26 @@ def test_cli_lowres_skips_when_already_low(tmp_path, capsys):
     assert "without resampling" in capsys.readouterr().err
 
     reloaded = Recording.from_file(str(out), bids_channels="off")
-    assert _rates(reloaded) == _rates(emg), "rate unchanged when no resampling occurred"
+    assert _rates(reloaded) == _rates(rec), "rate unchanged when no resampling occurred"
 
 
 @requires_eeg
 def test_resample_equal_rate_returns_unchanged_copy():
     """target == source: a copy with the same rate and sample count, but a new object."""
-    emg = Recording.from_file(str(EEG), importer="eeglab")
-    rs = emg.resample(250)
-    assert rs is not emg
+    rec = Recording.from_file(str(EEG), importer="eeglab")
+    rs = rec.resample(250)
+    assert rs is not rec
     assert _rates(rs) == {250}
-    assert rs.signals.shape == emg.signals.shape
-    assert np.allclose(rs.signals.to_numpy(), emg.signals.to_numpy())
+    assert rs.signals.shape == rec.signals.shape
+    assert np.allclose(rs.signals.to_numpy(), rec.signals.to_numpy())
 
 
 @requires_eeg
 def test_resample_above_source_raises():
     """Up-sampling is refused (low-res only)."""
-    emg = Recording.from_file(str(EEG), importer="eeglab")
+    rec = Recording.from_file(str(EEG), importer="eeglab")
     with pytest.raises(ValueError, match="exceeds source rate"):
-        emg.resample(500)
+        rec.resample(500)
 
 
 def test_resample_non_integer_target_stores_actual_rate():
@@ -205,10 +205,10 @@ def test_resample_non_integer_target_stores_actual_rate():
     integer factors up=25/down=64 -> achieves exactly 100.0 Hz, which must be what
     is written to the channels (not the requested 100.4).
     """
-    emg = Recording()
+    rec = Recording()
     rng = np.random.default_rng(0)
-    emg.add_channel("X", rng.standard_normal(2560), 256, "uV", "EEG")
-    rs = emg.resample(100.4)
+    rec.add_channel("X", rng.standard_normal(2560), 256, "uV", "EEG")
+    rs = rec.resample(100.4)
     assert _rates(rs) == {100.0}  # the ACHIEVED rate, never the requested 100.4
     assert 100.4 not in _rates(rs)
 
@@ -219,11 +219,11 @@ def test_resample_mixed_rate_raises():
     biosigio stores one uniform-length grid, so the two channels share a length;
     only their declared sample_frequency differs, which the guard must reject.
     """
-    emg = Recording()
-    emg.add_channel("A", np.zeros(1000), 500.0, "uV", "EEG")
-    emg.add_channel("B", np.zeros(1000), 250.0, "uV", "EEG")
+    rec = Recording()
+    rec.add_channel("A", np.zeros(1000), 500.0, "uV", "EEG")
+    rec.add_channel("B", np.zeros(1000), 250.0, "uV", "EEG")
     with pytest.raises(ValueError, match="single sampling rate"):
-        emg.resample(100)
+        rec.resample(100)
 
 
 def test_resample_no_signals_raises():

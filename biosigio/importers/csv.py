@@ -204,15 +204,15 @@ class CSVImporter(BaseImporter):
                 )
 
         # Create recording object
-        emg = Recording()
+        rec = Recording()
 
         # Add metadata
-        emg.set_metadata("source_file", filepath)
-        emg.set_metadata("file_format", "CSV")
+        rec.set_metadata("source_file", filepath)
+        rec.set_metadata("file_format", "CSV")
 
         # Add any user-provided metadata
         for key, value in metadata.items():
-            emg.set_metadata(key, value)
+            rec.set_metadata(key, value)
 
         # Default sampling frequency if not specified
         default_sample_frequency = 1000.0  # 1 kHz is a common default for EMG
@@ -246,7 +246,7 @@ class CSVImporter(BaseImporter):
                 phys_dim = self._default_physical_dimension(ch_type)
 
             # Add the channel to the recording
-            emg.add_channel(
+            rec.add_channel(
                 label=column,
                 data=df[column].values,
                 sample_frequency=sample_frequency or default_sample_frequency,
@@ -255,9 +255,9 @@ class CSVImporter(BaseImporter):
             )
 
         # Encourage user to add metadata if missing essential information
-        self._print_metadata_reminder(emg)
+        self._print_metadata_reminder(rec)
 
-        return emg
+        return rec
 
     def _analyze_csv_structure(self, filepath: str) -> dict:
         """
@@ -424,18 +424,18 @@ class CSVImporter(BaseImporter):
         dimensions = {"EMG": "µV", "ACC": "g", "GYRO": "deg/s", "TIME": "s", "OTHER": "a.u."}
         return dimensions.get(channel_type, "a.u.")
 
-    def _print_metadata_reminder(self, emg: Recording) -> None:
+    def _print_metadata_reminder(self, rec: Recording) -> None:
         """
         Print a reminder to add metadata if essential information is missing.
 
         Args:
-            emg: Recording object to check
+            rec: Recording object to check
         """
         essential_metadata = ["subject", "device", "recording_date"]
-        missing = [meta for meta in essential_metadata if meta not in emg.metadata]
+        missing = [meta for meta in essential_metadata if meta not in rec.metadata]
 
         if missing:
             print("[INFO] Reminder: Consider adding essential metadata for better context:")
             for meta in missing:
-                print(f"  emg.set_metadata('{meta}', '<Your {meta.replace('_', ' ').title()}>')")
-            print("Example: emg.set_metadata('subject', 'S001')")
+                print(f"  rec.set_metadata('{meta}', '<Your {meta.replace('_', ' ').title()}>')")
+            print("Example: rec.set_metadata('subject', 'S001')")

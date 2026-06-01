@@ -25,13 +25,13 @@ pytestmark = pytest.mark.skipif(not MEG.exists(), reason="MEG fixture missing")
 
 
 @pytest.fixture(scope="module")
-def meg_emg():
+def meg_rec():
     return Recording.from_file(str(MEG))
 
 
-def test_meg_channel_types_preserved(meg_emg):
+def test_meg_channel_types_preserved(meg_rec):
     """Sensor types stay distinct (mag vs reference vs stim), not collapsed."""
-    types = Counter(i["channel_type"] for i in meg_emg.channels.values())
+    types = Counter(i["channel_type"] for i in meg_rec.channels.values())
     assert types["MEGMAG"] == 274
     assert types["MEGREFMAG"] == 29
     assert types["TRIG"] == 2
@@ -40,8 +40,8 @@ def test_meg_channel_types_preserved(meg_emg):
     assert "EMG" not in types
 
 
-def test_meg_units_and_modalities(meg_emg):
-    by_type = {i["channel_type"]: i for i in meg_emg.channels.values()}
+def test_meg_units_and_modalities(meg_rec):
+    by_type = {i["channel_type"]: i for i in meg_rec.channels.values()}
     assert by_type["MEGMAG"]["physical_dimension"] == "T"  # Tesla magnetometers
     assert by_type["MEGREFMAG"]["physical_dimension"] == "T"
     assert by_type["TRIG"]["physical_dimension"] == "V"
@@ -49,40 +49,40 @@ def test_meg_units_and_modalities(meg_emg):
     assert by_type["TRIG"]["modality"] == "MISC"
 
 
-def test_meg_sampling_and_shape(meg_emg):
-    rates = {i["sample_frequency"] for i in meg_emg.channels.values()}
+def test_meg_sampling_and_shape(meg_rec):
+    rates = {i["sample_frequency"] for i in meg_rec.channels.values()}
     assert rates == {100.0}
-    assert meg_emg.signals.shape == (3000, 305)  # 30 s @ 100 Hz, 305 channels
+    assert meg_rec.signals.shape == (3000, 305)  # 30 s @ 100 Hz, 305 channels
 
 
-def test_meg_stim_events(meg_emg):
+def test_meg_stim_events(meg_rec):
     """Stim-channel triggers are read into events (onsets in seconds, sorted)."""
-    assert meg_emg.events is not None and len(meg_emg.events) == 58
-    onsets = meg_emg.events["onset"].to_numpy()
+    assert meg_rec.events is not None and len(meg_rec.events) == 58
+    onsets = meg_rec.events["onset"].to_numpy()
     assert (onsets[:-1] <= onsets[1:]).all()  # sorted
     assert onsets.min() >= 0.0 and onsets.max() <= 30.0  # within the recording
-    assert meg_emg.events["onset"].dtype == np.float64
+    assert meg_rec.events["onset"].dtype == np.float64
     # Descriptions are the stringified trigger codes.
-    assert all(d.isdigit() for d in meg_emg.events["description"])
+    assert all(d.isdigit() for d in meg_rec.events["description"])
 
 
-def test_meg_roundtrip_preserves_tesla_signals(meg_emg, tmp_path):
+def test_meg_roundtrip_preserves_tesla_signals(meg_rec, tmp_path):
     """Tesla-magnitude MEG channels survive EDF/BDF export+reimport (r > 0.99).
 
     Magnetometer values are ~1e-12 T, exercising the exporter's small-magnitude
     physical-bound path; BDF (auto-selected for the dynamic range) must keep them.
     """
     out = tmp_path / "meg.edf"
-    meg_emg.to_edf(str(out), format="bdf", bypass_analysis=True)
+    meg_rec.to_edf(str(out), format="bdf", bypass_analysis=True)
     written = out if out.exists() else out.with_suffix(".bdf")
     reloaded = Recording.from_file(str(written), bids_channels="off")
-    assert len(reloaded.channels) == len(meg_emg.channels)
+    assert len(reloaded.channels) == len(meg_rec.channels)
 
     # Check a handful of magnetometer channels on a 10 s window.
-    mag = [c for c, i in meg_emg.channels.items() if i["channel_type"] == "MEGMAG"][:5]
+    mag = [c for c, i in meg_rec.channels.items() if i["channel_type"] == "MEGMAG"][:5]
     window = slice(0, 1000)  # 10 s @ 100 Hz
     for ch in mag:
-        original = meg_emg.signals[ch].values[window].astype(float)
+        original = meg_rec.signals[ch].values[window].astype(float)
         roundtripped = reloaded.signals[ch].values[window].astype(float)
         if np.std(original) == 0:
             continue

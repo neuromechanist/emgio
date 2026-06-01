@@ -20,36 +20,36 @@ XDF_FILE = _REPO / "examples/multi_stream_test.xdf"
 
 
 def test_add_channel_requires_channel_type():
-    emg = Recording()
+    rec = Recording()
     with pytest.raises(TypeError):
-        emg.add_channel("C", np.zeros(10), 100, "uV")  # channel_type omitted
+        rec.add_channel("C", np.zeros(10), 100, "uV")  # channel_type omitted
 
 
 def test_add_channel_validates_and_infers_modality():
-    emg = Recording()
-    emg.add_channel("E1", np.zeros(10), 100, "uV", "eeg")  # case-insensitive
-    assert emg.channels["E1"]["channel_type"] == "EEG"
-    assert emg.channels["E1"]["modality"] == "EEG"
+    rec = Recording()
+    rec.add_channel("E1", np.zeros(10), 100, "uV", "eeg")  # case-insensitive
+    assert rec.channels["E1"]["channel_type"] == "EEG"
+    assert rec.channels["E1"]["modality"] == "EEG"
 
-    emg.add_channel("S1", np.zeros(10), 100, "uV", "ECOG")
-    assert emg.channels["S1"]["modality"] == "IEEG"
+    rec.add_channel("S1", np.zeros(10), 100, "uV", "ECOG")
+    assert rec.channels["S1"]["modality"] == "IEEG"
 
     with pytest.raises(ValueError):
-        emg.add_channel("X", np.zeros(10), 100, "uV", "BOGUS")
+        rec.add_channel("X", np.zeros(10), 100, "uV", "BOGUS")
 
 
 def test_set_channel_and_modality_selectors():
-    emg = Recording()
-    emg.add_channel("a", np.zeros(10), 100, "uV", "EEG")
-    emg.add_channel("b", np.zeros(10), 100, "mV", "EMG")
+    rec = Recording()
+    rec.add_channel("a", np.zeros(10), 100, "uV", "EEG")
+    rec.add_channel("b", np.zeros(10), 100, "mV", "EMG")
 
-    assert set(emg.get_modalities()) == {"EEG", "EMG"}
-    assert emg.get_channels_by_modality("EEG") == ["a"]
-    assert emg.select_channels(modality="EMG").signals.columns.tolist() == ["b"]
+    assert set(rec.get_modalities()) == {"EEG", "EMG"}
+    assert rec.get_channels_by_modality("EEG") == ["a"]
+    assert rec.select_channels(modality="EMG").signals.columns.tolist() == ["b"]
 
-    emg.set_channel("b", channel_type="ECG")
-    assert emg.channels["b"]["channel_type"] == "ECG"
-    assert emg.channels["b"]["modality"] == "MISC"  # re-derived from new type
+    rec.set_channel("b", channel_type="ECG")
+    assert rec.channels["b"]["channel_type"] == "ECG"
+    assert rec.channels["b"]["modality"] == "MISC"  # re-derived from new type
 
 
 def test_csv_time_column_is_not_an_invalid_type():
@@ -60,9 +60,9 @@ def test_csv_time_column_is_not_an_invalid_type():
 
 @pytest.mark.skipif(not XDF_FILE.exists(), reason="XDF fixture missing")
 def test_xdf_channels_carry_valid_type_and_modality():
-    emg = Recording.from_file(str(XDF_FILE))
-    assert len(emg.channels) > 0
-    for info in emg.channels.values():
+    rec = Recording.from_file(str(XDF_FILE))
+    assert len(rec.channels) > 0
+    for info in rec.channels.values():
         # No raw/unvalidated LSL type strings leak through, and every channel
         # carries a modality (so the modality selectors work for XDF data).
         assert info["channel_type"] in VALID_CHANNEL_TYPES
@@ -71,9 +71,9 @@ def test_xdf_channels_carry_valid_type_and_modality():
 
 @pytest.mark.skipif(not EEG_SET.exists(), reason="EEG BIDS fixture missing")
 def test_real_eeg_does_not_creep_to_emg():
-    emg = Recording.from_file(str(EEG_SET), importer="eeglab")
-    types = {info["channel_type"] for info in emg.channels.values()}
+    rec = Recording.from_file(str(EEG_SET), importer="eeglab")
+    types = {info["channel_type"] for info in rec.channels.values()}
     # The headline bug: EEG data must not be silently relabelled EMG.
     assert "EMG" not in types
     # Every channel carries a modality after the explicit-modality migration.
-    assert all("modality" in info for info in emg.channels.values())
+    assert all("modality" in info for info in rec.channels.values())

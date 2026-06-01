@@ -158,18 +158,18 @@ class EDFImporter(BaseImporter):
             edf_reader = pyedflib.EdfReader(filepath)
 
             # Create Recording object
-            emg = Recording()
+            rec = Recording()
 
             # Extract and store metadata
             metadata = self._extract_metadata(edf_reader)
             for key, value in metadata["recording_info"].items():
                 if value:  # Only store non-empty values
-                    emg.set_metadata(key, value)
+                    rec.set_metadata(key, value)
             for key, value in metadata["file_info"].items():
-                emg.set_metadata(key, value)
+                rec.set_metadata(key, value)
 
             # Store source file information
-            emg.set_metadata("source_file", filepath)
+            rec.set_metadata("source_file", filepath)
 
             # Read signals
             for i in range(edf_reader.signals_in_file):
@@ -181,7 +181,7 @@ class EDFImporter(BaseImporter):
                 )
 
                 # Add channel to Recording object
-                emg.add_channel(
+                rec.add_channel(
                     label=signal_info["label"],
                     data=signal_data,
                     sample_frequency=signal_info["sample_frequency"],
@@ -198,7 +198,7 @@ class EDFImporter(BaseImporter):
                     "digital_max": signal_info["digital_max"],
                     "transducer": signal_info["transducer"],
                 }
-                emg.channels[signal_info["label"]].update(channel_metadata)
+                rec.channels[signal_info["label"]].update(channel_metadata)
 
             # Read EDF+/BDF+ annotations into events so they survive the
             # import->export->import round-trip (issue #47). Assigned directly
@@ -207,9 +207,9 @@ class EDFImporter(BaseImporter):
             # sorted by onset). Left as the empty __init__ frame when none exist.
             events = self._read_annotations(edf_reader)
             if not events.empty:
-                emg.events = events
+                rec.events = events
 
-            return emg
+            return rec
 
         except Exception as e:
             raise ValueError(f"Error reading EDF file: {str(e)}") from e

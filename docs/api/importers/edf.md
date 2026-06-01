@@ -17,10 +17,10 @@ from biosigio import Recording
 from biosigio.importers.edf import EDFImporter
 
 # Method 1: Using Recording.from_file (recommended)
-emg = Recording.from_file('data.edf', importer='edf')  # Works for both .edf and .bdf
+rec = Recording.from_file('data.edf', importer='edf')  # Works for both .edf and .bdf
 
 # Method 2: Using the importer directly
-emg = EDFImporter().load('data.edf')
+rec = EDFImporter().load('data.edf')
 ```
 
 ## File Format Support
@@ -86,10 +86,10 @@ EDF/BDF, these events are written out again as EDF+ annotations.
 
 ```python
 # Load an EDF+ file with annotations
-emg = Recording.from_file('data.edf', importer='edf')
+rec = Recording.from_file('data.edf', importer='edf')
 
 # Access annotations via the events DataFrame
-for _, event in emg.events.iterrows():
+for _, event in rec.events.iterrows():
     print(f"Event: {event['description']} at {event['onset']}s, "
           f"duration: {event['duration']}s")
 ```

@@ -10,7 +10,7 @@ MNE exposes as annotations) are read into ``Recording.events``.
 import pandas as pd
 
 from ..core.emg import Recording
-from ._mne_common import raw_to_emg, require_mne
+from ._mne_common import raw_to_recording, require_mne
 from .base import BaseImporter
 
 
@@ -53,11 +53,11 @@ class BrainVisionImporter(BaseImporter):
         except Exception as e:
             raise ValueError(f"Error reading BrainVision file {filepath}: {e}") from e
 
-        emg = raw_to_emg(raw)
-        emg.set_metadata("source_file", filepath)
+        rec = raw_to_recording(raw)
+        rec.set_metadata("source_file", filepath)
 
         events = self._read_events(raw)
         if not events.empty:
-            emg.events = events
+            rec.events = events
 
-        return emg
+        return rec

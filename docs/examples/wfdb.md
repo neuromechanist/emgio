@@ -15,11 +15,11 @@ The `WFDBImporter` automatically detects and loads annotations if the correspond
 1.  **Import `Recording`:** The core class is imported.
 2.  **Define Path:** The path to the WFDB header file (`.hea`) is specified.
 3.  **Load Data:** `Recording.from_file()` is called with the header file path. biosigIO infers the importer (`'wfdb'`) based on the `.hea` extension (this could also be explicitly set using `importer='wfdb'`). The importer reads the header, data, and automatically looks for `100.atr` to load annotations.
-4.  **Access Metadata:** Basic metadata like `record_name` and `sampling_frequency` are accessed using `emg.get_metadata()`.
-5.  **Access Channels:** Information about the loaded channels (`MLII`, `V5`) is iterated through `emg.channels`.
-6.  **Access Annotations:** The script checks if the `emg.events` DataFrame is populated. If the `.atr` file was loaded successfully, it prints the first and last few annotations.
-7.  **Plotting:** A short segment of the first channel is plotted using `emg.plot_signals()`.
-8.  **Exporting:** The loaded data (including annotations) is exported to both EDF+ and BDF+ formats using `emg.to_edf()`. The presence of annotations is noted in the output.
+4.  **Access Metadata:** Basic metadata like `record_name` and `sampling_frequency` are accessed using `rec.get_metadata()`.
+5.  **Access Channels:** Information about the loaded channels (`MLII`, `V5`) is iterated through `rec.channels`.
+6.  **Access Annotations:** The script checks if the `rec.events` DataFrame is populated. If the `.atr` file was loaded successfully, it prints the first and last few annotations.
+7.  **Plotting:** A short segment of the first channel is plotted using `rec.plot_signals()`.
+8.  **Exporting:** The loaded data (including annotations) is exported to both EDF+ and BDF+ formats using `rec.to_edf()`. The presence of annotations is noted in the output.
 
 ## Running the Example
 

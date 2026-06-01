@@ -43,22 +43,22 @@ from biosigio import Recording
 import matplotlib.pyplot as plt
 
 # Load data from OTB file
-emg = Recording.from_file('data.otb+', importer='otb')
+rec = Recording.from_file('data.otb+', importer='otb')
 
 # Print device information
-print(f"Device: {emg.get_metadata('device')}")
-print(f"Resolution: {emg.get_metadata('signal_resolution')} bits")
+print(f"Device: {rec.get_metadata('device')}")
+print(f"Resolution: {rec.get_metadata('signal_resolution')} bits")
 
 # Summarize channel types
-channel_types = emg.get_channel_types()
+channel_types = rec.get_channel_types()
 print(f"Channel types: {channel_types}")
 
 for ch_type in channel_types:
-    channels = emg.get_channels_by_type(ch_type)
+    channels = rec.get_channels_by_type(ch_type)
     print(f"{ch_type} channels: {len(channels)}")
 
 # Select only EMG channels
-emg_only = emg.select_channels(channel_type='EMG')
+emg_only = rec.select_channels(channel_type='EMG')
 
 # Plot EMG channels
 emg_only.plot_signals(time_range=(0, 5))

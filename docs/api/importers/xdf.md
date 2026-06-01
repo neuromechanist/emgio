@@ -19,11 +19,11 @@ from biosigio import Recording
 from biosigio.importers.xdf import XDFImporter
 
 # Method 1: Using Recording.from_file (recommended)
-emg = Recording.from_file('recording.xdf')
+rec = Recording.from_file('recording.xdf')
 
 # Method 2: Using the importer directly
 importer = XDFImporter()
-emg = importer.load('recording.xdf')
+rec = importer.load('recording.xdf')
 ```
 
 ### Exploring File Contents
@@ -54,30 +54,30 @@ print(summary)
 
 ```python
 # Load only specific stream types
-emg = Recording.from_file('recording.xdf', stream_types=['EMG'])
+rec = Recording.from_file('recording.xdf', stream_types=['EMG'])
 
 # Load multiple types
-emg = Recording.from_file('recording.xdf', stream_types=['EMG', 'EEG'])
+rec = Recording.from_file('recording.xdf', stream_types=['EMG', 'EEG'])
 
 # Load by stream name
-emg = Recording.from_file('recording.xdf', stream_names=['MyEMGDevice'])
+rec = Recording.from_file('recording.xdf', stream_names=['MyEMGDevice'])
 
 # Load by stream ID
-emg = Recording.from_file('recording.xdf', stream_ids=[2])
+rec = Recording.from_file('recording.xdf', stream_ids=[2])
 ```
 
 ### Setting Default Channel Type
 
 ```python
 # For streams without explicit channel type metadata
-emg = Recording.from_file('recording.xdf', default_channel_type='EMG')
+rec = Recording.from_file('recording.xdf', default_channel_type='EMG')
 ```
 
 ### Preserving LSL Timestamps
 
 ```python
 # Include original LSL timestamps as additional channels
-emg = Recording.from_file('recording.xdf', include_timestamps=True)
+rec = Recording.from_file('recording.xdf', include_timestamps=True)
 
 # Each stream gets a "{stream_name}_LSL_timestamps" channel
 # Useful for synchronization with other LSL-recorded data

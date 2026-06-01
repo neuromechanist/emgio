@@ -16,14 +16,14 @@ The EDF/BDF exporter module in biosigIO provides functionality to export biosign
 from biosigio import Recording
 
 # Load data
-emg = Recording.from_file('data.csv', importer='trigno')
+rec = Recording.from_file('data.csv', importer='trigno')
 
 # Export to EDF/BDF with automatic format selection
-emg.to_edf('output')  # Will generate output.edf or output.bdf
+rec.to_edf('output')  # Will generate output.edf or output.bdf
 
 # Force specific format
-emg.to_edf('output_edf', format='edf')  # Forces 16-bit EDF
-emg.to_edf('output_bdf', format='bdf')  # Forces 24-bit BDF
+rec.to_edf('output_edf', format='edf')  # Forces 16-bit EDF
+rec.to_edf('output_bdf', format='bdf')  # Forces 24-bit BDF
 ```
 
 ## Automatic Format Selection
@@ -32,15 +32,15 @@ A key feature of biosigIO's exporter is its ability to automatically determine w
 
 ```python
 # Control the analysis method for format selection
-emg.to_edf('output', method='svd')  # Use SVD analysis only
-emg.to_edf('output', method='fft')  # Use FFT analysis only 
-emg.to_edf('output', method='both')  # Use both methods (default)
+rec.to_edf('output', method='svd')  # Use SVD analysis only
+rec.to_edf('output', method='fft')  # Use FFT analysis only 
+rec.to_edf('output', method='both')  # Use both methods (default)
 
 # Customize SVD parameters
-emg.to_edf('output', method='svd', svd_rank=5)  # Manual rank cutoff
+rec.to_edf('output', method='svd', svd_rank=5)  # Manual rank cutoff
 
 # Customize FFT parameters
-emg.to_edf('output', 
+rec.to_edf('output', 
            method='fft', 
            fft_noise_range=(0.1, 10))  # Manual frequency range for noise floor estimation
 ```

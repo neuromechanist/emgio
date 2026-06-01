@@ -25,22 +25,22 @@ EEG_SET = (
 
 @pytest.mark.skipif(not EEG_SET.exists(), reason="EEG BIDS fixture missing")
 def test_eeglab_bids_eeg_fixture_imports():
-    emg = Recording.from_file(str(EEG_SET), importer="eeglab")
+    rec = Recording.from_file(str(EEG_SET), importer="eeglab")
 
     # All 64 channels imported with their real 10-10 montage labels.
-    assert len(emg.channels) == 64
-    assert "FP1" in emg.signals.columns
+    assert len(rec.channels) == 64
+    assert "FP1" in rec.signals.columns
 
-    col = emg.signals.columns[0]
-    assert emg.channels[col]["sample_frequency"] == 250
+    col = rec.signals.columns[0]
+    assert rec.channels[col]["sample_frequency"] == 250
 
     # 60 s at 250 Hz.
-    n = len(emg.signals[col])
+    n = len(rec.signals[col])
     assert n == 15000
 
     # Time index is seconds derived from the sample count, not the old
     # milliseconds/srate mis-scaling (which gave ~240 s for a 60 s recording).
-    assert emg.signals.index[-1] == pytest.approx((n - 1) / 250, rel=1e-6)
+    assert rec.signals.index[-1] == pytest.approx((n - 1) / 250, rel=1e-6)
 
     # Events were parsed from the .set event struct into the events table.
-    assert not emg.events.empty and len(emg.events) == 3
+    assert not rec.events.empty and len(rec.events) == 3

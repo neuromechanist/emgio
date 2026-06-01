@@ -11,21 +11,21 @@ import matplotlib.pyplot as plt
 from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Load original data from a device-specific format
-emg_original = Recording.from_file('sample_data.csv', importer='trigno')
+rec_original = Recording.from_file('sample_data.csv', importer='trigno')
 # just keep the EMG channels
-emg_channels = [ch for ch, info in emg_original.channels.items() if info['channel_type'] == 'EMG']
-emg_original = emg_original.select_channels(emg_channels)  # Creates a new Recording object with only EMG channels
+emg_channels = [ch for ch, info in rec_original.channels.items() if info['channel_type'] == 'EMG']
+rec_original = rec_original.select_channels(emg_channels)  # Creates a new Recording object with only EMG channels
 
 # Export to EDF (automatically selects EDF or BDF based on signal characteristics).
 # Pass a base path without an extension; the writer appends .edf or .bdf.
-emg_original.to_edf('exported_data')
+rec_original.to_edf('exported_data')
 
 # Reload the exported data. Resolve whichever extension to_edf selected.
 exported_path = 'exported_data.edf' if os.path.exists('exported_data.edf') else 'exported_data.bdf'
-emg_reloaded = Recording.from_file(exported_path)
+rec_reloaded = Recording.from_file(exported_path)
 
 # Verify signals using the verification module
-results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
+results = compare_signals(rec_original, rec_reloaded, tolerance=0.01)
 is_identical = report_verification_results(results, verify_tolerance=0.01)
 
 print(f"Verification result: {'Passed' if is_identical else 'Failed'}")
@@ -39,13 +39,13 @@ The `plot_comparison()` function provides a visual way to compare signals:
 from biosigio.visualization.static import plot_comparison
 
 # Visual comparison of original and reloaded signals
-plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
+plot_comparison(rec_original, rec_reloaded, channels=['EMG1', 'EMG2'])
 plt.show()
 
 # Customize the comparison
 plot_comparison(
-    emg_original,
-    emg_reloaded,
+    rec_original,
+    rec_reloaded,
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),  # Only show first 5 seconds
     detrend=True,       # Remove mean for easier comparison
@@ -63,8 +63,8 @@ from biosigio.analysis.verification import compare_signals, report_verification_
 
 # Compare with detailed metrics
 results = compare_signals(
-    emg_original,
-    emg_reloaded,
+    rec_original,
+    rec_reloaded,
     tolerance=0.01,  # Set custom tolerance (1%)
     channel_map=None  # Use automatic channel matching
 )
@@ -98,8 +98,8 @@ channel_map = {
 
 # Compare with channel mapping
 results = compare_signals(
-    emg_original,
-    emg_reloaded,
+    rec_original,
+    rec_reloaded,
     tolerance=0.01,
     channel_map=channel_map
 )
@@ -109,8 +109,8 @@ is_identical = report_verification_results(results, verify_tolerance=0.01)
 
 # Visual comparison with channel mapping
 plot_comparison(
-    emg_original,
-    emg_reloaded,
+    rec_original,
+    rec_reloaded,
     channel_map=channel_map,
     time_range=(0, 5)
 )
@@ -127,30 +127,30 @@ from biosigio.analysis.verification import compare_signals, report_verification_
 from biosigio.visualization.static import plot_comparison
 
 # 1. Load original Trigno CSV data
-emg_trigno = Recording.from_file('trigno_data.csv', importer='trigno')
+rec_trigno = Recording.from_file('trigno_data.csv', importer='trigno')
 
 # 2. Export to EDF (the writer appends .edf or .bdf based on signal analysis)
-emg_trigno.to_edf('converted_data')
-print(f"Data exported. Duration: {emg_trigno.get_duration():.2f}s, "
-      f"Channels: {emg_trigno.get_n_channels()}")
+rec_trigno.to_edf('converted_data')
+print(f"Data exported. Duration: {rec_trigno.get_duration():.2f}s, "
+      f"Channels: {rec_trigno.get_n_channels()}")
 
 # 3. Reload from the exported file (resolve the auto-selected extension)
 converted_path = 'converted_data.edf' if os.path.exists('converted_data.edf') else 'converted_data.bdf'
-emg_edf = Recording.from_file(converted_path)
-print(f"Data reloaded. Duration: {emg_edf.get_duration():.2f}s, "
-      f"Channels: {emg_edf.get_n_channels()}")
+rec_edf = Recording.from_file(converted_path)
+print(f"Data reloaded. Duration: {rec_edf.get_duration():.2f}s, "
+      f"Channels: {rec_edf.get_n_channels()}")
 
 # 4. Verification using the analysis module
-results = compare_signals(emg_trigno, emg_edf, tolerance=0.01)
+results = compare_signals(rec_trigno, rec_edf, tolerance=0.01)
 is_identical = report_verification_results(results, verify_tolerance=0.01)
 print(f"Verification result: {'Passed' if is_identical else 'Failed'}")
 
 # 5. Visual verification of a few channels
 plt.figure(figsize=(14, 8))
 plot_comparison(
-    emg_trigno,
-    emg_edf,
-    channels=list(emg_trigno.signals.columns)[:3],  # First 3 channels
+    rec_trigno,
+    rec_edf,
+    channels=list(rec_trigno.signals.columns)[:3],  # First 3 channels
     time_range=(0, 2),  # First 2 seconds
     detrend=True
 )

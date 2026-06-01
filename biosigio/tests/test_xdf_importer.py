@@ -83,32 +83,32 @@ def test_summarize_xdf_stream_lookup():
 def test_xdf_importer_basic():
     """Test XDF importer with sample data."""
     importer = XDFImporter()
-    emg = importer.load(SAMPLE_XDF_PATH)
+    rec = importer.load(SAMPLE_XDF_PATH)
 
     # Check if channels were loaded
-    assert len(emg.channels) == 8
+    assert len(rec.channels) == 8
 
     # Check channel properties
-    first_channel = list(emg.channels.keys())[0]
-    assert emg.channels[first_channel]["sample_frequency"] == 1000.0
+    first_channel = list(rec.channels.keys())[0]
+    assert rec.channels[first_channel]["sample_frequency"] == 1000.0
 
     # Check data shape
-    assert emg.signals.shape == (9520, 8)
+    assert rec.signals.shape == (9520, 8)
 
     # Check metadata
-    assert emg.get_metadata("device") == "XDF"
-    assert emg.get_metadata("source_file") == SAMPLE_XDF_PATH
-    assert emg.get_metadata("stream_count") == 1
+    assert rec.get_metadata("device") == "XDF"
+    assert rec.get_metadata("source_file") == SAMPLE_XDF_PATH
+    assert rec.get_metadata("stream_count") == 1
 
 
 def test_xdf_importer_from_emg_class():
     """Test XDF import through Recording.from_file."""
-    emg = Recording.from_file(SAMPLE_XDF_PATH)
+    rec = Recording.from_file(SAMPLE_XDF_PATH)
 
     # Check basic loading
-    assert emg.signals is not None
-    assert len(emg.channels) == 8
-    assert emg.signals.shape[0] == 9520
+    assert rec.signals is not None
+    assert len(rec.channels) == 8
+    assert rec.signals.shape[0] == 9520
 
 
 def test_xdf_importer_stream_selection_by_type():
@@ -116,8 +116,8 @@ def test_xdf_importer_stream_selection_by_type():
     importer = XDFImporter()
 
     # Select by type - should match the stream
-    emg = importer.load(SAMPLE_XDF_PATH, stream_types=["EEG"])
-    assert len(emg.channels) == 8
+    rec = importer.load(SAMPLE_XDF_PATH, stream_types=["EEG"])
+    assert len(rec.channels) == 8
 
     # Select by non-matching type - should raise error
     with pytest.raises(ValueError, match="No matching streams"):
@@ -129,8 +129,8 @@ def test_xdf_importer_stream_selection_by_name():
     importer = XDFImporter()
 
     # Select by name (case-insensitive)
-    emg = importer.load(SAMPLE_XDF_PATH, stream_names=["obci_neeg1"])
-    assert len(emg.channels) == 8
+    rec = importer.load(SAMPLE_XDF_PATH, stream_names=["obci_neeg1"])
+    assert len(rec.channels) == 8
 
     # Select by non-matching name
     with pytest.raises(ValueError, match="No matching streams"):
@@ -140,50 +140,50 @@ def test_xdf_importer_stream_selection_by_name():
 def test_xdf_importer_channel_labels():
     """Test channel labeling in XDF importer."""
     importer = XDFImporter()
-    emg = importer.load(SAMPLE_XDF_PATH)
+    rec = importer.load(SAMPLE_XDF_PATH)
 
     # Check channel names contain stream name prefix
-    channel_names = list(emg.channels.keys())
+    channel_names = list(rec.channels.keys())
     assert all("obci_neeg1" in name for name in channel_names)
 
 
 def test_xdf_importer_timestamps():
     """Test timestamp handling in XDF importer."""
     importer = XDFImporter()
-    emg = importer.load(SAMPLE_XDF_PATH)
+    rec = importer.load(SAMPLE_XDF_PATH)
 
     # Check time index starts at 0
-    assert emg.signals.index[0] == pytest.approx(0.0, abs=1e-6)
+    assert rec.signals.index[0] == pytest.approx(0.0, abs=1e-6)
 
     # Check duration matches expected
-    duration = emg.signals.index[-1]
+    duration = rec.signals.index[-1]
     assert duration > 9.0  # Should be about 9.5 seconds
 
 
 def test_xdf_export_roundtrip():
     """Test XDF import and EDF export roundtrip."""
     # Load XDF file
-    emg = Recording.from_file(SAMPLE_XDF_PATH)
+    rec = Recording.from_file(SAMPLE_XDF_PATH)
 
     # Export to EDF
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         temp_path = f.name
 
     try:
-        emg.to_edf(temp_path, format="edf")
+        rec.to_edf(temp_path, format="edf")
 
         # Reload from EDF
-        emg_reloaded = Recording.from_file(temp_path)
+        rec_reloaded = Recording.from_file(temp_path)
 
         # Check basic structure preserved
-        assert len(emg_reloaded.channels) == len(emg.channels)
+        assert len(rec_reloaded.channels) == len(rec.channels)
 
         # Check data is similar (allowing for EDF precision loss)
         for orig_ch, reload_ch in zip(
-            emg.channels.keys(), emg_reloaded.channels.keys(), strict=False
+            rec.channels.keys(), rec_reloaded.channels.keys(), strict=False
         ):
-            orig_data = emg.signals[orig_ch].values
-            reload_data = emg_reloaded.signals[reload_ch].values
+            orig_data = rec.signals[orig_ch].values
+            reload_data = rec_reloaded.signals[reload_ch].values
 
             # Trim to same length (EDF may have different sample count)
             min_len = min(len(orig_data), len(reload_data))
@@ -213,11 +213,11 @@ def test_xdf_file_not_found():
 def test_xdf_default_channel_type():
     """Test default channel type assignment."""
     importer = XDFImporter()
-    emg = importer.load(SAMPLE_XDF_PATH, default_channel_type="EEG")
+    rec = importer.load(SAMPLE_XDF_PATH, default_channel_type="EEG")
 
     # Since the stream has no explicit channel types in desc,
     # channels should get the default type
-    for channel_info in emg.channels.values():
+    for channel_info in rec.channels.values():
         assert channel_info["channel_type"] == "EEG"
 
 
@@ -245,19 +245,19 @@ def test_multistream_summarize():
 
 def test_multistream_import_all():
     """Test importing all numeric streams from multi-stream file."""
-    emg = Recording.from_file(MULTI_STREAM_XDF_PATH)
+    rec = Recording.from_file(MULTI_STREAM_XDF_PATH)
 
     # Should have channels from EEG, EMG, and Mocap (not Markers - string stream)
     # EEG: 8, EMG: 2, Mocap: 6 = 16 total
-    assert len(emg.channels) == 16
+    assert len(rec.channels) == 16
 
 
 def test_multistream_import_by_type():
     """Test importing specific stream types from multi-stream file."""
     # Import only EMG
-    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"])
-    assert len(emg.channels) == 2
-    channel_names = list(emg.channels.keys())
+    rec = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"])
+    assert len(rec.channels) == 2
+    channel_names = list(rec.channels.keys())
     assert "EMG_L" in channel_names
     assert "EMG_R" in channel_names
 
@@ -274,16 +274,16 @@ def test_multistream_import_by_type():
 
 def test_multistream_import_by_name():
     """Test importing specific streams by name from multi-stream file."""
-    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_names=["TestEMG"])
-    assert len(emg.channels) == 2
+    rec = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_names=["TestEMG"])
+    assert len(rec.channels) == 2
 
 
 def test_multistream_import_multiple_types():
     """Test importing multiple stream types from multi-stream file."""
-    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG", "EMG"])
+    rec = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EEG", "EMG"])
 
     # Should have EEG (8) + EMG (2) = 10 channels
-    assert len(emg.channels) == 10
+    assert len(rec.channels) == 10
 
 
 def test_multistream_sampling_rates():
@@ -398,10 +398,10 @@ def test_multistream_reference_stream_not_found():
 def test_include_timestamps_single_stream():
     """Test include_timestamps option with single stream."""
     importer = XDFImporter()
-    emg = importer.load(SAMPLE_XDF_PATH, include_timestamps=True)
+    rec = importer.load(SAMPLE_XDF_PATH, include_timestamps=True)
 
     # Should have original channels plus one timestamp channel
-    channel_names = list(emg.channels.keys())
+    channel_names = list(rec.channels.keys())
 
     # Find the timestamp channel
     ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
@@ -409,19 +409,19 @@ def test_include_timestamps_single_stream():
 
     # Check timestamp channel properties
     ts_channel = ts_channels[0]
-    assert emg.channels[ts_channel]["physical_dimension"] == "s"
-    assert emg.channels[ts_channel]["channel_type"] == "MISC"
+    assert rec.channels[ts_channel]["physical_dimension"] == "s"
+    assert rec.channels[ts_channel]["channel_type"] == "MISC"
 
     # Verify timestamp values are reasonable (should be monotonically increasing)
-    ts_values = emg.signals[ts_channel].values
+    ts_values = rec.signals[ts_channel].values
     assert np.all(np.diff(ts_values) >= 0), "Timestamps should be monotonically increasing"
 
 
 def test_include_timestamps_multistream():
     """Test include_timestamps option with multi-stream file."""
-    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, include_timestamps=True)
+    rec = Recording.from_file(MULTI_STREAM_XDF_PATH, include_timestamps=True)
 
-    channel_names = list(emg.channels.keys())
+    channel_names = list(rec.channels.keys())
 
     # Should have timestamp channels for each numeric stream (EEG, EMG, Mocap)
     ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
@@ -429,15 +429,15 @@ def test_include_timestamps_multistream():
 
     # Verify each timestamp channel
     for ts_ch in ts_channels:
-        assert emg.channels[ts_ch]["physical_dimension"] == "s"
-        assert emg.channels[ts_ch]["channel_type"] == "MISC"
+        assert rec.channels[ts_ch]["physical_dimension"] == "s"
+        assert rec.channels[ts_ch]["channel_type"] == "MISC"
 
 
 def test_include_timestamps_by_type():
     """Test include_timestamps with stream type selection."""
-    emg = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"], include_timestamps=True)
+    rec = Recording.from_file(MULTI_STREAM_XDF_PATH, stream_types=["EMG"], include_timestamps=True)
 
-    channel_names = list(emg.channels.keys())
+    channel_names = list(rec.channels.keys())
 
     # Should have EMG channels plus one timestamp channel
     ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
@@ -447,9 +447,9 @@ def test_include_timestamps_by_type():
 
 def test_include_timestamps_default_false():
     """Test that timestamps are not included by default."""
-    emg = Recording.from_file(SAMPLE_XDF_PATH)
+    rec = Recording.from_file(SAMPLE_XDF_PATH)
 
-    channel_names = list(emg.channels.keys())
+    channel_names = list(rec.channels.keys())
     ts_channels = [ch for ch in channel_names if "_LSL_timestamps" in ch]
 
     assert len(ts_channels) == 0, "Timestamp channels should not be included by default"
@@ -461,32 +461,32 @@ def test_include_timestamps_export_roundtrip():
     import tempfile
 
     # Load with timestamps
-    emg = Recording.from_file(SAMPLE_XDF_PATH, include_timestamps=True)
+    rec = Recording.from_file(SAMPLE_XDF_PATH, include_timestamps=True)
 
     # Find timestamp channel
-    ts_channels = [ch for ch in emg.channels.keys() if "_LSL_timestamps" in ch]
+    ts_channels = [ch for ch in rec.channels.keys() if "_LSL_timestamps" in ch]
     assert len(ts_channels) == 1
     ts_channel = ts_channels[0]
-    original_ts = emg.signals[ts_channel].values.copy()
+    original_ts = rec.signals[ts_channel].values.copy()
 
     # Export to EDF
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         temp_path = f.name
 
     try:
-        emg.to_edf(temp_path, format="edf")
+        rec.to_edf(temp_path, format="edf")
 
         # Reload from EDF
-        emg_reloaded = Recording.from_file(temp_path)
+        rec_reloaded = Recording.from_file(temp_path)
 
         # Check timestamp channel exists in reloaded data
         # Note: EDF has 16-char limit, so "_LSL_timestamps" may be truncated to "_LSL_t"
-        reloaded_channels = list(emg_reloaded.channels.keys())
+        reloaded_channels = list(rec_reloaded.channels.keys())
         reloaded_ts_channels = [ch for ch in reloaded_channels if "_LSL_t" in ch]
         assert len(reloaded_ts_channels) == 1
 
         # Check values are preserved (with some tolerance for EDF precision)
-        reloaded_ts = emg_reloaded.signals[reloaded_ts_channels[0]].values
+        reloaded_ts = rec_reloaded.signals[reloaded_ts_channels[0]].values
         min_len = min(len(original_ts), len(reloaded_ts))
         correlation = np.corrcoef(original_ts[:min_len], reloaded_ts[:min_len])[0, 1]
         assert correlation > 0.99, f"Timestamp correlation is {correlation}"

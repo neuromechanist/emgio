@@ -130,7 +130,7 @@ class NeoImporter(BaseImporter):
 
         selected = self._select_streams(seg.analogsignals, stream, filepath)
 
-        emg = Recording()
+        rec = Recording()
         used: set[str] = set()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=pd.errors.PerformanceWarning)
@@ -144,28 +144,28 @@ class NeoImporter(BaseImporter):
                 for col, name in enumerate(names):
                     label = _unique_label(name, used)  # keep merged streams distinct
                     used.add(label)
-                    emg.add_channel(
+                    rec.add_channel(
                         label=label,
                         data=data[:, col],
                         sample_frequency=fs,
                         physical_dimension=dimension,
                         channel_type=channel_type,
                     )
-        if emg.signals is not None:
-            emg.signals = emg.signals.copy()  # de-fragment after many inserts (#66)
+        if rec.signals is not None:
+            rec.signals = rec.signals.copy()  # de-fragment after many inserts (#66)
 
         # Align events to the imported signal's time origin (neo times are in the
         # recording's absolute time base, which may not start at zero). The 0-based
         # signal grid discards the absolute origin, so keep it in metadata for
         # downstream (e.g. BIDS) temporal alignment.
         t0 = float(selected[0].t_start.rescale("s").magnitude)
-        self._add_events(emg, seg, t0)
+        self._add_events(rec, seg, t0)
 
-        emg.set_metadata("source_file", filepath)
-        emg.set_metadata("neo_io", type(reader).__name__)
-        emg.set_metadata("t_start_s", t0)
-        emg.set_metadata("number_of_signals", len(emg.channels))
-        return emg
+        rec.set_metadata("source_file", filepath)
+        rec.set_metadata("neo_io", type(reader).__name__)
+        rec.set_metadata("t_start_s", t0)
+        rec.set_metadata("number_of_signals", len(rec.channels))
+        return rec
 
     @staticmethod
     def _select_streams(analogsignals, stream, filepath):
@@ -231,7 +231,7 @@ class NeoImporter(BaseImporter):
         return list(analogsignals)
 
     @staticmethod
-    def _add_events(emg: Recording, seg, t0: float) -> None:
+    def _add_events(rec: Recording, seg, t0: float) -> None:
         """Add neo Events (instantaneous) and Epochs (with duration) as biosigio events."""
 
         def labels_for(obj, times):
@@ -244,9 +244,9 @@ class NeoImporter(BaseImporter):
         for ev in seg.events:
             times = np.asarray(ev.times.rescale("s").magnitude)
             for onset, label in zip(times, labels_for(ev, times), strict=True):
-                emg.add_event(onset=float(onset) - t0, duration=0.0, description=label)
+                rec.add_event(onset=float(onset) - t0, duration=0.0, description=label)
         for ep in seg.epochs:
             times = np.asarray(ep.times.rescale("s").magnitude)
             durations = np.asarray(ep.durations.rescale("s").magnitude)
             for onset, dur, label in zip(times, durations, labels_for(ep, times), strict=True):
-                emg.add_event(onset=float(onset) - t0, duration=float(dur), description=label)
+                rec.add_event(onset=float(onset) - t0, duration=float(dur), description=label)

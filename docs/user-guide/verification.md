@@ -16,16 +16,16 @@ from biosigio import Recording
 from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Load original data
-emg_original = Recording.from_file('raw_data.csv', importer='trigno')
+rec_original = Recording.from_file('raw_data.csv', importer='trigno')
 
 # Export to EDF/BDF and reload. to_edf auto-selects the extension, so the
 # written file may be exported_data.edf or exported_data.bdf depending on the
 # signal analysis; reload whichever was created.
-emg_original.to_edf('exported_data')
-emg_reloaded = Recording.from_file('exported_data.edf')  # or 'exported_data.bdf'
+rec_original.to_edf('exported_data')
+rec_reloaded = Recording.from_file('exported_data.edf')  # or 'exported_data.bdf'
 
 # Compare signals with detailed metrics
-results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
+results = compare_signals(rec_original, rec_reloaded, tolerance=0.01)
 
 # Generate a detailed report (logs to the console)
 is_identical = report_verification_results(results, verify_tolerance=0.01)
@@ -53,17 +53,17 @@ from biosigio.visualization.static import plot_comparison
 import matplotlib.pyplot as plt
 
 # Plot comparison of original and reloaded signals
-plot_comparison(emg_original, emg_reloaded)
+plot_comparison(rec_original, rec_reloaded)
 plt.show()
 
 # Plot specific channels only
-plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
+plot_comparison(rec_original, rec_reloaded, channels=['EMG1', 'EMG2'])
 plt.show()
 
 # Customize the comparison
 plot_comparison(
-    emg_original,
-    emg_reloaded,
+    rec_original,
+    rec_reloaded,
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),  # First 5 seconds only
     detrend=True,       # Remove DC offset
@@ -80,7 +80,7 @@ For more detailed verification, you can use the functions in the `verification` 
 from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Compare signals with detailed metrics
-results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
+results = compare_signals(rec_original, rec_reloaded, tolerance=0.01)
 
 # Generate a detailed report (logs to the console)
 is_identical = report_verification_results(results, verify_tolerance=0.01)
@@ -105,13 +105,13 @@ channel_map = {
 }
 
 # Compare with channel mapping
-results = compare_signals(emg_original, emg_reloaded, channel_map=channel_map)
+results = compare_signals(rec_original, rec_reloaded, channel_map=channel_map)
 report_verification_results(results, verify_tolerance=0.01)
 
 # Visual comparison with channel mapping
 from biosigio.visualization.static import plot_comparison
 import matplotlib.pyplot as plt
-plot_comparison(emg_original, emg_reloaded, channel_map=channel_map)
+plot_comparison(rec_original, rec_reloaded, channel_map=channel_map)
 plt.show()
 ```
 
