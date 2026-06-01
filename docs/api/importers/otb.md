@@ -20,65 +20,58 @@ from biosigio.importers.otb import OTBImporter
 emg = Recording.from_file('data.otb+', importer='otb')
 
 # Method 2: Using the importer directly
-importer = OTBImporter('data.otb+')
-signals, channels, metadata = importer.load()
-emg = Recording(signals, channels, metadata)
+emg = OTBImporter().load('data.otb+')
 ```
 
 ## File Format Support
 
 The OTB importer supports:
-1. Binary OTB+ files from OT Bioelettronica devices (SESSANTAQUATTRO, MUOVI, etc.)
-2. Multiple channel types (EMG, ACC, TRIG, AUX, IMUX)
-3. Different sampling rates for different channel types
-4. Various bit resolutions (8-bit, 12-bit, 16-bit, etc.)
+1. OTB/OTB+ archives from OT Bioelettronica devices (Sessantaquattro, Muovi, Quattrocento, etc.)
+2. Multiple channel types (EMG, ACC, GYRO, QUAT, CTRL, OTHER)
+3. 16-bit and 24-bit signal resolutions
+
+The archive carries one device-wide sampling frequency, which is assigned to
+every channel.
 
 ## Channel Type Mapping
 
-The OTB importer identifies channel types based on the OTB+ file header information. Common channel types include:
+The OTB importer identifies channel types from the OTB+ XML metadata (adapter
+model, channel description/ID). The mapped types are:
 
-- **EMG**: Electromyography channels
+- **EMG**: Electromyography channels (Due, Muovi, Sessantaquattro, Novecento, Quattro, Quattrocento adapters)
 - **ACC**: Accelerometer channels
-- **TRIG**: Trigger channels
-- **AUX**: Auxiliary channels 
-- **IMUX**: Input multiplexer channels
+- **GYRO**: Gyroscope channels
+- **QUAT**: Quaternion channels
+- **CTRL**: Control channels
+- **OTHER**: Anything that does not match the above
 
 ## Parameters
 
-- **file_path (str)**: Path to the OTB+ file
-- **kwargs (dict)**: Additional keyword arguments
-  - **use_matlab (bool, optional)**: Whether to use MATLAB for import (requires MATLAB runtime). Default is False.
-  - **channel_types (dict, optional)**: Manual mapping of channel names to types.
+`OTBImporter().load(filepath)` takes:
 
-## Return Values
+- **filepath (str)**: Path to the OTB/OTB+ file.
 
-The `load()` method returns a tuple of:
+## Return Value
 
-1. **signals (pandas.DataFrame)**: Signal data with channels as columns
-2. **channels (dict)**: Dictionary of channel information including:
-   - channel_type: Type of channel (EMG, ACC, etc.)
-   - physical_dimension: Physical unit (e.g., 'µV' for EMG, 'g' for ACC)
-   - sample_frequency: Sampling rate in Hz
-   - bit_resolution: Bit resolution of the channel
-   - calibration_factor: Calibration factor for converting raw to physical values
+The `load()` method returns a single `Recording` object with:
 
-3. **metadata (dict)**: Dictionary containing metadata from the OTB+ file, including:
-   - device: Device name (e.g., 'SESSANTAQUATTRO')
-   - recording_date: Recording date if available
-   - signal_resolution: Bit resolution of the signals
-   - device_settings: Additional device-specific settings
+1. **signals**: signal data with channels as columns.
+2. **channels**: per-channel information including:
+   - `channel_type`: type of channel (EMG, ACC, GYRO, QUAT, CTRL, OTHER)
+   - `physical_dimension`: physical unit (e.g., 'mV' for EMG, 'g' for ACC/GYRO, 'rad' for QUAT)
+   - `sample_frequency`: device sampling rate in Hz
+   - `prefilter`: pre-filtering string built from the adapter's HP/LP filter settings
+3. **metadata**: fields parsed from the OTB+ archive, including:
+   - `source_file`: input path
+   - `device`: device name parsed from the XML header
+   - `signal_resolution`: bit resolution of the signals (e.g., 16 or 24)
 
 ## Implementation Details
 
 The OTB importer works by:
 
-1. Reading the binary header information from the OTB+ file
-2. Parsing the header to extract metadata about channels and device settings
-3. Loading the raw signal data from the binary file
-4. Applying calibration factors to convert raw values to physical units
-5. Organizing the data into channel types and creating the appropriate metadata
-
-## Dependencies
-
-- The OTB importer includes a pure Python implementation for parsing OTB+ files
-- It can optionally use the OT Bioelettronica MATLAB functions for import if MATLAB is available 
+1. Extracting the OTB/OTB+ archive (a tar container) to a temporary directory.
+2. Parsing the XML metadata file to extract device and per-channel information.
+3. Reading the raw binary `.sig` signal data (reconstructing 24-bit samples when applicable).
+4. Applying the device gain and reference-voltage scaling to convert raw values to physical units.
+5. Adding each channel to the Recording with its inferred type and unit.

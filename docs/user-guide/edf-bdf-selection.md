@@ -76,19 +76,27 @@ emg.to_edf('output', format='bdf')  # Force BDF (24-bit)
 
 ## Understanding the Output
 
-After export, biosigIO will indicate which format was selected:
+After export, biosigIO prints which format was selected. For the automatic
+case the messages are (illustrative; the per-channel analysis lines vary with
+your data):
 
 ```
-Exporting to EDF format: dynamic range is 78.3 dB (less than 90 dB threshold)
-Output file: output.edf
+Using EDF format (16-bit) based on signal analysis (precision within acceptable range).
+
+EMG data exported to: output.edf
 ```
 
 or:
 
 ```
-Exporting to BDF format: dynamic range is 108.2 dB (exceeds 90 dB threshold)
-Output file: output.bdf
+Using BDF format (24-bit) based on signal analysis to preserve precision.
+Reason: Channel 'EMG1': <reason from signal analysis>
+
+EMG data exported to: output.bdf
 ```
+
+Because `to_edf` auto-selects the extension, an `'output'` path becomes
+`output.edf` or `output.bdf` depending on the analysis result.
 
 ## Best Practices
 

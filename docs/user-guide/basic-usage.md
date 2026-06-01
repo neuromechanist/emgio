@@ -32,12 +32,16 @@ biosigIO automatically infers the appropriate importer based on file extension:
 | Extension | Default Importer |
 |-----------|------------------|
 | `.csv`, `.txt` | `csv` (Generic CSV importer) |
-| `.edf`, `.edf+`, `.bdf` | `edf` (EDF/BDF importer) |
+| `.edf`, `.bdf` | `edf` (EDF/BDF importer) |
 | `.set` | `eeglab` (EEGLAB importer) |
 | `.otb`, `.otb+` | `otb` (OTB importer) |
-| `.hea` | `wfdb` (WFDB importer) |
+| `.hea`, `.dat`, `.atr` | `wfdb` (WFDB importer) |
 
-Additionally, for CSV files, biosigIO includes specialized format detection that can identify formats like Trigno CSV exports and suggest the appropriate specialized importer.
+Automatic importer selection works for CSV/TXT files as well; the generic CSV
+importer additionally includes specialized format detection that can identify
+formats like Trigno CSV exports and route to the appropriate specialized
+importer. WFDB datasets without a file extension must be loaded with an explicit
+`importer='wfdb'`.
 
 ### Special Case: CSV Files
 

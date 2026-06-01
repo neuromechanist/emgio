@@ -43,14 +43,28 @@ This allows you to modify the source code and see the changes without reinstalli
 
 ## Optional Dependencies
 
-biosigIO provides optional dependency groups:
+biosigIO provides optional dependency groups. For an existing install use
+`uv pip install` (this is a UV-only project):
 
 ```bash
-# Development tools (pytest, ruff, coverage)
+# Development tools (pytest, pytest-cov, ruff, ty)
 uv pip install "biosigio[dev]"
 
-# Documentation tools (mkdocs, mkdocstrings)
+# Documentation tools (mkdocs, mkdocs-material, mkdocstrings)
 uv pip install "biosigio[docs]"
+
+# MEG (.fif / CTF .ds) and BrainVision (.vhdr) import via MNE
+uv pip install "biosigio[meg]"
+
+# Parquet / Arrow / Feather serialization via pyarrow
+uv pip install "biosigio[arrow]"
+
+# Proprietary electrophysiology formats (Intan, Blackrock, Spike2, Plexon,
+# Micromed, Neuralynx, ...) via python-neo
+uv pip install "biosigio[neo]"
+
+# Sharded Zarr v3 serving store via zarr v3
+uv pip install "biosigio[zarr]"
 
 # All optional dependencies
 uv pip install "biosigio[all]"
@@ -94,4 +108,4 @@ import biosigio
 print(biosigio.__version__)
 ```
 
-You should see the version number (e.g., `0.2.2` or later) without any errors.
+You should see the version number (e.g., `1.0.1` or later) without any errors.

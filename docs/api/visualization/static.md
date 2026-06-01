@@ -1,6 +1,6 @@
 # Static Visualization API
 
-The `static` module in `biosigio.visualization` provides functions for static plotting of EMG data. These functions are primarily used internally by the `Recording` class methods but can also be called directly for advanced customization.
+The `static` module in `biosigio.visualization` provides functions for static plotting of biosignal data. These functions are primarily used internally by the `Recording` class methods but can also be called directly for advanced customization.
 
 ## Module Documentation
 
@@ -84,4 +84,4 @@ The static plotting functions provide several parameters for customization:
 - **Grid lines**: Toggle grid visibility
 - **Titles**: Add custom titles to plots
 
-For most use cases, the corresponding methods on the `Recording` class (`plot_signals()` and `plot_comparison()`) are recommended as they provide simplified interfaces to these functions. 
+For most use cases, the `Recording.plot_signals()` method is recommended as it provides a simplified interface that delegates to `plot_signals()` here. Note that `plot_comparison()` is a module-level function only; there is no `Recording.plot_comparison()` method, so call it directly from `biosigio.visualization.static` (as shown above, or automatically via `Recording.to_edf(..., verify=True, verify_plot=True)`).

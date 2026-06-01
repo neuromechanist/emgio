@@ -7,7 +7,7 @@ python-neo is an optional, heavy dependency, so it is not installed by default. 
 ```bash
 uv sync --extra neo
 # or, for an existing install:
-pip install 'biosigio[neo]'
+uv pip install 'biosigio[neo]'
 ```
 
 If you attempt to load a neo-backed format without the extra installed, biosigIO raises an `ImportError` with this install hint rather than failing obscurely.
@@ -112,4 +112,4 @@ print(rec.get_metadata('t_start_s'))
 
 ## Requirements
 
-The Neo importer requires the optional `neo` extra. Install it with `uv sync --extra neo` or `pip install 'biosigio[neo]'`.
+The Neo importer requires the optional `neo` extra. Install it with `uv sync --extra neo` or `uv pip install 'biosigio[neo]'`.

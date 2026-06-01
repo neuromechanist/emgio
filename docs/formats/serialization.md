@@ -1,6 +1,6 @@
 # Serialization & Serving Formats
 
-Besides EDF/BDF, biosigio can serialize a `Recording` to three columnar or array
+Besides EDF/BDF, biosigIO can serialize a `Recording` to three columnar or array
 formats: Parquet, Arrow/Feather, and Zarr. Each carries enough information to be
 read back without any side files, and all of them round-trip through the same
 entry point, `Recording.from_file`, which auto-detects the format from the file
@@ -87,8 +87,8 @@ These formats are not part of the core install; install the matching extra.
 
 | Format | Extra | Install |
 |--------|-------|---------|
-| Parquet, Arrow/Feather | `arrow` (pyarrow) | `uv sync --extra arrow` or `pip install 'biosigio[arrow]'` |
-| Zarr | `zarr` (zarr v3) | `uv sync --extra zarr` or `pip install 'biosigio[zarr]'` |
+| Parquet, Arrow/Feather | `arrow` (pyarrow) | `uv sync --extra arrow` or `uv pip install 'biosigio[arrow]'` |
+| Zarr | `zarr` (zarr v3) | `uv sync --extra zarr` or `uv pip install 'biosigio[zarr]'` |
 
 If the extra is missing, the exporter and importer raise an `ImportError` with
 the exact install command, so you never get a partial or silent failure.

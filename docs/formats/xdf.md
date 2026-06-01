@@ -122,14 +122,13 @@ Loaded XDF files include metadata such as:
 
 - `device`: Set to "XDF"
 - `source_file`: Path to the XDF file
-- `stream_count`: Number of streams in the file
-- `stream_names`: Names of all streams
-- `stream_types`: Types of all streams
+- `stream_count`: Number of selected streams
+- `srate`: Sampling rate of the reference (highest-rate) stream
 
 ```python
 emg = Recording.from_file('recording.xdf')
-print(emg.get_metadata('stream_names'))
-print(emg.get_metadata('stream_types'))
+print(emg.get_metadata('stream_count'))
+print(emg.get_metadata('srate'))
 ```
 
 ## Preserving LSL Timestamps
@@ -152,7 +151,7 @@ Timestamp channels:
 - Contain the original LSL timestamps in seconds
 - Are marked with `channel_type='MISC'` and `physical_dimension='s'`
 - Are resampled along with the data when multiple streams have different rates
-- Survive export to EDF/BDF for later synchronization analysis
+- Can be exported to EDF/BDF for later synchronization analysis (EDF/BDF export requires all channels to share one sampling rate)
 
 This is useful for:
 

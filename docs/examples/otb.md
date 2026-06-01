@@ -26,23 +26,16 @@ for ch_type in channel_types:
     channels = emg.get_channels_by_type(ch_type)
     print(f"{ch_type}: {len(channels)} channels")
 
-# Plot one channel of each type
-plt.figure(figsize=(12, 8))
-subplot_count = len(channel_types)
-for i, ch_type in enumerate(channel_types, 1):
+# Plot one channel of each type (each call manages its own figure)
+for ch_type in channel_types:
     channels = emg.get_channels_by_type(ch_type)
     if channels:
-        plt.subplot(subplot_count, 1, i)
         # Select the first channel of this type
         sample_channel = emg.select_channels([channels[0]])
         sample_channel.plot_signals(
             time_range=(0, 5),
-            title=f"{ch_type} Sample: {channels[0]}",
-            ax=plt.gca()
+            title=f"{ch_type} Sample: {channels[0]}"
         )
-
-plt.tight_layout()
-plt.show()
 ```
 
 ## Working with EMG Channels
@@ -155,31 +148,22 @@ emg_channels = [ch for ch in common_channels
                 if emg1.channels[ch]['channel_type'] == 'EMG']
 
 if emg_channels:
-    # Select a channel to compare
+    # Select a channel to compare (each call manages its own figure)
     channel_to_compare = emg_channels[0]
-    
-    plt.figure(figsize=(12, 8))
-    
+
     # Plot channel from first session
-    plt.subplot(2, 1, 1)
     emg1.plot_signals(
-        [channel_to_compare], 
+        [channel_to_compare],
         time_range=(0, 5),
-        title=f"Session 1 ({emg1.get_metadata('condition')}): {channel_to_compare}",
-        ax=plt.gca()
+        title=f"Session 1 ({emg1.get_metadata('condition')}): {channel_to_compare}"
     )
-    
+
     # Plot same channel from second session
-    plt.subplot(2, 1, 2)
     emg2.plot_signals(
-        [channel_to_compare], 
+        [channel_to_compare],
         time_range=(0, 5),
-        title=f"Session 2 ({emg2.get_metadata('condition')}): {channel_to_compare}",
-        ax=plt.gca()
+        title=f"Session 2 ({emg2.get_metadata('condition')}): {channel_to_compare}"
     )
-    
-    plt.tight_layout()
-    plt.show()
 ```
 
 ## Exporting OTB Data to EDF/BDF

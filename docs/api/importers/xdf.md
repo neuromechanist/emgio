@@ -117,15 +117,14 @@ For each channel:
 - `channel_type`: Inferred or default type
 - `physical_dimension`: Unit (default "a.u.")
 - `sample_frequency`: Effective sampling rate
-- `stream_name`: Original stream name
-- `stream_id`: Original stream ID
+- `prefilter`: Pre-filtering string (default "n/a")
+- `modality`: Coarse modality inferred from the channel type
 
 ### Metadata (dict)
 - `device`: "XDF"
 - `source_file`: Path to the XDF file
-- `stream_count`: Number of streams in file
-- `stream_names`: List of all stream names
-- `stream_types`: List of all stream types
+- `stream_count`: Number of selected streams
+- `srate`: Sampling rate of the reference stream (base sample rate)
 
 ## Helper Classes
 

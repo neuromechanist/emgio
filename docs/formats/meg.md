@@ -13,7 +13,7 @@ uv sync --extra meg
 For an existing installation, you can install the extra directly:
 
 ```bash
-pip install 'biosigio[meg]'
+uv pip install 'biosigio[meg]'
 ```
 
 If MNE-Python is not installed, loading a MEG file raises an `ImportError` with the install hint above.

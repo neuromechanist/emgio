@@ -12,34 +12,41 @@ Trigno CSV files typically have the following structure:
 
 ### Example File Structure
 
-```
-# Trigno Data File
-# Date: 2023-05-01
-# Time: 10:30:00
-# Device: Trigno Wireless System
-# ...additional metadata...
+A Trigno CSV export begins with one metadata line per channel, each starting
+with `Label:` and carrying that channel's sampling frequency and unit. The
+data section that follows is introduced by a header line containing `X[s]`
+time columns (one per channel). For example:
 
-Time(s),EMG1,EMG2,EMG3,EMG4,ACC1_X,ACC1_Y,ACC1_Z,...
-0.000,0.01,0.02,0.03,0.04,0.1,0.2,0.3,...
-0.001,0.02,0.03,0.04,0.05,0.1,0.2,0.3,...
-0.002,0.03,0.04,0.05,0.06,0.1,0.2,0.3,...
 ```
+Label: EMG1  Sampling frequency: 1925.926 Unit: V  Domain: Time
+Label: ACC1.X  Sampling frequency: 148.148 Unit: g  Domain: Time
+...
+X[s],EMG1,X[s].1,ACC1.X,...
+0.000,0.01,0.000,0.10,...
+0.001,0.02,0.007,0.10,...
+```
+
+The importer detects the start of the data section by finding the line that
+contains `X[s]`, and reads each channel's sampling frequency and unit from the
+preceding `Label:` lines.
 
 ## Channel Types
 
-biosigIO recognizes the following channel types in Trigno CSV files:
+biosigIO assigns channel types from the channel label:
 
-- **EMG** - Electromyography channels (typically in μV or mV)
-- **ACC** - Accelerometer channels (typically in g)
+- **EMG** - Electromyography channels (label contains `EMG`)
+- **ACC** - Accelerometer channels (label contains `ACC`)
+- **GYRO** - Gyroscope channels (label contains `GYRO`)
+- **OTHER** - Any channel whose label matches none of the above
 
 ## Importer Implementation
 
 The Trigno importer in biosigIO (`biosigio.importers.trigno`) processes these files by:
 
-1. Reading the header section to extract metadata
-2. Parsing the data section as a pandas DataFrame
+1. Reading the `Label:` header lines to extract each channel's sampling frequency and unit
+2. Locating the data section via the `X[s]` header line and parsing it as a pandas DataFrame
 3. Identifying channel types based on naming conventions
-4. Setting appropriate units and sampling frequencies for each channel
+4. Setting the per-channel units and sampling frequencies parsed from the header
 
 ## Code Example
 
@@ -65,6 +72,7 @@ print(f"ACC channels: {acc_channels}")
 ## Notes and Limitations
 
 - Trigno systems can have different sampling rates for EMG and accelerometer channels
-- The importer automatically detects the sampling rate from the time column
+- The importer reads each channel's sampling frequency from its `Label:` header line
 - Column names may vary between different Trigno system versions
-- Some metadata may be missing depending on the export settings 
+- Some metadata may be missing depending on the export settings
+- Channels in a Trigno export often have different sampling rates (e.g. EMG vs ACC); EDF/BDF export requires a single rate, so resample to a common rate before exporting

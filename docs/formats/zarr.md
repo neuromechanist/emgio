@@ -11,8 +11,8 @@ The store is a derived serving copy, not an archive. The Brain Imaging Data Stru
 Zarr is an optional dependency (the `zarr` extra, which installs zarr v3) and is imported lazily. Install it with one of:
 
 ```bash
-uv sync --extra zarr        # development install
-pip install 'biosigio[zarr]'   # existing environment
+uv sync --extra zarr           # development install
+uv pip install 'biosigio[zarr]'   # existing environment
 ```
 
 Write a store with `Recording.to_zarr`:

@@ -13,9 +13,9 @@ These formats need optional dependencies. Parquet and Arrow/Feather use the
 uv sync --extra arrow      # Parquet / Arrow / Feather
 uv sync --extra zarr       # Zarr serving store
 
-# Or with pip, into an existing environment
-pip install 'biosigio[arrow]'
-pip install 'biosigio[zarr]'
+# Or into an existing environment (UV-only project; use uv pip)
+uv pip install 'biosigio[arrow]'
+uv pip install 'biosigio[zarr]'
 ```
 
 The examples below build a small `Recording` in memory so they run without any

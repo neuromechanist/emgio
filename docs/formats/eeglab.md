@@ -1,6 +1,6 @@
 # EEGLAB Format
 
-EEGLAB is a MATLAB toolbox for processing EEG, MEG, and other electrophysiological data. biosigIO can import EEGLAB `.set` files to work with EMG data stored in this format.
+EEGLAB is a MATLAB toolbox for processing EEG, MEG, and other electrophysiological data. biosigIO can import EEGLAB `.set` files to work with biosignal data stored in this format.
 
 ## Format Description
 
@@ -33,11 +33,11 @@ A typical EEGLAB `.set` file contains these fields:
 
 The EEGLAB importer in biosigIO (`biosigio.importers.eeglab`) works by:
 
-1. Loading the `.set` file using Python's `scipy.io.loadmat` (for MATLAB files)
+1. Loading the `.set` file using `scipy.io.loadmat` (pre-v7.3, non-HDF5 MAT-files only)
 2. Extracting the EEG structure with signal data and metadata
 3. Converting channel information to biosigIO's channel format
 4. Creating appropriate metadata dictionary
-5. Handling both continuous and epoched data
+5. Storing parsed event markers under the `events` metadata key
 
 ## Code Example
 
@@ -72,8 +72,8 @@ EEGLAB doesn't always explicitly designate channel types. biosigIO's EEGLAB impo
 
 ## Notes and Limitations
 
-- biosigIO supports both MATLAB v7.3 and older format .set files
-- Event markers are preserved in the metadata
+- Only pre-v7.3 (non-HDF5) `.set` files are supported, via `scipy.io.loadmat`; MATLAB v7.3/HDF5 `.set` files are not supported
+- Event markers are preserved under the `events` metadata key (access with `emg.get_metadata('events')`)
 - Channel locations (if available) are preserved in the channel information
 - Some EEGLAB-specific information may not be fully preserved in the conversion
 - Time information is properly handled to maintain accurate timing in the imported data 
