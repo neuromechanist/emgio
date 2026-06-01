@@ -41,9 +41,12 @@ def test_get_sampling_frequency_mixed_raises():
 
 
 def test_get_duration():
-    rec = _rec()  # 1000 samples @ 500 Hz -> last index at 999/500 s
-    assert rec.get_duration() == pytest.approx(999 / 500)
-    assert Recording().get_duration() == 0.0
+    rec = _rec()  # 1000 samples @ 500 Hz -> 2.0 s window
+    assert rec.get_duration() == pytest.approx(1000 / 500)
+    assert Recording().get_duration() == 0.0  # no signals
+    one = Recording()
+    one.add_channel("C", np.zeros(1), 500, "uV", "EEG")
+    assert one.get_duration() == 0.0  # single sample: no inferable period
 
 
 def test_has_metadata():

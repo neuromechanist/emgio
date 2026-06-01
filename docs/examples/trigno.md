@@ -134,10 +134,12 @@ emg_only = emg.select_channels(channel_type='EMG')
 # (the full mixed-rate recording would raise ValueError).
 emg_only.set_metadata('sampling_rate', emg_only.get_sampling_frequency())
 
-# 4. Plot raw signals (plot_signals manages its own figure)
+# 4. Plot raw signals (plot_signals manages its own figure). Pass show=False so
+# the figure stays open for savefig; plot_signals calls plt.show() by default.
 emg_only.plot_signals(time_range=(0, 10),
-                     title="Raw EMG Signals")
+                     title="Raw EMG Signals", show=False)
 plt.savefig('raw_emg.png')
+plt.show()
 
 # 5. Export to EDF/BDF
 output_path = 'processed_emg'

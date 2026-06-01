@@ -791,10 +791,18 @@ class Recording:
         return float(next(iter(rates)))
 
     def get_duration(self) -> float:
-        """Recording duration in seconds (time of the last sample); 0.0 if empty."""
-        if self.signals is None or len(self.signals) == 0:
+        """Total recording duration in seconds (n_samples / sampling_frequency).
+
+        Computed from the time index spacing, so it is the full window length
+        (one sample period longer than the last sample's timestamp). Returns 0.0
+        when fewer than two samples are loaded (a single sample has no inferable
+        sample period).
+        """
+        if self.signals is None or len(self.signals) < 2:
             return 0.0
-        return float(self.signals.index[-1])
+        index = self.signals.index
+        sample_period = float(index[1] - index[0])
+        return len(index) * sample_period
 
     def add_channel(
         self,

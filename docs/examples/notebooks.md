@@ -139,7 +139,8 @@ emg.plot_signals(
     channels=emg.get_channels_by_type('EMG')[:4],  # First 4 EMG channels
     time_range=(10, 15),
     title='EMG Signals During Movement',
-    grid=True
+    grid=True,
+    show=False,  # keep the figure open so savefig below captures it
 )
 plt.tight_layout()
 
@@ -147,6 +148,7 @@ plt.tight_layout()
 plt.savefig('emg_plot.png', dpi=300)  # PNG for presentations
 plt.savefig('emg_plot.pdf')  # PDF for publications
 plt.savefig('emg_plot.svg')  # SVG for editing
+plt.show()
 ```
 
 ## Tips for Jupyter Notebooks
