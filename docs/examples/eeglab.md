@@ -59,18 +59,17 @@ import matplotlib.pyplot as plt
 # Load EEGLAB data with events
 emg = Recording.from_file('data_with_events.set', importer='eeglab')
 
-# EEGLAB events are stored under the metadata key 'events' (plural) as a list
-# of dicts with 'type', 'latency', and (optionally) 'duration'/'trial_type'.
-if emg.has_metadata('events'):
-    events = emg.get_metadata('events')
-    print(f"Found {len(events)} events")
-    
+# EEGLAB events are loaded into emg.events (a DataFrame: onset/duration in
+# seconds, description = the EEGLAB event 'type'). The latency (samples) is
+# converted to an onset in seconds on import.
+if emg.events is not None and not emg.events.empty:
+    print(f"Found {len(emg.events)} events")
+
     # Print the first 5 events
-    for i, event in enumerate(events[:5]):
-        print(f"Event {i+1}: Type={event.get('type')}, Latency={event.get('latency')}")
-    
-    # Extract specific event types
-    movement_events = [e for e in events if e.get('type') == 'movement']
+    print(emg.events.head(5).to_string(index=False))
+
+    # Extract specific event types by description
+    movement_events = emg.events[emg.events['description'] == 'movement']
     print(f"Found {len(movement_events)} movement events")
     
     # Plot signals around an event

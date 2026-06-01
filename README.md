@@ -31,7 +31,7 @@ The documentation including installation instructions, examples, and API referen
   - Automatic file format detection based on extension
   - Specialized format detection for CSV files
   - Custom importers for system-specific formats
-  - Automatic annotation/event loading (WFDB and EDF+/BDF+; EEGLAB .set events read into metadata), embedded back on EDF+/BDF+ export and carried in the Parquet/Arrow/Zarr serialization formats
+  - Automatic annotation/event loading (WFDB, EDF+/BDF+, and EEGLAB .set) into the events table, embedded back on EDF+/BDF+ export and carried in the Parquet/Arrow/Zarr serialization formats
   - LSL timestamp preservation for XDF files (for synchronization)
   
 - Export to standardized formats:
