@@ -24,11 +24,11 @@ You can create a new Recording object with only the channels you specify:
 
 ```python
 # Select specific channels by name
-subset_rec = rec.select_channels(['EMG1', 'EMG2', 'ACC1'])
+subset_emg = rec.select_channels(['EMG1', 'EMG2', 'ACC1'])
 
 # The original Recording object remains unchanged
 print(f"Original channels: {len(rec.channels)}")
-print(f"Selected channels: {len(subset_rec.channels)}")
+print(f"Selected channels: {len(subset_emg.channels)}")
 ```
 
 ## Selecting Channels by Type
@@ -61,7 +61,7 @@ import re
 # Select all EMG channels with numbers 1-5
 pattern = re.compile(r'EMG[1-5]')
 selected_channels = [ch for ch in rec.channels if pattern.match(ch)]
-subset_rec = rec.select_channels(selected_channels)
+subset_emg = rec.select_channels(selected_channels)
 ```
 
 ## Working with Selected Channels
@@ -70,10 +70,10 @@ After selecting channels, you can work with the new Recording object just like t
 
 ```python
 # Plot the selected channels
-subset_rec.plot_signals()
+subset_emg.plot_signals()
 
 # Export only the selected channels
-subset_rec.to_edf('output_subset')
+subset_emg.to_edf('output_subset')
 ```
 
 ## Combining Selection Methods
@@ -88,7 +88,7 @@ emg_channels = rec.get_channels_by_type('EMG')
 bicep_channels = [ch for ch in emg_channels if 'Bicep' in ch]
 
 # Create a new Recording object with just these channels
-bicep_rec = rec.select_channels(bicep_channels)
+bicep_emg = rec.select_channels(bicep_channels)
 ```
 
 ## Channel Selection Best Practices

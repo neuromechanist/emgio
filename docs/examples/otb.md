@@ -57,7 +57,7 @@ if emg_channels:
     print(f"Found {len(emg_channels)} EMG channels")
     
     # Select EMG channels
-    rec_data = rec.select_channels(emg_channels)
+    emg_data = rec.select_channels(emg_channels)
     
     # Plot EMG data
     plt.figure(figsize=(15, 10))
@@ -65,7 +65,7 @@ if emg_channels:
     # If there are many channels, select a subset
     channels_to_plot = emg_channels[:8] if len(emg_channels) > 8 else emg_channels
     
-    rec_data.plot_signals(
+    emg_data.plot_signals(
         channels=channels_to_plot,
         time_range=(0, 5),
         title='EMG Channels from OTB File',
@@ -79,12 +79,12 @@ if emg_channels:
     plt.figure(figsize=(15, 6))
     
     # Calculate RMS in 100ms windows
-    fs = rec_data.get_sampling_frequency()
+    fs = emg_data.get_sampling_frequency()
     window_size = int(0.1 * fs)  # 100ms window
     
     for i, channel in enumerate(channels_to_plot):
         # Get signal data
-        signal = rec_data.signals[channel].values
+        signal = emg_data.signals[channel].values
         
         # Calculate RMS in windows
         n_windows = len(signal) // window_size
@@ -204,9 +204,9 @@ if len(rec.channels) > 100:  # EDF typically handles fewer channels
                     for i in range(0, len(rec.channels), 50)]
     
     for i, channel_list in enumerate(channel_lists):
-        subset_rec = rec.select_channels(channel_list)
+        subset_emg = rec.select_channels(channel_list)
         output_path = f'otb_split_{i+1}'
-        subset_rec.to_edf(output_path)
+        subset_emg.to_edf(output_path)
         print(f"Exported channel group {i+1} to: {output_path}")
 ```
 

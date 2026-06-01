@@ -93,8 +93,8 @@ print(f"Channel names: {list(rec.channels.keys())}")
 
 ```python
 # Load only EMG data
-rec_data = Recording.from_file('examples/multi_stream_test.xdf', stream_types=['EMG'])
-print(f"EMG channels: {list(rec_data.channels.keys())}")
+emg_data = Recording.from_file('examples/multi_stream_test.xdf', stream_types=['EMG'])
+print(f"EMG channels: {list(emg_data.channels.keys())}")
 # Output: ['EMG_L', 'EMG_R']
 
 # Load EEG and EMG together
@@ -107,7 +107,7 @@ print(f"Combined channels: {len(combined.channels)}")
 
 ```python
 # Load specific streams by name
-rec_data = Recording.from_file('examples/multi_stream_test.xdf', stream_names=['TestEMG'])
+emg_data = Recording.from_file('examples/multi_stream_test.xdf', stream_names=['TestEMG'])
 ```
 
 ## Working with Multi-Rate Data

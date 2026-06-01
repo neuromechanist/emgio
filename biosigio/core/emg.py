@@ -293,7 +293,7 @@ class Recording:
             emg_only = rec.select_channels(channel_type='EMG')
 
             # Select specific EMG channels only, this example does not select ACC channels
-            rec_subset = rec.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
+            emg_subset = rec.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
         """
         if self.signals is None:
             raise ValueError("No signals loaded")

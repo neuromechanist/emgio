@@ -102,13 +102,13 @@ rec = Recording.from_file('data.csv', importer='csv',
 
 ```python
 # Select specific channels
-subset_rec = rec.select_channels(['EMG1', 'EMG2', 'ACC1'])
+subset_emg = rec.select_channels(['EMG1', 'EMG2', 'ACC1'])
 
 # Select all channels of a specific type
 emg_only = rec.select_channels(channel_type='EMG')
 
 # Plot selected channels
-subset_rec.plot_signals()
+subset_emg.plot_signals()
 ```
 
 ### Metadata Handling
