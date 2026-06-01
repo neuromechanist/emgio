@@ -12,16 +12,16 @@ Loading WFDB data typically involves three files sharing the same base name (e.g
 
 ## Loading Data
 
-To load a WFDB record, provide the path to the **header (`.hea`) file** or just the base record name (if the files are in the current directory or the path is configured) to `Recording.from_file`:
+To load a WFDB record, provide the path to the **header (`.hea`) file** to `Recording.from_file`. A `.hea`, `.dat`, or `.atr` extension is auto-detected as WFDB; an extension-less base record name needs an explicit `importer='wfdb'`:
 
 ```python
 from biosigio.core.emg import Recording
 
-# Load using the header file path
+# Load using the header file path (extension auto-detected)
 emg = Recording.from_file('path/to/your/record.hea')
 
-# Or load using just the base name (looks for files in the current directory)
-# emg = Recording.from_file('record')
+# Or load using just the base name (no extension); pass importer explicitly
+# emg = Recording.from_file('record', importer='wfdb')
 ```
 
 biosigIO uses the `wfdb` library (PyPI package `wfdb`) internally. It ships as a core dependency, so no separate installation is required.

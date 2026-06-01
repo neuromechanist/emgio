@@ -20,51 +20,46 @@ from biosigio.importers.trigno import TrignoImporter
 emg = Recording.from_file('data.csv', importer='trigno')
 
 # Method 2: Using the importer directly
-importer = TrignoImporter('data.csv')
-signals, channels, metadata = importer.load()
-emg = Recording(signals, channels, metadata)
+emg = TrignoImporter().load('data.csv')
 ```
 
 ## File Format Requirements
 
-The importer expects a CSV file with:
+The importer expects a Delsys Trigno CSV export with:
 
-1. A header section (optional) containing metadata lines starting with '#'
-2. A data section with columns:
-   - First column: Time in seconds
-   - Remaining columns: Channel data
+1. A per-channel metadata header. Each channel is described by a line of the
+   form `Label: <name> Sampling frequency: <Hz> ... Unit: <unit> Domain: ...`,
+   from which the importer parses the channel name, its sampling frequency, and
+   its physical unit.
+2. A data header row whose first column is `X[s]` (the time axis in seconds);
+   the importer treats the line containing `X[s]` as the start of the numeric
+   data section.
+3. The numeric data section that follows, with the time column first and one
+   column per channel.
 
-Example:
-```
-# Delsys Trigno EMG Data
-# Recording Date: 2023-01-01
-# Subject: S001
-Time(s),EMG1,EMG2,EMG3,EMG4,ACC1_X,ACC1_Y,ACC1_Z
-0.000,0.01,0.02,0.03,0.04,0.05,0.06,0.07
-0.001,0.02,0.03,0.04,0.05,0.06,0.07,0.08
-...
-```
+Because Trigno records each sensor at its own rate, the parsed
+`sample_frequency` is stored per channel.
 
 ## Channel Type Detection
 
 The Trigno importer automatically detects channel types based on channel names:
 
-- Channels containing 'EMG' or 'emg' are classified as 'EMG'
-- Channels containing 'ACC' or 'acc' are classified as 'ACC'
-- Other channels are classified as 'OTHER'
+- Channels whose name contains `EMG` are classified as `EMG`
+- Channels whose name contains `ACC` are classified as `ACC`
+- Channels whose name contains `GYRO` are classified as `GYRO`
+- Other channels are classified as `OTHER`
 
 ## Parameters
 
-- **file_path (str)**: Path to the Trigno CSV file
-- **kwargs (dict)**: Additional keyword arguments
-  - **header_rows (int, optional)**: Number of header rows to skip. If not provided, automatically detected.
-  - **delimiter (str, optional)**: Column delimiter. Default is ','.
-  - **channel_types (dict, optional)**: Manual mapping of channel names to types.
+`TrignoImporter().load(filepath)` takes:
 
-## Return Values
+- **filepath (str)**: Path to the Trigno CSV file.
 
-The `load()` method returns a tuple of:
+Per-channel sampling frequency and units are read from the file's `Label: ...`
+header lines, so no manual header/delimiter arguments are required.
 
-1. **signals (pandas.DataFrame)**: Signal data with channels as columns
-2. **channels (dict)**: Dictionary of channel information
-3. **metadata (dict)**: Dictionary containing metadata from the header 
+## Return Value
+
+The `load()` method returns a single `Recording` object populated with the
+parsed signals, per-channel information (type, unit, sampling frequency), and
+recording metadata (including `source_file` and `device`).

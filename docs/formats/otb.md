@@ -71,10 +71,11 @@ plt.show()
 OTB files can contain various channel types:
 
 - **EMG** - Electromyography channels
-- **ACC** - Accelerometer channels 
-- **IMUX** - Input multiplexer channels (for OT Bioelettronica devices)
-- **AUX** - Auxiliary input channels
-- **TRIG** - Trigger or event marker channels
+- **ACC** - Accelerometer channels
+- **GYRO** - Gyroscope channels
+- **QUAT** - Quaternion channels
+- **CTRL** - Control channels
+- **OTHER** - Any channel that matches none of the above
 
 ## Notes and Limitations
 

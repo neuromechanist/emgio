@@ -760,6 +760,42 @@ class Recording:
         """
         return self.metadata.get(key)
 
+    def has_metadata(self, key: str) -> bool:
+        """Return True if ``key`` is present in the recording metadata."""
+        return key in self.metadata
+
+    def get_n_channels(self) -> int:
+        """Number of channels in the recording."""
+        return len(self.channels)
+
+    def get_n_samples(self) -> int:
+        """Number of time samples per channel (0 if no signals are loaded)."""
+        return 0 if self.signals is None else len(self.signals)
+
+    def get_sampling_frequency(self) -> float:
+        """Sampling frequency in Hz, when all channels share a single rate.
+
+        Raises:
+            ValueError: if no channels are loaded, or channels have differing
+                sampling frequencies; for a mixed-rate recording read
+                ``channels[ch]["sample_frequency"]`` per channel instead.
+        """
+        if not self.channels:
+            raise ValueError("No channels loaded")
+        rates = {info["sample_frequency"] for info in self.channels.values()}
+        if len(rates) > 1:
+            raise ValueError(
+                "Channels have differing sampling frequencies; read "
+                "channels[ch]['sample_frequency'] per channel instead."
+            )
+        return float(next(iter(rates)))
+
+    def get_duration(self) -> float:
+        """Recording duration in seconds (time of the last sample); 0.0 if empty."""
+        if self.signals is None or len(self.signals) == 0:
+            return 0.0
+        return float(self.signals.index[-1])
+
     def add_channel(
         self,
         label: str,

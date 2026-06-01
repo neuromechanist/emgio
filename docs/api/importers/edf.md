@@ -20,9 +20,7 @@ from biosigio.importers.edf import EDFImporter
 emg = Recording.from_file('data.edf', importer='edf')  # Works for both .edf and .bdf
 
 # Method 2: Using the importer directly
-importer = EDFImporter('data.edf')
-signals, channels, metadata = importer.load()
-emg = Recording(signals, channels, metadata)
+emg = EDFImporter().load('data.edf')
 ```
 
 ## File Format Support
@@ -31,71 +29,67 @@ The EDF importer supports:
 
 1. EDF files (16-bit resolution)
 2. BDF files (24-bit resolution)
-3. EDF+ files with annotations
-4. Different sampling rates for different channels
-5. Time-stamped data
+3. EDF+ / BDF+ files with annotations (loaded into `Recording.events`)
+
+The `.edf` and `.bdf` extensions are auto-detected by `Recording.from_file`.
 
 ## Channel Type Detection
 
-The EDF importer attempts to identify channel types based on:
-
-1. Channel labels in the EDF header
-2. Signal characteristics 
-3. Common naming conventions (e.g., channels with 'EMG' in the name are classified as 'EMG')
+The EDF importer identifies channel types from the channel label and transducer
+fields in the EDF header (e.g., a label or transducer containing 'EMG' is
+classified as `EMG`; 'EEG', 'ECG'/'EKG', 'EOG', 'ACC', 'GYRO', and 'TRIG' are
+handled similarly, otherwise `OTHER`).
 
 ## Parameters
 
-- **file_path (str)**: Path to the EDF/BDF file
-- **kwargs (dict)**: Additional keyword arguments
-  - **load_data (bool, optional)**: Whether to load the data or just metadata. Default is True.
-  - **channel_types (dict, optional)**: Manual mapping of channel names to types.
-  - **start_time (float, optional)**: Start time in seconds for loading a subset of the data.
-  - **end_time (float, optional)**: End time in seconds for loading a subset of the data.
+`EDFImporter().load(filepath)` takes:
 
-## Return Values
+- **filepath (str)**: Path to the EDF/BDF file.
 
-The `load()` method returns a tuple of:
+The importer reads the entire file; it does not support partial/segment loading.
 
-1. **signals (pandas.DataFrame)**: Signal data with channels as columns
-2. **channels (dict)**: Dictionary of channel information including:
-   - channel_type: Type of channel (EMG, EEG, etc.)
-   - physical_dimension: Physical unit (e.g., 'µV', 'mV')
-   - sample_frequency: Sampling rate in Hz
-   - physical_min: Minimum physical value
-   - physical_max: Maximum physical value
-   - digital_min: Minimum digital value
-   - digital_max: Maximum digital value
+## Return Value
 
-3. **metadata (dict)**: Dictionary containing metadata from the EDF file, including:
-   - subject: Subject identifier (from EDF patient field)
-   - recording_date: Recording date
-   - start_time: Start time of the recording
-   - duration: Duration of the recording in seconds
-   - file_type: 'EDF' or 'BDF'
-   - annotations: Any annotations found in the file
+The `load()` method returns a single `Recording` object with:
+
+1. **signals**: signal data with channels as columns.
+2. **channels**: per-channel information including:
+   - `channel_type`: type of channel (EMG, EEG, etc.)
+   - `physical_dimension`: physical unit (e.g., 'µV', 'mV')
+   - `sample_frequency`: sampling rate in Hz
+   - `prefilter`: pre-filtering string from the header
+   - `physical_min` / `physical_max`: physical value bounds
+   - `digital_min` / `digital_max`: digital value bounds
+   - `transducer`: transducer string from the header
+3. **metadata**: fields parsed from the EDF header, including patient/recording
+   info (`patientcode`, `patient_name`, `technician`, `equipment`, `startdate`,
+   ...), `file_info` (`filetype`, `number_of_signals`, `file_duration`,
+   `datarecord_duration`), and `source_file`.
+
+Annotations are NOT stored in metadata; see "Working with Annotations" below.
 
 ## Implementation Details
 
 The EDF importer uses the `pyedflib` package to:
 
-1. Read the EDF/BDF file header to extract metadata
-2. Extract channel information and convert to biosigIO's format
-3. Load the signal data, applying appropriate scaling
-4. Handle annotations if present
-5. Convert the data to a pandas DataFrame for use with biosigIO
+1. Read the EDF/BDF file header to extract metadata.
+2. Extract per-channel information and convert it to biosigIO's format.
+3. Load the signal data into a pandas DataFrame.
+4. Read any EDF+/BDF+ annotations into the Recording's events.
 
 ## Working with Annotations
 
-EDF+ files can contain annotations that mark specific events or segments in the data. The importer preserves these annotations in the metadata dictionary:
+EDF+ / BDF+ files can contain annotations that mark events in the data. The
+importer reads them into `Recording.events`, a pandas DataFrame with `onset`,
+`duration`, and `description` columns. When the Recording is exported back to
+EDF/BDF, these events are written out again as EDF+ annotations.
 
 ```python
-# Load EDF+ file with annotations
-emg = Recording.from_file('data.edf+', importer='edf')
+# Load an EDF+ file with annotations
+emg = Recording.from_file('data.edf', importer='edf')
 
-# Access annotations
-annotations = emg.get_metadata('annotations')
-if annotations:
-    for annotation in annotations:
-        onset, duration, description = annotation
-        print(f"Event: {description} at {onset}s, duration: {duration}s")
-``` 
+# Access annotations via the events DataFrame
+for _, event in emg.events.iterrows():
+    print(f"Event: {event['description']} at {event['onset']}s, "
+          f"duration: {event['duration']}s")
+```

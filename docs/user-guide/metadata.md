@@ -75,7 +75,8 @@ This DataFrame has the following standard columns:
 
 *   **EDF/BDF:** Annotations stored in the EDF+/BDF+ annotation channel are automatically loaded into `emg.events` by the `EDFImporter`.
 *   **WFDB:** Annotations stored in a corresponding `.atr` (or similar) file are automatically loaded into `emg.events` by the `WFDBImporter` when loading the `.hea` file.
-*   **Other Formats:** For formats that don't have standardized annotation support within the file (like CSV, Trigno, OTB, EEGLAB `.set`), annotations are typically not loaded automatically. You may need to load them from a separate file and add them manually.
+*   **EEGLAB `.set`:** EEGLAB events are read by the `EEGLABImporter` and stored under the metadata key `events` (i.e. `emg.get_metadata('events')`), as a list of event dictionaries, rather than in the `emg.events` DataFrame.
+*   **Other Formats:** For formats that don't have standardized annotation support within the file (like CSV, Trigno, OTB), annotations are typically not loaded automatically. You may need to load them from a separate file and add them manually.
 
 **Accessing Annotations:**
 
@@ -118,8 +119,13 @@ You can add or modify metadata fields:
 # Set a single metadata field
 emg.set_metadata('subject', 'S001')
 
-# Set multiple metadata fields at once
-emg.set_metadata_dict({
+# Set several fields with repeated set_metadata calls
+emg.set_metadata('condition', 'resting')
+emg.set_metadata('experimenter', 'John Doe')
+emg.set_metadata('recording_date', '2023-01-15')
+
+# Or update the metadata dictionary directly
+emg.metadata.update({
     'subject': 'S001',
     'condition': 'resting',
     'experimenter': 'John Doe',
@@ -150,7 +156,7 @@ emg.to_edf('output')
 
 # This will create:
 # - output.edf or output.bdf (depending on format selection)
-# - output.channels.tsv (channel metadata in tab-separated format)
+# - output_channels.tsv (channel metadata in tab-separated format, BIDS naming)
 ```
 
 The channels.tsv file will include information like:

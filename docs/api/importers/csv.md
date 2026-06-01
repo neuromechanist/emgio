@@ -20,9 +20,7 @@ from biosigio.importers.csv import CSVImporter
 emg = Recording.from_file('data.csv', importer='csv')
 
 # Method 2: Using the importer directly
-importer = CSVImporter('data.csv', has_header=True, delimiter=',')
-signals, channels, metadata = importer.load()
-emg = Recording(signals, channels, metadata)
+emg = CSVImporter().load('data.csv', has_header=True, delimiter=',')
 ```
 
 ## Auto-Detection Features
@@ -36,8 +34,14 @@ The CSV importer includes several auto-detection capabilities:
 
 ## Parameters
 
-- **file_path (str)**: Path to the CSV file
-- **kwargs (dict)**: Additional keyword arguments
+`CSVImporter().load(filepath, force_generic=False, **kwargs)` takes:
+
+- **filepath (str)**: Path to the CSV file.
+- **force_generic (bool, optional)**: Force using the generic CSV importer even
+  if a specialized format (e.g., Trigno) is detected. When loading through
+  `Recording.from_file(..., importer='csv', force_csv=True)`, the `force_csv`
+  argument is forwarded as this `force_generic` flag.
+- **kwargs**: Additional keyword arguments:
   - **sample_frequency (float, optional)**: Sampling frequency in Hz (required if no time column)
   - **has_header (bool, optional)**: Whether file has a header row (auto-detected if not specified)
   - **skiprows (int, optional)**: Number of rows to skip at beginning (auto-detected if not specified)
@@ -48,19 +52,18 @@ The CSV importer includes several auto-detection capabilities:
   - **channel_types (dict, optional)**: Dict mapping column names to channel types ('EMG', 'ACC', etc.)
   - **physical_dimensions (dict, optional)**: Dict mapping column names to physical dimensions
   - **metadata (dict, optional)**: Dict of additional metadata to include
-  - **force_csv (bool, optional)**: Force using generic CSV importer even if specialized format is detected
 
-## Return Values
+## Return Value
 
-The `load()` method returns a tuple of:
+The `load()` method returns a single `Recording` object with:
 
-1. **signals (pandas.DataFrame)**: Signal data with channels as columns and time as index
-2. **channels (dict)**: Dictionary of channel information including:
-   - channel_type: Type of channel (EMG, EEG, etc.)
-   - physical_dimension: Physical unit (e.g., 'mV', 'g')
-   - sample_frequency: Sampling rate in Hz
-
-3. **metadata (dict)**: Dictionary containing metadata from the file and any additional provided metadata
+1. **signals**: signal data with channels as columns and time as index.
+2. **channels**: per-channel information including:
+   - `channel_type`: type of channel (EMG, ACC, GYRO, MISC, OTHER), inferred from the column name when not provided
+   - `physical_dimension`: physical unit (e.g., 'µV', 'g')
+   - `sample_frequency`: sampling rate in Hz
+3. **metadata**: includes `source_file`, `file_format` ('CSV'), and any
+   additional metadata passed via the `metadata` keyword argument.
 
 ## Implementation Details
 

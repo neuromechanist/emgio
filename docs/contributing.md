@@ -124,7 +124,7 @@ Some specific style guidelines:
 
 ## Adding New Importers
 
-To add support for a new EMG format:
+To add support for a new biosignal format:
 
 1. Create a new file in `biosigio/importers/` (e.g., `new_format.py`)
 2. Implement a class that inherits from `BaseImporter`

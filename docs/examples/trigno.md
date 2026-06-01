@@ -1,6 +1,6 @@
 # Trigno Examples
 
-This page demonstrates how to work with EMG data from the Delsys Trigno wireless EMG system. Trigno data is typically exported as CSV files with a specific format that biosigIO can parse.
+This page demonstrates how to work with EMG data from the Delsys Trigno wireless EMG system. Trigno data is exported as CSV files with a metadata preamble followed by a data table. The importer reads per-channel `Label: ... Sampling frequency: ... Unit: ...` lines from the preamble, then locates the data header line (the one containing the `X[s]` time column) and reads the samples below it. Per-channel sampling frequency comes from each channel's `Sampling frequency:` field, so EMG and accelerometer (ACC) channels can carry different rates.
 
 ## Basic Trigno Example
 
@@ -16,7 +16,13 @@ emg = Recording.from_file(data_path, importer='trigno')
 # Print information about the loaded data
 print(f"Number of channels: {emg.get_n_channels()}")
 print(f"Number of samples: {emg.get_n_samples()}")
-print(f"Sampling frequency: {emg.get_sampling_frequency()} Hz")
+# Trigno recordings are often mixed-rate (EMG vs ACC/GYRO), so a single overall
+# sampling frequency may not exist. get_sampling_frequency() raises ValueError in
+# that case; read the per-channel rate from channels[ch]['sample_frequency'] instead.
+try:
+    print(f"Sampling frequency: {emg.get_sampling_frequency()} Hz")
+except ValueError:
+    print("Mixed per-channel sampling rates (see per-channel rates below)")
 print(f"Recording duration: {emg.get_duration()} seconds")
 
 # List available channels
@@ -51,34 +57,30 @@ print(f"ACC channels: {acc_channels}")
 # Create ACC-only object
 acc_only = emg.select_channels(acc_channels)
 
-# Plot EMG and ACC signals separately
-plt.figure(figsize=(10, 8))
-
-plt.subplot(2, 1, 1)
-emg_only.plot_signals(time_range=(0, 5), title="EMG Signals", ax=plt.gca())
-
-plt.subplot(2, 1, 2)
-acc_only.plot_signals(time_range=(0, 5), title="Accelerometer Signals", ax=plt.gca())
-
-plt.tight_layout()
-plt.show()
+# Plot EMG and ACC signals separately (each call manages its own figure)
+emg_only.plot_signals(time_range=(0, 5), title="EMG Signals")
+acc_only.plot_signals(time_range=(0, 5), title="Accelerometer Signals")
 ```
 
 ## Exporting Trigno Data to EDF/BDF
 
-You can export the Trigno data to EDF or BDF format for use with other software:
+You can export the Trigno data to EDF or BDF format for use with other software.
+EDF/BDF requires a single sampling rate across all channels, so a mixed-rate
+Trigno recording (EMG vs ACC/GYRO) must be split by channel type (or resampled to
+a common rate) before export; exporting a mixed-rate recording raises a
+`ValueError`.
 
 ```python
-# Export all channels
-output_path = 'trigno_all_channels'
-emg.to_edf(output_path)  # Format (EDF/BDF) will be selected automatically
-print(f"Exported to: {output_path}")
-
-# Export only EMG channels
+# Export only EMG channels (a single-rate subset)
 emg_only = emg.select_channels(channel_type='EMG')
 output_path = 'trigno_emg_only'
-emg_only.to_edf(output_path)
+emg_only.to_edf(output_path)  # Format (EDF/BDF) will be selected automatically
 print(f"Exported EMG channels to: {output_path}")
+
+# Accelerometer channels have a different rate, so export them separately
+acc_only = emg.select_channels(channel_type='ACC')
+acc_only.to_edf('trigno_acc_only')
+print("Exported ACC channels to: trigno_acc_only")
 ```
 
 ## Working with Multiple Trigno Recordings
@@ -97,22 +99,14 @@ session1.set_metadata('condition', 'rest')
 session2.set_metadata('session', '2')
 session2.set_metadata('condition', 'active')
 
-# Plot channels from both sessions
+# Plot channels from both sessions (each call manages its own figure)
 channel_to_compare = 'EMG1'  # Replace with your channel name
 
-plt.figure(figsize=(10, 6))
-plt.subplot(2, 1, 1)
-session1.plot_signals([channel_to_compare], time_range=(0, 5), 
-                     title=f"Session 1: {session1.get_metadata('condition')}", 
-                     ax=plt.gca())
+session1.plot_signals([channel_to_compare], time_range=(0, 5),
+                     title=f"Session 1: {session1.get_metadata('condition')}")
 
-plt.subplot(2, 1, 2)
-session2.plot_signals([channel_to_compare], time_range=(0, 5), 
-                     title=f"Session 2: {session2.get_metadata('condition')}", 
-                     ax=plt.gca())
-
-plt.tight_layout()
-plt.show()
+session2.plot_signals([channel_to_compare], time_range=(0, 5),
+                     title=f"Session 2: {session2.get_metadata('condition')}")
 ```
 
 ## Complete Trigno Workflow Example
@@ -132,17 +126,17 @@ emg = Recording.from_file(data_path, importer='trigno')
 # 2. Add metadata
 emg.set_metadata('subject', 'S001')
 emg.set_metadata('condition', 'reaching')
-emg.set_metadata('sampling_rate', emg.get_sampling_frequency())
 
 # 3. Select only EMG channels
 emg_only = emg.select_channels(channel_type='EMG')
 
-# 4. Plot raw signals
-plt.figure(figsize=(12, 6))
-emg_only.plot_signals(time_range=(0, 10), 
-                     title="Raw EMG Signals", 
-                     ax=plt.gca())
-plt.tight_layout()
+# The EMG-only subset has a single rate, so get_sampling_frequency() is safe here
+# (the full mixed-rate recording would raise ValueError).
+emg_only.set_metadata('sampling_rate', emg_only.get_sampling_frequency())
+
+# 4. Plot raw signals (plot_signals manages its own figure)
+emg_only.plot_signals(time_range=(0, 10),
+                     title="Raw EMG Signals")
 plt.savefig('raw_emg.png')
 
 # 5. Export to EDF/BDF

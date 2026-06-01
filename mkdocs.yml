@@ -1,5 +1,5 @@
 site_name: biosigIO Documentation
-site_description: Documentation for biosigIO - EMG data import/export and manipulation
+site_description: Documentation for biosigIO - biosignal (EEG/EMG/iEEG/MEG) import/export and manipulation
 site_author: Seyed (Yahya) Shirazi
 repo_url: https://github.com/neuromechanist/biosigio
 repo_name: neuromechanist/biosigio
@@ -92,6 +92,10 @@ nav:
     - Zarr Serving Store: formats/zarr.md
   - API Reference:
     - Recording Class: api/emg.md
+    - Command-Line Interface: api/cli.md
+    - Modality Vocabulary: api/core/modality.md
+    - BIDS Helpers: api/bids.md
+    - Serialization Schema: api/tabular_schema.md
     - Importers:
       - Base Importer: api/importers/base.md
       - Trigno Importer: api/importers/trigno.md
@@ -112,6 +116,7 @@ nav:
       - Zarr Exporter: api/exporters/zarr.md
     - Analysis:
       - Verification: api/analysis/verification.md
+      - Signal Analysis: api/analysis/signal.md
     - Visualization:
       - Static Plots: api/visualization/static.md
   - Examples:

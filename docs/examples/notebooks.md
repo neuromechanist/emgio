@@ -42,12 +42,11 @@ import matplotlib.pyplot as plt
 # Load EMG data
 emg = Recording.from_file('data.csv', importer='trigno')
 
-# Plot signals with customized appearance
+# Plot signals with customized appearance (plot_signals manages its own figure)
 emg.plot_signals(
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),
     title='EMG Signals',
-    figsize=(12, 6),
     grid=True
 )
 ```
@@ -152,15 +151,19 @@ plt.savefig('emg_plot.svg')  # SVG for editing
 
 ## Tips for Jupyter Notebooks
 
-1. **Memory management**: When working with large files, consider using:
+1. **Loading data**: `Recording.from_file` infers the importer from the file
+   extension and returns a `Recording`. You can also call an importer directly;
+   importers take no constructor arguments and their `load(filepath)` returns a
+   `Recording` (not a tuple):
    ```python
-   # Load only metadata first
-   importer = EDFImporter('large_file.edf')
-   signals, channels, metadata = importer.load(load_data=False)
-   
-   # Then load specific time segments as needed
-   importer = EDFImporter('large_file.edf')
-   signals, channels, metadata = importer.load(start_time=10, end_time=20)
+   from biosigio import Recording
+   from biosigio.importers.edf import EDFImporter
+
+   # Inferred importer (extension-based)
+   emg = Recording.from_file('recording.edf')
+
+   # Equivalent direct use
+   emg = EDFImporter().load('recording.edf')
    ```
 
 2. **Progress tracking**: For long operations, use `tqdm` for progress bars:

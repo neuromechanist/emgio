@@ -18,9 +18,11 @@ from biosigio.analysis.verification import compare_signals, report_verification_
 # Load original data
 emg_original = Recording.from_file('raw_data.csv', importer='trigno')
 
-# Export to EDF and reload
+# Export to EDF/BDF and reload. to_edf auto-selects the extension, so the
+# written file may be exported_data.edf or exported_data.bdf depending on the
+# signal analysis; reload whichever was created.
 emg_original.to_edf('exported_data')
-emg_reloaded = Recording.from_file('exported_data.edf')
+emg_reloaded = Recording.from_file('exported_data.edf')  # or 'exported_data.bdf'
 
 # Compare signals with detailed metrics
 results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)

@@ -53,7 +53,7 @@ The EDF importer in biosigIO (`biosigio.importers.edf`) uses the `pyedflib` pack
 1. Read the EDF/BDF file header to extract metadata
 2. Load the signal data for all channels
 3. Convert channel information to biosigIO's format
-4. Handle different sampling rates across channels
+4. Read EDF+/BDF+ annotations into the `events` DataFrame
 
 ## Exporter Implementation
 
@@ -62,7 +62,8 @@ The EDF exporter in biosigIO (`biosigio.exporters.edf`) also uses `pyedflib` to:
 1. Automatically determine whether to use EDF or BDF based on signal characteristics
 2. Generate appropriate header information
 3. Scale the signals correctly for storage
-4. Create a sidecar channels.tsv file with detailed channel metadata (BIDS-compatible)
+4. Write the `events` DataFrame back as EDF+/BDF+ annotations
+5. Create a sidecar `<output>_channels.tsv` file with detailed channel metadata (BIDS-compatible)
 
 ## Code Example
 
@@ -100,7 +101,7 @@ verification_results = emg.to_edf('output', verify=True)
 verification_results = emg.to_edf(
     'output',
     verify=True,
-    verify_tolerance=0.001,  # 0.1% tolerance
+    verify_tolerance=0.001,  # Absolute tolerance for signal comparison
     verify_channel_map={'EMG1': 'CH1'},  # Custom channel mapping
     verify_plot=True  # Generate visualization of comparison
 )
@@ -116,8 +117,10 @@ The verification process:
 
 ## Notes and Limitations
 
-- The BIDS-compatible channels.tsv sidecar file includes detailed channel information
-- Annotations in EDF files are preserved in biosigIO's metadata
+- The BIDS-compatible `<output>_channels.tsv` sidecar file includes detailed channel information
+- EDF+/BDF+ annotations are loaded into the `events` DataFrame (columns `onset`, `duration`, `description`) and written back as EDF+/BDF+ annotations on export
 - When importing from EDF, biosigIO attempts to identify channel types based on labels and signal characteristics
 - When exporting to EDF/BDF, biosigIO automatically handles scaling to maximize precision
+- EDF/BDF export requires a single sampling rate across all channels; if per-channel rates differ, export raises `ValueError`. Resample channels to a common rate first
+- With `format='auto'`, `to_edf('output')` selects either `.edf` (16-bit) or `.bdf` (24-bit) based on signal analysis and appends the matching extension
 - EDF has limitations on channel naming (maximum 16 characters)

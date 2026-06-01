@@ -1,10 +1,11 @@
 # Signal Verification Examples
 
-This page demonstrates how to use biosigIO's verification capabilities to ensure signal integrity when transferring EMG data between formats.
+This page demonstrates how to use biosigIO's verification capabilities to ensure signal integrity when transferring biosignal data between formats.
 
 ## Basic Verification Workflow
 
 ```python
+import os
 from biosigio import Recording
 import matplotlib.pyplot as plt
 from biosigio.analysis.verification import compare_signals, report_verification_results
@@ -15,11 +16,13 @@ emg_original = Recording.from_file('sample_data.csv', importer='trigno')
 emg_channels = [ch for ch, info in emg_original.channels.items() if info['channel_type'] == 'EMG']
 emg_original = emg_original.select_channels(emg_channels)  # Creates a new Recording object with only EMG channels
 
-# Export to EDF (automatically selects EDF or BDF based on signal characteristics)
+# Export to EDF (automatically selects EDF or BDF based on signal characteristics).
+# Pass a base path without an extension; the writer appends .edf or .bdf.
 emg_original.to_edf('exported_data')
 
-# Reload the exported data
-emg_reloaded = Recording.from_file('exported_data.edf')
+# Reload the exported data. Resolve whichever extension to_edf selected.
+exported_path = 'exported_data.edf' if os.path.exists('exported_data.edf') else 'exported_data.bdf'
+emg_reloaded = Recording.from_file(exported_path)
 
 # Verify signals using the verification module
 results = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
@@ -117,6 +120,7 @@ plt.show()
 ## Real-World Example: CSV to EDF Conversion
 
 ```python
+import os
 from biosigio import Recording
 import matplotlib.pyplot as plt
 from biosigio.analysis.verification import compare_signals, report_verification_results
@@ -125,13 +129,14 @@ from biosigio.visualization.static import plot_comparison
 # 1. Load original Trigno CSV data
 emg_trigno = Recording.from_file('trigno_data.csv', importer='trigno')
 
-# 2. Export to EDF
+# 2. Export to EDF (the writer appends .edf or .bdf based on signal analysis)
 emg_trigno.to_edf('converted_data')
 print(f"Data exported. Duration: {emg_trigno.get_duration():.2f}s, "
       f"Channels: {emg_trigno.get_n_channels()}")
 
-# 3. Reload from EDF
-emg_edf = Recording.from_file('converted_data.edf')
+# 3. Reload from the exported file (resolve the auto-selected extension)
+converted_path = 'converted_data.edf' if os.path.exists('converted_data.edf') else 'converted_data.bdf'
+emg_edf = Recording.from_file(converted_path)
 print(f"Data reloaded. Duration: {emg_edf.get_duration():.2f}s, "
       f"Channels: {emg_edf.get_n_channels()}")
 

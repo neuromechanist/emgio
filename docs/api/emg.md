@@ -1,6 +1,6 @@
 # Recording Class API
 
-The `Recording` class is the main class in biosigIO for working with EMG data. It encapsulates signals, channel information, and metadata, and provides methods for data manipulation and export.
+The `Recording` class is the main class in biosigIO for working with biosignal data. It encapsulates signals, channel information, and metadata, and provides methods for data manipulation and export.
 
 ## Class Documentation
 
@@ -52,8 +52,8 @@ Details about the main attributes:
 
 ### Data Loading
 
-- `from_file()`: Load EMG data from a file (class method)
-- `from_dataframe()`: Create Recording object from a pandas DataFrame (class method)
+- `from_file()`: Load biosignal data from a file (class method)
+- `add_channel()`: Append a channel (data + metadata) to a Recording
 
 ### Data Access
 
@@ -92,38 +92,33 @@ emg = Recording.from_file("data.otb+")
 # Load with explicit importer
 emg = Recording.from_file("data.otb+", importer="otb")
 
-# Load with explicit importer (.csv does not support automatic importer selection)
+# Generic CSV/TXT supports automatic importer selection, but a Delsys Trigno
+# export is best loaded with its dedicated importer
 emg = Recording.from_file("data.csv", importer='trigno')
 ```
 
-### Creating from DataFrame
+### Building a Recording Programmatically
 
 ```python
-import pandas as pd
+import numpy as np
 from biosigio import Recording
 
-# Create a DataFrame with EMG data
-data = pd.DataFrame({
-    'EMG1': [1, 2, 3, 4, 5],
-    'EMG2': [5, 4, 3, 2, 1]
-})
-
-# Create channels dictionary
-channels = {
-    'EMG1': {
-        'channel_type': 'EMG',
-        'physical_dimension': 'µV',
-        'sample_frequency': 1000
-    },
-    'EMG2': {
-        'channel_type': 'EMG',
-        'physical_dimension': 'µV',
-        'sample_frequency': 1000
-    }
-}
-
-# Create Recording object
-emg = Recording.from_dataframe(data, channels=channels)
+# Start from an empty Recording and add channels
+emg = Recording()
+emg.add_channel(
+    label='EMG1',
+    data=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
+    sample_frequency=1000,
+    physical_dimension='µV',
+    channel_type='EMG',
+)
+emg.add_channel(
+    label='EMG2',
+    data=np.array([5.0, 4.0, 3.0, 2.0, 1.0]),
+    sample_frequency=1000,
+    physical_dimension='µV',
+    channel_type='EMG',
+)
 ```
 
 ### Selecting Channels
@@ -187,9 +182,10 @@ emg_original.to_edf('output', verify=True, verify_channel_map=channel_map)
 # Export, verify, and generate verification plot
 emg_original.to_edf('output', verify=True, verify_plot=True)
 
-# Manual verification (alternative approach)
+# Manual verification (alternative approach). With the default format='auto',
+# to_edf may write either output.edf or output.bdf; reload the path it wrote.
 emg_original.to_edf('output')
-emg_reloaded = Recording.from_file('output.edf')
+emg_reloaded = Recording.from_file('output.edf')  # or 'output.bdf' if BDF was selected
 
 # Compare signals
 results = compare_signals(emg_original, emg_reloaded, tolerance=0.001)

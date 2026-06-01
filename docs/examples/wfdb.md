@@ -24,6 +24,6 @@ The `WFDBImporter` automatically detects and loads annotations if the correspond
 ## Running the Example
 
 1.  Ensure you have the necessary files (`100.hea`, `100.dat`, `100.atr`) in the `examples/` directory.
-2.  Run the script from the project root directory: `python examples/wfdb_example.py`
+2.  Run the script from the project root directory: `uv run python examples/wfdb_example.py`
 
 You should see output detailing the loaded metadata, channels, annotations, and the paths to the exported EDF and BDF files. A plot window showing the first 10 seconds of the 'MLII' channel will also appear. 

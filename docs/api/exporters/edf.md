@@ -1,6 +1,6 @@
 # EDF/BDF Exporter
 
-The EDF/BDF exporter module in biosigIO provides functionality to export EMG data to EDF (European Data Format) or BDF (BioSemi Data Format) files.
+The EDF/BDF exporter module in biosigIO provides functionality to export biosignal data to EDF (European Data Format) or BDF (BioSemi Data Format) files.
 
 ## Module Documentation
 
@@ -49,15 +49,20 @@ emg.to_edf('output',
 
 The `to_edf` method accepts the following parameters:
 
-- **output_path (str)**: Path for the output file (without extension)
+- **filepath (str)**: Path for the output file. The extension is set automatically to `.edf` or `.bdf` based on the chosen format.
 - **format (str, optional)**: Specify the format to use ('auto', 'edf', or 'bdf'). Default is 'auto'.
 - **method (str, optional)**: Method for format selection ('svd', 'fft', or 'both'). Default is 'both'.
 - **svd_rank (int, optional)**: Rank cutoff for SVD analysis. Default is None (automatic).
 - **fft_noise_range (tuple, optional)**: Frequency range (min, max) for noise floor estimation in FFT. Default is None (automatic).
-- **physical_min (float, optional)**: Physical minimum value. Default is None (automatic).
-- **physical_max (float, optional)**: Physical maximum value. Default is None (automatic).
-- **overwrite (bool, optional)**: Whether to overwrite existing files. Default is False.
-- **additional_info (dict, optional)**: Additional information to include in the EDF header.
+- **precision_threshold (float, optional)**: Maximum acceptable precision loss percentage. Default is 0.01.
+- **bypass_analysis (bool, optional)**: Skip signal analysis when `format` is forced to 'edf' or 'bdf'. Default is None (skip when format is forced).
+- **verify (bool, optional)**: Reload the exported file and compare it with the original. Default is False.
+- **verify_tolerance (float, optional)**: Absolute tolerance used during verification. Default is 1e-6.
+- **verify_channel_map (dict, optional)**: Map original channel names to reloaded names for verification.
+- **verify_plot (bool, optional)**: Plot original vs reloaded signals when verifying. Default is False.
+- **events_df (DataFrame, optional)**: Events to write as EDF+ annotations. Defaults to `self.events`.
+- **create_channels_tsv (bool, optional)**: Write a BIDS-compliant channels.tsv sidecar. Default is True.
+- **clip_outliers (bool or str, optional)**: Per-channel physical-window outlier handling ('auto', True, or False). Default is 'auto'.
 
 ## Understanding Format Selection
 
@@ -82,14 +87,14 @@ Fast Fourier Transform (FFT) analysis:
 When exporting, biosigIO generates the following files:
 
 1. **Main data file**: Either `.edf` or `.bdf` extension depending on the format selected
-2. **Channels metadata file**: A `{output_path}.channels.tsv` file with detailed channel information in BIDS-compatible format
+2. **Channels metadata file**: A `{output}_channels.tsv` sidecar (BIDS underscore naming) with detailed channel information in BIDS-compatible format, written next to the data file unless `create_channels_tsv=False`.
 
 Example channels.tsv file content:
 ```
-name    type    units   sampling_frequency
-EMG1    EMG     µV      2000
-EMG2    EMG     µV      2000
-ACC1    ACC     g       2000
+name    type    units   sampling_frequency  reference   status
+EMG1    EMG     µV      2000                n/a         good
+EMG2    EMG     µV      2000                n/a         good
+ACC1    ACC     g       2000                n/a         good
 ```
 
 ## Additional Features
@@ -98,4 +103,4 @@ ACC1    ACC     g       2000
 - **Metadata preservation**: Subject, recording, and other metadata are included in the EDF header
 - **BIDS compatibility**: The exporter follows BIDS conventions for metadata
 - **Multi-channel support**: Handles multiple channel types with appropriate units
-- **Different sampling rates**: Can handle channels with different sampling rates 
+- **Single sampling rate**: EDF/BDF export requires one sampling rate shared by all channels. If the channels have differing sampling rates, the exporter raises a `ValueError`; resample the channels to a common rate (for example with `Recording.resample()`) before exporting.

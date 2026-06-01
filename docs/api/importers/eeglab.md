@@ -20,19 +20,17 @@ from biosigio.importers.eeglab import EEGLABImporter
 emg = Recording.from_file('data.set', importer='eeglab')
 
 # Method 2: Using the importer directly
-importer = EEGLABImporter('data.set')
-signals, channels, metadata = importer.load()
-emg = Recording(signals, channels, metadata)
+emg = EEGLABImporter().load('data.set')
 ```
 
 ## File Format Support
 
-The EEGLAB importer supports:
+The EEGLAB importer reads `.set` files with `scipy.io.loadmat`, so it supports:
 
-1. MATLAB `.set` files (version 7.3 and earlier)
-2. Both continuous and epoched data
-3. Multiple channel types (EMG, EEG, ACC, etc.)
-4. Event markers and annotations
+1. Pre-v7.3 (non-HDF5) MATLAB `.set` files. MATLAB v7.3 / HDF5-format `.set`
+   files are not supported.
+2. Multiple channel types (EMG, EEG, ACC, etc.)
+3. Event markers (stored in metadata)
 
 ## Channel Type Detection
 
@@ -44,34 +42,30 @@ The EEGLAB importer attempts to detect channel types based on:
 
 ## Parameters
 
-- **file_path (str)**: Path to the EEGLAB .set file
-- **kwargs (dict)**: Additional keyword arguments
-  - **load_data (bool, optional)**: Whether to load the data or just metadata. Default is True.
-  - **channel_types (dict, optional)**: Manual mapping of channel names to types.
+`EEGLABImporter().load(filepath)` takes:
 
-## Return Values
+- **filepath (str)**: Path to the EEGLAB `.set` file.
 
-The `load()` method returns a tuple of:
+## Return Value
 
-1. **signals (pandas.DataFrame)**: Signal data with channels as columns
-2. **channels (dict)**: Dictionary of channel information including:
-   - channel_type: Type of channel (EMG, EEG, etc.)
-   - physical_dimension: Physical unit (e.g., 'µV')
-   - sample_frequency: Sampling rate in Hz
-   - coordinates: Channel coordinates if available
+The `load()` method returns a single `Recording` object with:
 
-3. **metadata (dict)**: Dictionary containing metadata from the EEGLAB file, including:
-   - subject: Subject identifier
-   - session: Session identifier
-   - condition: Condition/task information
-   - srate: Sampling rate
-   - xmin/xmax: Time limits
-   - event: Event markers
-   - epoch: Epoch information (if epoched)
+1. **signals**: signal data with channels as columns.
+2. **channels**: per-channel information including:
+   - `channel_type`: type of channel (EMG, EEG, etc.)
+   - `physical_dimension`: physical unit (defaults to `'uV'`)
+   - `sample_frequency`: sampling rate in Hz
+   - `X`/`Y`/`Z`: channel coordinates when available in `chanlocs`
+3. **metadata**: fields parsed from the EEGLAB file, which may include:
+   - `setname`, `filename`, `filepath`
+   - `subject`, `group`, `condition`, `session`, `comments`
+   - `srate`: sampling rate
+   - `nbchan`, `trials`, `pnts`
+   - `xmin`/`xmax`: time limits
+   - `events`: list of event markers (stored under the `events` key)
+   - `device`: set to `'EEGLAB'`
 
 ## Notes
 
-- The importer automatically handles both continuous and epoched data
-- For epoched data, epochs are concatenated in the time dimension
-- Event markers are preserved in the metadata
-- Channel locations are preserved in the channel information when available 
+- Event markers are preserved in metadata under the `events` key.
+- Channel coordinates are preserved in the channel information when available.

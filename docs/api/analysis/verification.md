@@ -1,6 +1,6 @@
 # Verification API
 
-The `verification` module provides functions for verifying signal integrity after operations like export/import. It's particularly useful for ensuring data quality when transferring EMG data between different formats.
+The `verification` module provides functions for verifying signal integrity after operations like export/import. It's particularly useful for ensuring data quality when transferring biosignal data between different formats.
 
 ## Module Documentation
 
@@ -23,18 +23,20 @@ The `verification` module provides functions for verifying signal integrity afte
 from biosigio import Recording
 from biosigio.analysis.verification import compare_signals, report_verification_results
 
-# Load original EMG data
+# Load original recording
 emg_original = Recording.from_file("data.csv", importer="trigno")
 
-# Export to EDF and reload
+# Export to EDF/BDF and reload. With the default format='auto', to_edf may pick
+# either .edf or .bdf, so reload the path it actually wrote.
+written_path = "exported_data.edf"  # or "exported_data.bdf" if BDF was selected
 emg_original.to_edf("exported_data")
-emg_reloaded = Recording.from_file("exported_data.edf")
+emg_reloaded = Recording.from_file(written_path)
 
 # Compare signals
 results = compare_signals(emg_original, emg_reloaded)
 
 # Generate report
-is_identical = report_verification_results(results, tolerance=0.01)
+is_identical = report_verification_results(results, verify_tolerance=0.01)
 
 # Check results
 if is_identical:
@@ -57,5 +59,5 @@ channel_map = {
 
 # Compare with mapping
 results = compare_signals(emg_original, emg_reloaded, channel_map=channel_map)
-is_identical = report_verification_results(results, tolerance=0.01)
+is_identical = report_verification_results(results, verify_tolerance=0.01)
 ``` 

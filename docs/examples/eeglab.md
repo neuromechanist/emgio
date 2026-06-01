@@ -1,6 +1,6 @@
 # EEGLAB Examples
 
-This page provides examples for working with EEGLAB `.set` files using biosigIO.
+This page provides examples for working with EEGLAB `.set` files using biosigIO. The importer reads `.set` files with `scipy.io.loadmat`, so only pre-v7.3 (non-HDF5) MATLAB `.set` files are supported; v7.3/HDF5 `.set` files are not.
 
 ## Basic EEGLAB Example
 
@@ -59,9 +59,10 @@ import matplotlib.pyplot as plt
 # Load EEGLAB data with events
 emg = Recording.from_file('data_with_events.set', importer='eeglab')
 
-# Check if events exist in the metadata
-if 'event' in emg.metadata:
-    events = emg.get_metadata('event')
+# EEGLAB events are stored under the metadata key 'events' (plural) as a list
+# of dicts with 'type', 'latency', and (optionally) 'duration'/'trial_type'.
+if emg.has_metadata('events'):
+    events = emg.get_metadata('events')
     print(f"Found {len(events)} events")
     
     # Print the first 5 events
@@ -79,83 +80,51 @@ if 'event' in emg.metadata:
         fs = emg.get_sampling_frequency()
         event_time = event_sample / fs
         
-        # Plot 2 seconds before and after the event
+        # Plot 2 seconds before and after the event. Pass show=False so the
+        # event marker can be overlaid before displaying.
         window = 2  # seconds
-        plt.figure(figsize=(12, 8))
         emg.plot_signals(
             time_range=(event_time - window, event_time + window),
-            title=f"EMG around movement event at {event_time:.2f}s"
+            title=f"EMG around movement event at {event_time:.2f}s",
+            show=False
         )
-        
+
         # Add a vertical line at the event time
         plt.axvline(x=event_time, color='r', linestyle='--', label='Movement Event')
         plt.legend()
-        plt.tight_layout()
         plt.show()
 ```
 
-## Converting Epoched Data
+## Inspecting Epoch Metadata
 
-EEGLAB can store continuous or epoched data. biosigIO can work with both:
+EEGLAB stores the number of epochs in the `trials` field and the samples per
+epoch in `pnts`. These are read into the recording metadata, so you can inspect
+them after loading. `get_metadata` returns `None` when a key is absent, so guard
+for that before comparing:
 
 ```python
 from biosigio import Recording
 import matplotlib.pyplot as plt
 
-# Load epoched EEGLAB data
+# Load EEGLAB data
 emg = Recording.from_file('epoched_data.set', importer='eeglab')
 
-# Check if data is epoched
-is_epoched = emg.get_metadata('trials', 1) > 1
+# trials > 1 indicates epoched data; get_metadata returns None if absent
+trials = emg.get_metadata('trials')
+is_epoched = trials is not None and trials > 1
 print(f"Data is {'epoched' if is_epoched else 'continuous'}")
 
 if is_epoched:
-    # Get epoch information
     n_epochs = emg.get_metadata('trials')
     epoch_length = emg.get_metadata('pnts')
     fs = emg.get_sampling_frequency()
     epoch_duration = epoch_length / fs
-    
+
     print(f"Number of epochs: {n_epochs}")
     print(f"Epoch length: {epoch_length} samples ({epoch_duration:.2f} seconds)")
-    
-    # biosigIO automatically concatenates epochs, so the data is handled as continuous
-    # The total duration is epochs * epoch_duration
-    total_duration = emg.get_duration()
-    print(f"Total duration: {total_duration:.2f} seconds")
-    
-    # Plot signals from different epochs
-    plt.figure(figsize=(15, 10))
-    
-    # Plot first epoch
-    plt.subplot(3, 1, 1)
-    emg.plot_signals(
-        time_range=(0, epoch_duration),
-        title="First Epoch",
-        ax=plt.gca()
-    )
-    
-    # Plot middle epoch
-    middle_epoch = n_epochs // 2
-    middle_start = middle_epoch * epoch_duration
-    plt.subplot(3, 1, 2)
-    emg.plot_signals(
-        time_range=(middle_start, middle_start + epoch_duration),
-        title=f"Middle Epoch (Epoch {middle_epoch+1})",
-        ax=plt.gca()
-    )
-    
-    # Plot last epoch
-    last_start = (n_epochs - 1) * epoch_duration
-    plt.subplot(3, 1, 3)
-    emg.plot_signals(
-        time_range=(last_start, last_start + epoch_duration),
-        title=f"Last Epoch (Epoch {n_epochs})",
-        ax=plt.gca()
-    )
-    
-    plt.tight_layout()
-    plt.show()
+
+# Plot the first few seconds (plot_signals manages its own figure)
+emg.plot_signals(time_range=(0, 5), title="EEGLAB Signals")
 ```
 
 ## Exporting EEGLAB Data to EDF/BDF

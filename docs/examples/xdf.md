@@ -17,22 +17,47 @@ print(summary)
 Output:
 ```
 XDF File: examples/multi_stream_test.xdf
-----------------------------------------
-Stream 1: TestEEG (EEG)
-  Channels: 8, Rate: 256.0 Hz
-  Samples: 1280, Duration: 5.0s
-  Labels: EEG1, EEG2, EEG3, EEG4, EEG5, EEG6, EEG7, EEG8
-Stream 2: TestEMG (EMG)
-  Channels: 2, Rate: 2048.0 Hz
-  Samples: 10240, Duration: 5.0s
-  Labels: EMG_L, EMG_R
-Stream 3: TestMocap (Mocap)
-  Channels: 6, Rate: 120.0 Hz
-  Samples: 600, Duration: 5.0s
-  Labels: Marker1_X, Marker1_Y, Marker1_Z, Marker2_X, Marker2_Y, Marker2_Z
-Stream 4: TestMarkers (Markers)
-  Channels: 1, Rate: 0.0 Hz (irregular)
+Number of streams: 4
+
+Stream 1: TestEEG
+  Type: EEG
+  Channels: 8
+  Nominal srate: 256.0 Hz
+  Effective srate: 256.20 Hz
+  Samples: 1280
+  Duration: 5.00 s
+  Format: float32
+  Channel labels: EEG1, EEG2, EEG3, EEG4, EEG5, ... (+3 more)
+
+Stream 2: TestEMG
+  Type: EMG
+  Channels: 2
+  Nominal srate: 2048.0 Hz
+  Effective srate: 2048.20 Hz
+  Samples: 10240
+  Duration: 5.00 s
+  Format: float32
+  Channel labels: EMG_L, EMG_R
+
+Stream 3: TestMocap
+  Type: Mocap
+  Channels: 6
+  Nominal srate: 120.0 Hz
+  Effective srate: 120.20 Hz
+  Samples: 600
+  Duration: 4.99 s
+  Format: float32
+  Channel labels: Marker1_X, Marker1_Y, Marker1_Z, Marker2_X, Marker2_Y, ... (+1 more)
+
+Stream 4: TestMarkers
+  Type: Markers
+  Channels: 1
+  Nominal srate: 0.0 Hz
+  Effective srate: 1.25 Hz
   Samples: 5
+  Duration: 4.00 s
+  Format: string
+  Channel labels: Ch1
 ```
 
 ## Finding Specific Streams
@@ -87,16 +112,25 @@ emg_data = Recording.from_file('examples/multi_stream_test.xdf', stream_names=['
 
 ## Working with Multi-Rate Data
 
-When loading streams with different sampling rates, they're resampled to a common time base:
+When loading streams with different sampling rates, all channels are interpolated
+onto a common time base. By default the highest-rate stream is the reference (to
+avoid downsampling), but each channel keeps its own original `sample_frequency`
+in `channels`, so a recording loaded this way is mixed-rate.
 
 ```python
 # Load EEG (256 Hz) and EMG (2048 Hz)
 combined = Recording.from_file('examples/multi_stream_test.xdf', stream_types=['EEG', 'EMG'])
 
-# Check the resulting sample rate (will be the highest: 2048 Hz)
-first_channel = list(combined.channels.keys())[0]
-print(f"Sample rate: {combined.channels[first_channel]['sample_frequency']} Hz")
+# Each channel reports its own original sampling frequency
+for ch, info in combined.channels.items():
+    print(f"{ch}: {info['sample_frequency']} Hz")
+# EEG channels report 256.0 Hz, EMG channels report 2048.0 Hz
 ```
+
+Note: a mixed-rate recording cannot be exported with `to_edf` (it requires a
+single rate across all channels and raises `ValueError` otherwise). Use
+`select_channels` to export one rate group at a time, or `resample` to a common
+rate first.
 
 ## Preserving LSL Timestamps
 
