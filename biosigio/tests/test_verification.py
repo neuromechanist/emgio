@@ -8,30 +8,30 @@ from ..core.emg import Recording
 
 
 @pytest.fixture
-def sample_emg_pair():
+def sample_rec_pair():
     """Create a pair of Recording objects with identical data for testing."""
-    emg_original = Recording()
-    emg_reloaded = Recording()
+    rec_original = Recording()
+    rec_reloaded = Recording()
 
     # Add identical channels
     time = np.linspace(0, 1, 1000)  # 1 second at 1000Hz
     signal1 = np.sin(2 * np.pi * 10 * time)  # 10Hz sine wave
     signal2 = np.cos(2 * np.pi * 5 * time)  # 5Hz cosine wave
 
-    emg_original.add_channel("EMG1", signal1, 1000, "mV", channel_type="EMG")
-    emg_original.add_channel("ACC1", signal2, 1000, "g", channel_type="ACC")
+    rec_original.add_channel("EMG1", signal1, 1000, "mV", channel_type="EMG")
+    rec_original.add_channel("ACC1", signal2, 1000, "g", channel_type="ACC")
 
-    emg_reloaded.add_channel("EMG1", signal1.copy(), 1000, "mV", channel_type="EMG")
-    emg_reloaded.add_channel("ACC1", signal2.copy(), 1000, "g", channel_type="ACC")
+    rec_reloaded.add_channel("EMG1", signal1.copy(), 1000, "mV", channel_type="EMG")
+    rec_reloaded.add_channel("ACC1", signal2.copy(), 1000, "g", channel_type="ACC")
 
-    return emg_original, emg_reloaded
+    return rec_original, rec_reloaded
 
 
 @pytest.fixture
-def sample_emg_pair_different():
+def sample_rec_pair_different():
     """Create a pair of Recording objects with slightly different data."""
-    emg_original = Recording()
-    emg_reloaded = Recording()
+    rec_original = Recording()
+    rec_reloaded = Recording()
 
     # Add slightly different channels
     time = np.linspace(0, 1, 1000)
@@ -42,40 +42,40 @@ def sample_emg_pair_different():
     signal1_modified = signal1 + 0.05 * np.random.randn(len(signal1))
     signal2_modified = signal2 + 0.05 * np.random.randn(len(signal2))
 
-    emg_original.add_channel("EMG1", signal1, 1000, "mV", channel_type="EMG")
-    emg_original.add_channel("ACC1", signal2, 1000, "g", channel_type="ACC")
+    rec_original.add_channel("EMG1", signal1, 1000, "mV", channel_type="EMG")
+    rec_original.add_channel("ACC1", signal2, 1000, "g", channel_type="ACC")
 
-    emg_reloaded.add_channel("EMG1", signal1_modified, 1000, "mV", channel_type="EMG")
-    emg_reloaded.add_channel("ACC1", signal2_modified, 1000, "g", channel_type="ACC")
+    rec_reloaded.add_channel("EMG1", signal1_modified, 1000, "mV", channel_type="EMG")
+    rec_reloaded.add_channel("ACC1", signal2_modified, 1000, "g", channel_type="ACC")
 
-    return emg_original, emg_reloaded
+    return rec_original, rec_reloaded
 
 
 @pytest.fixture
-def sample_emg_pair_renamed():
+def sample_rec_pair_renamed():
     """Create a pair of Recording objects with same data but different channel names."""
-    emg_original = Recording()
-    emg_reloaded = Recording()
+    rec_original = Recording()
+    rec_reloaded = Recording()
 
     # Add channels with different names but identical data
     time = np.linspace(0, 1, 1000)
     signal1 = np.sin(2 * np.pi * 10 * time)
     signal2 = np.cos(2 * np.pi * 5 * time)
 
-    emg_original.add_channel("EMG1", signal1, 1000, "mV", channel_type="EMG")
-    emg_original.add_channel("ACC1", signal2, 1000, "g", channel_type="ACC")
+    rec_original.add_channel("EMG1", signal1, 1000, "mV", channel_type="EMG")
+    rec_original.add_channel("ACC1", signal2, 1000, "g", channel_type="ACC")
 
-    emg_reloaded.add_channel("EMG_CH1", signal1.copy(), 1000, "mV", channel_type="EMG")
-    emg_reloaded.add_channel("ACC_CH1", signal2.copy(), 1000, "g", channel_type="ACC")
+    rec_reloaded.add_channel("EMG_CH1", signal1.copy(), 1000, "mV", channel_type="EMG")
+    rec_reloaded.add_channel("ACC_CH1", signal2.copy(), 1000, "g", channel_type="ACC")
 
-    return emg_original, emg_reloaded
+    return rec_original, rec_reloaded
 
 
 @pytest.fixture
-def sample_emg_pair_different_lengths():
+def sample_rec_pair_different_lengths():
     """Create a pair of Recording objects with different signal lengths."""
-    emg_original = Recording()
-    emg_reloaded = Recording()
+    rec_original = Recording()
+    rec_reloaded = Recording()
 
     # Add channels with different lengths
     time1 = np.linspace(0, 1, 1000)
@@ -84,17 +84,17 @@ def sample_emg_pair_different_lengths():
     signal1 = np.sin(2 * np.pi * 10 * time1)
     signal2 = np.sin(2 * np.pi * 10 * time2)  # Shorter version
 
-    emg_original.add_channel("EMG1", signal1, 1000, "mV", channel_type="EMG")
-    emg_reloaded.add_channel("EMG1", signal2, 1000, "mV", channel_type="EMG")
+    rec_original.add_channel("EMG1", signal1, 1000, "mV", channel_type="EMG")
+    rec_reloaded.add_channel("EMG1", signal2, 1000, "mV", channel_type="EMG")
 
-    return emg_original, emg_reloaded
+    return rec_original, rec_reloaded
 
 
-def test_compare_signals_identical(sample_emg_pair):
+def test_compare_signals_identical(sample_rec_pair):
     """Test compare_signals with identical signals."""
-    emg_original, emg_reloaded = sample_emg_pair
+    rec_original, rec_reloaded = sample_rec_pair
 
-    result = compare_signals(emg_original, emg_reloaded)
+    result = compare_signals(rec_original, rec_reloaded)
 
     # Check channel summary
     assert result["channel_summary"]["comparison_mode"] == "exact_name"
@@ -110,15 +110,15 @@ def test_compare_signals_identical(sample_emg_pair):
         assert result[channel]["is_identical"]  # Check boolean value without "is True"
 
 
-def test_compare_signals_different(sample_emg_pair_different):
+def test_compare_signals_different(sample_rec_pair_different):
     """Test compare_signals with slightly different signals."""
-    emg_original, emg_reloaded = sample_emg_pair_different
+    rec_original, rec_reloaded = sample_rec_pair_different
 
     # Use a higher tolerance to still consider them identical
-    result_high_tolerance = compare_signals(emg_original, emg_reloaded, tolerance=0.1)
+    result_high_tolerance = compare_signals(rec_original, rec_reloaded, tolerance=0.1)
 
     # Use a lower tolerance to consider them different
-    result_low_tolerance = compare_signals(emg_original, emg_reloaded, tolerance=0.01)
+    result_low_tolerance = compare_signals(rec_original, rec_reloaded, tolerance=0.01)
 
     # With high tolerance, they should be considered identical
     assert all(result_high_tolerance[ch]["is_identical"] for ch in ["EMG1", "ACC1"])
@@ -127,14 +127,14 @@ def test_compare_signals_different(sample_emg_pair_different):
     assert not all(result_low_tolerance[ch]["is_identical"] for ch in ["EMG1", "ACC1"])
 
 
-def test_compare_signals_with_channel_map(sample_emg_pair_renamed):
+def test_compare_signals_with_channel_map(sample_rec_pair_renamed):
     """Test compare_signals with channel mapping."""
-    emg_original, emg_reloaded = sample_emg_pair_renamed
+    rec_original, rec_reloaded = sample_rec_pair_renamed
 
     # Define channel mapping
     channel_map = {"EMG1": "EMG_CH1", "ACC1": "ACC_CH1"}
 
-    result = compare_signals(emg_original, emg_reloaded, channel_map=channel_map)
+    result = compare_signals(rec_original, rec_reloaded, channel_map=channel_map)
 
     # Check comparison mode
     assert result["channel_summary"]["comparison_mode"] == "mapped"
@@ -149,11 +149,11 @@ def test_compare_signals_with_channel_map(sample_emg_pair_renamed):
     assert result["ACC1"]["is_identical"]  # Check boolean value without "is True"
 
 
-def test_compare_signals_different_lengths(sample_emg_pair_different_lengths):
+def test_compare_signals_different_lengths(sample_rec_pair_different_lengths):
     """Test compare_signals with different signal lengths."""
-    emg_original, emg_reloaded = sample_emg_pair_different_lengths
+    rec_original, rec_reloaded = sample_rec_pair_different_lengths
 
-    result = compare_signals(emg_original, emg_reloaded)
+    result = compare_signals(rec_original, rec_reloaded)
 
     # Check that comparison was made (truncating to shorter length)
     assert "EMG1" in result
@@ -163,17 +163,17 @@ def test_compare_signals_different_lengths(sample_emg_pair_different_lengths):
 
 def test_compare_signals_empty_intersection():
     """Test compare_signals with no common channels."""
-    emg1 = Recording()
-    emg2 = Recording()
+    rec1 = Recording()
+    rec2 = Recording()
 
     # Add completely different channels
     time = np.linspace(0, 1, 1000)
     signal = np.sin(2 * np.pi * 10 * time)
 
-    emg1.add_channel("CH1", signal, 1000, "mV", "EMG")
-    emg2.add_channel("CH2", signal, 1000, "mV", "EMG")
+    rec1.add_channel("CH1", signal, 1000, "mV", "EMG")
+    rec2.add_channel("CH2", signal, 1000, "mV", "EMG")
 
-    result = compare_signals(emg1, emg2)
+    result = compare_signals(rec1, rec2)
 
     # Should be order-based comparison with no actual comparisons
     assert result["channel_summary"]["comparison_mode"] == "order_based"
@@ -184,33 +184,33 @@ def test_compare_signals_empty_intersection():
 
 def test_compare_signals_invalid_channel_map():
     """Test compare_signals with invalid channel map."""
-    emg1 = Recording()
-    emg2 = Recording()
+    rec1 = Recording()
+    rec2 = Recording()
 
     time = np.linspace(0, 1, 1000)
     signal = np.sin(2 * np.pi * 10 * time)
 
-    emg1.add_channel("CH1", signal, 1000, "mV", "EMG")
-    emg2.add_channel("CH2", signal, 1000, "mV", "EMG")
+    rec1.add_channel("CH1", signal, 1000, "mV", "EMG")
+    rec2.add_channel("CH2", signal, 1000, "mV", "EMG")
 
     # Channel map with non-existent original channel
     channel_map = {"NONEXISTENT": "CH2"}
 
     with pytest.raises(ValueError):
-        compare_signals(emg1, emg2, channel_map=channel_map)
+        compare_signals(rec1, rec2, channel_map=channel_map)
 
 
 def test_compare_signals_with_constant_signal():
     """Test compare_signals with constant signals (zero range)."""
-    emg1 = Recording()
-    emg2 = Recording()
+    rec1 = Recording()
+    rec2 = Recording()
 
     # Add constant signals to both
     const_signal = np.ones(1000)
-    emg1.add_channel("CONST", const_signal, 1000, "mV", "EMG")
-    emg2.add_channel("CONST", const_signal + 1e-6, 1000, "mV", "EMG")  # Tiny difference
+    rec1.add_channel("CONST", const_signal, 1000, "mV", "EMG")
+    rec2.add_channel("CONST", const_signal + 1e-6, 1000, "mV", "EMG")  # Tiny difference
 
-    result = compare_signals(emg1, emg2)
+    result = compare_signals(rec1, rec2)
 
     # Should handle constant signals properly (no division by zero)
     assert "CONST" in result

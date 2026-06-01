@@ -54,18 +54,18 @@ The Trigno importer in biosigIO (`biosigio.importers.trigno`) processes these fi
 from biosigio import Recording
 
 # Load data from Trigno CSV file
-emg = Recording.from_file('data.csv', importer='trigno')
+rec = Recording.from_file('data.csv', importer='trigno')
 
 # Print identified channel types
-channel_types = emg.get_channel_types()
+channel_types = rec.get_channel_types()
 print(f"Identified channel types: {channel_types}")
 
 # Get EMG channels
-emg_channels = emg.get_channels_by_type('EMG')
+emg_channels = rec.get_channels_by_type('EMG')
 print(f"EMG channels: {emg_channels}")
 
 # Get accelerometer channels
-acc_channels = emg.get_channels_by_type('ACC')
+acc_channels = rec.get_channels_by_type('ACC')
 print(f"ACC channels: {acc_channels}")
 ```
 

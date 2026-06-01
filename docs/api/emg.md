@@ -87,14 +87,14 @@ Details about the main attributes:
 from biosigio import Recording
 
 # Load from file with automatic importer selection
-emg = Recording.from_file("data.otb+")
+rec = Recording.from_file("data.otb+")
 
 # Load with explicit importer
-emg = Recording.from_file("data.otb+", importer="otb")
+rec = Recording.from_file("data.otb+", importer="otb")
 
 # Generic CSV/TXT supports automatic importer selection, but a Delsys Trigno
 # export is best loaded with its dedicated importer
-emg = Recording.from_file("data.csv", importer='trigno')
+rec = Recording.from_file("data.csv", importer='trigno')
 ```
 
 ### Building a Recording Programmatically
@@ -104,15 +104,15 @@ import numpy as np
 from biosigio import Recording
 
 # Start from an empty Recording and add channels
-emg = Recording()
-emg.add_channel(
+rec = Recording()
+rec.add_channel(
     label='EMG1',
     data=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
     sample_frequency=1000,
     physical_dimension='µV',
     channel_type='EMG',
 )
-emg.add_channel(
+rec.add_channel(
     label='EMG2',
     data=np.array([5.0, 4.0, 3.0, 2.0, 1.0]),
     sample_frequency=1000,
@@ -125,37 +125,37 @@ emg.add_channel(
 
 ```python
 # Select by channel names
-subset = emg.select_channels(['EMG1', 'EMG2'])
+subset = rec.select_channels(['EMG1', 'EMG2'])
 
 # Select by channel type
-emg_only = emg.select_channels(channel_type='EMG')
+emg_only = rec.select_channels(channel_type='EMG')
 ```
 
 ### Metadata Handling
 
 ```python
 # Set metadata
-emg.set_metadata('subject', 'S001')
+rec.set_metadata('subject', 'S001')
 
 # Get metadata
-subject = emg.get_metadata('subject')
+subject = rec.get_metadata('subject')
 
 # Check if metadata exists
-if emg.has_metadata('condition'):
-    condition = emg.get_metadata('condition')
+if rec.has_metadata('condition'):
+    condition = rec.get_metadata('condition')
 ```
 
 ### Plotting
 
 ```python
 # Plot all channels
-emg.plot_signals()
+rec.plot_signals()
 
 # Plot specific channels with time range
-emg.plot_signals(['EMG1', 'EMG2'], time_range=(0, 5))
+rec.plot_signals(['EMG1', 'EMG2'], time_range=(0, 5))
 
 # Customize plot
-emg.plot_signals(
+rec.plot_signals(
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),
     title='EMG Signals',
@@ -173,26 +173,26 @@ from biosigio.visualization.static import plot_comparison
 import matplotlib.pyplot as plt
 
 # Export with built-in verification
-emg_original.to_edf('output', verify=True, verify_tolerance=0.001)
+rec_original.to_edf('output', verify=True, verify_tolerance=0.001)
 
 # Export and verify with custom channel mapping
 channel_map = {'EMG1': 'CH1', 'EMG2': 'CH2'}
-emg_original.to_edf('output', verify=True, verify_channel_map=channel_map)
+rec_original.to_edf('output', verify=True, verify_channel_map=channel_map)
 
 # Export, verify, and generate verification plot
-emg_original.to_edf('output', verify=True, verify_plot=True)
+rec_original.to_edf('output', verify=True, verify_plot=True)
 
 # Manual verification (alternative approach). With the default format='auto',
 # to_edf may write either output.edf or output.bdf; reload the path it wrote.
-emg_original.to_edf('output')
-emg_reloaded = Recording.from_file('output.edf')  # or 'output.bdf' if BDF was selected
+rec_original.to_edf('output')
+rec_reloaded = Recording.from_file('output.edf')  # or 'output.bdf' if BDF was selected
 
 # Compare signals
-results = compare_signals(emg_original, emg_reloaded, tolerance=0.001)
+results = compare_signals(rec_original, rec_reloaded, tolerance=0.001)
 is_identical = report_verification_results(results, verify_tolerance=0.001)
 
 # Plot comparison for visual verification
-plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
+plot_comparison(rec_original, rec_reloaded, channels=['EMG1', 'EMG2'])
 plt.show()
 ```
 
@@ -200,11 +200,11 @@ plt.show()
 
 ```python
 # Export with automatic format selection
-emg.to_edf('output')
+rec.to_edf('output')
 
 # Force EDF format
-emg.to_edf('output', format='edf')
+rec.to_edf('output', format='edf')
 
 # Control format selection method
-emg.to_edf('output', method='svd')
+rec.to_edf('output', method='svd')
 ```

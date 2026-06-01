@@ -125,34 +125,34 @@ def sample_eeglab_set():
 def test_eeglab_importer(sample_eeglab_set):
     """Test EEGLAB importer with sample data."""
     importer = EEGLABImporter()
-    emg = importer.load(sample_eeglab_set)
+    rec = importer.load(sample_eeglab_set)
 
     # Check if metadata was loaded
-    assert emg.get_metadata("subject") == "test_subject"
-    assert emg.get_metadata("srate") == 1000
-    assert emg.get_metadata("device") == "EEGLAB"
+    assert rec.get_metadata("subject") == "test_subject"
+    assert rec.get_metadata("srate") == 1000
+    assert rec.get_metadata("device") == "EEGLAB"
 
     # Check if signals were loaded
-    assert emg.signals is not None
-    assert emg.signals.shape[0] == 1000  # 1000 samples
-    assert emg.signals.shape[1] == 32  # 32 channels
+    assert rec.signals is not None
+    assert rec.signals.shape[0] == 1000  # 1000 samples
+    assert rec.signals.shape[1] == 32  # 32 channels
 
     # Check if channel info was loaded
-    assert len(emg.channels) == 32
-    for _ch_name, ch_info in emg.channels.items():
+    assert len(rec.channels) == 32
+    for _ch_name, ch_info in rec.channels.items():
         assert ch_info["channel_type"] == "EMG"
         assert ch_info["sample_frequency"] == 1000
         assert ch_info["physical_dimension"] == "uV"
 
     # Events are loaded into the events table (onset/duration in seconds), not metadata.
-    assert "events" not in emg.metadata
-    assert not emg.events.empty
-    assert len(emg.events) == 5
-    assert list(emg.events["description"]) == [f"{i + 1}" for i in range(5)]
+    assert "events" not in rec.metadata
+    assert not rec.events.empty
+    assert len(rec.events) == 5
+    assert list(rec.events["description"]) == [f"{i + 1}" for i in range(5)]
     # EEGLAB latency is 1-based samples -> seconds at 1000 Hz: (i*200+100 - 1) / 1000.
     expected_onsets = [(i * 200 + 100 - 1) / 1000 for i in range(5)]
-    assert emg.events["onset"].tolist() == pytest.approx(expected_onsets)
-    assert (emg.events["duration"] == 0.0).all()
+    assert rec.events["onset"].tolist() == pytest.approx(expected_onsets)
+    assert (rec.events["duration"] == 0.0).all()
 
 
 def test_eeglab_file_not_found():
@@ -165,68 +165,68 @@ def test_eeglab_file_not_found():
 def test_eeglab_metadata_extraction(sample_eeglab_set):
     """Test metadata extraction from EEGLAB file."""
     importer = EEGLABImporter()
-    emg = importer.load(sample_eeglab_set)
+    rec = importer.load(sample_eeglab_set)
 
     # Test basic metadata
-    assert emg.get_metadata("setname") == "test_emg"
-    assert emg.get_metadata("subject") == "test_subject"
-    assert emg.get_metadata("group") == "test_group"
-    assert emg.get_metadata("condition") == "test_condition"
-    assert emg.get_metadata("session") == "001"
-    assert emg.get_metadata("comments") == "Test EMG data"
+    assert rec.get_metadata("setname") == "test_emg"
+    assert rec.get_metadata("subject") == "test_subject"
+    assert rec.get_metadata("group") == "test_group"
+    assert rec.get_metadata("condition") == "test_condition"
+    assert rec.get_metadata("session") == "001"
+    assert rec.get_metadata("comments") == "Test EMG data"
 
     # Test recording parameters
-    assert emg.get_metadata("srate") == 1000
-    assert emg.get_metadata("nbchan") == 32
-    assert emg.get_metadata("trials") == 1
-    assert emg.get_metadata("pnts") == 1000
-    assert emg.get_metadata("xmin") == 0.0
-    assert emg.get_metadata("xmax") == 1.0
+    assert rec.get_metadata("srate") == 1000
+    assert rec.get_metadata("nbchan") == 32
+    assert rec.get_metadata("trials") == 1
+    assert rec.get_metadata("pnts") == 1000
+    assert rec.get_metadata("xmin") == 0.0
+    assert rec.get_metadata("xmax") == 1.0
 
 
 def test_eeglab_channel_type_detection(sample_eeglab_set):
     """Test channel type detection from EEGLAB file."""
     importer = EEGLABImporter()
-    emg = importer.load(sample_eeglab_set)
+    rec = importer.load(sample_eeglab_set)
 
     # All channels should be EMG type
-    for _ch_name, ch_info in emg.channels.items():
+    for _ch_name, ch_info in rec.channels.items():
         assert ch_info["channel_type"] == "EMG"
 
     # Test channel naming
     for i in range(16):
-        assert f"emg{i}_left" in emg.channels
+        assert f"emg{i}_left" in rec.channels
     for i in range(16):
-        assert f"emg{i}_right" in emg.channels
+        assert f"emg{i}_right" in rec.channels
 
 
 def test_eeglab_event_processing(sample_eeglab_set):
     """Test event processing from EEGLAB file."""
     importer = EEGLABImporter()
-    emg = importer.load(sample_eeglab_set)
+    rec = importer.load(sample_eeglab_set)
 
     # Events are loaded into the events table (onset/duration in seconds), not metadata.
-    assert "events" not in emg.metadata
-    assert not emg.events.empty
-    assert len(emg.events) == 5
+    assert "events" not in rec.metadata
+    assert not rec.events.empty
+    assert len(rec.events) == 5
     # The EEGLAB event `type` becomes the description.
-    assert list(emg.events["description"]) == [f"{i + 1}" for i in range(5)]
+    assert list(rec.events["description"]) == [f"{i + 1}" for i in range(5)]
     # latency (1-based samples) -> seconds at 1000 Hz: (i*200+100 - 1) / 1000.
     expected_onsets = [(i * 200 + 100 - 1) / 1000 for i in range(5)]
-    assert emg.events["onset"].tolist() == pytest.approx(expected_onsets)
+    assert rec.events["onset"].tolist() == pytest.approx(expected_onsets)
 
 
 def test_eeglab_to_edf_export(sample_eeglab_set):
     """Test exporting EEGLAB data to EDF format."""
     importer = EEGLABImporter()
-    emg = importer.load(sample_eeglab_set)
+    rec = importer.load(sample_eeglab_set)
 
     # Export to EDF
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         edf_path = f.name
 
     try:
-        emg.to_edf(edf_path)
+        rec.to_edf(edf_path)
 
         # Check if EDF file was created
         assert os.path.exists(edf_path) or os.path.exists(os.path.splitext(edf_path)[0] + ".bdf")

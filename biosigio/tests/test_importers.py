@@ -59,28 +59,28 @@ def sample_generic_csv():
 def test_trigno_importer(sample_trigno_csv):
     """Test Trigno importer with sample data."""
     importer = TrignoImporter()
-    emg = importer.load(sample_trigno_csv)
+    rec = importer.load(sample_trigno_csv)
 
     # Check if all channels were loaded
-    assert "EMG1" in emg.channels
-    assert "EMG2" in emg.channels
-    assert "ACC1" in emg.channels
+    assert "EMG1" in rec.channels
+    assert "EMG2" in rec.channels
+    assert "ACC1" in rec.channels
 
     # Check channel properties
-    assert emg.channels["EMG1"]["sample_frequency"] == 1000
-    assert emg.channels["EMG1"]["physical_dimension"] == "mV"
-    assert emg.channels["EMG1"]["channel_type"] == "EMG"
+    assert rec.channels["EMG1"]["sample_frequency"] == 1000
+    assert rec.channels["EMG1"]["physical_dimension"] == "mV"
+    assert rec.channels["EMG1"]["channel_type"] == "EMG"
 
-    assert emg.channels["ACC1"]["physical_dimension"] == "g"
-    assert emg.channels["ACC1"]["channel_type"] == "ACC"
+    assert rec.channels["ACC1"]["physical_dimension"] == "g"
+    assert rec.channels["ACC1"]["channel_type"] == "ACC"
 
     # Check data shape
-    assert len(emg.signals) == 5  # 5 samples
-    assert len(emg.signals.columns) == 3  # 3 channels
+    assert len(rec.signals) == 5  # 5 samples
+    assert len(rec.signals.columns) == 3  # 3 channels
 
     # Check metadata
-    assert emg.get_metadata("device") == "Delsys Trigno"
-    assert emg.get_metadata("source_file") == sample_trigno_csv
+    assert rec.get_metadata("device") == "Delsys Trigno"
+    assert rec.get_metadata("source_file") == sample_trigno_csv
 
 
 def test_trigno_file_not_found():
@@ -116,25 +116,25 @@ def test_csv_importer_basic(sample_generic_csv):
     importer = CSVImporter()
 
     # Test with default parameters
-    emg = importer.load(
+    rec = importer.load(
         sample_generic_csv,
         sample_frequency=1000,  # Required since no time column
         has_header=False,
     )
 
     # Check if channels were created
-    assert len(emg.channels) == 3  # 3 columns in our test data
-    assert "Channel_0" in emg.channels
-    assert "Channel_1" in emg.channels
-    assert "Channel_2" in emg.channels
+    assert len(rec.channels) == 3  # 3 columns in our test data
+    assert "Channel_0" in rec.channels
+    assert "Channel_1" in rec.channels
+    assert "Channel_2" in rec.channels
 
     # Check data shape
-    assert len(emg.signals) == 5  # 5 samples
-    assert len(emg.signals.columns) == 3  # 3 channels
+    assert len(rec.signals) == 5  # 5 samples
+    assert len(rec.signals.columns) == 3  # 3 channels
 
     # Check metadata
-    assert emg.get_metadata("source_file") == sample_generic_csv
-    assert emg.get_metadata("file_format") == "CSV"
+    assert rec.get_metadata("source_file") == sample_generic_csv
+    assert rec.get_metadata("file_format") == "CSV"
 
 
 def test_csv_importer_channel_params(sample_generic_csv):
@@ -147,7 +147,7 @@ def test_csv_importer_channel_params(sample_generic_csv):
     physical_dimensions = {"Channel_0": "mV", "Channel_1": "mV", "Channel_2": "g"}
 
     # Test with custom channel parameters
-    emg = importer.load(
+    rec = importer.load(
         sample_generic_csv,
         sample_frequency=1000,
         has_header=False,
@@ -156,11 +156,11 @@ def test_csv_importer_channel_params(sample_generic_csv):
     )
 
     # Check channel properties
-    assert emg.channels["Channel_0"]["channel_type"] == "EMG"
-    assert emg.channels["Channel_0"]["physical_dimension"] == "mV"
+    assert rec.channels["Channel_0"]["channel_type"] == "EMG"
+    assert rec.channels["Channel_0"]["physical_dimension"] == "mV"
 
-    assert emg.channels["Channel_2"]["channel_type"] == "ACC"
-    assert emg.channels["Channel_2"]["physical_dimension"] == "g"
+    assert rec.channels["Channel_2"]["channel_type"] == "ACC"
+    assert rec.channels["Channel_2"]["physical_dimension"] == "g"
 
 
 def test_csv_importer_selection(sample_generic_csv):
@@ -168,18 +168,18 @@ def test_csv_importer_selection(sample_generic_csv):
     importer = CSVImporter()
 
     # Test with column selection
-    emg = importer.load(
+    rec = importer.load(
         sample_generic_csv, sample_frequency=1000, has_header=False, columns=[0, 2]
     )  # Select only first and third columns
 
     # Check if only selected channels were loaded
-    assert len(emg.channels) == 2
-    assert "Channel_0" in emg.channels
-    assert "Channel_1" in emg.channels
-    assert "Channel_2" not in emg.channels  # This should not exist
+    assert len(rec.channels) == 2
+    assert "Channel_0" in rec.channels
+    assert "Channel_1" in rec.channels
+    assert "Channel_2" not in rec.channels  # This should not exist
 
     # Check data shape
-    assert len(emg.signals.columns) == 2
+    assert len(rec.signals.columns) == 2
 
 
 def test_csv_importer_custom_names(sample_generic_csv):
@@ -189,17 +189,17 @@ def test_csv_importer_custom_names(sample_generic_csv):
     channel_names = ["EMG_L", "EMG_R", "ACC_X"]
 
     # Test with custom channel names
-    emg = importer.load(
+    rec = importer.load(
         sample_generic_csv, sample_frequency=1000, has_header=False, channel_names=channel_names
     )
 
     # Check if channels have correct names
-    assert "EMG_L" in emg.channels
-    assert "EMG_R" in emg.channels
-    assert "ACC_X" in emg.channels
+    assert "EMG_L" in rec.channels
+    assert "EMG_R" in rec.channels
+    assert "ACC_X" in rec.channels
 
     # Check data shape
-    assert len(emg.signals.columns) == 3
+    assert len(rec.signals.columns) == 3
 
 
 def test_csv_format_detection(sample_trigno_csv):
@@ -217,11 +217,11 @@ def test_csv_format_detection(sample_trigno_csv):
     assert "force_generic=True" in error_msg
 
     # Test with force_generic=True
-    emg = importer.load(sample_trigno_csv, force_generic=True)
+    rec = importer.load(sample_trigno_csv, force_generic=True)
 
     # Basic checks to make sure it loaded something
-    assert emg.signals is not None
-    assert len(emg.channels) > 0
+    assert rec.signals is not None
+    assert len(rec.channels) > 0
 
 
 def test_csv_file_not_found():
@@ -250,13 +250,13 @@ def test_csv_delimiter_detection(sample_generic_csv):
         assert analyzed_params["delimiter"] == "\t"
 
         # Test loading with auto-detection
-        emg = importer.load(tab_file, sample_frequency=1000, has_header=False)
+        rec = importer.load(tab_file, sample_frequency=1000, has_header=False)
 
         # Debug print
-        print("EMG channels:", list(emg.channels.keys()))
-        print("EMG signals columns:", list(emg.signals.columns))
+        print("EMG channels:", list(rec.channels.keys()))
+        print("EMG signals columns:", list(rec.signals.columns))
 
-        assert len(emg.channels) == 4
+        assert len(rec.channels) == 4
 
         # Clean up
         os.unlink(tab_file)
@@ -269,26 +269,26 @@ def test_csv_delimiter_detection(sample_generic_csv):
 def test_otb_importer():
     """Test OTB importer with sample data."""
     importer = OTBImporter()
-    emg = importer.load("examples/one_sessantaquattro_truncated.otb+")
+    rec = importer.load("examples/one_sessantaquattro_truncated.otb+")
 
     # Check if channels were loaded
-    assert len(emg.channels) > 0
+    assert len(rec.channels) > 0
 
     # Check channel properties for first channel
-    first_channel = next(iter(emg.channels.values()))
+    first_channel = next(iter(rec.channels.values()))
     assert first_channel["sample_frequency"] > 0
     assert first_channel["physical_dimension"] in ["mV", "g", "rad", "a.u."]
     assert first_channel["channel_type"] in ["EMG", "ACC", "GYRO", "QUAT", "CTRL", "OTHER"]
 
     # Check metadata
-    assert emg.get_metadata("device") is not None
-    assert emg.get_metadata("signal_resolution") is not None
-    assert emg.get_metadata("source_file") == "examples/one_sessantaquattro_truncated.otb+"
+    assert rec.get_metadata("device") is not None
+    assert rec.get_metadata("signal_resolution") is not None
+    assert rec.get_metadata("source_file") == "examples/one_sessantaquattro_truncated.otb+"
 
     # Check data structure
-    assert emg.signals is not None
-    assert len(emg.signals) > 0  # Has samples
-    assert len(emg.signals.columns) == len(emg.channels)  # Columns match channels
+    assert rec.signals is not None
+    assert len(rec.signals) > 0  # Has samples
+    assert len(rec.signals.columns) == len(rec.channels)  # Columns match channels
 
 
 def test_otb_file_not_found():
@@ -301,14 +301,14 @@ def test_otb_file_not_found():
 def test_otb_metadata_parsing():
     """Test metadata parsing from OTB file."""
     importer = OTBImporter()
-    emg = importer.load("examples/one_sessantaquattro_truncated.otb+")
+    rec = importer.load("examples/one_sessantaquattro_truncated.otb+")
 
     # Test device metadata
-    assert emg.get_metadata("device") is not None
-    assert emg.get_metadata("signal_resolution") is not None
+    assert rec.get_metadata("device") is not None
+    assert rec.get_metadata("signal_resolution") is not None
 
     # Test channel metadata
-    for _channel_name, channel_info in emg.channels.items():
+    for _channel_name, channel_info in rec.channels.items():
         assert "sample_frequency" in channel_info
         assert "physical_dimension" in channel_info
         assert "channel_type" in channel_info
@@ -414,28 +414,28 @@ def sample_edf_file():
 def test_edf_importer(sample_edf_file):
     """Test EDF importer with sample data."""
     importer = EDFImporter()
-    emg = importer.load(sample_edf_file)
+    rec = importer.load(sample_edf_file)
 
     # Check if channels were loaded
-    assert "EMG1" in emg.channels
-    assert "ACC1" in emg.channels
+    assert "EMG1" in rec.channels
+    assert "ACC1" in rec.channels
 
     # Check channel properties
-    assert emg.channels["EMG1"]["sample_frequency"] == 1000
-    assert emg.channels["EMG1"]["physical_dimension"] == "mV"
-    assert emg.channels["EMG1"]["channel_type"] == "EMG"
-    assert "HP:20Hz LP:500Hz" in emg.channels["EMG1"]["prefilter"]
+    assert rec.channels["EMG1"]["sample_frequency"] == 1000
+    assert rec.channels["EMG1"]["physical_dimension"] == "mV"
+    assert rec.channels["EMG1"]["channel_type"] == "EMG"
+    assert "HP:20Hz LP:500Hz" in rec.channels["EMG1"]["prefilter"]
 
-    assert emg.channels["ACC1"]["physical_dimension"] == "g"
-    assert emg.channels["ACC1"]["channel_type"] == "ACC"
+    assert rec.channels["ACC1"]["physical_dimension"] == "g"
+    assert rec.channels["ACC1"]["channel_type"] == "ACC"
 
     # Check data shape
-    assert len(emg.signals) == 1000  # 1000 samples
-    assert len(emg.signals.columns) == 2  # 2 channels
+    assert len(rec.signals) == 1000  # 1000 samples
+    assert len(rec.signals.columns) == 2  # 2 channels
 
     # Check metadata
-    assert emg.get_metadata("source_file") == sample_edf_file
-    assert emg.get_metadata("filetype") in [0, 1, 2]  # EDF, EDF+, or BDF+
+    assert rec.get_metadata("source_file") == sample_edf_file
+    assert rec.get_metadata("filetype") in [0, 1, 2]  # EDF, EDF+, or BDF+
 
 
 def test_edf_file_not_found():
@@ -448,28 +448,28 @@ def test_edf_file_not_found():
 def test_edf_channel_type_detection(sample_edf_file):
     """Test channel type detection from labels and transducers."""
     importer = EDFImporter()
-    emg = importer.load(sample_edf_file)
+    rec = importer.load(sample_edf_file)
 
     # Test EMG channel detection
-    assert emg.channels["EMG1"]["channel_type"] == "EMG"
+    assert rec.channels["EMG1"]["channel_type"] == "EMG"
 
     # Test ACC channel detection
-    assert emg.channels["ACC1"]["channel_type"] == "ACC"
+    assert rec.channels["ACC1"]["channel_type"] == "ACC"
 
 
 def test_edf_metadata_extraction(sample_edf_file):
     """Test metadata extraction from EDF file."""
     importer = EDFImporter()
-    emg = importer.load(sample_edf_file)
+    rec = importer.load(sample_edf_file)
 
     # Check file metadata
-    assert "filetype" in emg.metadata
-    assert "number_of_signals" in emg.metadata
-    assert emg.metadata["number_of_signals"] == 2
+    assert "filetype" in rec.metadata
+    assert "number_of_signals" in rec.metadata
+    assert rec.metadata["number_of_signals"] == 2
 
     # Check recording info
     assert any(
-        key in emg.metadata
+        key in rec.metadata
         for key in ["startdate", "equipment", "technician", "recording_additional"]
     )
 
@@ -479,9 +479,9 @@ def test_edf_no_annotations_yields_empty_events(sample_edf_file):
 
     (``sample_edf_file`` is EDF+: pyedflib's EdfWriter defaults to FILETYPE_EDFPLUS.)
     """
-    emg = EDFImporter().load(sample_edf_file)
-    assert emg.events is not None
-    assert emg.events.empty
+    rec = EDFImporter().load(sample_edf_file)
+    assert rec.events is not None
+    assert rec.events.empty
 
 
 def test_edf_plain_format_has_no_events(tmp_path):
@@ -506,8 +506,8 @@ def test_edf_plain_format_has_no_events(tmp_path):
     writer.writeSamples([np.sin(2 * np.pi * 5 * np.arange(500) / 100)])
     writer.close()
 
-    emg = EDFImporter().load(path)
-    assert emg.events.empty
+    rec = EDFImporter().load(path)
+    assert rec.events.empty
 
 
 def test_edf_annotation_readback(tmp_path):
@@ -535,8 +535,8 @@ def test_edf_annotation_readback(tmp_path):
     writer.writeAnnotation(0.5, 0.0, "stim_onset")
     writer.close()
 
-    emg = EDFImporter().load(path)
-    assert list(emg.events["description"]) == ["stim_onset", "stim_offset"]
-    assert np.allclose(emg.events["onset"].to_numpy(), [0.5, 2.0], atol=1e-3)
-    assert np.allclose(emg.events["duration"].to_numpy(), [0.0, 0.5], atol=1e-3)
-    assert emg.events["onset"].dtype == np.float64
+    rec = EDFImporter().load(path)
+    assert list(rec.events["description"]) == ["stim_onset", "stim_offset"]
+    assert np.allclose(rec.events["onset"].to_numpy(), [0.5, 2.0], atol=1e-3)
+    assert np.allclose(rec.events["duration"].to_numpy(), [0.0, 0.5], atol=1e-3)
+    assert rec.events["onset"].dtype == np.float64

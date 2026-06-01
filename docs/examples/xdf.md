@@ -81,10 +81,10 @@ if mocap:
 from biosigio import Recording
 
 # Load all numeric streams (EEG, EMG, Mocap - excludes Markers)
-emg = Recording.from_file('examples/multi_stream_test.xdf')
+rec = Recording.from_file('examples/multi_stream_test.xdf')
 
-print(f"Total channels: {len(emg.channels)}")
-print(f"Channel names: {list(emg.channels.keys())}")
+print(f"Total channels: {len(rec.channels)}")
+print(f"Channel names: {list(rec.channels.keys())}")
 ```
 
 ## Selective Stream Loading
@@ -138,16 +138,16 @@ XDF files contain per-sample LSL timestamps. To preserve these for synchronizati
 
 ```python
 # Load with timestamp channels
-emg = Recording.from_file('examples/multi_stream_test.xdf',
+rec = Recording.from_file('examples/multi_stream_test.xdf',
                     stream_types=['EMG'],
                     include_timestamps=True)
 
 # Each stream gets a timestamp channel
-print(list(emg.channels.keys()))
+print(list(rec.channels.keys()))
 # ['EMG_L', 'EMG_R', 'TestEMG_LSL_timestamps']
 
 # Access the original LSL timestamps
-ts = emg.signals['TestEMG_LSL_timestamps']
+ts = rec.signals['TestEMG_LSL_timestamps']
 print(f"First timestamp: {ts.iloc[0]:.6f}s")
 print(f"Last timestamp: {ts.iloc[-1]:.6f}s")
 ```
@@ -158,16 +158,16 @@ After loading, export to EDF/BDF format:
 
 ```python
 # Load EMG streams with timestamps for synchronization
-emg = Recording.from_file('examples/multi_stream_test.xdf',
+rec = Recording.from_file('examples/multi_stream_test.xdf',
                     stream_types=['EMG'],
                     include_timestamps=True)
 
 # Export to EDF (timestamps are preserved as a channel)
-emg.to_edf('output_emg.edf')
+rec.to_edf('output_emg.edf')
 
 # Verify the export
-emg_reloaded = Recording.from_file('output_emg.edf')
-print(f"Exported channels: {list(emg_reloaded.channels.keys())}")
+rec_reloaded = Recording.from_file('output_emg.edf')
+print(f"Exported channels: {list(rec_reloaded.channels.keys())}")
 ```
 
 ## Complete Workflow Example
@@ -185,18 +185,18 @@ emg_streams = summary.get_streams_by_type('EMG')
 print(f"Found {len(emg_streams)} EMG streams")
 
 # 3. Load selected data
-emg = Recording.from_file('recording.xdf', stream_types=['EMG'])
+rec = Recording.from_file('recording.xdf', stream_types=['EMG'])
 
 # 4. Check loaded data
-print(f"Channels: {list(emg.channels.keys())}")
-print(f"Duration: {emg.signals.index[-1]:.1f}s")
-print(f"Sample rate: {emg.channels[list(emg.channels.keys())[0]]['sample_frequency']} Hz")
+print(f"Channels: {list(rec.channels.keys())}")
+print(f"Duration: {rec.signals.index[-1]:.1f}s")
+print(f"Sample rate: {rec.channels[list(rec.channels.keys())[0]]['sample_frequency']} Hz")
 
 # 5. Plot signals
-emg.plot_signals(time_range=(0, 5))
+rec.plot_signals(time_range=(0, 5))
 
 # 6. Export
-emg.to_edf('emg_export.edf', verify=True)
+rec.to_edf('emg_export.edf', verify=True)
 ```
 
 ## Notes

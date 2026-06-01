@@ -274,7 +274,7 @@ class EDFExporter:
 
     @staticmethod
     def export(
-        emg: Recording,
+        rec: Recording,
         filepath: str,
         precision_threshold: float = 0.01,
         method: str = "both",
@@ -293,7 +293,7 @@ class EDFExporter:
         Export EMG data to EDF/BDF format with optional BIDS-compliant channels.tsv file.
 
         Args:
-            emg: Recording object containing the data
+            rec: Recording object containing the data
             filepath: Path to save the EDF/BDF file
             precision_threshold: Maximum acceptable precision loss percentage (default: 0.01%)
             method: Method for signal analysis ('svd', 'fft', or 'both')
@@ -331,7 +331,7 @@ class EDFExporter:
                 (or forced/low-res EDF) trigger clipping.
             **kwargs: Additional arguments for the exporter
         """
-        if emg.signals is None:
+        if rec.signals is None:
             raise ValueError("No signals to export")
 
         print("\nSignal Analysis:")
@@ -373,9 +373,9 @@ class EDFExporter:
         # --- Conditional Signal Analysis ---
         if not bypass_analysis:
             # Analyze signals (needed for summary and potentially for 'auto' format decision)
-            for ch_name in emg.channels:
-                signal = emg.signals[ch_name].values
-                ch_info = emg.channels[ch_name]
+            for ch_name in rec.channels:
+                signal = rec.signals[ch_name].values
+                ch_info = rec.channels[ch_name]
 
                 # Analyze signal characteristics
                 analysis = analyze_signal(
@@ -444,7 +444,7 @@ class EDFExporter:
         # an unreadable file when per-channel record counts differ. Fail loudly instead
         # of writing a corrupt file; mixed-rate sources (e.g. Trigno EMG + ACC) must be
         # resampled to a common rate before export.
-        distinct_rates = {int(emg.channels[ch]["sample_frequency"]) for ch in emg.channels}
+        distinct_rates = {int(rec.channels[ch]["sample_frequency"]) for ch in rec.channels}
         if len(distinct_rates) > 1:
             raise ValueError(
                 "EDF/BDF export requires a single sampling rate across all channels, but "
@@ -459,14 +459,14 @@ class EDFExporter:
             filepath = os.path.splitext(filepath)[0] + ".edf"
             filetype = pyedflib.FILETYPE_EDFPLUS
 
-        writer = pyedflib.EdfWriter(filepath, len(emg.channels), file_type=filetype)
+        writer = pyedflib.EdfWriter(filepath, len(rec.channels), file_type=filetype)
 
         try:
             # MEMORY OPTIMIZATION: Two-pass approach to avoid holding all signals in memory
             # Pass 1: Collect headers only (compute min/max without copying data)
-            for _i, ch_name in enumerate(emg.channels):
-                signal = emg.signals[ch_name].values
-                ch_info = emg.channels[ch_name]
+            for _i, ch_name in enumerate(rec.channels):
+                signal = rec.signals[ch_name].values
+                ch_info = rec.channels[ch_name]
 
                 # Resolve the physical window the bounds will bracket. Handle the
                 # empty/all-NaN edge case, then choose the window (full range, or a
@@ -554,11 +554,11 @@ class EDFExporter:
             # (sample_frequency samples) per call, so calling it once per channel with
             # the full array silently truncated every export to a single record
             # (one second). writeSamples() emits all records for every signal.
-            # IMPORTANT: order must match setSignalHeaders; emg.channels preserves
+            # IMPORTANT: order must match setSignalHeaders; rec.channels preserves
             # insertion order (Python 3.7+) and both passes iterate it.
             signals_to_write = [
-                np.nan_to_num(emg.signals[ch_name].values, nan=0.0).astype(np.float64, copy=False)
-                for ch_name in emg.channels
+                np.nan_to_num(rec.signals[ch_name].values, nan=0.0).astype(np.float64, copy=False)
+                for ch_name in rec.channels
             ]
             writer.writeSamples(signals_to_write)
 
@@ -629,7 +629,7 @@ class EDFExporter:
                         "use_bdf": use_bdf,  # Use the final decision for the whole file
                     }
 
-                summary = summarize_channels(cast(dict, emg.channels), summary_analyses)
+                summary = summarize_channels(cast(dict, rec.channels), summary_analyses)
                 print("\nSummary:")
                 print(summary)
             else:

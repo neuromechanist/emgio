@@ -17,10 +17,10 @@ from biosigio import Recording
 from biosigio.importers.otb import OTBImporter
 
 # Method 1: Using Recording.from_file (recommended)
-emg = Recording.from_file('data.otb+', importer='otb')
+rec = Recording.from_file('data.otb+', importer='otb')
 
 # Method 2: Using the importer directly
-emg = OTBImporter().load('data.otb+')
+rec = OTBImporter().load('data.otb+')
 ```
 
 ## File Format Support

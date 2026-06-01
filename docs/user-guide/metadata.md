@@ -10,19 +10,19 @@ When you load data into biosigIO, any available metadata from the source file is
 
 ```python
 # Load data
-emg = Recording.from_file('data.set', importer='eeglab')
+rec = Recording.from_file('data.set', importer='eeglab')
 
 # Access all metadata
-all_metadata = emg.metadata
+all_metadata = rec.metadata
 print(all_metadata)
 
 # Access specific metadata field
-subject = emg.get_metadata('subject')
+subject = rec.get_metadata('subject')
 print(f"Subject: {subject}")
 
 # Check if a metadata field exists
-if emg.has_metadata('condition'):
-    condition = emg.get_metadata('condition')
+if rec.has_metadata('condition'):
+    condition = rec.get_metadata('condition')
     print(f"Condition: {condition}")
 ```
 
@@ -30,26 +30,26 @@ You can access the general metadata dictionary directly or use helper methods:
 
 ```python
 # Access the entire metadata dictionary
-all_metadata = emg.metadata
+all_metadata = rec.metadata
 print(all_metadata)
 
 # Get a specific metadata value
-subject_id = emg.get_metadata('subject')
-fs = emg.get_metadata('sampling_frequency')
+subject_id = rec.get_metadata('subject')
+fs = rec.get_metadata('sampling_frequency')
 print(f"Subject: {subject_id}, Fs: {fs}")
 
 # Set or update a metadata value
-emg.set_metadata('task', 'Isometric Contraction')
+rec.set_metadata('task', 'Isometric Contraction')
 ```
 
-The specific keys available in `emg.metadata` depend on the data format and the information present in the source file header. Common keys might include `sampling_frequency`, `subject_id`, `recording_date`, device information, etc.
+The specific keys available in `rec.metadata` depend on the data format and the information present in the source file header. Common keys might include `sampling_frequency`, `subject_id`, `recording_date`, device information, etc.
 
 ## Channel-Specific Information
 
-Information specific to each channel (like its type, physical dimension/unit, or prefiltering details) is stored within the `emg.channels` dictionary, keyed by the channel label:
+Information specific to each channel (like its type, physical dimension/unit, or prefiltering details) is stored within the `rec.channels` dictionary, keyed by the channel label:
 
 ```python
-for channel_name, channel_info in emg.channels.items():
+for channel_name, channel_info in rec.channels.items():
     print(f"Channel: {channel_name}")
     print(f"  Type: {channel_info.get('channel_type', 'N/A')}")
     print(f"  Unit: {channel_info.get('physical_dimension', 'N/A')}")
@@ -57,13 +57,13 @@ for channel_name, channel_info in emg.channels.items():
     print(f"  Prefilter: {channel_info.get('prefilter', 'N/A')}")
 
 # Access info for a specific channel
-emg1_info = emg.channels['EMG1']
+emg1_info = rec.channels['EMG1']
 print(f"EMG1 Unit: {emg1_info['physical_dimension']}")
 ```
 
 ## Annotations / Events
 
-Time-stamped annotations or events associated with the recording are stored in the `emg.events` attribute as a pandas DataFrame.
+Time-stamped annotations or events associated with the recording are stored in the `rec.events` attribute as a pandas DataFrame.
 
 This DataFrame has the following standard columns:
 
@@ -73,22 +73,22 @@ This DataFrame has the following standard columns:
 
 **Loading Annotations:**
 
-*   **EDF/BDF:** Annotations stored in the EDF+/BDF+ annotation channel are automatically loaded into `emg.events` by the `EDFImporter`.
-*   **WFDB:** Annotations stored in a corresponding `.atr` (or similar) file are automatically loaded into `emg.events` by the `WFDBImporter` when loading the `.hea` file.
-*   **EEGLAB `.set`:** EEGLAB events are loaded into `emg.events` by the `EEGLABImporter`; the event latency/duration (samples) are converted to onset/duration in seconds and the event `type` becomes the description.
+*   **EDF/BDF:** Annotations stored in the EDF+/BDF+ annotation channel are automatically loaded into `rec.events` by the `EDFImporter`.
+*   **WFDB:** Annotations stored in a corresponding `.atr` (or similar) file are automatically loaded into `rec.events` by the `WFDBImporter` when loading the `.hea` file.
+*   **EEGLAB `.set`:** EEGLAB events are loaded into `rec.events` by the `EEGLABImporter`; the event latency/duration (samples) are converted to onset/duration in seconds and the event `type` becomes the description.
 *   **Other Formats:** For formats that don't have standardized annotation support within the file (like CSV, Trigno, OTB), annotations are typically not loaded automatically. You may need to load them from a separate file and add them manually.
 
 **Accessing Annotations:**
 
 ```python
 # Check if any events were loaded
-if emg.events is not None and not emg.events.empty:
-    print(f"Loaded {len(emg.events)} events.")
+if rec.events is not None and not rec.events.empty:
+    print(f"Loaded {len(rec.events)} events.")
     print("First 5 events:")
-    print(emg.events.head())
+    print(rec.events.head())
 
     # Filter events by description
-    marker_events = emg.events[emg.events['description'].str.contains('Marker')]
+    marker_events = rec.events[rec.events['description'].str.contains('Marker')]
     print("\nMarker Events:")
     print(marker_events)
 else:
@@ -97,19 +97,19 @@ else:
 
 **Adding Annotations Manually:**
 
-You can add events programmatically using the `emg.add_event()` method:
+You can add events programmatically using the `rec.add_event()` method:
 
 ```python
-emg.add_event(onset=10.5, duration=5.0, description="Rest Period")
-emg.add_event(onset=15.5, duration=0.0, description="Stimulus Onset")
+rec.add_event(onset=10.5, duration=5.0, description="Rest Period")
+rec.add_event(onset=15.5, duration=0.0, description="Stimulus Onset")
 
 print("\nEvents after adding manually:")
-print(emg.events)
+print(rec.events)
 ```
 
 **Exporting Annotations:**
 
-When exporting data using `emg.to_edf()`, the events stored in `emg.events` are automatically written to the EDF+/BDF+ annotation channel.
+When exporting data using `rec.to_edf()`, the events stored in `rec.events` are automatically written to the EDF+/BDF+ annotation channel.
 
 ## Setting Metadata
 
@@ -117,15 +117,15 @@ You can add or modify metadata fields:
 
 ```python
 # Set a single metadata field
-emg.set_metadata('subject', 'S001')
+rec.set_metadata('subject', 'S001')
 
 # Set several fields with repeated set_metadata calls
-emg.set_metadata('condition', 'resting')
-emg.set_metadata('experimenter', 'John Doe')
-emg.set_metadata('recording_date', '2023-01-15')
+rec.set_metadata('condition', 'resting')
+rec.set_metadata('experimenter', 'John Doe')
+rec.set_metadata('recording_date', '2023-01-15')
 
 # Or update the metadata dictionary directly
-emg.metadata.update({
+rec.metadata.update({
     'subject': 'S001',
     'condition': 'resting',
     'experimenter': 'John Doe',
@@ -152,7 +152,7 @@ When exporting to EDF/BDF, biosigIO automatically includes metadata in the file 
 
 ```python
 # Export to EDF with metadata
-emg.to_edf('output')
+rec.to_edf('output')
 
 # This will create:
 # - output.edf or output.bdf (depending on format selection)
@@ -174,13 +174,13 @@ When working with multiple Recording objects, you can copy metadata between them
 
 ```python
 # Create a subset with only EMG channels
-emg_only = emg.select_channels(channel_type='EMG')
+emg_only = rec.select_channels(channel_type='EMG')
 
 # Copy all metadata from original to subset
-emg_only.metadata = emg.metadata.copy()
+emg_only.metadata = rec.metadata.copy()
 
 # Or selectively copy metadata
-emg_only.set_metadata('subject', emg.get_metadata('subject'))
+emg_only.set_metadata('subject', rec.get_metadata('subject'))
 ```
 
 ## Best Practices for Metadata

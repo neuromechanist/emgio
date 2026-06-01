@@ -10,19 +10,19 @@ The main entry point for loading data is the `Recording.from_file()` method. Thi
 from biosigio import Recording
 
 # Automatic importer selection based on file extension
-emg = Recording.from_file('data.csv')  # Will use CSV importer for CSV files
-emg = Recording.from_file('data.edf')  # Will use EDF importer for EDF files
-emg = Recording.from_file('data.set')  # Will use EEGLAB importer for SET files
-emg = Recording.from_file('data.otb')  # Will use OTB importer for OTB files
-emg = Recording.from_file('data.hea')  # Will use WFDB importer for WFDB files
+rec = Recording.from_file('data.csv')  # Will use CSV importer for CSV files
+rec = Recording.from_file('data.edf')  # Will use EDF importer for EDF files
+rec = Recording.from_file('data.set')  # Will use EEGLAB importer for SET files
+rec = Recording.from_file('data.otb')  # Will use OTB importer for OTB files
+rec = Recording.from_file('data.hea')  # Will use WFDB importer for WFDB files
 
 # Explicit importer selection
-emg = Recording.from_file('data.csv', importer='trigno')
-emg = Recording.from_file('data.set', importer='eeglab')
-emg = Recording.from_file('data.otb+', importer='otb')
-emg = Recording.from_file('data.edf', importer='edf')
-emg = Recording.from_file('data.csv', importer='csv')  # Generic CSV importer
-emg = Recording.from_file('data.hea', importer='wfdb')  # WFDB importer
+rec = Recording.from_file('data.csv', importer='trigno')
+rec = Recording.from_file('data.set', importer='eeglab')
+rec = Recording.from_file('data.otb+', importer='otb')
+rec = Recording.from_file('data.edf', importer='edf')
+rec = Recording.from_file('data.csv', importer='csv')  # Generic CSV importer
+rec = Recording.from_file('data.hea', importer='wfdb')  # WFDB importer
 ```
 
 ### Automatic File Type Inference
@@ -49,7 +49,7 @@ For CSV files with specialized formats like Trigno, the generic CSV importer wil
 
 ```python
 # Force using the generic CSV importer even for specialized formats
-emg = Recording.from_file('trigno_data.csv', importer='csv', force_csv=True)
+rec = Recording.from_file('trigno_data.csv', importer='csv', force_csv=True)
 ```
 
 See the [Generic CSV Format](../formats/csv.md) documentation for more details on CSV import options.
@@ -60,13 +60,13 @@ Once you've loaded data, you can access the signals and metadata:
 
 ```python
 # Access raw signal data (returns a pandas DataFrame)
-signals = emg.signals
+signals = rec.signals
 
 # Get information about channels
-channels = emg.channels
+channels = rec.channels
 
 # Get metadata
-device = emg.get_metadata('device')
+device = rec.get_metadata('device')
 ```
 
 ## Plotting Signals
@@ -75,16 +75,16 @@ biosigIO provides methods to visualize the EMG signals:
 
 ```python
 # Plot all channels
-emg.plot_signals()
+rec.plot_signals()
 
 # Plot specific channels
-emg.plot_signals(['EMG1', 'EMG2'])
+rec.plot_signals(['EMG1', 'EMG2'])
 
 # Plot with time range (in seconds)
-emg.plot_signals(time_range=(0, 5))
+rec.plot_signals(time_range=(0, 5))
 
 # Customize plot
-emg.plot_signals(
+rec.plot_signals(
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),
     title='EMG Signals',
@@ -102,7 +102,7 @@ When exporting and reimporting data, you might want to verify that the signals r
 ```python
 # Method 1: Integrated verification during export
 # Export to EDF with automatic verification
-verification_results = emg_original.to_edf('output', verify=True)
+verification_results = rec_original.to_edf('output', verify=True)
 
 # Method 2: Manual verification with more control
 from biosigio.analysis.verification import compare_signals, report_verification_results
@@ -110,16 +110,16 @@ from biosigio.visualization.static import plot_comparison
 import matplotlib.pyplot as plt
 
 # Export to EDF and reload
-emg_original.to_edf('output')
-emg_reloaded = Recording.from_file('output.edf')
+rec_original.to_edf('output')
+rec_reloaded = Recording.from_file('output.edf')
 
 # Compare signals
-results = compare_signals(emg_original, emg_reloaded)
+results = compare_signals(rec_original, rec_reloaded)
 is_identical = report_verification_results(results, verify_tolerance=0.01)
 print(f"Verification {'passed' if is_identical else 'failed'}")
 
 # Visual verification
-plot_comparison(emg_original, emg_reloaded, channels=['EMG1', 'EMG2'])
+plot_comparison(rec_original, rec_reloaded, channels=['EMG1', 'EMG2'])
 plt.show()
 ```
 
@@ -131,18 +131,18 @@ biosigIO can export data to EDF/BDF formats:
 
 ```python
 # Export to EDF or BDF (format selected automatically)
-emg.to_edf('output')  # Extension (.edf/.bdf) will be added automatically
+rec.to_edf('output')  # Extension (.edf/.bdf) will be added automatically
 
 # Force EDF format
-emg.to_edf('output', format='edf')
+rec.to_edf('output', format='edf')
 
 # Force BDF format
-emg.to_edf('output', format='bdf')
+rec.to_edf('output', format='bdf')
 
 # Control the analysis method for format selection
-emg.to_edf('output', method='svd')  # Use SVD analysis only
-emg.to_edf('output', method='fft')  # Use FFT analysis only
-emg.to_edf('output', method='both')  # Use both methods (default)
+rec.to_edf('output', method='svd')  # Use SVD analysis only
+rec.to_edf('output', method='fft')  # Use FFT analysis only
+rec.to_edf('output', method='both')  # Use both methods (default)
 ```
 
 ## Next Steps

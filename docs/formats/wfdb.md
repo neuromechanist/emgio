@@ -18,10 +18,10 @@ To load a WFDB record, provide the path to the **header (`.hea`) file** to `Reco
 from biosigio.core.emg import Recording
 
 # Load using the header file path (extension auto-detected)
-emg = Recording.from_file('path/to/your/record.hea')
+rec = Recording.from_file('path/to/your/record.hea')
 
 # Or load using just the base name (no extension); pass importer explicitly
-# emg = Recording.from_file('record', importer='wfdb')
+# rec = Recording.from_file('record', importer='wfdb')
 ```
 
 biosigIO uses the `wfdb` library (PyPI package `wfdb`) internally. It ships as a core dependency, so no separate installation is required.
@@ -30,7 +30,7 @@ biosigIO uses the `wfdb` library (PyPI package `wfdb`) internally. It ships as a
 
 If an annotation file (e.g., `record.atr`) exists in the same directory and shares the same base name as the header file, the `WFDBImporter` will **automatically load** these annotations.
 
-Loaded annotations are stored in the `emg.events` pandas DataFrame with the following columns:
+Loaded annotations are stored in the `rec.events` pandas DataFrame with the following columns:
 
 - `onset`: The time of the event in seconds from the start of the recording.
 - `duration`: The duration of the event in seconds (typically 0 for standard WFDB point annotations).
@@ -38,4 +38,4 @@ Loaded annotations are stored in the `emg.events` pandas DataFrame with the foll
 
 See the [Metadata Handling](../user-guide/metadata.md#annotations-events) guide for more details on accessing and working with the `events` DataFrame.
 
-If the annotation file is not found, a message will be stored in the `emg.metadata['annotation_status']` field. 
+If the annotation file is not found, a message will be stored in the `rec.metadata['annotation_status']` field. 

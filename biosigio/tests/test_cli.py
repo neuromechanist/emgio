@@ -127,12 +127,12 @@ def test_is_unknown_uses_channel_type_not_modality():
 
 def test_apply_modality_fills_only_unknown_channels():
     """--modality fills OTHER-typed channels but leaves detected ones untouched."""
-    emg = Recording()
-    emg.add_channel("X", np.zeros(100), 100, "uV", "OTHER")
-    emg.add_channel("ECG1", np.zeros(100), 100, "uV", "ECG")
-    _apply_modality(emg, "EEG")
-    assert emg.channels["X"]["modality"] == "EEG"  # unknown -> filled
-    assert emg.channels["ECG1"]["modality"] == "MISC"  # detected -> untouched
+    rec = Recording()
+    rec.add_channel("X", np.zeros(100), 100, "uV", "OTHER")
+    rec.add_channel("ECG1", np.zeros(100), 100, "uV", "ECG")
+    _apply_modality(rec, "EEG")
+    assert rec.channels["X"]["modality"] == "EEG"  # unknown -> filled
+    assert rec.channels["ECG1"]["modality"] == "MISC"  # detected -> untouched
 
 
 def test_missing_input_is_input_error():

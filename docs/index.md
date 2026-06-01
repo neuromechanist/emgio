@@ -62,16 +62,16 @@ biosigIO simplifies this process by providing a standardized interface for loadi
 from biosigio import Recording
 
 # Load data with automatic format detection, will issue an error to indicate use of the `trigno` importer
-emg = Recording.from_file('data.csv')  # Format detected from file extension
+rec = Recording.from_file('data.csv')  # Format detected from file extension
 
 # Load data with explicit importer
-emg = Recording.from_file('data.csv', importer='trigno')
+rec = Recording.from_file('data.csv', importer='trigno')
 
 # Plot specific channels
-emg.plot_signals(['EMG1', 'EMG2'])
+rec.plot_signals(['EMG1', 'EMG2'])
 
 # Export to EDF/BDF (format automatically determined)
-emg.to_edf('output.edf')  # Extension will be added if not provided
+rec.to_edf('output.edf')  # Extension will be added if not provided
 ```
 
 ## Documentation Structure

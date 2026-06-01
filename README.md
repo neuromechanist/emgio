@@ -76,23 +76,23 @@ uv pip install .
 from biosigio import Recording
 
 # Load data with automatic format detection
-emg = Recording.from_file('data.csv')  # Format detected from file extension
+rec = Recording.from_file('data.csv')  # Format detected from file extension
 
 # Load data with explicit importer
-emg = Recording.from_file('data.csv', importer='trigno')
+rec = Recording.from_file('data.csv', importer='trigno')
 
 # Plot specific channels
-emg.plot_signals(['EMG1', 'EMG2'])
+rec.plot_signals(['EMG1', 'EMG2'])
 
 # Export to EDF or BDF (format automatically determined)
-emg.to_edf('output.edf')
+rec.to_edf('output.edf')
 ```
 
 ### Generic CSV Import
 
 ```python
 # Import a generic CSV file
-emg = Recording.from_file('data.csv', importer='csv',
+rec = Recording.from_file('data.csv', importer='csv',
                    sample_frequency=1000,  # Required if no time column
                    has_header=True,        # Whether file has header row
                    channel_names=['EMG_L', 'EMG_R', 'ACC_X'])
@@ -102,10 +102,10 @@ emg = Recording.from_file('data.csv', importer='csv',
 
 ```python
 # Select specific channels
-subset_emg = emg.select_channels(['EMG1', 'EMG2', 'ACC1'])
+subset_emg = rec.select_channels(['EMG1', 'EMG2', 'ACC1'])
 
 # Select all channels of a specific type
-emg_only = emg.select_channels(channel_type='EMG')
+emg_only = rec.select_channels(channel_type='EMG')
 
 # Plot selected channels
 subset_emg.plot_signals()
@@ -115,11 +115,11 @@ subset_emg.plot_signals()
 
 ```python
 # Set metadata
-emg.set_metadata('subject', 'S001')
-emg.set_metadata('condition', 'resting')
+rec.set_metadata('subject', 'S001')
+rec.set_metadata('condition', 'resting')
 
 # Get metadata
-subject = emg.get_metadata('subject')
+subject = rec.get_metadata('subject')
 ```
 
 ## Development

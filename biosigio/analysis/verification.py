@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 
 def compare_signals(
-    emg_original: "Recording",
-    emg_reloaded: "Recording",
+    rec_original: "Recording",
+    rec_reloaded: "Recording",
     tolerance: float = 0.01,  # Default tolerance 1% for NRMSE and Max Norm Abs Diff
     channel_map: dict[str, str] | None = None,
 ) -> dict:
@@ -24,8 +24,8 @@ def compare_signals(
     Does NOT perform logging/printing.
 
     Args:
-        emg_original: The original Recording object before export.
-        emg_reloaded: The Recording object reloaded from the exported file.
+        rec_original: The original Recording object before export.
+        rec_reloaded: The Recording object reloaded from the exported file.
         tolerance: Relative tolerance for comparisons (default: 0.001 or 0.1%).
                    Used for NRMSE, Max Norm Abs Diff, and identity check.
         channel_map: Optional dictionary mapping original channel names (keys)
@@ -40,10 +40,10 @@ def compare_signals(
     # Removed local import: from biosigio.core.emg import Recording
 
     results = {}
-    if emg_original.signals is None or emg_reloaded.signals is None:
+    if rec_original.signals is None or rec_reloaded.signals is None:
         raise ValueError("No signals loaded in one or both Recording objects to compare")
-    original_channels = set(emg_original.signals.columns)
-    reloaded_channels = set(emg_reloaded.signals.columns)
+    original_channels = set(rec_original.signals.columns)
+    reloaded_channels = set(rec_reloaded.signals.columns)
 
     # Initialize channel summary
     channel_summary = {
@@ -108,8 +108,8 @@ def compare_signals(
 
     # Compare each channel pair
     for orig_channel, reloaded_channel in channel_pairs:
-        sig_orig = emg_original.signals[orig_channel].values
-        sig_reloaded = emg_reloaded.signals[reloaded_channel].values
+        sig_orig = rec_original.signals[orig_channel].values
+        sig_reloaded = rec_reloaded.signals[reloaded_channel].values
 
         # Basic check for length mismatch
         if len(sig_orig) != len(sig_reloaded):

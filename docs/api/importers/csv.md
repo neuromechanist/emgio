@@ -17,10 +17,10 @@ from biosigio import Recording
 from biosigio.importers.csv import CSVImporter
 
 # Method 1: Using Recording.from_file (recommended)
-emg = Recording.from_file('data.csv', importer='csv')
+rec = Recording.from_file('data.csv', importer='csv')
 
 # Method 2: Using the importer directly
-emg = CSVImporter().load('data.csv', has_header=True, delimiter=',')
+rec = CSVImporter().load('data.csv', has_header=True, delimiter=',')
 ```
 
 ## Auto-Detection Features
@@ -81,14 +81,14 @@ The CSV importer uses pandas to:
 
 ```python
 # Load CSV with automatic format detection
-emg = Recording.from_file('data.csv', importer='csv')
+rec = Recording.from_file('data.csv', importer='csv')
 ```
 
 ### Headerless CSV with Custom Names
 
 ```python
 # Load headerless CSV with custom channel names
-emg = Recording.from_file('data.csv', importer='csv',
+rec = Recording.from_file('data.csv', importer='csv',
                    has_header=False,
                    sample_frequency=1000,  # Required since no time column
                    channel_names=['EMG_L', 'EMG_R', 'ACC_X'])
@@ -98,7 +98,7 @@ emg = Recording.from_file('data.csv', importer='csv',
 
 ```python
 # Specify channel types and physical dimensions
-emg = Recording.from_file('data.csv', importer='csv',
+rec = Recording.from_file('data.csv', importer='csv',
                    channel_types={
                        'EMG1': 'EMG',
                        'EMG2': 'EMG',

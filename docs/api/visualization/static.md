@@ -26,11 +26,11 @@ from biosigio import Recording
 from biosigio.visualization.static import plot_signals
 
 # Load EMG data
-emg = Recording.from_file("data.csv", importer="trigno")
+rec = Recording.from_file("data.csv", importer="trigno")
 
 # Plot signals directly with custom parameters
 plot_signals(
-    emg_object=emg,
+    rec_object=rec,
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),
     offset_scale=0.7,
@@ -49,8 +49,8 @@ from biosigio import Recording
 from biosigio.visualization.static import plot_comparison
 
 # Load original and reloaded EMG data
-emg_original = Recording.from_file("original.csv", importer="trigno")
-emg_reloaded = Recording.from_file("reloaded.edf")
+rec_original = Recording.from_file("original.csv", importer="trigno")
+rec_reloaded = Recording.from_file("reloaded.edf")
 
 # Create channel mapping
 channel_map = {
@@ -60,8 +60,8 @@ channel_map = {
 
 # Plot comparison directly
 plot_comparison(
-    emg_original=emg_original,
-    emg_reloaded=emg_reloaded,
+    rec_original=rec_original,
+    rec_reloaded=rec_reloaded,
     channels=['EMG1', 'EMG2'],
     time_range=(1, 3),
     detrend=True,

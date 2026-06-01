@@ -3,7 +3,7 @@
 MNE is an optional, heavy dependency, so it is imported lazily via
 :func:`require_mne` (with a clear install hint) rather than at module import.
 Both importers turn an MNE ``Raw`` into a :class:`~biosigio.core.emg.Recording` with the
-same channel-type/unit mapping (:func:`raw_to_emg`); they differ only in how the
+same channel-type/unit mapping (:func:`raw_to_recording`); they differ only in how the
 ``Raw`` is read and how events are extracted.
 """
 
@@ -57,7 +57,7 @@ def require_mne():
     return mne
 
 
-def raw_to_emg(raw) -> Recording:
+def raw_to_recording(raw) -> Recording:
     """Build a Recording from an MNE ``Raw``: channels with mapped types and FIFF units.
 
     Does not read events (the two importers extract them differently) and does not
@@ -66,24 +66,24 @@ def raw_to_emg(raw) -> Recording:
     expected pandas warning is suppressed and the frame de-fragmented once after
     (root-cause perf drift tracked in #66).
     """
-    emg = Recording()
+    rec = Recording()
     sfreq = float(raw.info["sfreq"])
     data = raw.get_data()  # (n_channels, n_samples) in SI units
     mne_types = raw.get_channel_types()
-    emg.set_metadata("number_of_signals", len(raw.ch_names))
+    rec.set_metadata("number_of_signals", len(raw.ch_names))
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=pd.errors.PerformanceWarning)
         for i, name in enumerate(raw.ch_names):
             channel_type = _MNE_TYPE_TO_biosigIO.get(mne_types[i], "OTHER")
             unit_code = int(raw.info["chs"][i]["unit"])
-            emg.add_channel(
+            rec.add_channel(
                 label=name,
                 data=data[i],
                 sample_frequency=sfreq,
                 physical_dimension=_FIFF_UNIT_TO_DIM.get(unit_code, "n/a"),
                 channel_type=channel_type,
             )
-    if emg.signals is not None:
-        emg.signals = emg.signals.copy()  # de-fragment after many inserts
-    return emg
+    if rec.signals is not None:
+        rec.signals = rec.signals.copy()  # de-fragment after many inserts
+    return rec

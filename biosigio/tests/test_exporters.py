@@ -17,9 +17,9 @@ from ..exporters.edf import EDFExporter, _determine_scaling_factors
 
 
 @pytest.fixture
-def sample_emg():
+def sample_rec():
     """Create a Recording object with sample data."""
-    emg = Recording()
+    rec = Recording()
 
     # Create sample data
     time = np.linspace(0, 1, 1000)  # 1 second at 1000Hz
@@ -27,10 +27,10 @@ def sample_emg():
     acc_data = np.cos(2 * np.pi * 5 * time) * 1.5  # Use a non-unity amplitude
 
     # Add channels
-    emg.add_channel("EMG1", emg_data, 1000, "mV", "EMG")
-    emg.add_channel("ACC1", acc_data, 1000, "g", "ACC")
+    rec.add_channel("EMG1", emg_data, 1000, "mV", "EMG")
+    rec.add_channel("ACC1", acc_data, 1000, "g", "ACC")
 
-    return emg
+    return rec
 
 
 def _reconstruct_physical_signal(reader: pyedflib.EdfReader, signal_index: int) -> np.ndarray:
@@ -166,7 +166,7 @@ def test_determine_scaling_factors():
     assert phys_max == 1.0e-6
 
 
-def test_edf_export(sample_emg):
+def test_edf_export(sample_rec):
     """Test EDF export functionality."""
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         edf_path = f.name
@@ -177,7 +177,7 @@ def test_edf_export(sample_emg):
 
     try:
         # Export using default ('auto') format - our test signals have high DR so expect BDF
-        EDFExporter.export(sample_emg, edf_path, precision_threshold=1)
+        EDFExporter.export(sample_rec, edf_path, precision_threshold=1)
 
         # Check if either EDF or BDF file was created (expect BDF here due to high dynamic range)
         actual_path = bdf_path if os.path.exists(bdf_path) else edf_path
@@ -206,7 +206,7 @@ def test_edf_export(sample_emg):
             assert headers[0]["digital_max"] == 8388607
             assert headers[0]["physical_min"] < headers[0]["physical_max"]
 
-            original_emg_data = sample_emg.signals["EMG1"].values
+            original_emg_data = sample_rec.signals["EMG1"].values
             reconstructed_emg_data = _reconstruct_physical_signal(reader, 0)
             assert np.allclose(original_emg_data, reconstructed_emg_data, atol=1e-3), (
                 f"EMG1 scaling incorrect. Max diff: {np.max(np.abs(original_emg_data - reconstructed_emg_data)):.2e}"
@@ -221,7 +221,7 @@ def test_edf_export(sample_emg):
             assert headers[1]["digital_max"] == 8388607
             assert headers[1]["physical_min"] < headers[1]["physical_max"]
 
-            original_acc_data = sample_emg.signals["ACC1"].values
+            original_acc_data = sample_rec.signals["ACC1"].values
             reconstructed_acc_data = _reconstruct_physical_signal(reader, 1)
             assert np.allclose(original_acc_data, reconstructed_acc_data, atol=1e-3), (
                 f"ACC1 scaling incorrect. Max diff: {np.max(np.abs(original_acc_data - reconstructed_acc_data)):.2e}"
@@ -245,7 +245,7 @@ def test_edf_export(sample_emg):
             os.unlink(channels_tsv_path)
 
 
-def test_edf_export_no_channels_tsv(sample_emg):
+def test_edf_export_no_channels_tsv(sample_rec):
     """Test that channels.tsv is not created when create_channels_tsv=False."""
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         edf_path = f.name
@@ -253,7 +253,7 @@ def test_edf_export_no_channels_tsv(sample_emg):
 
     try:
         # Export with create_channels_tsv=False
-        EDFExporter.export(sample_emg, edf_path, create_channels_tsv=False, precision_threshold=1)
+        EDFExporter.export(sample_rec, edf_path, create_channels_tsv=False, precision_threshold=1)
 
         # Check if either EDF or BDF file was created
         actual_path = bdf_path if os.path.exists(bdf_path) else edf_path
@@ -275,13 +275,13 @@ def test_edf_export_no_channels_tsv(sample_emg):
 
 def test_edf_export_no_signals():
     """Test error handling when exporting empty Recording object."""
-    empty_emg = Recording()
+    empty_rec = Recording()
     with pytest.raises(ValueError):
         with tempfile.NamedTemporaryFile(suffix=".edf") as f:
-            EDFExporter.export(empty_emg, f.name)
+            EDFExporter.export(empty_rec, f.name)
 
 
-def test_edf_export_file_permissions(sample_emg):
+def test_edf_export_file_permissions(sample_rec):
     """Test error handling for file permission issues."""
     # Attempt to write to a directory that likely doesn't exist or isn't writable
     invalid_path = "/dev/null/some_dir/test.edf"
@@ -291,7 +291,7 @@ def test_edf_export_file_permissions(sample_emg):
 
     # Expecting an OSError or similar depending on OS and filesystem
     with pytest.raises(Exception) as excinfo:
-        EDFExporter.export(sample_emg, invalid_path)
+        EDFExporter.export(sample_rec, invalid_path)
     print(f"Caught expected exception: {excinfo.type}")  # For debugging
 
 
@@ -373,20 +373,20 @@ def test_format_selection():
 
     # Test case 1: High quality signal with small amplitude (should still use BDF due to dynamic range)
     clean_signal = np.sin(2 * np.pi * 10 * time) * 1  # Clean 10 Hz sine with amplitude 1
-    emg_clean = Recording()
-    emg_clean.add_channel("Clean", clean_signal, 1000, "uV", "EMG")
+    rec_clean = Recording()
+    rec_clean.add_channel("Clean", clean_signal, 1000, "uV", "EMG")
 
     # Test case 2: Moderate dynamic range signal that will trigger EDF
     # Update test to reflect signals under ~80dB typically use EDF
     hdr_signal, actual_dr = generate_high_dynamic_range_signal(dynamic_range_db=85)
     print(f"HDR signal generated with {actual_dr:.1f} dB dynamic range")
-    emg_hdr = Recording()
-    emg_hdr.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
+    rec_hdr = Recording()
+    rec_hdr.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
 
     # Test case 3: Mixed signals (should result in BDF due to high DR clean signal)
-    emg_mixed = Recording()
-    emg_mixed.add_channel("Clean", clean_signal, 1000, "uV", "EMG")
-    emg_mixed.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
+    rec_mixed = Recording()
+    rec_mixed.add_channel("Clean", clean_signal, 1000, "uV", "EMG")
+    rec_mixed.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
 
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         base_path = f.name
@@ -411,13 +411,13 @@ def test_format_selection():
 
     try:
         # Test clean signal -> BDF (due to high DR in our analysis)
-        EDFExporter.export(emg_clean, edf_path_clean, format="auto")
+        EDFExporter.export(rec_clean, edf_path_clean, format="auto")
         assert os.path.exists(bdf_path_clean), "BDF file not created for clean signal in auto mode"
         assert not os.path.exists(edf_path_clean), "EDF file created unexpectedly"
 
         # Test HDR signal -> EDF (since actual dynamic range is below BDF threshold)
         with warnings.catch_warnings(record=True) as w:
-            EDFExporter.export(emg_hdr, edf_path_hdr, format="auto")
+            EDFExporter.export(rec_hdr, edf_path_hdr, format="auto")
             # Since our signal's dynamic range is ~78dB, expect EDF file
             assert os.path.exists(edf_path_hdr), (
                 "EDF file not created for moderate (~78dB) DR signal in auto mode"
@@ -428,7 +428,7 @@ def test_format_selection():
 
         # Test mixed signal -> BDF (because the clean signal has a high DR)
         with warnings.catch_warnings(record=True) as w:
-            EDFExporter.export(emg_mixed, edf_path_mixed, format="auto")
+            EDFExporter.export(rec_mixed, edf_path_mixed, format="auto")
             assert os.path.exists(bdf_path_mixed), (
                 "BDF file not created for mixed signal in auto mode"
             )
@@ -454,13 +454,13 @@ def test_format_reproducibility():
 
     # BDF test signal (large amplitude, requires BDF ideally)
     bdf_signal = np.sin(2 * np.pi * 10 * time) * 1e6
-    emg_bdf = Recording()
-    emg_bdf.add_channel("LargeAmp", bdf_signal, 1000, "uV", "EMG")
+    rec_bdf = Recording()
+    rec_bdf.add_channel("LargeAmp", bdf_signal, 1000, "uV", "EMG")
 
     # EDF test signal (smaller amplitude, suitable for EDF)
     edf_signal = np.sin(2 * np.pi * 10 * time) * 1000
-    emg_edf = Recording()
-    emg_edf.add_channel("SmallAmp", edf_signal, 1000, "uV", "EMG")
+    rec_edf = Recording()
+    rec_edf.add_channel("SmallAmp", edf_signal, 1000, "uV", "EMG")
 
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         base_path = f.name
@@ -472,7 +472,7 @@ def test_format_reproducibility():
 
     try:
         # Test BDF reproducibility (using format='bdf')
-        EDFExporter.export(emg_bdf, bdf_test_path, format="bdf")
+        EDFExporter.export(rec_bdf, bdf_test_path, format="bdf")
         assert os.path.exists(bdf_test_path)
         with pyedflib.EdfReader(bdf_test_path) as reader:
             reconstructed_bdf = _reconstruct_physical_signal(reader, 0)
@@ -482,7 +482,7 @@ def test_format_reproducibility():
             )
 
         # Test EDF reproducibility (using format='edf')
-        EDFExporter.export(emg_edf, edf_test_path, format="edf")
+        EDFExporter.export(rec_edf, edf_test_path, format="edf")
         assert os.path.exists(edf_test_path)
         with pyedflib.EdfReader(edf_test_path) as reader:
             reconstructed_edf = _reconstruct_physical_signal(reader, 0)
@@ -502,11 +502,11 @@ def test_format_reproducibility():
 
 def test_bdf_format_selection():
     """Test automatic BDF format selection with scaling verification."""
-    emg = Recording()
+    rec = Recording()
     time = np.linspace(0, 1, 1000)
     # Create signal that should trigger BDF in 'auto' mode
     signal = np.sin(2 * np.pi * 10 * time) * 1e6  # Large amplitude
-    emg.add_channel("HighPrec", signal, 1000, "uV", "EMG")
+    rec.add_channel("HighPrec", signal, 1000, "uV", "EMG")
 
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         edf_path = f.name
@@ -518,7 +518,7 @@ def test_bdf_format_selection():
     try:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            EDFExporter.export(emg, edf_path, format="auto")
+            EDFExporter.export(rec, edf_path, format="auto")
             # Both files might exist since we create one then rename, just check BDF was created
             assert os.path.exists(bdf_path), (
                 "BDF file was not created in auto mode for high precision signal"
@@ -558,16 +558,16 @@ def test_user_format_selection():
     hdr_signal, _ = generate_high_dynamic_range_signal(
         dynamic_range_db=85
     )  # Lower threshold for reliability
-    emg_hdr = Recording()
-    emg_hdr.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
+    rec_hdr = Recording()
+    rec_hdr.add_channel("HDR", hdr_signal, 1000, "uV", "EMG")
 
     # Signal that would normally trigger EDF (Lower Dynamic Range)
     np.random.seed(42)
     noisy_signal = np.sin(2 * np.pi * 10 * time) * 100
     noise = np.random.normal(0, 5.0, 1000)
     noisy_signal += noise
-    emg_lowdr = Recording()
-    emg_lowdr.add_channel("LowDR", noisy_signal, 1000, "uV", "EMG")
+    rec_lowdr = Recording()
+    rec_lowdr.add_channel("LowDR", noisy_signal, 1000, "uV", "EMG")
 
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         base_path = f.name
@@ -583,7 +583,7 @@ def test_user_format_selection():
         # 1. Force EDF for HDR signal (no warning expected as format is explicit)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            EDFExporter.export(emg_hdr, edf_path_hdr, format="edf")
+            EDFExporter.export(rec_hdr, edf_path_hdr, format="edf")
             assert os.path.exists(edf_path_hdr), (
                 "EDF file not created when format='edf' specified for HDR signal"
             )
@@ -604,7 +604,7 @@ def test_user_format_selection():
         # 2. Force BDF for LowDR signal (no warning expected as format is explicit)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            EDFExporter.export(emg_lowdr, bdf_path_lowdr, format="bdf")
+            EDFExporter.export(rec_lowdr, bdf_path_lowdr, format="bdf")
             assert os.path.exists(bdf_path_lowdr), (
                 "BDF file not created when format='bdf' specified for LowDR signal"
             )
@@ -636,18 +636,18 @@ def test_user_format_selection():
 def test_high_dynamic_range():
     """Test export of signals with high dynamic range using auto format."""
     # Create Recording object
-    emg = Recording()
+    rec = Recording()
 
     # Generate a high dynamic range signal (lowered threshold for test reliability)
     hdr_signal, actual_dr = generate_high_dynamic_range_signal(dynamic_range_db=85)
     assert actual_dr > 75, f"Generated signal has {actual_dr:.1f} dB DR, expected >75 dB"
     print(f"Successfully generated test signal with {actual_dr:.1f} dB dynamic range")
-    emg.add_channel("HDR_EMG", hdr_signal, 1000, "uV", "EMG")
+    rec.add_channel("HDR_EMG", hdr_signal, 1000, "uV", "EMG")
 
     # Add a regular channel for comparison - this has high dynamic range
     time = np.linspace(0, 1, 1000)
     regular_signal = np.sin(2 * np.pi * 10 * time) * 1000
-    emg.add_channel("REG_EMG", regular_signal, 1000, "uV", "EMG")
+    rec.add_channel("REG_EMG", regular_signal, 1000, "uV", "EMG")
 
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
         edf_path = f.name
@@ -660,7 +660,7 @@ def test_high_dynamic_range():
         # Export the EMG data using format='auto'
         # When we mix a moderate DR signal with a high DR signal,
         # the exporter should use BDF
-        EDFExporter.export(emg, edf_path, format="auto")
+        EDFExporter.export(rec, edf_path, format="auto")
 
         # The regular signal has high DR so we expect BDF output
         assert os.path.exists(bdf_path), "BDF file not created even though REG_EMG has high DR"
@@ -731,7 +731,7 @@ def test_dynamic_range_calculation():
 @patch("biosigio.exporters.edf.analyze_signal")
 @patch("biosigio.exporters.edf.determine_format_suitability")
 def test_edf_export_bypass_analysis(
-    mock_determine_suitability, mock_analyze_signal, sample_emg, capsys
+    mock_determine_suitability, mock_analyze_signal, sample_rec, capsys
 ):
     """Test EDF/BDF export with bypass_analysis=True."""
     with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as f:
@@ -744,7 +744,7 @@ def test_edf_export_bypass_analysis(
 
     try:
         # --- Test bypassing with format='edf' ---
-        EDFExporter.export(sample_emg, edf_path, format="edf", bypass_analysis=True)
+        EDFExporter.export(sample_rec, edf_path, format="edf", bypass_analysis=True)
 
         # Verify analysis functions were NOT called
         mock_analyze_signal.assert_not_called()
@@ -766,7 +766,7 @@ def test_edf_export_bypass_analysis(
             assert headers[0]["digital_min"] == -32768  # EDF range
             assert headers[0]["digital_max"] == 32767
             reconstructed_emg = _reconstruct_physical_signal(reader, 0)
-            assert np.allclose(sample_emg.signals["EMG1"].values, reconstructed_emg, atol=0.2)
+            assert np.allclose(sample_rec.signals["EMG1"].values, reconstructed_emg, atol=0.2)
 
         # Verify summary was skipped
         captured = capsys.readouterr()
@@ -783,7 +783,7 @@ def test_edf_export_bypass_analysis(
             os.unlink(edf_channels_tsv_path)
 
         # --- Test bypassing with format='bdf' ---
-        EDFExporter.export(sample_emg, bdf_path, format="bdf", bypass_analysis=True)
+        EDFExporter.export(sample_rec, bdf_path, format="bdf", bypass_analysis=True)
 
         # Verify analysis functions were NOT called
         mock_analyze_signal.assert_not_called()
@@ -805,7 +805,7 @@ def test_edf_export_bypass_analysis(
             assert headers[0]["digital_min"] == -8388608  # BDF range
             assert headers[0]["digital_max"] == 8388607
             reconstructed_emg = _reconstruct_physical_signal(reader, 0)
-            assert np.allclose(sample_emg.signals["EMG1"].values, reconstructed_emg, atol=0.2)
+            assert np.allclose(sample_rec.signals["EMG1"].values, reconstructed_emg, atol=0.2)
 
         # Verify summary was skipped
         captured = capsys.readouterr()
@@ -819,7 +819,7 @@ def test_edf_export_bypass_analysis(
 
         # --- Test error when bypassing with format='auto' ---
         with pytest.raises(ValueError, match="Cannot bypass analysis when format is set to 'auto'"):
-            EDFExporter.export(sample_emg, edf_path, format="auto", bypass_analysis=True)
+            EDFExporter.export(sample_rec, edf_path, format="auto", bypass_analysis=True)
 
         mock_analyze_signal.assert_not_called()  # Should raise error before analysis
 
@@ -836,7 +836,7 @@ def test_edf_export_bypass_analysis(
 @patch("biosigio.exporters.edf.analyze_signal")
 @patch("biosigio.exporters.edf.determine_format_suitability")
 def test_edf_export_force_analysis(
-    mock_determine_suitability, mock_analyze_signal, sample_emg, capsys
+    mock_determine_suitability, mock_analyze_signal, sample_rec, capsys
 ):
     """Test EDF/BDF export with bypass_analysis=False when format is specified."""
     # Mock return values for analysis functions
@@ -857,11 +857,11 @@ def test_edf_export_force_analysis(
 
     try:
         # --- Test forcing analysis with format='edf' ---
-        EDFExporter.export(sample_emg, edf_path, format="edf", bypass_analysis=False)
+        EDFExporter.export(sample_rec, edf_path, format="edf", bypass_analysis=False)
 
         # Verify analysis functions WERE called (once per channel)
-        assert mock_analyze_signal.call_count == len(sample_emg.channels)
-        assert mock_determine_suitability.call_count == len(sample_emg.channels)
+        assert mock_analyze_signal.call_count == len(sample_rec.channels)
+        assert mock_determine_suitability.call_count == len(sample_rec.channels)
 
         # Verify file was created
         assert os.path.exists(edf_path), (

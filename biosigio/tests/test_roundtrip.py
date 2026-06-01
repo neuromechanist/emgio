@@ -88,13 +88,13 @@ MIXED_RATE_CASES = [
 def _roundtrip(case):
     """Import -> export (auto) -> reimport once per fixture (cached)."""
     if case.name not in _RT_CACHE:
-        emg = Recording.from_file(str(case.path), importer=case.importer)
+        rec = Recording.from_file(str(case.path), importer=case.importer)
         out = os.path.join(_RT_DIR, f"{case.name}.edf")
         # format="auto" exercises the real EDF/BDF selection (and ignores
         # bypass_analysis by design), which is what a round-trip harness wants.
-        emg.to_edf(out, format="auto")
+        rec.to_edf(out, format="auto")
         written = out if os.path.exists(out) else os.path.splitext(out)[0] + ".bdf"
-        _RT_CACHE[case.name] = (emg, Recording.from_file(written))
+        _RT_CACHE[case.name] = (rec, Recording.from_file(written))
     return _RT_CACHE[case.name]
 
 
@@ -103,12 +103,12 @@ def test_roundtrip_preserves_structure(case):
     """No sample loss, channel count preserved, no modality creep (all fixtures)."""
     if not case.path.exists():
         pytest.skip(f"fixture missing: {case.path}")
-    emg, reloaded = _roundtrip(case)
+    rec, reloaded = _roundtrip(case)
 
     # No samples lost (modulo one EDF data-record of zero padding).
-    rate = max(int(c["sample_frequency"]) for c in emg.channels.values())
-    assert emg.signals.shape[0] <= reloaded.signals.shape[0] <= emg.signals.shape[0] + rate
-    assert len(reloaded.channels) == len(emg.channels)
+    rate = max(int(c["sample_frequency"]) for c in rec.channels.values())
+    assert rec.signals.shape[0] <= reloaded.signals.shape[0] <= rec.signals.shape[0] + rate
+    assert len(reloaded.channels) == len(rec.channels)
 
     # No modality creep: a fixture with no EMG must not gain EMG channels.
     if not case.has_emg:
@@ -128,19 +128,19 @@ def test_roundtrip_preserves_signal_values(case):
     """
     if not case.path.exists():
         pytest.skip(f"fixture missing: {case.path}")
-    emg, reloaded = _roundtrip(case)
+    rec, reloaded = _roundtrip(case)
 
-    rate = max(int(c["sample_frequency"]) for c in emg.channels.values())
-    n = emg.signals.shape[0]
+    rate = max(int(c["sample_frequency"]) for c in rec.channels.values())
+    n = rec.signals.shape[0]
     width = min(int(_WINDOW_S * rate), n)
     start = int(_RNG.integers(0, n - width + 1)) if n > width else 0
     window = slice(start, start + width)
 
     compared = 0
     low_corr = []
-    for ch in emg.channels:
+    for ch in rec.channels:
         assert ch in reloaded.signals.columns, f"{case.name}: channel '{ch}' lost on reload"
-        original = emg.signals[ch].values[window].astype(float)
+        original = rec.signals[ch].values[window].astype(float)
         roundtripped = reloaded.signals[ch].values[window].astype(float)
         compared += 1
         ptp = float(np.ptp(original))
@@ -162,12 +162,12 @@ def test_roundtrip_preserves_signal_values(case):
 def test_mixed_rate_export_raises(case, tmp_path):
     if not case.path.exists():
         pytest.skip(f"fixture missing: {case.path}")
-    emg = Recording.from_file(str(case.path), importer=case.importer)
-    rates = {int(c["sample_frequency"]) for c in emg.channels.values()}
+    rec = Recording.from_file(str(case.path), importer=case.importer)
+    rates = {int(c["sample_frequency"]) for c in rec.channels.values()}
     if len(rates) <= 1:
         pytest.skip(f"{case.name}: fixture is single-rate, guard not exercised")
     with pytest.raises(ValueError, match="single sampling rate"):
-        emg.to_edf(str(tmp_path / f"{case.name}.edf"), format="edf", bypass_analysis=True)
+        rec.to_edf(str(tmp_path / f"{case.name}.edf"), format="edf", bypass_analysis=True)
 
 
 def test_meg_fif_imports_via_mne():
@@ -176,10 +176,10 @@ def test_meg_fif_imports_via_mne():
     if not meg.exists():
         pytest.skip("MEG fixture missing")
     pytest.importorskip("mne", reason="MEG import requires the optional 'meg' extra (mne)")
-    emg = Recording.from_file(str(meg))
-    assert len(emg.channels) > 0
+    rec = Recording.from_file(str(meg))
+    assert len(rec.channels) > 0
     # No modality creep: a MEG file must not invent EMG channels.
-    assert not [c for c, i in emg.channels.items() if i["channel_type"] == "EMG"]
+    assert not [c for c, i in rec.channels.items() if i["channel_type"] == "EMG"]
 
 
 def test_event_roundtrip_through_edf(tmp_path):
@@ -192,11 +192,11 @@ def test_event_roundtrip_through_edf(tmp_path):
     fixture = BIDS / "emg/sub-01/emg/sub-01_task-isometric10percentmvc_run-01_emg.edf"
     if not fixture.exists():
         pytest.skip("EMG fixture missing")
-    emg = Recording.from_file(str(fixture))
-    emg.add_event(onset=0.5, duration=0.0, description="m1")
-    emg.add_event(onset=1.0, duration=0.2, description="m2")
+    rec = Recording.from_file(str(fixture))
+    rec.add_event(onset=0.5, duration=0.0, description="m1")
+    rec.add_event(onset=1.0, duration=0.2, description="m2")
     out = tmp_path / "ev.edf"
-    emg.to_edf(str(out), format="edf", bypass_analysis=True)
+    rec.to_edf(str(out), format="edf", bypass_analysis=True)
 
     reloaded = Recording.from_file(str(out), bids_channels="off")
     assert len(reloaded.events) == 2

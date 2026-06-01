@@ -58,15 +58,15 @@ def find_events_tsv(data_filepath: str) -> str | None:
     return _find_sidecar(data_filepath, "events")
 
 
-def apply_channels_tsv(emg: Recording, channels_tsv_path: str) -> int:
-    """Override per-channel ``type``/``units`` in ``emg`` from a ``_channels.tsv``.
+def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
+    """Override per-channel ``type``/``units`` in ``rec`` from a ``_channels.tsv``.
 
     Rows are matched to channels by the ``name`` column; ``n/a`` and empty
     values are skipped (the importer-inferred value is kept). An unrecognized
     ``type`` is warned about and skipped rather than raising.
 
     Args:
-        emg: The Recording object to update in place.
+        rec: The Recording object to update in place.
         channels_tsv_path: Path to the BIDS ``_channels.tsv``.
 
     Returns:
@@ -80,7 +80,7 @@ def apply_channels_tsv(emg: Recording, channels_tsv_path: str) -> int:
     updated = 0
     for _, row in df.iterrows():
         name = str(row["name"]).strip()
-        if name not in emg.channels:
+        if name not in rec.channels:
             continue
         kwargs: dict[str, str] = {}
         ctype = str(row.get("type", "")).strip()
@@ -92,7 +92,7 @@ def apply_channels_tsv(emg: Recording, channels_tsv_path: str) -> int:
         if not kwargs:
             continue
         try:
-            emg.set_channel(name, **kwargs)
+            rec.set_channel(name, **kwargs)
             updated += 1
         except ValueError:
             logging.warning(

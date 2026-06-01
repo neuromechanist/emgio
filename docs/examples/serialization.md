@@ -124,7 +124,7 @@ choose which one to reconstruct:
 
 ```python
 # Explicit importer plus group selector for a multi-rate store
-emg = Recording.from_file('rec.zarr', importer='zarr', group='emg_1000hz')
+rec = Recording.from_file('rec.zarr', importer='zarr', group='emg_1000hz')
 eeg = Recording.from_file('rec.zarr', importer='zarr', group='eeg_250hz')
 ```
 

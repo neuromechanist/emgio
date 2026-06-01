@@ -24,16 +24,16 @@ from biosigio import Recording
 from biosigio.analysis.verification import compare_signals, report_verification_results
 
 # Load original recording
-emg_original = Recording.from_file("data.csv", importer="trigno")
+rec_original = Recording.from_file("data.csv", importer="trigno")
 
 # Export to EDF/BDF and reload. With the default format='auto', to_edf may pick
 # either .edf or .bdf, so reload the path it actually wrote.
 written_path = "exported_data.edf"  # or "exported_data.bdf" if BDF was selected
-emg_original.to_edf("exported_data")
-emg_reloaded = Recording.from_file(written_path)
+rec_original.to_edf("exported_data")
+rec_reloaded = Recording.from_file(written_path)
 
 # Compare signals
-results = compare_signals(emg_original, emg_reloaded)
+results = compare_signals(rec_original, rec_reloaded)
 
 # Generate report
 is_identical = report_verification_results(results, verify_tolerance=0.01)
@@ -58,6 +58,6 @@ channel_map = {
 }
 
 # Compare with mapping
-results = compare_signals(emg_original, emg_reloaded, channel_map=channel_map)
+results = compare_signals(rec_original, rec_reloaded, channel_map=channel_map)
 is_identical = report_verification_results(results, verify_tolerance=0.01)
 ``` 

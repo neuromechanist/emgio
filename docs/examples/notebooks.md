@@ -40,10 +40,10 @@ import matplotlib.pyplot as plt
 %matplotlib inline  # For displaying plots in the notebook
 
 # Load EMG data
-emg = Recording.from_file('data.csv', importer='trigno')
+rec = Recording.from_file('data.csv', importer='trigno')
 
 # Plot signals with customized appearance (plot_signals manages its own figure)
-emg.plot_signals(
+rec.plot_signals(
     channels=['EMG1', 'EMG2'],
     time_range=(0, 5),
     title='EMG Signals',
@@ -57,18 +57,18 @@ Jupyter notebooks are excellent for interactively exploring your EMG data:
 
 ```python
 # Load data
-emg = Recording.from_file('data.otb+', importer='otb')
+rec = Recording.from_file('data.otb+', importer='otb')
 
 # Display channel information
-channel_types = emg.get_channel_types()
+channel_types = rec.get_channel_types()
 for ch_type in channel_types:
-    channels = emg.get_channels_by_type(ch_type)
+    channels = rec.get_channels_by_type(ch_type)
     print(f"{ch_type} channels: {len(channels)}")
     
     # Show details of the first channel
     if channels:
         ch_name = channels[0]
-        ch_info = emg.channels[ch_name]
+        ch_info = rec.channels[ch_name]
         print(f"  Sample channel: {ch_name}")
         for key, value in ch_info.items():
             print(f"    {key}: {value}")
@@ -83,10 +83,10 @@ import ipywidgets as widgets
 from IPython.display import display
 
 # Load data
-emg = Recording.from_file('data.set', importer='eeglab')
+rec = Recording.from_file('data.set', importer='eeglab')
 
 # Get all channels
-all_channels = list(emg.channels.keys())
+all_channels = list(rec.channels.keys())
 
 # Create widgets
 channel_dropdown = widgets.Dropdown(
@@ -98,7 +98,7 @@ channel_dropdown = widgets.Dropdown(
 time_slider = widgets.FloatRangeSlider(
     value=[0, 5],
     min=0,
-    max=emg.get_duration(),
+    max=rec.get_duration(),
     step=1,
     description='Time (s):',
     disabled=False,
@@ -110,7 +110,7 @@ time_slider = widgets.FloatRangeSlider(
 # Define update function
 def update_plot(channel, time_range):
     plt.figure(figsize=(12, 6))
-    emg.plot_signals(
+    rec.plot_signals(
         channels=[channel],
         time_range=time_range,
         title=f'Channel: {channel}, Time: {time_range[0]}-{time_range[1]}s',
@@ -135,8 +135,8 @@ You can easily export high-quality figures for publications:
 ```python
 # Create a figure
 plt.figure(figsize=(10, 6), dpi=300)  # High DPI for publication quality
-emg.plot_signals(
-    channels=emg.get_channels_by_type('EMG')[:4],  # First 4 EMG channels
+rec.plot_signals(
+    channels=rec.get_channels_by_type('EMG')[:4],  # First 4 EMG channels
     time_range=(10, 15),
     title='EMG Signals During Movement',
     grid=True,
@@ -162,10 +162,10 @@ plt.show()
    from biosigio.importers.edf import EDFImporter
 
    # Inferred importer (extension-based)
-   emg = Recording.from_file('recording.edf')
+   rec = Recording.from_file('recording.edf')
 
    # Equivalent direct use
-   emg = EDFImporter().load('recording.edf')
+   rec = EDFImporter().load('recording.edf')
    ```
 
 2. **Progress tracking**: For long operations, use `tqdm` for progress bars:
@@ -173,9 +173,9 @@ plt.show()
    from tqdm.notebook import tqdm
    
    channel_stats = {}
-   for channel in tqdm(emg.channels.keys()):
+   for channel in tqdm(rec.channels.keys()):
        # Perform analysis on each channel
-       signal = emg.signals[channel].values
+       signal = rec.signals[channel].values
        channel_stats[channel] = {
            'mean': signal.mean(),
            'std': signal.std(),
@@ -190,7 +190,7 @@ plt.show()
    
    # Convert channel info to DataFrame
    channel_df = pd.DataFrame()
-   for ch_name, ch_info in emg.channels.items():
+   for ch_name, ch_info in rec.channels.items():
        ch_data = pd.Series(ch_info)
        ch_data.name = ch_name
        channel_df = channel_df.append(ch_data)

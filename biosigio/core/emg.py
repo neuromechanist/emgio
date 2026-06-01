@@ -91,7 +91,7 @@ class Recording:
         """
         # Delegate to the static plotting function in visualization module
         static_plot_signals(
-            emg_object=self,
+            rec_object=self,
             channels=channels,
             time_range=time_range,
             offset_scale=offset_scale,
@@ -245,12 +245,12 @@ class Recording:
         importer_class = getattr(importer_module, importers[importer])
 
         # Create importer instance and load data
-        emg = importer_class().load(filepath, **kwargs)
+        rec = importer_class().load(filepath, **kwargs)
 
         # Record provenance: which format this recording came from. setdefault so a
         # re-imported serialization file (tabular/zarr) keeps the ORIGINAL
         # source_format restored from its metadata rather than being relabeled.
-        emg.metadata.setdefault("source_format", importer)
+        rec.metadata.setdefault("source_format", importer)
 
         # In a BIDS layout, the sibling _channels.tsv is the authoritative source
         # of per-channel type/units; apply it over the importer's header/label
@@ -260,9 +260,9 @@ class Recording:
 
             channels_tsv = find_channels_tsv(filepath)
             if channels_tsv:
-                apply_channels_tsv(emg, channels_tsv)
+                apply_channels_tsv(rec, channels_tsv)
 
-        return emg
+        return rec
 
     def select_channels(
         self,
@@ -287,13 +287,13 @@ class Recording:
 
         Examples:
             # Select specific channels
-            new_emg = emg.select_channels(['EMG1', 'ACC1'])
+            new_rec = rec.select_channels(['EMG1', 'ACC1'])
 
             # Select all EMG channels
-            emg_only = emg.select_channels(channel_type='EMG')
+            emg_only = rec.select_channels(channel_type='EMG')
 
             # Select specific EMG channels only, this example does not select ACC channels
-            emg_subset = emg.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
+            emg_subset = rec.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
         """
         if self.signals is None:
             raise ValueError("No signals loaded")
@@ -337,21 +337,21 @@ class Recording:
                 raise ValueError(f"None of the selected channels are of modality: {modality}")
 
         # Create new Recording object
-        new_emg = Recording()
+        new_rec = Recording()
 
         # Copy selected signals and channels
-        new_emg.signals = self.signals[channels].copy()
-        new_emg.channels = {ch: self.channels[ch].copy() for ch in channels}
+        new_rec.signals = self.signals[channels].copy()
+        new_rec.channels = {ch: self.channels[ch].copy() for ch in channels}
 
         # Copy metadata
-        new_emg.metadata = self.metadata.copy()
+        new_rec.metadata = self.metadata.copy()
 
         if not inplace:
-            return new_emg
+            return new_rec
         else:
-            self.signals = new_emg.signals
-            self.channels = new_emg.channels
-            self.metadata = new_emg.metadata
+            self.signals = new_rec.signals
+            self.channels = new_rec.channels
+            self.metadata = new_rec.metadata
             return self
 
     def resample(self, target_rate: float) -> "Recording":
@@ -423,18 +423,18 @@ class Recording:
                 "resample() only down-samples (low-res). Up-sampling is out of scope."
             )
 
-        new_emg = Recording()
-        new_emg.channels = {ch: info.copy() for ch, info in self.channels.items()}
-        new_emg.metadata = self.metadata.copy()
+        new_rec = Recording()
+        new_rec.channels = {ch: info.copy() for ch, info in self.channels.items()}
+        new_rec.metadata = self.metadata.copy()
         # Onsets/durations are in SECONDS, so they remain valid after the grid
         # changes; copy them through unchanged.
-        new_emg.events = self.events.copy() if self.events is not None else self.events
+        new_rec.events = self.events.copy() if self.events is not None else self.events
 
         if target_rate == source_rate:
             # No grid change: copy signals through untouched (fresh RangeIndex for
             # consistency with the resampled path).
-            new_emg.signals = self.signals.copy().reset_index(drop=True)
-            return new_emg
+            new_rec.signals = self.signals.copy().reset_index(drop=True)
+            return new_rec
 
         # Rational resampling factors from the integer rates.
         src_i = int(round(source_rate))
@@ -463,12 +463,12 @@ class Recording:
         # shared anti-alias FIR.
         resampled = resample_poly(data, up, down, axis=0)
 
-        new_emg.signals = pd.DataFrame(resampled, columns=columns)
-        new_emg.signals.index = pd.RangeIndex(len(new_emg.signals))
-        for info in new_emg.channels.values():
+        new_rec.signals = pd.DataFrame(resampled, columns=columns)
+        new_rec.signals.index = pd.RangeIndex(len(new_rec.signals))
+        for info in new_rec.channels.values():
             info["sample_frequency"] = actual_rate
 
-        return new_emg
+        return new_rec
 
     def get_channel_types(self) -> list[str]:
         """
@@ -647,12 +647,12 @@ class Recording:
             logging.info(f"Verification requested. Reloading exported file: {filepath}")
             try:
                 # Reload the exported file
-                reloaded_emg = Recording.from_file(filepath, importer="edf")
+                reloaded_rec = Recording.from_file(filepath, importer="edf")
 
                 logging.info("Comparing original signals with reloaded signals...")
                 # Compare signals using the imported function
                 verification_results = compare_signals(
-                    self, reloaded_emg, tolerance=verify_tolerance, channel_map=verify_channel_map
+                    self, reloaded_rec, tolerance=verify_tolerance, channel_map=verify_channel_map
                 )
 
                 # Generate and log report using the imported function
@@ -665,7 +665,7 @@ class Recording:
                 compared_count = sum(1 for k in verification_results if k != "channel_summary")
 
                 if verify_plot and compared_count > 0 and comparison_mode != "failed":
-                    plot_comparison(self, reloaded_emg, channel_map=verify_channel_map)
+                    plot_comparison(self, reloaded_rec, channel_map=verify_channel_map)
                 elif verify_plot:
                     logging.warning(
                         "Skipping verification plot: No channels were successfully compared."

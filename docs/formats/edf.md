@@ -71,22 +71,22 @@ The EDF exporter in biosigIO (`biosigio.exporters.edf`) also uses `pyedflib` to:
 from biosigio import Recording
 
 # Import from EDF file
-emg = Recording.from_file('input.edf', importer='edf')
+rec = Recording.from_file('input.edf', importer='edf')
 
 # Print basic information
-print(f"Number of channels: {emg.get_n_channels()}")
-print(f"Sampling frequency: {emg.get_sampling_frequency()} Hz")
-print(f"Recording duration: {emg.get_duration()} seconds")
+print(f"Number of channels: {rec.get_n_channels()}")
+print(f"Sampling frequency: {rec.get_sampling_frequency()} Hz")
+print(f"Recording duration: {rec.get_duration()} seconds")
 
 # Export to EDF/BDF (format selected automatically)
-emg.to_edf('output')  # Will add .edf or .bdf extension automatically
+rec.to_edf('output')  # Will add .edf or .bdf extension automatically
 
 # Force a specific format
-emg.to_edf('output_edf', format='edf')  # Forces 16-bit EDF
-emg.to_edf('output_bdf', format='bdf')  # Forces 24-bit BDF
+rec.to_edf('output_edf', format='edf')  # Forces 16-bit EDF
+rec.to_edf('output_bdf', format='bdf')  # Forces 24-bit BDF
 
 # Export with verification to ensure data integrity 
-emg.to_edf('output_verified', verify=True)
+rec.to_edf('output_verified', verify=True)
 ```
 
 ## Signal Verification
@@ -95,10 +95,10 @@ When exporting EMG data to EDF/BDF format, you can optionally verify the integri
 
 ```python
 # Export with verification
-verification_results = emg.to_edf('output', verify=True)
+verification_results = rec.to_edf('output', verify=True)
 
 # Export with custom verification settings
-verification_results = emg.to_edf(
+verification_results = rec.to_edf(
     'output',
     verify=True,
     verify_tolerance=0.001,  # Absolute tolerance for signal comparison

@@ -17,10 +17,10 @@ from biosigio import Recording
 from biosigio.importers.trigno import TrignoImporter
 
 # Method 1: Using Recording.from_file (recommended)
-emg = Recording.from_file('data.csv', importer='trigno')
+rec = Recording.from_file('data.csv', importer='trigno')
 
 # Method 2: Using the importer directly
-emg = TrignoImporter().load('data.csv')
+rec = TrignoImporter().load('data.csv')
 ```
 
 ## File Format Requirements

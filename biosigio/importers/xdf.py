@@ -428,10 +428,10 @@ class XDFImporter(BaseImporter):
         >>>
         >>> # Import specific streams (only loads selected streams)
         >>> importer = XDFImporter()
-        >>> emg = importer.load("recording.xdf", stream_names=["EMG_stream"])
+        >>> rec = importer.load("recording.xdf", stream_names=["EMG_stream"])
         >>>
         >>> # Or import by type
-        >>> emg = importer.load("recording.xdf", stream_types=["EMG", "EXG"])
+        >>> rec = importer.load("recording.xdf", stream_types=["EMG", "EXG"])
     """
 
     def load(
@@ -537,24 +537,24 @@ class XDFImporter(BaseImporter):
                 )
 
         # Create Recording object
-        emg = Recording()
+        rec = Recording()
 
         # Store metadata
-        emg.set_metadata("source_file", filepath)
-        emg.set_metadata("device", "XDF")
-        emg.set_metadata("stream_count", len(selected_streams))
+        rec.set_metadata("source_file", filepath)
+        rec.set_metadata("device", "XDF")
+        rec.set_metadata("stream_count", len(selected_streams))
 
         if sync_streams and len(selected_streams) > 1:
             self._load_synchronized_streams(
-                emg, selected_streams, default_channel_type, include_timestamps, reference_stream
+                rec, selected_streams, default_channel_type, include_timestamps, reference_stream
             )
         else:
             # Load streams (uses highest sample rate as reference unless specified)
             self._load_streams(
-                emg, selected_streams, default_channel_type, include_timestamps, reference_stream
+                rec, selected_streams, default_channel_type, include_timestamps, reference_stream
             )
 
-        return emg
+        return rec
 
     def _build_select_streams(
         self,
@@ -700,7 +700,7 @@ class XDFImporter(BaseImporter):
 
     def _load_streams(
         self,
-        emg: Recording,
+        rec: Recording,
         streams: list[dict],
         default_channel_type: str,
         include_timestamps: bool = False,
@@ -856,7 +856,7 @@ class XDFImporter(BaseImporter):
                 ch_type = validate_channel_type(ch_info["type"])
             except ValueError:
                 ch_type = "OTHER"
-            emg.channels[label] = {
+            rec.channels[label] = {
                 "sample_frequency": ch_info["srate"] if ch_info["srate"] else base_srate,
                 "physical_dimension": ch_info["unit"],
                 "prefilter": "n/a",
@@ -882,7 +882,7 @@ class XDFImporter(BaseImporter):
 
                 df[ts_label] = resampled_ts
 
-                emg.channels[ts_label] = {
+                rec.channels[ts_label] = {
                     "sample_frequency": ts_info["srate"] if ts_info["srate"] else base_srate,
                     "physical_dimension": "s",  # seconds
                     "prefilter": "n/a",
@@ -890,12 +890,12 @@ class XDFImporter(BaseImporter):
                     "modality": "MISC",
                 }
 
-        emg.signals = df
-        emg.set_metadata("srate", base_srate)
+        rec.signals = df
+        rec.set_metadata("srate", base_srate)
 
     def _load_synchronized_streams(
         self,
-        emg: Recording,
+        rec: Recording,
         streams: list[dict],
         default_channel_type: str,
         include_timestamps: bool = False,
@@ -908,7 +908,7 @@ class XDFImporter(BaseImporter):
         Currently, pyxdf handles clock synchronization during file loading,
         so this delegates to _load_streams without additional processing.
         """
-        self._load_streams(emg, streams, default_channel_type, include_timestamps, reference_stream)
+        self._load_streams(rec, streams, default_channel_type, include_timestamps, reference_stream)
 
     def _extract_channel_info(
         self,

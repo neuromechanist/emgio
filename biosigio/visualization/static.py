@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def plot_signals(
-    emg_object: "Recording",  # Changed first arg to accept Recording object
+    rec_object: "Recording",  # Changed first arg to accept Recording object
     channels: list[str] | None = None,
     time_range: tuple[float, float] | None = None,
     offset_scale: float = 0.8,
@@ -28,7 +28,7 @@ def plot_signals(
     Plot EMG signals in a single plot with vertical offsets.
 
     Args:
-        emg_object: The Recording object containing the signals and metadata.
+        rec_object: The Recording object containing the signals and metadata.
         channels: List of channels to plot. If None, plot all channels.
         time_range: Tuple of (start_time, end_time) to plot. If None, plot all data.
         offset_scale: Portion of allocated space each signal can use (0.0 to 1.0).
@@ -39,10 +39,10 @@ def plot_signals(
         show: Whether to display the plot.
         plt_module: Matplotlib pyplot module to use.
     """
-    if emg_object.signals is None:
+    if rec_object.signals is None:
         raise ValueError("Recording object has no signals loaded.")
 
-    signals_df = emg_object.signals
+    signals_df = rec_object.signals
 
     if channels is None:
         channels = list(signals_df.columns)
@@ -147,8 +147,8 @@ def plot_signals(
 
 
 def plot_comparison(
-    emg_original: "Recording",
-    emg_reloaded: "Recording",
+    rec_original: "Recording",
+    rec_reloaded: "Recording",
     channels: list[str] | None = None,
     time_range: tuple[float, float] | None = None,
     detrend: bool = False,
@@ -164,8 +164,8 @@ def plot_comparison(
     Creates subplots for each channel pair.
 
     Args:
-        emg_original: The original Recording object.
-        emg_reloaded: The reloaded Recording object.
+        rec_original: The original Recording object.
+        rec_reloaded: The reloaded Recording object.
         channels: List of original channels to plot. If None, plot common/mapped channels.
         time_range: Tuple of (start_time, end_time) to plot. If None, plot all data.
         detrend: Whether to remove mean from signals before plotting.
@@ -179,11 +179,11 @@ def plot_comparison(
     """
     # Removed local import: from biosigio.core.emg import Recording
 
-    if emg_original.signals is None or emg_reloaded.signals is None:
+    if rec_original.signals is None or rec_reloaded.signals is None:
         raise ValueError("Both Recording objects must have signals loaded to plot a comparison")
 
-    original_channel_names = set(emg_original.signals.columns)
-    reloaded_channel_names = set(emg_reloaded.signals.columns)
+    original_channel_names = set(rec_original.signals.columns)
+    reloaded_channel_names = set(rec_reloaded.signals.columns)
 
     # --- Channel Matching Logic (adapted from compare_signals) ---
     comparison_mode = "unknown"
@@ -274,8 +274,8 @@ def plot_comparison(
 
     for i, (orig_ch, reloaded_ch) in enumerate(channel_pairs):
         ax = axes[i]
-        sig_orig = emg_original.signals[orig_ch]
-        sig_reloaded = emg_reloaded.signals[reloaded_ch]
+        sig_orig = rec_original.signals[orig_ch]
+        sig_reloaded = rec_reloaded.signals[reloaded_ch]
 
         # Apply time range
         if time_range:
