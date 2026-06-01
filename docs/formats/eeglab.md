@@ -37,7 +37,7 @@ The EEGLAB importer in biosigIO (`biosigio.importers.eeglab`) works by:
 2. Extracting the EEG structure with signal data and metadata
 3. Converting channel information to biosigIO's channel format
 4. Creating appropriate metadata dictionary
-5. Storing parsed event markers under the `events` metadata key
+5. Loading event markers into the recording's `events` table (onset/duration in seconds)
 
 ## Code Example
 
@@ -73,7 +73,7 @@ EEGLAB doesn't always explicitly designate channel types. biosigIO's EEGLAB impo
 ## Notes and Limitations
 
 - Only pre-v7.3 (non-HDF5) `.set` files are supported, via `scipy.io.loadmat`; MATLAB v7.3/HDF5 `.set` files are not supported
-- Event markers are preserved under the `events` metadata key (access with `emg.get_metadata('events')`)
+- Event markers are loaded into the `events` table (`rec.events`): EEGLAB event latency/duration (samples) are converted to onset/duration in seconds and the event `type` becomes the description
 - Channel locations (if available) are preserved in the channel information
 - Some EEGLAB-specific information may not be fully preserved in the conversion
 - Time information is properly handled to maintain accurate timing in the imported data 

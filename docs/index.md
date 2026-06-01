@@ -36,7 +36,7 @@ biosigIO simplifies this process by providing a standardized interface for loadi
   - Automatic file format detection
   - Format-specific metadata extraction
   - Handling of specialized CSV formats
-  - Automatic annotation/event loading (WFDB and EDF+/BDF+; EEGLAB .set events read into metadata), embedded back on EDF+/BDF+ export and carried in the Parquet/Arrow/Zarr serialization formats
+  - Automatic annotation/event loading (WFDB, EDF+/BDF+, and EEGLAB .set) into the events table, embedded back on EDF+/BDF+ export and carried in the Parquet/Arrow/Zarr serialization formats
   - LSL timestamp preservation for XDF files (for synchronization)
   
 - **Intelligent export**:

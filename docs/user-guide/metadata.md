@@ -75,7 +75,7 @@ This DataFrame has the following standard columns:
 
 *   **EDF/BDF:** Annotations stored in the EDF+/BDF+ annotation channel are automatically loaded into `emg.events` by the `EDFImporter`.
 *   **WFDB:** Annotations stored in a corresponding `.atr` (or similar) file are automatically loaded into `emg.events` by the `WFDBImporter` when loading the `.hea` file.
-*   **EEGLAB `.set`:** EEGLAB events are read by the `EEGLABImporter` and stored under the metadata key `events` (i.e. `emg.get_metadata('events')`), as a list of event dictionaries, rather than in the `emg.events` DataFrame.
+*   **EEGLAB `.set`:** EEGLAB events are loaded into `emg.events` by the `EEGLABImporter`; the event latency/duration (samples) are converted to onset/duration in seconds and the event `type` becomes the description.
 *   **Other Formats:** For formats that don't have standardized annotation support within the file (like CSV, Trigno, OTB), annotations are typically not loaded automatically. You may need to load them from a separate file and add them manually.
 
 **Accessing Annotations:**

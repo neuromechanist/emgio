@@ -144,13 +144,15 @@ def test_eeglab_importer(sample_eeglab_set):
         assert ch_info["sample_frequency"] == 1000
         assert ch_info["physical_dimension"] == "uV"
 
-    # Check if events were loaded
-    assert "events" in emg.metadata
-    events = emg.metadata["events"]
-    assert len(events) == 5
-    for i, event in enumerate(events):
-        assert event["latency"] == i * 200 + 100
-        assert event["type"] == f"{i + 1}"
+    # Events are loaded into the events table (onset/duration in seconds), not metadata.
+    assert "events" not in emg.metadata
+    assert not emg.events.empty
+    assert len(emg.events) == 5
+    assert list(emg.events["description"]) == [f"{i + 1}" for i in range(5)]
+    # EEGLAB latency is 1-based samples -> seconds at 1000 Hz: (i*200+100 - 1) / 1000.
+    expected_onsets = [(i * 200 + 100 - 1) / 1000 for i in range(5)]
+    assert emg.events["onset"].tolist() == pytest.approx(expected_onsets)
+    assert (emg.events["duration"] == 0.0).all()
 
 
 def test_eeglab_file_not_found():
@@ -203,17 +205,15 @@ def test_eeglab_event_processing(sample_eeglab_set):
     importer = EEGLABImporter()
     emg = importer.load(sample_eeglab_set)
 
-    # Check if events were loaded
-    assert "events" in emg.metadata
-    events = emg.metadata["events"]
-    assert len(events) == 5
-
-    # Check event properties
-    for i, event in enumerate(events):
-        assert event["latency"] == i * 200 + 100
-        assert event["type"] == f"{i + 1}"
-        assert "trial_type" in event
-        assert event["trial_type"] == f"key/{chr(97 + i)}"
+    # Events are loaded into the events table (onset/duration in seconds), not metadata.
+    assert "events" not in emg.metadata
+    assert not emg.events.empty
+    assert len(emg.events) == 5
+    # The EEGLAB event `type` becomes the description.
+    assert list(emg.events["description"]) == [f"{i + 1}" for i in range(5)]
+    # latency (1-based samples) -> seconds at 1000 Hz: (i*200+100 - 1) / 1000.
+    expected_onsets = [(i * 200 + 100 - 1) / 1000 for i in range(5)]
+    assert emg.events["onset"].tolist() == pytest.approx(expected_onsets)
 
 
 def test_eeglab_to_edf_export(sample_eeglab_set):

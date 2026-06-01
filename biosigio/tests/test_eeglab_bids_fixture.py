@@ -42,6 +42,5 @@ def test_eeglab_bids_eeg_fixture_imports():
     # milliseconds/srate mis-scaling (which gave ~240 s for a 60 s recording).
     assert emg.signals.index[-1] == pytest.approx((n - 1) / 250, rel=1e-6)
 
-    # Events were parsed from the .set event struct.
-    events = emg.get_metadata("events")
-    assert events is not None and len(events) == 3
+    # Events were parsed from the .set event struct into the events table.
+    assert not emg.events.empty and len(emg.events) == 3

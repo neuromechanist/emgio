@@ -210,10 +210,6 @@ class EEGLABImporter(BaseImporter):
                     event_info["duration"] = (
                         float(field_value[0][0]) if field_value[0].size > 0 else 0
                     )
-                elif field == "trial_type" and field_value.size > 0:
-                    event_info["trial_type"] = (
-                        str(field_value[0]) if field_value[0].size > 0 else ""
-                    )
 
             # Add to list if it has required fields
             if "latency" in event_info and "type" in event_info:
@@ -236,15 +232,21 @@ class EEGLABImporter(BaseImporter):
             data = loadmat(filepath)
 
             # Create Recording object
-            emg = Recording()
+            rec = Recording()
 
             # Extract and store metadata
             metadata = self._extract_metadata(data)
             for key, value in metadata.items():
-                emg.set_metadata(key, value)
+                rec.set_metadata(key, value)
 
             # Store source file information
-            emg.set_metadata("source_file", filepath)
+            rec.set_metadata("source_file", filepath)
+
+            # Sampling rate (used for the event onset/duration conversion below and
+            # for the signal time index).
+            # Fall back to 1000 Hz when srate is absent OR present-but-zero (an
+            # empty srate field), so the event/time-index divisions never hit 0.
+            srate = float(metadata.get("srate", 1000)) or 1000.0
 
             # Process channel information
             if "chanlocs" in data and data["chanlocs"].size > 0:
@@ -255,18 +257,21 @@ class EEGLABImporter(BaseImporter):
                 for i in range(metadata.get("nbchan", 0)):
                     channel_info_list.append({"label": f"Channel{i + 1}", "channel_type": "OTHER"})
 
-            # Process event information
+            # Process event information into the standard events table. EEGLAB
+            # stores event latency/duration in samples (latency is 1-based), so
+            # convert to seconds; the event ``type`` becomes the description.
             if "event" in data and data["event"].size > 0:
-                event_list = self._process_events(data["event"])
-                emg.set_metadata("events", event_list)
+                for ev in self._process_events(data["event"]):
+                    rec.add_event(
+                        onset=(ev["latency"] - 1) / srate,
+                        duration=ev.get("duration", 0.0) / srate,
+                        description=ev["type"],
+                    )
 
             # Extract signal data
             if "data" in data and data["data"].size > 0:
                 # Get data array
                 signal_data = data["data"]
-
-                # Get sampling rate
-                srate = metadata.get("srate", 1000)
 
                 # Derive the time index in seconds from the sample count. EEGLAB's
                 # `times` field is in milliseconds, so dividing it by srate (the old
@@ -288,7 +293,7 @@ class EEGLABImporter(BaseImporter):
                         df[channel_label] = channel_data
 
                 # Set signals DataFrame
-                emg.signals = df
+                rec.signals = df
 
                 # Add channel information
                 for i, channel_info in enumerate(channel_info_list):
@@ -297,7 +302,7 @@ class EEGLABImporter(BaseImporter):
 
                         # Add channel info (no silent EMG default; carry modality)
                         ch_type = channel_info.get("channel_type", "OTHER")
-                        emg.channels[channel_label] = {
+                        rec.channels[channel_label] = {
                             "sample_frequency": srate,
                             "physical_dimension": "uV",  # Default unit for EEG/EMG
                             "prefilter": "n/a",
@@ -307,13 +312,13 @@ class EEGLABImporter(BaseImporter):
 
                         # Add additional channel metadata
                         if "X" in channel_info:
-                            emg.channels[channel_label]["X"] = channel_info["X"]
+                            rec.channels[channel_label]["X"] = channel_info["X"]
                         if "Y" in channel_info:
-                            emg.channels[channel_label]["Y"] = channel_info["Y"]
+                            rec.channels[channel_label]["Y"] = channel_info["Y"]
                         if "Z" in channel_info:
-                            emg.channels[channel_label]["Z"] = channel_info["Z"]
+                            rec.channels[channel_label]["Z"] = channel_info["Z"]
 
-            return emg
+            return rec
 
         except Exception as e:
             raise ValueError(f"Error reading EEGLAB .set file: {str(e)}") from e
