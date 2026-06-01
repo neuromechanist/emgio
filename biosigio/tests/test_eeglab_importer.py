@@ -146,7 +146,7 @@ def test_eeglab_importer(sample_eeglab_set):
 
     # Events are loaded into the events table (onset/duration in seconds), not metadata.
     assert "events" not in emg.metadata
-    assert emg.events is not None
+    assert not emg.events.empty
     assert len(emg.events) == 5
     assert list(emg.events["description"]) == [f"{i + 1}" for i in range(5)]
     # EEGLAB latency is 1-based samples -> seconds at 1000 Hz: (i*200+100 - 1) / 1000.
@@ -207,7 +207,7 @@ def test_eeglab_event_processing(sample_eeglab_set):
 
     # Events are loaded into the events table (onset/duration in seconds), not metadata.
     assert "events" not in emg.metadata
-    assert emg.events is not None
+    assert not emg.events.empty
     assert len(emg.events) == 5
     # The EEGLAB event `type` becomes the description.
     assert list(emg.events["description"]) == [f"{i + 1}" for i in range(5)]

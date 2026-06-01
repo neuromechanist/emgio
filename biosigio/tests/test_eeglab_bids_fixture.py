@@ -43,4 +43,4 @@ def test_eeglab_bids_eeg_fixture_imports():
     assert emg.signals.index[-1] == pytest.approx((n - 1) / 250, rel=1e-6)
 
     # Events were parsed from the .set event struct into the events table.
-    assert emg.events is not None and len(emg.events) == 3
+    assert not emg.events.empty and len(emg.events) == 3

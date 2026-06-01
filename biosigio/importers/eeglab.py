@@ -210,10 +210,6 @@ class EEGLABImporter(BaseImporter):
                     event_info["duration"] = (
                         float(field_value[0][0]) if field_value[0].size > 0 else 0
                     )
-                elif field == "trial_type" and field_value.size > 0:
-                    event_info["trial_type"] = (
-                        str(field_value[0]) if field_value[0].size > 0 else ""
-                    )
 
             # Add to list if it has required fields
             if "latency" in event_info and "type" in event_info:
@@ -248,7 +244,9 @@ class EEGLABImporter(BaseImporter):
 
             # Sampling rate (used for the event onset/duration conversion below and
             # for the signal time index).
-            srate = float(metadata.get("srate", 1000))
+            # Fall back to 1000 Hz when srate is absent OR present-but-zero (an
+            # empty srate field), so the event/time-index divisions never hit 0.
+            srate = float(metadata.get("srate", 1000)) or 1000.0
 
             # Process channel information
             if "chanlocs" in data and data["chanlocs"].size > 0:

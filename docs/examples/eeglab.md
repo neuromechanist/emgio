@@ -62,7 +62,7 @@ emg = Recording.from_file('data_with_events.set', importer='eeglab')
 # EEGLAB events are loaded into emg.events (a DataFrame: onset/duration in
 # seconds, description = the EEGLAB event 'type'). The latency (samples) is
 # converted to an onset in seconds on import.
-if emg.events is not None and not emg.events.empty:
+if not emg.events.empty:
     print(f"Found {len(emg.events)} events")
 
     # Print the first 5 events
@@ -71,14 +71,12 @@ if emg.events is not None and not emg.events.empty:
     # Extract specific event types by description
     movement_events = emg.events[emg.events['description'] == 'movement']
     print(f"Found {len(movement_events)} movement events")
-    
-    # Plot signals around an event
-    if movement_events:
-        # Get the timestamp of the first movement event (convert from samples to seconds)
-        event_sample = movement_events[0].get('latency')
-        fs = emg.get_sampling_frequency()
-        event_time = event_sample / fs
-        
+
+    # Plot signals around the first movement event
+    if not movement_events.empty:
+        # Onsets are already in seconds.
+        event_time = movement_events.iloc[0]['onset']
+
         # Plot 2 seconds before and after the event. Pass show=False so the
         # event marker can be overlaid before displaying.
         window = 2  # seconds
