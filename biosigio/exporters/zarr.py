@@ -120,40 +120,35 @@ def _resample_channel(
     return y
 
 
-def _quantize_int16(block: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Map a (n_ch, n_time) float block to int16 with per-channel scale/offset.
+def _quantize_int16_channel(row: np.ndarray, index: int = 0) -> tuple[np.ndarray, float, float]:
+    """Map one channel (1-D float) to int16 with scale/offset.
 
-    ``physical = digital * scale + offset``. A constant channel gets scale=1.
-    Non-finite samples (NaN/inf) cannot be represented in int16 and would
-    silently decode to a midrange value, so they are rejected here rather than
-    corrupted -- use ``dtype="float32"`` (which preserves NaN) to keep them.
+    ``physical = digital * scale + offset``. A constant (or empty) channel gets
+    scale=1 and the constant in offset. Non-finite samples (NaN/inf) cannot be
+    represented in int16 and would silently decode to a midrange value, so they
+    are rejected here -- use ``dtype="float32"`` (which preserves NaN) to keep them.
+
+    Operates one channel at a time so the exporter can quantize straight into the
+    output array without materializing a float64 copy of the whole group (#95).
     """
-    n_ch = block.shape[0]
-    scale = np.ones(n_ch, dtype=np.float64)
-    offset = np.zeros(n_ch, dtype=np.float64)
-    out = np.zeros(block.shape, dtype=np.int16)
+    # Quantize in float64 regardless of the caller's dtype (the old batch path
+    # cast the whole block up front); a no-op for the float64 resample output.
+    row = np.asarray(row, dtype=np.float64)
+    if row.size and not np.all(np.isfinite(row)):
+        raise ValueError(
+            f"Channel index {index} has non-finite (NaN/inf) samples, which int16 storage "
+            "cannot represent without silently corrupting them. Use dtype='float32' "
+            "(preserves NaN) or mask/interpolate the samples before exporting."
+        )
+    pmin = float(np.min(row)) if row.size else 0.0
+    pmax = float(np.max(row)) if row.size else 0.0
+    if pmax == pmin:  # constant (or empty) channel: store the constant in offset
+        return np.zeros(row.shape, dtype=np.int16), 1.0, pmin
     digital_span = _INT16_MAX - _INT16_MIN
-    for i in range(n_ch):
-        row = block[i]
-        if row.size and not np.all(np.isfinite(row)):
-            raise ValueError(
-                f"Channel index {i} has non-finite (NaN/inf) samples, which int16 storage "
-                "cannot represent without silently corrupting them. Use dtype='float32' "
-                "(preserves NaN) or mask/interpolate the samples before exporting."
-            )
-        pmin = float(np.min(row)) if row.size else 0.0
-        pmax = float(np.max(row)) if row.size else 0.0
-        if pmax == pmin:  # constant (or empty) channel: store the constant in offset
-            offset[i] = pmin
-            out[i] = 0
-            continue
-        s = (pmax - pmin) / digital_span
-        o = pmin - _INT16_MIN * s
-        scale[i] = s
-        offset[i] = o
-        digital = np.round((row - o) / s)
-        out[i] = np.clip(digital, _INT16_MIN, _INT16_MAX).astype(np.int16)
-    return out, scale, offset
+    s = (pmax - pmin) / digital_span
+    o = pmin - _INT16_MIN * s
+    digital = np.round((row - o) / s)
+    return np.clip(digital, _INT16_MIN, _INT16_MAX).astype(np.int16), s, o
 
 
 def _build_minmax_pyramid(
@@ -262,16 +257,30 @@ class ZarrExporter:
         for (modality, native_rate), labels in groups.items():
             target_rate = _target_rate(native_rate, modality, rates)
 
-            resampled = []
+            # Stream channels one at a time straight into the output-dtype array.
+            # The previous code held a float64 list of every channel, a float64
+            # vstack copy, and the int16 copy at once (~4.5x the int16 output);
+            # a 5 GB recording peaked at ~26 GB RSS and OOM'd every free CI
+            # runner (#95). n_time is the post-resample length, identical for
+            # every channel in the group (they share native_rate).
+            n_ch = len(labels)
+            n_time = max(0, int(round(len(rec.signals) * target_rate / native_rate)))
+            base = np.empty((n_ch, n_time), dtype=np.int16 if dtype == "int16" else np.float32)
+            scale = np.ones(n_ch, dtype=np.float64)
+            offset = np.zeros(n_ch, dtype=np.float64)
             chan_meta = []
-            for label in labels:
+            for i, label in enumerate(labels):
                 info = rec.channels[label]
                 ctype = str(info.get("channel_type", "MISC")).upper()
                 discrete = ctype in _DISCRETE_TYPES
                 y = _resample_channel(
                     rec.signals[label].values, native_rate, target_rate, discrete=discrete
                 )
-                resampled.append(y)
+                if dtype == "int16":
+                    base[i], scale[i], offset[i] = _quantize_int16_channel(y, i)
+                else:
+                    base[i] = y.astype(np.float32)
+                del y
                 chan_meta.append(
                     {
                         "label": label,
@@ -285,21 +294,11 @@ class ZarrExporter:
                         "target_rate": float(target_rate),
                         "anti_aliased": bool((not discrete) and target_rate < native_rate),
                         "usable_for_inference": (not discrete),
+                        "scale": float(scale[i]),
+                        "offset": float(offset[i]),
+                        "row_index": i,
                     }
                 )
-            block = np.vstack(resampled).astype(np.float64)
-            n_ch, n_time = block.shape
-
-            if dtype == "int16":
-                base, scale, offset = _quantize_int16(block)
-            else:
-                base = block.astype(np.float32)
-                scale = np.ones(n_ch)
-                offset = np.zeros(n_ch)
-            for i, m in enumerate(chan_meta):
-                m["scale"] = float(scale[i])
-                m["offset"] = float(offset[i])
-                m["row_index"] = i
 
             gname = f"{modality.lower()}_{int(round(target_rate))}hz"
             # Disambiguate the rare collision of two native rates -> same target.
