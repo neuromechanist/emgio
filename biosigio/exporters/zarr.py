@@ -131,6 +131,9 @@ def _quantize_int16_channel(row: np.ndarray, index: int = 0) -> tuple[np.ndarray
     Operates one channel at a time so the exporter can quantize straight into the
     output array without materializing a float64 copy of the whole group (#95).
     """
+    # Quantize in float64 regardless of the caller's dtype (the old batch path
+    # cast the whole block up front); a no-op for the float64 resample output.
+    row = np.asarray(row, dtype=np.float64)
     if row.size and not np.all(np.isfinite(row)):
         raise ValueError(
             f"Channel index {index} has non-finite (NaN/inf) samples, which int16 storage "
