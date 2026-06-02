@@ -216,6 +216,117 @@ def test_eeglab_event_processing(sample_eeglab_set):
     assert rec.events["onset"].tolist() == pytest.approx(expected_onsets)
 
 
+def _write_set_with_fdt(directory, stem, data, srate, embedded_name):
+    """Write a real EEGLAB .set whose data lives in a sibling float32 .fdt.
+
+    ``data`` is (nbchan, pnts) for continuous data or (nbchan, pnts, trials) for
+    epoched data; the .fdt is written MATLAB column-major. ``EEG.data`` stores
+    ``embedded_name`` (the .fdt's original, possibly pre-BIDS-rename name),
+    exercising the sibling-by-path resolution.
+    """
+    nbchan, pnts = data.shape[0], data.shape[1]
+    trials = data.shape[2] if data.ndim == 3 else 1
+    fdt_path = os.path.join(directory, f"{stem}.fdt")
+    data.astype(np.float32).flatten(order="F").tofile(fdt_path)
+    set_path = os.path.join(directory, f"{stem}.set")
+    scipy.io.savemat(
+        set_path,
+        {
+            "setname": np.array(["fdt_test"]),
+            "nbchan": np.array([[nbchan]]),
+            "trials": np.array([[trials]]),
+            "pnts": np.array([[pnts]]),
+            "srate": np.array([[srate]]),
+            "xmin": np.array([[0.0]]),
+            "xmax": np.array([[pnts / srate]]),
+            "data": np.array([embedded_name]),  # filename string, not the matrix
+        },
+    )
+    return set_path
+
+
+def test_eeglab_reads_separate_fdt(tmp_path):
+    """A .set whose EEG.data is a .fdt filename loads the sibling .fdt matrix."""
+    rng = np.random.default_rng(0)
+    data = (rng.standard_normal((8, 500)) * 10).astype(np.float32)  # (nbchan, pnts)
+    set_path = _write_set_with_fdt(str(tmp_path), "sub-09_eeg", data, 200, "sub-09_eeg.fdt")
+
+    rec = EEGLABImporter().load(set_path)
+
+    assert rec.signals.shape == (500, 8)  # samples x channels
+    for i, label in enumerate(rec.signals.columns):
+        # Recording stores samples x channels, so column i is data row i.
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), data[i], rtol=0, atol=1e-5)
+
+
+def test_eeglab_fdt_resolves_sibling_despite_renamed_embedded_name(tmp_path):
+    """BIDS renames the .fdt on disk but not EEG.data; the sibling wins."""
+    rng = np.random.default_rng(1)
+    data = (rng.standard_normal((4, 256)) * 5).astype(np.float32)
+    # On-disk sibling is sub-09_task-rest_eeg.fdt, but EEG.data says the
+    # pre-rename "Merged.fdt" (which does not exist) -- the importer must still
+    # find the sibling by the .set path.
+    set_path = _write_set_with_fdt(str(tmp_path), "sub-09_task-rest_eeg", data, 256, "Merged.fdt")
+
+    rec = EEGLABImporter().load(set_path)
+    assert rec.signals.shape == (256, 4)
+    for i, label in enumerate(rec.signals.columns):
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), data[i], rtol=0, atol=1e-5)
+
+
+def test_eeglab_reads_epoched_fdt(tmp_path):
+    """Epoched (trials > 1) .fdt reshapes to concatenated continuous samples."""
+    rng = np.random.default_rng(2)
+    nbchan, pnts, trials = 4, 100, 3
+    data = (rng.standard_normal((nbchan, pnts, trials)) * 7).astype(np.float32)
+    set_path = _write_set_with_fdt(str(tmp_path), "sub-09_eeg", data, 100, "sub-09_eeg.fdt")
+
+    rec = EEGLABImporter().load(set_path)
+
+    # trials are concatenated: pnts * trials continuous samples per channel.
+    assert rec.signals.shape == (pnts * trials, nbchan)
+    for i, label in enumerate(rec.signals.columns):
+        # Channel i continuous series = [trial0, trial1, trial2] = column-major flatten.
+        expected = data[i].flatten(order="F")
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), expected, rtol=0, atol=1e-5)
+
+
+def test_eeglab_fdt_missing_raises(tmp_path):
+    """A .set pointing at a .fdt with no resolvable file errors clearly."""
+    set_path = os.path.join(str(tmp_path), "sub-09_eeg.set")
+    scipy.io.savemat(
+        set_path,
+        {
+            "nbchan": np.array([[4]]),
+            "trials": np.array([[1]]),
+            "pnts": np.array([[256]]),
+            "srate": np.array([[256]]),
+            "data": np.array(["nowhere.fdt"]),
+        },
+    )
+    with pytest.raises(ValueError, match="separate .fdt"):
+        EEGLABImporter().load(set_path)
+
+
+def test_eeglab_fdt_size_mismatch_raises(tmp_path):
+    """A .fdt whose element count disagrees with the header is rejected."""
+    fdt_path = os.path.join(str(tmp_path), "sub-09_eeg.fdt")
+    np.zeros(8 * 500 - 7, dtype=np.float32).tofile(fdt_path)  # wrong count
+    set_path = os.path.join(str(tmp_path), "sub-09_eeg.set")
+    scipy.io.savemat(
+        set_path,
+        {
+            "nbchan": np.array([[8]]),
+            "trials": np.array([[1]]),
+            "pnts": np.array([[500]]),
+            "srate": np.array([[200]]),
+            "data": np.array(["sub-09_eeg.fdt"]),
+        },
+    )
+    with pytest.raises(ValueError, match="float32 samples"):
+        EEGLABImporter().load(set_path)
+
+
 def test_eeglab_to_edf_export(sample_eeglab_set):
     """Test exporting EEGLAB data to EDF format."""
     importer = EEGLABImporter()

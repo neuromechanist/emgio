@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 import numpy as np
@@ -227,6 +228,61 @@ class EEGLABImporter(BaseImporter):
         Returns:
             Recording: Recording object containing the loaded data
         """
+        return self._load(filepath)
+
+    @staticmethod
+    def _read_fdt(
+        set_filepath: str, data_field: np.ndarray, metadata: dict[str, Any]
+    ) -> np.ndarray:
+        """Load the signal matrix from a sibling EEGLAB ``.fdt`` float32 file.
+
+        EEGLAB writes the ``[nbchan x pnts x trials]`` matrix to a separate
+        ``.fdt`` in MATLAB column-major order when the data is large; ``EEG.data``
+        then stores only the ``.fdt``'s original (pre-BIDS-rename) filename. The
+        sibling ``.fdt`` next to the ``.set`` is resolved first because BIDS
+        renames the file on disk but not the embedded reference, with the
+        embedded name as a fallback.
+
+        Args:
+            set_filepath: Path to the ``.set`` file being loaded.
+            data_field: The ``EEG.data`` char array holding the ``.fdt`` name.
+            metadata: Extracted header metadata (needs ``nbchan``/``pnts``).
+
+        Returns:
+            The signal matrix as a ``(nbchan, pnts * trials)`` float32 array.
+        """
+        nbchan = int(metadata.get("nbchan", 0))
+        pnts = int(metadata.get("pnts", 0))
+        trials = int(metadata.get("trials", 1)) or 1
+        if nbchan <= 0 or pnts <= 0:
+            raise ValueError(
+                "EEGLAB data is in a separate .fdt file but the .set header is "
+                "missing nbchan/pnts needed to reshape it"
+            )
+        directory = os.path.dirname(set_filepath)
+        sibling = os.path.splitext(set_filepath)[0] + ".fdt"
+        embedded = "".join(np.atleast_1d(data_field).ravel().astype(str)).strip()
+        candidates = [sibling]
+        if embedded:
+            candidates.append(os.path.join(directory, os.path.basename(embedded)))
+        fdt_path = next((p for p in candidates if os.path.isfile(p)), None)
+        if fdt_path is None:
+            raise FileNotFoundError(
+                f"EEGLAB data is in a separate .fdt file but none was found "
+                f"(tried sibling {sibling!r} and embedded name {embedded!r})"
+            )
+        raw = np.fromfile(fdt_path, dtype="<f4")
+        expected = nbchan * pnts * trials
+        if raw.size != expected:
+            raise ValueError(
+                f"{fdt_path} holds {raw.size} float32 samples but the .set header "
+                f"implies {expected} (nbchan {nbchan} x pnts {pnts} x trials {trials})"
+            )
+        # MATLAB stores column-major, so the matrix is (nbchan, samples).
+        return raw.reshape((nbchan, pnts * trials), order="F")
+
+    def _load(self, filepath: str) -> Recording:
+        """Internal loader (see :meth:`load`)."""
         try:
             # Load the .set file
             data = loadmat(filepath)
@@ -270,8 +326,13 @@ class EEGLABImporter(BaseImporter):
 
             # Extract signal data
             if "data" in data and data["data"].size > 0:
-                # Get data array
+                # Get data array. EEGLAB stores large recordings with the signal
+                # matrix in a separate float32 ``.fdt`` file; in that case
+                # ``EEG.data`` holds the ``.fdt`` filename (a char array) rather
+                # than the numeric matrix, so load the sibling ``.fdt`` instead.
                 signal_data = data["data"]
+                if signal_data.dtype.kind in ("U", "S"):
+                    signal_data = self._read_fdt(filepath, signal_data, metadata)
 
                 # Derive the time index in seconds from the sample count. EEGLAB's
                 # `times` field is in milliseconds, so dividing it by srate (the old
