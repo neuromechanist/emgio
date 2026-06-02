@@ -10,6 +10,7 @@ their real BIDS types (e.g. ``SEEG``) instead of header/label guesses.
 from __future__ import annotations
 
 import logging
+import math
 import os
 from typing import TYPE_CHECKING
 
@@ -164,7 +165,7 @@ def apply_events_tsv(
         except ValueError:
             skipped += 1
             continue
-        if onset != onset:  # NaN
+        if not math.isfinite(onset):  # NaN or +/-inf
             skipped += 1
             continue
         raw_duration = str(row.get("duration", "")).strip()

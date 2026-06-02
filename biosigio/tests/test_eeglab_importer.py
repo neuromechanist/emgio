@@ -219,11 +219,13 @@ def test_eeglab_event_processing(sample_eeglab_set):
 def _write_set_with_fdt(directory, stem, data, srate, embedded_name):
     """Write a real EEGLAB .set whose data lives in a sibling float32 .fdt.
 
-    ``data`` is (nbchan, pnts); the .fdt is written MATLAB column-major.
-    ``EEG.data`` stores ``embedded_name`` (the .fdt's original, possibly
-    pre-BIDS-rename name), exercising the sibling-by-path resolution.
+    ``data`` is (nbchan, pnts) for continuous data or (nbchan, pnts, trials) for
+    epoched data; the .fdt is written MATLAB column-major. ``EEG.data`` stores
+    ``embedded_name`` (the .fdt's original, possibly pre-BIDS-rename name),
+    exercising the sibling-by-path resolution.
     """
-    nbchan, pnts = data.shape
+    nbchan, pnts = data.shape[0], data.shape[1]
+    trials = data.shape[2] if data.ndim == 3 else 1
     fdt_path = os.path.join(directory, f"{stem}.fdt")
     data.astype(np.float32).flatten(order="F").tofile(fdt_path)
     set_path = os.path.join(directory, f"{stem}.set")
@@ -232,7 +234,7 @@ def _write_set_with_fdt(directory, stem, data, srate, embedded_name):
         {
             "setname": np.array(["fdt_test"]),
             "nbchan": np.array([[nbchan]]),
-            "trials": np.array([[1]]),
+            "trials": np.array([[trials]]),
             "pnts": np.array([[pnts]]),
             "srate": np.array([[srate]]),
             "xmin": np.array([[0.0]]),
@@ -270,6 +272,23 @@ def test_eeglab_fdt_resolves_sibling_despite_renamed_embedded_name(tmp_path):
     assert rec.signals.shape == (256, 4)
     for i, label in enumerate(rec.signals.columns):
         np.testing.assert_allclose(rec.signals[label].to_numpy(), data[i], rtol=0, atol=1e-5)
+
+
+def test_eeglab_reads_epoched_fdt(tmp_path):
+    """Epoched (trials > 1) .fdt reshapes to concatenated continuous samples."""
+    rng = np.random.default_rng(2)
+    nbchan, pnts, trials = 4, 100, 3
+    data = (rng.standard_normal((nbchan, pnts, trials)) * 7).astype(np.float32)
+    set_path = _write_set_with_fdt(str(tmp_path), "sub-09_eeg", data, 100, "sub-09_eeg.fdt")
+
+    rec = EEGLABImporter().load(set_path)
+
+    # trials are concatenated: pnts * trials continuous samples per channel.
+    assert rec.signals.shape == (pnts * trials, nbchan)
+    for i, label in enumerate(rec.signals.columns):
+        # Channel i continuous series = [trial0, trial1, trial2] = column-major flatten.
+        expected = data[i].flatten(order="F")
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), expected, rtol=0, atol=1e-5)
 
 
 def test_eeglab_fdt_missing_raises(tmp_path):

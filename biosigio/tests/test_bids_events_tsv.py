@@ -94,6 +94,19 @@ def test_skips_rows_with_missing_onset(tmp_path):
     assert list(rec.events["description"]) == ["A", "C"]
 
 
+def test_skips_rows_with_nonfinite_onset(tmp_path):
+    """inf/-inf onsets are skipped like NaN, not appended and sorted to the end."""
+    rec = Recording()
+    p = tmp_path / "sub-x_events.tsv"
+    _write_tsv(
+        p,
+        "onset\tduration\tvalue\n0.0\t0\tA\ninf\t0\tB\n-inf\t0\tC\nnan\t0\tD\n2.0\t0\tE\n",
+    )
+    n = apply_events_tsv(rec, str(p))
+    assert n == 2
+    assert list(rec.events["description"]) == ["A", "E"]
+
+
 def test_events_sorted_by_onset(tmp_path):
     rec = Recording()
     p = tmp_path / "sub-x_events.tsv"
