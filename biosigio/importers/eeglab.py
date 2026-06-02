@@ -340,25 +340,24 @@ class EEGLABImporter(BaseImporter):
                 # always matches the data length.
                 time_index = np.arange(signal_data.shape[1]) / srate
 
-                # Create DataFrame with time index
-                df = pd.DataFrame(index=time_index)
-
-                # Add channels to Recording object
-                for i, channel_info in enumerate(channel_info_list):
-                    if i < signal_data.shape[0]:  # Make sure we have data for this channel
-                        # Get channel data
-                        channel_data = signal_data[i, :]
-
-                        # Add to DataFrame
-                        channel_label = channel_info.get("label", f"Channel{i + 1}")
-                        df[channel_label] = channel_data
-
-                # Set signals DataFrame
-                rec.signals = df
+                # Build the frame in a single allocation (samples x channels)
+                # rather than assigning one column at a time. The per-column path
+                # reallocates the block manager O(n_channels) times and roughly
+                # doubles peak RAM, which OOMs large / high-channel-count .fdt
+                # recordings (#66, #95); the .fdt's native float32 is preserved so
+                # a multi-GB recording is not silently upcast to float64.
+                n_data_ch = min(len(channel_info_list), signal_data.shape[0])
+                labels = [
+                    channel_info_list[i].get("label", f"Channel{i + 1}") for i in range(n_data_ch)
+                ]
+                rec.signals = pd.DataFrame(
+                    signal_data[:n_data_ch].T, columns=labels, index=time_index, copy=False
+                )
+                del signal_data
 
                 # Add channel information
                 for i, channel_info in enumerate(channel_info_list):
-                    if i < signal_data.shape[0]:  # Make sure we have data for this channel
+                    if i < n_data_ch:  # Make sure we have data for this channel
                         channel_label = channel_info.get("label", f"Channel{i + 1}")
 
                         # Add channel info (no silent EMG default; carry modality)
