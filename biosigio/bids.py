@@ -102,3 +102,96 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
                 name,
             )
     return updated
+
+
+def apply_events_tsv(
+    rec: Recording,
+    events_tsv_path: str,
+    *,
+    description_column: str | None = None,
+) -> int:
+    """Replace ``rec.events`` with the authoritative BIDS ``_events.tsv`` list.
+
+    A BIDS ``_events.tsv`` is the curated event table for a recording; it is
+    richer and more reliable than the data file's own markers (e.g. a
+    BrainVision ``.vmrk`` or an EEGLAB event struct), so when it is present it
+    is the source of truth. This loads it into ``rec.events`` as the standard
+    ``onset``/``duration``/``description`` frame, overwriting any
+    importer-loaded events.
+
+    Columns:
+        ``onset`` (required, seconds) and ``duration`` (seconds; ``n/a`` or
+        missing -> ``0.0``) follow the BIDS spec. The ``description`` is taken
+        from ``description_column`` if given, else per row from the first of
+        ``trial_type`` then ``value`` that is present and not ``n/a`` (BIDS
+        names the categorical label ``trial_type`` and the raw marker
+        ``value``; datasets populate one or both). Rows whose ``onset`` is
+        missing or non-numeric are skipped.
+
+    Args:
+        rec: The Recording object to update in place.
+        events_tsv_path: Path to the BIDS ``_events.tsv``.
+        description_column: Force the description to come from this column.
+
+    Returns:
+        The number of events loaded into ``rec.events``.
+    """
+    df = pd.read_csv(events_tsv_path, sep="\t", dtype=str, keep_default_na=False)
+    if "onset" not in df.columns:
+        logging.warning("events.tsv has no 'onset' column: %s", events_tsv_path)
+        return 0
+
+    def _is_na(value: str) -> bool:
+        v = value.strip()
+        return v == "" or v.lower() == "n/a"
+
+    if description_column is not None:
+        if description_column not in df.columns:
+            logging.warning("events.tsv has no %r column: %s", description_column, events_tsv_path)
+            return 0
+        desc_columns = [description_column]
+    else:
+        desc_columns = [c for c in ("trial_type", "value") if c in df.columns]
+
+    onsets: list[float] = []
+    durations: list[float] = []
+    descriptions: list[str] = []
+    skipped = 0
+    for _, row in df.iterrows():
+        raw_onset = str(row["onset"]).strip()
+        try:
+            onset = float(raw_onset)
+        except ValueError:
+            skipped += 1
+            continue
+        if onset != onset:  # NaN
+            skipped += 1
+            continue
+        raw_duration = str(row.get("duration", "")).strip()
+        try:
+            duration = 0.0 if _is_na(raw_duration) else float(raw_duration)
+        except ValueError:
+            duration = 0.0
+        description = "n/a"
+        for col in desc_columns:
+            candidate = str(row.get(col, "")).strip()
+            if not _is_na(candidate):
+                description = candidate
+                break
+        onsets.append(onset)
+        durations.append(duration)
+        descriptions.append(description)
+
+    if skipped:
+        logging.warning(
+            "events.tsv: skipped %d row(s) with missing/non-numeric onset: %s",
+            skipped,
+            events_tsv_path,
+        )
+
+    rec.events = (
+        pd.DataFrame({"onset": onsets, "duration": durations, "description": descriptions})
+        .sort_values(by="onset")
+        .reset_index(drop=True)
+    )
+    return len(onsets)
