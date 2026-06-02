@@ -2675,7 +2675,10 @@
 <p>The EEGLAB importer in biosigIO (<code>biosigio.importers.eeglab</code>) works by:</p>
 <ol>
 <li>Loading the <code>.set</code> file using <code>scipy.io.loadmat</code> (pre-v7.3, non-HDF5 MAT-files only)</li>
-<li>Extracting the EEG structure with signal data and metadata</li>
+<li>Extracting the EEG structure with signal data and metadata. When the matrix is
+   stored in a separate float32 <code>.fdt</code> file (EEGLAB's default for large
+   recordings, where <code>EEG.data</code> holds the <code>.fdt</code> filename), the sibling <code>.fdt</code>
+   next to the <code>.set</code> is loaded and reshaped to <code>(nbchan, pnts * trials)</code></li>
 <li>Converting channel information to biosigIO's channel format</li>
 <li>Creating appropriate metadata dictionary</li>
 <li>Loading event markers into the recording's <code>events</code> table (onset/duration in seconds)</li>
@@ -2710,6 +2713,7 @@
 <h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Only pre-v7.3 (non-HDF5) <code>.set</code> files are supported, via <code>scipy.io.loadmat</code>; MATLAB v7.3/HDF5 <code>.set</code> files are not supported</li>
+<li>Signal data stored inline in the <code>.set</code> or in a separate float32 <code>.fdt</code> file is supported; the sibling <code>.fdt</code> is resolved by the <code>.set</code> path (so BIDS-renamed files load even though <code>EEG.data</code> keeps the original <code>.fdt</code> name)</li>
 <li>Event markers are loaded into the <code>events</code> table (<code>rec.events</code>): EEGLAB event latency/duration (samples) are converted to onset/duration in seconds and the event <code>type</code> becomes the description</li>
 <li>Channel locations (if available) are preserved in the channel information</li>
 <li>Some EEGLAB-specific information may not be fully preserved in the conversion</li>
