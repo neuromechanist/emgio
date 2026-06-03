@@ -22,5 +22,13 @@
     "BIDS",
     "Zarr",
     "signal-processing"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://pypi.org/project/biosigio/",
+      "relation": "isIdenticalTo",
+      "scheme": "url",
+      "resource_type": "software"
+    }
   ]
 }
