@@ -231,6 +231,52 @@ class EEGLABImporter(BaseImporter):
         return self._load(filepath)
 
     @staticmethod
+    def _normalize_eeglab_dict(data: dict[str, Any]) -> dict[str, Any]:
+        """Flatten the two on-disk EEGLAB ``.set`` save forms to one flat dict.
+
+        A real EEGLAB export saves the whole dataset as a single MATLAB struct
+        variable named ``EEG``, so ``scipy.io.loadmat`` returns
+        ``{'EEG': <(1, 1) struct>}`` and every field (``nbchan``, ``data``,
+        ``chanlocs``, ``event``, ...) is nested one level under ``data['EEG']``.
+        Some files (and the synthetic test fixtures) instead store those fields at
+        the top level of the ``.mat`` dict. ``_extract_metadata`` and the
+        signal/channel/event reads in :meth:`_load` expect top-level fields, so
+        this normalizes the nested form to the flat form before either runs and
+        passes the flat form through unchanged.
+
+        For a struct *array* (multiple datasets, shape ``(1, N)``) only the first
+        dataset is used; the rest is currently unsupported. Any non-``EEG``
+        top-level keys (e.g. loadmat's ``__header__``) are preserved so nothing is
+        lost.
+
+        Args:
+            data: The raw mapping returned by ``scipy.io.loadmat``.
+
+        Returns:
+            A flat dict whose EEGLAB fields are at the top level.
+        """
+        eeg = data.get("EEG")
+        if eeg is None:
+            return data
+        eeg = np.asarray(eeg)
+        # Only unwrap a MATLAB struct (it exposes named fields via dtype.names);
+        # a flat-form dict has no "EEG" key, or an "EEG" that is not a struct.
+        names = eeg.dtype.names
+        if names is None or eeg.size == 0:
+            return data
+
+        # A struct array (shape (1, N)) holds several datasets; take the first.
+        record = eeg.ravel()[0]
+
+        flat: dict[str, Any] = {name: record[name] for name in names}
+        # Keep any non-EEG top-level keys (loadmat's __header__/__version__, or a
+        # second variable saved alongside) without letting them clobber EEG fields.
+        for key, value in data.items():
+            if key != "EEG" and key not in flat:
+                flat[key] = value
+        return flat
+
+    @staticmethod
     def _read_fdt(
         set_filepath: str, data_field: np.ndarray, metadata: dict[str, Any]
     ) -> np.ndarray:
@@ -284,8 +330,11 @@ class EEGLABImporter(BaseImporter):
     def _load(self, filepath: str) -> Recording:
         """Internal loader (see :meth:`load`)."""
         try:
-            # Load the .set file
-            data = loadmat(filepath)
+            # Load the .set file. A real EEGLAB export wraps every field in a
+            # single ``EEG`` struct, so unwrap it to the flat top-level form that
+            # the metadata/signal/channel/event reads below expect (a no-op for
+            # files already saved flat).
+            data = self._normalize_eeglab_dict(loadmat(filepath))
 
             # Create Recording object
             rec = Recording()
