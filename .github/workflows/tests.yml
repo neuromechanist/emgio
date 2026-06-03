@@ -1,19 +1,25 @@
 name: Tests
 
 on:
-  # Skip the test matrix for docs-only changes (a mixed code+docs change still runs).
+  # Skip the test matrix for docs/metadata-only changes (a mixed code change still runs).
   push:
     branches: [ main ]
     paths-ignore:
       - 'docs/**'
       - '**.md'
       - 'mkdocs.yml'
+      - 'CITATION.cff'
+      - '.zenodo.json'
+      - 'LICENSE'
   # Run on every PR regardless of base so stacked/epic PRs get their own CI.
   pull_request:
     paths-ignore:
       - 'docs/**'
       - '**.md'
       - 'mkdocs.yml'
+      - 'CITATION.cff'
+      - '.zenodo.json'
+      - 'LICENSE'
 
 concurrency:
   group: tests-${{ github.ref }}
