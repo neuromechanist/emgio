@@ -1119,6 +1119,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Format version and provenance">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extended-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extended attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2596,6 +2613,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Format version and provenance">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extended-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extended attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2763,6 +2797,8 @@
 <li><code>format_version</code> is currently <code>2</code>. In version 2, <code>recording_metadata</code> is a native JSON object, with non-JSON-native values such as datetimes carried in typed envelopes, so a browser or zarrita reader can consume it without a second parse. Version 1 stored <code>recording_metadata</code> as a JSON string; the reader still accepts version 1 stores.</li>
 </ul>
 <p>A reader should reject a store whose <code>format_version</code> is newer than the one it supports rather than guess at an unknown layout. The biosigIO importer does exactly this: it raises if the store's version exceeds the version this build reads.</p>
+<h3 id="extended-attributes">Extended attributes<a class="headerlink" href="#extended-attributes" title="Permanent link">&para;</a></h3>
+<p>Downstream tools may attach their own attributes to the root group, a modality group, or the <code>events</code> group, for example sensor positions, a line-noise frequency, or richer per-code descriptions alongside the <code>events</code> group's <code>label_map</code>. The biosigIO reader reads only the attributes it defines and ignores any it does not recognize, so these domain-specific extensions are forward-compatible: they enrich the store for a specialized consumer (such as a scalp-topography viewer) without changing the <code>format_version</code> or breaking the store contract.</p>
 <h2 id="serving-model-external">Serving model (external)<a class="headerlink" href="#serving-model-external" title="Permanent link">&para;</a></h2>
 <p>The viewing, inference, training, and batch-conversion layers live outside biosigIO. biosigIO only writes and reads the store; the sections below summarize the intended serving model so those external consumers can be built against the same contract.</p>
 <p><strong>Reads need no backend.</strong> A Zarr v3 store is objects plus JSON, so a browser reader (zarrita) streams it directly from object storage over HTTPS using ranged GETs. The viewing path has no decode service.</p>

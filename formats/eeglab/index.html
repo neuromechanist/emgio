@@ -2675,6 +2675,12 @@
 <p>The EEGLAB importer in biosigIO (<code>biosigio.importers.eeglab</code>) works by:</p>
 <ol>
 <li>Loading the <code>.set</code> file using <code>scipy.io.loadmat</code> (pre-v7.3, non-HDF5 MAT-files only)</li>
+<li>Normalizing the two EEGLAB save forms to a flat field map. Real EEGLAB saves a
+   dataset as a single MATLAB struct named <code>EEG</code>, so <code>loadmat</code> returns
+   <code>{'EEG': struct}</code> with every field nested one level down; the legacy form
+   writes the fields at the top level. biosigIO unwraps the nested <code>EEG</code> struct
+   (and accepts the flat form) before reading any field, so a real-world <code>.set</code>
+   loads correctly instead of silently importing as an empty recording</li>
 <li>Extracting the EEG structure with signal data and metadata. When the matrix is
    stored in a separate float32 <code>.fdt</code> file (EEGLAB's default for large
    recordings, where <code>EEG.data</code> holds the <code>.fdt</code> filename), the sibling <code>.fdt</code>
@@ -2712,6 +2718,7 @@
 </ol>
 <h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
 <ul>
+<li>Both EEGLAB save forms load: the standard single <code>EEG</code> struct (<code>loadmat</code> returns <code>{'EEG': struct}</code>, which is what real EEGLAB writes) and the legacy flat layout. The importer normalizes them before reading, so a nested-struct file no longer imports as an empty recording</li>
 <li>Only pre-v7.3 (non-HDF5) <code>.set</code> files are supported, via <code>scipy.io.loadmat</code>; MATLAB v7.3/HDF5 <code>.set</code> files are not supported</li>
 <li>Signal data stored inline in the <code>.set</code> or in a separate float32 <code>.fdt</code> file is supported; the sibling <code>.fdt</code> is resolved by the <code>.set</code> path (so BIDS-renamed files load even though <code>EEG.data</code> keeps the original <code>.fdt</code> name)</li>
 <li>Event markers are loaded into the <code>events</code> table (<code>rec.events</code>): EEGLAB event latency/duration (samples) are converted to onset/duration in seconds and the event <code>type</code> becomes the description</li>
