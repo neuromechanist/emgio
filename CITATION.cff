@@ -1,0 +1,36 @@
+cff-version: 1.3.0
+message: "If you use biosigIO in your research, please cite it using the metadata below."
+title: biosigIO
+abstract: >-
+  biosigIO is a Python package with a unified interface for importing biosignal
+  recordings (EEG, EMG, MEG, iEEG) from many acquisition systems and file
+  formats and exporting them to interoperable targets, including EDF/BDF,
+  Parquet/Arrow, and a cloud-native Zarr serving store for interactive viewing
+  and machine-learning streaming.
+type: software
+authors:
+  - family-names: Shirazi
+    given-names: Seyed Yahya
+    orcid: "https://orcid.org/0000-0001-5557-259X"
+    affiliation:
+      name: "Swartz Center for Computational Neuroscience"
+      ror: "https://ror.org/01bt2qm76"
+repository-code: "https://github.com/neuromechanist/biosigio"
+url: "https://neuromechanist.github.io/biosigio/"
+license: BSD-3-Clause
+version: 1.1.3
+date-released: "2026-06-03"
+keywords:
+  - biosignal
+  - electrophysiology
+  - EEG
+  - EMG
+  - MEG
+  - iEEG
+  - EDF
+  - BIDS
+  - Zarr
+  - signal-processing
+# After the Zenodo DOI is minted on the v1.1.3 GitHub release, add the concept
+# (all-versions) DOI here so the GitHub "Cite this repository" widget resolves to it:
+# doi: "10.5281/zenodo.XXXXXXX"
