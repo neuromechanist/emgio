@@ -4,26 +4,34 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "biosigio"
-version = "1.1.2"
+version = "1.1.3"
 authors = [
     { name = "Seyed Yahya Shirazi", email = "shirazi@ieee.org" }
 ]
 maintainers = [
     { name = "Seyed Yahya Shirazi", email = "shirazi@ieee.org" }
 ]
-description = "A Python package for EMG data import/export and manipulation with unified interface for various EMG systems"
+description = "A unified interface to import, convert, and serve biosignal data (EEG, EMG, MEG, iEEG) across formats, including EDF/BDF, EEGLAB, BrainVision, FIF, and a cloud-native Zarr serving store"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 keywords = [
+    "biosignal",
+    "electrophysiology",
+    "eeg",
     "emg",
     "electromyography",
-    "biosignal",
+    "meg",
+    "ieeg",
+    "eeglab",
     "edf",
     "bdf",
+    "brainvision",
     "wfdb",
     "trigno",
     "delsys",
+    "zarr",
+    "bids",
     "neuroscience",
     "signal-processing",
 ]

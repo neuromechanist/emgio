@@ -1,0 +1,26 @@
+{
+  "title": "biosigIO",
+  "description": "biosigIO is a Python package with a unified interface for importing biosignal recordings (EEG, EMG, MEG, iEEG) from many acquisition systems and file formats and exporting them to interoperable targets, including EDF/BDF, Parquet/Arrow, and a cloud-native Zarr serving store for interactive viewing and machine-learning streaming.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "BSD-3-Clause",
+  "creators": [
+    {
+      "name": "Shirazi, Seyed Yahya",
+      "orcid": "0000-0001-5557-259X",
+      "affiliation": "Swartz Center for Computational Neuroscience, University of California San Diego"
+    }
+  ],
+  "keywords": [
+    "biosignal",
+    "electrophysiology",
+    "EEG",
+    "EMG",
+    "MEG",
+    "iEEG",
+    "EDF",
+    "BIDS",
+    "Zarr",
+    "signal-processing"
+  ]
+}

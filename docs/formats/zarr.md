@@ -143,6 +143,10 @@ The root group attributes carry the format tag and version so a reader can recog
 
 A reader should reject a store whose `format_version` is newer than the one it supports rather than guess at an unknown layout. The biosigIO importer does exactly this: it raises if the store's version exceeds the version this build reads.
 
+### Extended attributes
+
+Downstream tools may attach their own attributes to the root group, a modality group, or the `events` group, for example sensor positions, a line-noise frequency, or richer per-code descriptions alongside the `events` group's `label_map`. The biosigIO reader reads only the attributes it defines and ignores any it does not recognize, so these domain-specific extensions are forward-compatible: they enrich the store for a specialized consumer (such as a scalp-topography viewer) without changing the `format_version` or breaking the store contract.
+
 ## Serving model (external)
 
 The viewing, inference, training, and batch-conversion layers live outside biosigIO. biosigIO only writes and reads the store; the sections below summarize the intended serving model so those external consumers can be built against the same contract.
