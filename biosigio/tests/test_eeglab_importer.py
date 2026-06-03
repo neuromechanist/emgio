@@ -327,6 +327,114 @@ def test_eeglab_fdt_size_mismatch_raises(tmp_path):
         EEGLABImporter().load(set_path)
 
 
+def _nested_eeg_struct(n_channels, n_samples, srate, data_field):
+    """Build the dict a real EEGLAB save produces: one top-level ``EEG`` struct.
+
+    ``scipy.io.savemat(path, {'EEG': {...}})`` writes the whole dataset as a
+    single MATLAB struct variable named ``EEG`` (the real-world form), so on
+    reload every field lands under ``data['EEG']`` rather than at the top level.
+    ``data_field`` is either the numeric matrix (inline data) or the ``.fdt``
+    filename char array.
+    """
+    chanlocs = np.zeros(
+        (1, n_channels),
+        dtype=[("labels", "O"), ("type", "O"), ("X", "O"), ("Y", "O"), ("Z", "O")],
+    )
+    for i in range(n_channels):
+        chanlocs[0, i] = (
+            np.array([f"Ch{i + 1}"]),  # labels
+            np.array([]),  # type (empty -> modality falls back, exercised by ERP CORE)
+            np.array([]),  # X
+            np.array([]),  # Y
+            np.array([]),  # Z
+        )
+
+    events = np.zeros((1, 2), dtype=[("latency", "O"), ("duration", "O"), ("type", "O")])
+    events[0, 0] = (np.array([[100]]), np.array([[0]]), np.array(["stim"]))
+    events[0, 1] = (np.array([[150]]), np.array([[0]]), np.array(["resp"]))
+
+    return {
+        "setname": np.array(["nested_test"]),
+        "nbchan": np.array([[n_channels]]),
+        "trials": np.array([[1]]),
+        "pnts": np.array([[n_samples]]),
+        "srate": np.array([[srate]]),
+        "xmin": np.array([[0.0]]),
+        "xmax": np.array([[n_samples / srate]]),
+        "data": data_field,
+        "chanlocs": chanlocs,
+        "event": events,
+    }
+
+
+def test_eeglab_nested_eeg_struct_inline_data(tmp_path):
+    """A real-form .set ({'EEG': struct}) with inline data loads signals + channels.
+
+    Regression for the bug where _extract_metadata/_load read fields from the
+    loadmat top level, so a real EEGLAB export (everything nested under ``EEG``)
+    silently returned an empty Recording.
+    """
+    n_channels, n_samples, srate = 3, 200, 256
+    rng = np.random.default_rng(0)
+    data = (rng.standard_normal((n_channels, n_samples)) * 10).astype(np.float32)
+    set_path = str(tmp_path / "nested_inline_eeg.set")
+    scipy.io.savemat(set_path, {"EEG": _nested_eeg_struct(n_channels, n_samples, srate, data)})
+
+    rec = EEGLABImporter().load(set_path)
+
+    assert rec.signals is not None
+    assert rec.signals.shape == (n_samples, n_channels)  # samples x channels
+    assert len(rec.channels) == n_channels
+    assert rec.get_metadata("srate") == srate
+    assert rec.get_metadata("nbchan") == n_channels
+    for i, label in enumerate(rec.signals.columns):
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), data[i], rtol=0, atol=1e-5)
+    # Events under the nested struct still parse.
+    assert len(rec.events) == 2
+    assert list(rec.events["description"]) == ["stim", "resp"]
+
+
+def test_eeglab_nested_eeg_struct_with_fdt(tmp_path):
+    """A real-form .set whose EEG.data is a .fdt filename loads the sibling .fdt."""
+    n_channels, n_samples, srate = 3, 200, 256
+    rng = np.random.default_rng(1)
+    data = (rng.standard_normal((n_channels, n_samples)) * 10).astype(np.float32)
+    stem = "sub-01_task-x_eeg"
+    (tmp_path / f"{stem}.fdt").write_bytes(b"")  # placeholder, overwritten below
+    data.flatten(order="F").tofile(str(tmp_path / f"{stem}.fdt"))
+    set_path = str(tmp_path / f"{stem}.set")
+    scipy.io.savemat(
+        set_path,
+        {"EEG": _nested_eeg_struct(n_channels, n_samples, srate, np.array([f"{stem}.fdt"]))},
+    )
+
+    rec = EEGLABImporter().load(set_path)
+
+    assert rec.signals.shape == (n_samples, n_channels)
+    assert len(rec.channels) == n_channels
+    for i, label in enumerate(rec.signals.columns):
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), data[i], rtol=0, atol=1e-5)
+
+
+def test_eeglab_nested_eeg_struct_to_zarr_non_empty(tmp_path):
+    """The full path that was broken: real-form .set -> Recording -> non-empty Zarr store."""
+    pytest.importorskip("zarr", reason="Zarr serving format requires the optional 'zarr' extra")
+    import zarr
+
+    n_channels, n_samples, srate = 4, 500, 256
+    rng = np.random.default_rng(2)
+    data = (rng.standard_normal((n_channels, n_samples)) * 10).astype(np.float32)
+    set_path = str(tmp_path / "nested_zarr_eeg.set")
+    scipy.io.savemat(set_path, {"EEG": _nested_eeg_struct(n_channels, n_samples, srate, data)})
+
+    rec = EEGLABImporter().load(set_path)
+    out = rec.to_zarr(str(tmp_path / "rec"))
+
+    assert os.path.exists(os.path.join(out, "zarr.json"))  # root metadata written
+    root = zarr.open_group(store=zarr.storage.LocalStore(out), mode="r")
+    assert root.attrs["channel_groups"]  # at least one channel group serialized
+
+
 def test_eeglab_to_edf_export(sample_eeglab_set):
     """Test exporting EEGLAB data to EDF format."""
     importer = EEGLABImporter()
