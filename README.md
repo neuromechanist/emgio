@@ -3,6 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/biosigio.svg)](https://badge.fury.io/py/biosigio)
 [![Tests](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml/badge.svg)](https://github.com/neuromechanist/biosigio/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/neuromechanist/biosigio/branch/main/graph/badge.svg?token=63EDIA9TWD)](https://codecov.io/gh/neuromechanist/biosigio)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20534173.svg)](https://doi.org/10.5281/zenodo.20534173)
 
 A Python package for biosignal import/export and manipulation across modalities (EEG, EMG, iEEG, MEG, and behavioral/marker streams). biosigIO provides a unified `Recording` interface for loading data from many acquisition systems and archives (EEGLAB, Delsys Trigno, OTB, EDF/BDF, WFDB, XDF, MEG/CTF and BrainVision via MNE, and proprietary electrophysiology such as Intan/Blackrock via python-neo) and exporting it to standardized and serving formats (EDF/BDF, Parquet, Arrow, Zarr) with harmonized metadata.
 
