@@ -123,7 +123,9 @@ class Recording:
             return "wfdb"
         elif extension in {".xdf", ".xdfz"}:
             return "xdf"
-        elif extension in {".fif", ".ds"}:
+        elif extension in {".fif", ".ds", ".con", ".sqd", ".kdf"}:
+            # MEG via MNE: .fif (Neuromag/FIF), CTF .ds directory, KIT/Yokogawa
+            # .con/.sqd/.kdf. The MEGImporter dispatches on extension internally.
             return "meg"
         elif extension in {".vhdr"}:
             return "brainvision"
@@ -158,6 +160,7 @@ class Recording:
         importer: ImporterName | None = None,
         force_csv: bool = False,
         bids_channels: str = "auto",
+        mixed_rate: str = "error",
         **kwargs,
     ) -> "Recording":
         """
@@ -173,7 +176,7 @@ class Recording:
                 - 'csv': Generic CSV (or TXT) files with columnar data
                 - 'wfdb': Waveform Database (WFDB)
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
-                - 'meg': MEG via MNE (.fif and CTF .ds; requires the 'meg' extra)
+                - 'meg': MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf; requires the 'meg' extra)
                 - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
                 - 'tabular': biosigIO Parquet/Arrow/Feather (requires the 'arrow' extra)
                 - 'neo': proprietary electrophysiology formats via python-neo
@@ -188,6 +191,13 @@ class Recording:
                       _channels.tsv next to the file and apply its per-channel
                       type/units over the importer's inferred values. Pass 'off'
                       to disable.
+            mixed_rate: Policy for an EDF/BDF file whose signals carry differing
+                      per-channel sampling rates (ignored for every other format,
+                      which is single-rate). 'error' (default) raises -- biosigIO
+                      stores one uniform grid and will not fabricate a common one
+                      silently. 'resample' upsamples the slower channels to the
+                      fastest rate (a lossy derived view; each channel keeps its
+                      native rate as ``original_sample_frequency``).
             **kwargs: Additional arguments passed to the importer.
                 For XDF files, useful kwargs include:
                 - stream_names: List of stream names to import
@@ -208,7 +218,7 @@ class Recording:
             "csv": "CSVImporter",  # Generic CSV/Text files
             "wfdb": "WFDBImporter",  # Waveform Database format
             "xdf": "XDFImporter",  # XDF multi-stream format
-            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds)
+            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)
             "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
             "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
             "neo": "NeoImporter",  # proprietary ephys via python-neo
@@ -226,7 +236,7 @@ class Recording:
                 "- csv: Generic CSV/Text files\n"
                 "- wfdb: Waveform Database\n"
                 "- xdf: XDF multi-stream format\n"
-                "- meg: MEG via MNE (.fif, CTF .ds)\n"
+                "- meg: MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)\n"
                 "- brainvision: BrainVision via MNE (.vhdr)\n"
                 "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)\n"
                 "- neo: proprietary electrophysiology formats via python-neo "
@@ -237,6 +247,12 @@ class Recording:
         # If using CSV importer and force_csv is set, pass it as force_generic
         if importer == "csv":
             kwargs["force_generic"] = force_csv
+
+        # mixed_rate is only meaningful for EDF/BDF, the one format whose signals may
+        # carry differing per-channel sampling rates; forward it there and nowhere
+        # else (so the default "error" never reaches an importer that can't use it).
+        if importer == "edf":
+            kwargs["mixed_rate"] = mixed_rate
 
         # Import the appropriate importer class
         importer_module = __import__(
