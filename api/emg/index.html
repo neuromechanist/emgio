@@ -3289,7 +3289,7 @@ imported from any supported format.</p>
 
 
 <h3 id="biosigio.core.emg.Recording.from_file" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">force_csv</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">bids_channels</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">from_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">force_csv</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">bids_channels</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">mixed_rate</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -3311,7 +3311,7 @@ imported from any supported format.</p>
         - 'csv': Generic CSV (or TXT) files with columnar data
         - 'wfdb': Waveform Database (WFDB)
         - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
-        - 'meg': MEG via MNE (.fif and CTF .ds; requires the 'meg' extra)
+        - 'meg': MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf; requires the 'meg' extra)
         - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
         - 'tabular': biosigIO Parquet/Arrow/Feather (requires the 'arrow' extra)
         - 'neo': proprietary electrophysiology formats via python-neo
@@ -3326,6 +3326,13 @@ imported from any supported format.</p>
               _channels.tsv next to the file and apply its per-channel
               type/units over the importer's inferred values. Pass 'off'
               to disable.
+    mixed_rate: Policy for an EDF/BDF file whose signals carry differing
+              per-channel sampling rates (ignored for every other format,
+              which is single-rate). 'error' (default) raises -- biosigIO
+              stores one uniform grid and will not fabricate a common one
+              silently. 'resample' upsamples the slower channels to the
+              fastest rate (a lossy derived view; each channel keeps its
+              native rate as <code>original_sample_frequency</code>).
     **kwargs: Additional arguments passed to the importer.
         For XDF files, useful kwargs include:
         - stream_names: List of stream names to import
