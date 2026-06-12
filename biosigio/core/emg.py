@@ -158,6 +158,7 @@ class Recording:
         importer: ImporterName | None = None,
         force_csv: bool = False,
         bids_channels: str = "auto",
+        mixed_rate: str = "error",
         **kwargs,
     ) -> "Recording":
         """
@@ -188,6 +189,13 @@ class Recording:
                       _channels.tsv next to the file and apply its per-channel
                       type/units over the importer's inferred values. Pass 'off'
                       to disable.
+            mixed_rate: Policy for an EDF/BDF file whose signals carry differing
+                      per-channel sampling rates (ignored for every other format,
+                      which is single-rate). 'error' (default) raises -- biosigIO
+                      stores one uniform grid and will not fabricate a common one
+                      silently. 'resample' upsamples the slower channels to the
+                      fastest rate (a lossy derived view; each channel keeps its
+                      native rate as ``original_sample_frequency``).
             **kwargs: Additional arguments passed to the importer.
                 For XDF files, useful kwargs include:
                 - stream_names: List of stream names to import
@@ -237,6 +245,12 @@ class Recording:
         # If using CSV importer and force_csv is set, pass it as force_generic
         if importer == "csv":
             kwargs["force_generic"] = force_csv
+
+        # mixed_rate is only meaningful for EDF/BDF, the one format whose signals may
+        # carry differing per-channel sampling rates; forward it there and nowhere
+        # else (so the default "error" never reaches an importer that can't use it).
+        if importer == "edf":
+            kwargs["mixed_rate"] = mixed_rate
 
         # Import the appropriate importer class
         importer_module = __import__(
