@@ -123,7 +123,9 @@ class Recording:
             return "wfdb"
         elif extension in {".xdf", ".xdfz"}:
             return "xdf"
-        elif extension in {".fif", ".ds"}:
+        elif extension in {".fif", ".ds", ".con", ".sqd", ".kdf"}:
+            # MEG via MNE: .fif (Neuromag/FIF), CTF .ds directory, KIT/Yokogawa
+            # .con/.sqd/.kdf. The MEGImporter dispatches on extension internally.
             return "meg"
         elif extension in {".vhdr"}:
             return "brainvision"
@@ -174,7 +176,7 @@ class Recording:
                 - 'csv': Generic CSV (or TXT) files with columnar data
                 - 'wfdb': Waveform Database (WFDB)
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
-                - 'meg': MEG via MNE (.fif and CTF .ds; requires the 'meg' extra)
+                - 'meg': MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf; requires the 'meg' extra)
                 - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
                 - 'tabular': biosigIO Parquet/Arrow/Feather (requires the 'arrow' extra)
                 - 'neo': proprietary electrophysiology formats via python-neo
@@ -216,7 +218,7 @@ class Recording:
             "csv": "CSVImporter",  # Generic CSV/Text files
             "wfdb": "WFDBImporter",  # Waveform Database format
             "xdf": "XDFImporter",  # XDF multi-stream format
-            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds)
+            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)
             "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
             "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
             "neo": "NeoImporter",  # proprietary ephys via python-neo
@@ -234,7 +236,7 @@ class Recording:
                 "- csv: Generic CSV/Text files\n"
                 "- wfdb: Waveform Database\n"
                 "- xdf: XDF multi-stream format\n"
-                "- meg: MEG via MNE (.fif, CTF .ds)\n"
+                "- meg: MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)\n"
                 "- brainvision: BrainVision via MNE (.vhdr)\n"
                 "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)\n"
                 "- neo: proprietary electrophysiology formats via python-neo "

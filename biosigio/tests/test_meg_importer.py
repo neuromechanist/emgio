@@ -88,3 +88,17 @@ def test_meg_roundtrip_preserves_tesla_signals(meg_rec, tmp_path):
             continue
         r = float(np.corrcoef(original, roundtripped)[0, 1])
         assert r > 0.99, f"{ch}: round-trip correlation {r}"
+
+
+# -- Format dispatch (no fixture needed; just the extension -> importer mapping) --
+
+
+def test_meg_extensions_dispatch_to_meg_importer():
+    """FIF, CTF .ds, and KIT .con/.sqd/.kdf all route to the 'meg' importer."""
+    for ext in (".fif", ".ds", ".con", ".sqd", ".kdf"):
+        assert Recording._infer_importer(f"sub-01/meg/sub-01_task-x_meg{ext}") == "meg"
+
+
+def test_ctf_ds_trailing_slash_dispatches_to_meg():
+    """A CTF .ds passed as a directory path (trailing slash) still resolves."""
+    assert Recording._infer_importer("sub-01/meg/sub-01_task-x_meg.ds/") == "meg"
