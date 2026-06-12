@@ -105,42 +105,23 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
     return updated
 
 
-def apply_events_tsv(
-    rec: Recording,
+def read_events_tsv(
     events_tsv_path: str,
     *,
     description_column: str | None = None,
-) -> int:
-    """Replace ``rec.events`` with the authoritative BIDS ``_events.tsv`` list.
+) -> pd.DataFrame:
+    """Parse a BIDS ``_events.tsv`` into the standard events frame.
 
-    A BIDS ``_events.tsv`` is the curated event table for a recording; it is
-    richer and more reliable than the data file's own markers (e.g. a
-    BrainVision ``.vmrk`` or an EEGLAB event struct), so when it is present it
-    is the source of truth. This loads it into ``rec.events`` as the standard
-    ``onset``/``duration``/``description`` frame, overwriting any
-    importer-loaded events.
-
-    Columns:
-        ``onset`` (required, seconds) and ``duration`` (seconds; ``n/a`` or
-        missing -> ``0.0``) follow the BIDS spec. The ``description`` is taken
-        from ``description_column`` if given, else per row from the first of
-        ``trial_type`` then ``value`` that is present and not ``n/a`` (BIDS
-        names the categorical label ``trial_type`` and the raw marker
-        ``value``; datasets populate one or both). Rows whose ``onset`` is
-        missing or non-numeric are skipped.
-
-    Args:
-        rec: The Recording object to update in place.
-        events_tsv_path: Path to the BIDS ``_events.tsv``.
-        description_column: Force the description to come from this column.
-
-    Returns:
-        The number of events loaded into ``rec.events``.
+    Returns a DataFrame with ``onset``/``duration``/``description`` columns
+    (sorted by onset), the same shape :attr:`Recording.events` uses. Used by
+    :func:`apply_events_tsv` and by the streaming Zarr exporter (which has no
+    Recording to mutate). See :func:`apply_events_tsv` for the column rules.
     """
     df = pd.read_csv(events_tsv_path, sep="\t", dtype=str, keep_default_na=False)
+    empty = pd.DataFrame({"onset": [], "duration": [], "description": []})
     if "onset" not in df.columns:
         logging.warning("events.tsv has no 'onset' column: %s", events_tsv_path)
-        return 0
+        return empty
 
     def _is_na(value: str) -> bool:
         v = value.strip()
@@ -149,7 +130,7 @@ def apply_events_tsv(
     if description_column is not None:
         if description_column not in df.columns:
             logging.warning("events.tsv has no %r column: %s", description_column, events_tsv_path)
-            return 0
+            return empty
         desc_columns = [description_column]
     else:
         desc_columns = [c for c in ("trial_type", "value") if c in df.columns]
@@ -190,9 +171,44 @@ def apply_events_tsv(
             events_tsv_path,
         )
 
-    rec.events = (
+    return (
         pd.DataFrame({"onset": onsets, "duration": durations, "description": descriptions})
         .sort_values(by="onset")
         .reset_index(drop=True)
     )
-    return len(onsets)
+
+
+def apply_events_tsv(
+    rec: Recording,
+    events_tsv_path: str,
+    *,
+    description_column: str | None = None,
+) -> int:
+    """Replace ``rec.events`` with the authoritative BIDS ``_events.tsv`` list.
+
+    A BIDS ``_events.tsv`` is the curated event table for a recording; it is
+    richer and more reliable than the data file's own markers (e.g. a
+    BrainVision ``.vmrk`` or an EEGLAB event struct), so when it is present it
+    is the source of truth. This loads it into ``rec.events`` as the standard
+    ``onset``/``duration``/``description`` frame, overwriting any
+    importer-loaded events.
+
+    Columns:
+        ``onset`` (required, seconds) and ``duration`` (seconds; ``n/a`` or
+        missing -> ``0.0``) follow the BIDS spec. The ``description`` is taken
+        from ``description_column`` if given, else per row from the first of
+        ``trial_type`` then ``value`` that is present and not ``n/a`` (BIDS
+        names the categorical label ``trial_type`` and the raw marker
+        ``value``; datasets populate one or both). Rows whose ``onset`` is
+        missing or non-numeric are skipped.
+
+    Args:
+        rec: The Recording object to update in place.
+        events_tsv_path: Path to the BIDS ``_events.tsv``.
+        description_column: Force the description to come from this column.
+
+    Returns:
+        The number of events loaded into ``rec.events``.
+    """
+    rec.events = read_events_tsv(events_tsv_path, description_column=description_column)
+    return len(rec.events)
