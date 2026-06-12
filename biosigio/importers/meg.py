@@ -13,6 +13,7 @@ Formats and their MNE reader:
     ``.con`` / ``.sqd`` / ``.kdf`` -> ``read_raw_kit`` (KIT / Yokogawa / RICOH)
 """
 
+import logging
 import os
 
 import numpy as np
@@ -44,8 +45,14 @@ class MEGImporter(BaseImporter):
         """Read stim-channel triggers into an events DataFrame (onsets in seconds)."""
         try:
             events = mne.find_events(raw, verbose="ERROR")
-        except (ValueError, RuntimeError):
-            # No stim channel / no transitions: no events.
+        except (ValueError, RuntimeError) as exc:
+            # "No stim channels found" is the common, benign case (many MEG
+            # recordings carry no triggers, or events come from a BIDS events.tsv
+            # applied separately) -- stay quiet for that. Any OTHER failure
+            # (malformed/ambiguous triggers) would silently drop real events, so
+            # surface it rather than swallowing it.
+            if "stim" not in str(exc).lower():
+                logging.warning("MEG find_events failed; events left empty: %s", exc)
             events = np.empty((0, 3), dtype=int)
         first_samp = int(raw.first_samp)
         rows = [

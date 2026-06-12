@@ -109,19 +109,22 @@ def read_events_tsv(
     events_tsv_path: str,
     *,
     description_column: str | None = None,
-) -> pd.DataFrame:
+) -> pd.DataFrame | None:
     """Parse a BIDS ``_events.tsv`` into the standard events frame.
 
     Returns a DataFrame with ``onset``/``duration``/``description`` columns
-    (sorted by onset), the same shape :attr:`Recording.events` uses. Used by
-    :func:`apply_events_tsv` and by the streaming Zarr exporter (which has no
-    Recording to mutate). See :func:`apply_events_tsv` for the column rules.
+    (sorted by onset), the same shape :attr:`Recording.events` uses, or **None**
+    when the sidecar is unparseable (no ``onset`` column, or a forced
+    ``description_column`` is absent) -- distinct from a valid-but-empty table (an
+    empty DataFrame). Callers use None to leave any existing events untouched
+    rather than wiping them. Used by :func:`apply_events_tsv` and by the streaming
+    Zarr exporter (which has no Recording to mutate). See :func:`apply_events_tsv`
+    for the column rules.
     """
     df = pd.read_csv(events_tsv_path, sep="\t", dtype=str, keep_default_na=False)
-    empty = pd.DataFrame({"onset": [], "duration": [], "description": []})
     if "onset" not in df.columns:
         logging.warning("events.tsv has no 'onset' column: %s", events_tsv_path)
-        return empty
+        return None
 
     def _is_na(value: str) -> bool:
         v = value.strip()
@@ -130,7 +133,7 @@ def read_events_tsv(
     if description_column is not None:
         if description_column not in df.columns:
             logging.warning("events.tsv has no %r column: %s", description_column, events_tsv_path)
-            return empty
+            return None
         desc_columns = [description_column]
     else:
         desc_columns = [c for c in ("trial_type", "value") if c in df.columns]
@@ -208,7 +211,12 @@ def apply_events_tsv(
         description_column: Force the description to come from this column.
 
     Returns:
-        The number of events loaded into ``rec.events``.
+        The number of events loaded into ``rec.events``. An unparseable sidecar
+        (no ``onset`` column / missing forced column) loads nothing and leaves any
+        importer-loaded events intact, returning 0.
     """
-    rec.events = read_events_tsv(events_tsv_path, description_column=description_column)
+    events = read_events_tsv(events_tsv_path, description_column=description_column)
+    if events is None:
+        return 0
+    rec.events = events
     return len(rec.events)

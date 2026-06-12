@@ -11,7 +11,7 @@ import pathlib
 import pytest
 
 from biosigio import Recording
-from biosigio.bids import apply_events_tsv, find_events_tsv
+from biosigio.bids import apply_events_tsv, find_events_tsv, read_events_tsv
 
 _REPO = pathlib.Path(__file__).resolve().parents[2]
 EEG_SET = _REPO / "examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set"
@@ -77,6 +77,38 @@ def test_description_column_override(tmp_path):
     _write_tsv(p, "onset\tduration\ttrial_type\tvalue\n0.0\t0\tgo\tS1\n")
     apply_events_tsv(rec, str(p), description_column="value")
     assert list(rec.events["description"]) == ["S1"]
+
+
+def test_unparseable_sidecar_preserves_existing_events(tmp_path):
+    """A sidecar with no 'onset' column must NOT wipe importer-loaded events."""
+    rec = Recording()
+    rec.add_event(0.5, 0.0, "native-marker")
+    p = tmp_path / "sub-x_events.tsv"
+    _write_tsv(p, "trial_type\tvalue\ngo\tS1\n")  # no onset column -> unparseable
+    n = apply_events_tsv(rec, str(p))
+    assert n == 0  # nothing loaded from the sidecar
+    assert list(rec.events["description"]) == ["native-marker"]  # preserved
+    # read_events_tsv signals "unparseable" as None (distinct from an empty table).
+    assert read_events_tsv(str(p)) is None
+
+
+def test_missing_forced_description_column_preserves_events(tmp_path):
+    """A missing forced description_column is also unparseable -> events preserved."""
+    rec = Recording()
+    rec.add_event(1.0, 0.0, "native")
+    p = tmp_path / "sub-x_events.tsv"
+    _write_tsv(p, "onset\tduration\n0.0\t0\n")
+    n = apply_events_tsv(rec, str(p), description_column="value")
+    assert n == 0
+    assert list(rec.events["description"]) == ["native"]
+
+
+def test_valid_empty_sidecar_returns_empty_not_none(tmp_path):
+    """A well-formed sidecar with zero data rows is empty (not unparseable)."""
+    p = tmp_path / "sub-x_events.tsv"
+    _write_tsv(p, "onset\tduration\tvalue\n")  # header only
+    df = read_events_tsv(str(p))
+    assert df is not None and len(df) == 0
 
 
 def test_skips_rows_with_missing_onset(tmp_path):
