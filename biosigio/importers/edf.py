@@ -201,9 +201,7 @@ class EDFImporter(BaseImporter):
             Recording: Recording object containing the loaded data
         """
         if mixed_rate not in MIXED_RATE_POLICIES:
-            raise ValueError(
-                f"mixed_rate must be one of {MIXED_RATE_POLICIES}, got {mixed_rate!r}"
-            )
+            raise ValueError(f"mixed_rate must be one of {MIXED_RATE_POLICIES}, got {mixed_rate!r}")
         try:
             edf_reader = pyedflib.EdfReader(filepath)
 
@@ -242,10 +240,10 @@ class EDFImporter(BaseImporter):
                         "EDF/BDF recording has mixed per-channel sampling rates "
                         f"({sorted(rates)} Hz); biosigIO stores one uniform grid. This "
                         "is a real BIDS montage (e.g. polysomnography: EEG ~200 Hz + "
-                        "SpO2/respiration ~12.5 Hz). Pass mixed_rate=\"resample\" to "
+                        'SpO2/respiration ~12.5 Hz). Pass mixed_rate="resample" to '
                         "upsample the slower channels to the fastest rate for a single-"
                         "grid serving copy (lossy: a derived view, not the faithful "
-                        "source), or read channels[ch][\"sample_frequency\"] per channel "
+                        'source), or read channels[ch]["sample_frequency"] per channel '
                         "to handle the rates yourself."
                     )
                 # resample: lift every slower channel onto the fastest channel's grid.

@@ -114,7 +114,7 @@ def read_events_tsv(
 
     Returns a DataFrame with ``onset``/``duration``/``description`` columns
     (sorted by onset), the same shape :attr:`Recording.events` uses, or **None**
-    when the sidecar is unparseable (no ``onset`` column, or a forced
+    when the sidecar is unparsable (no ``onset`` column, or a forced
     ``description_column`` is absent) -- distinct from a valid-but-empty table (an
     empty DataFrame). Callers use None to leave any existing events untouched
     rather than wiping them. Used by :func:`apply_events_tsv` and by the streaming
@@ -211,7 +211,7 @@ def apply_events_tsv(
         description_column: Force the description to come from this column.
 
     Returns:
-        The number of events loaded into ``rec.events``. An unparseable sidecar
+        The number of events loaded into ``rec.events``. An unparsable sidecar
         (no ``onset`` column / missing forced column) loads nothing and leaves any
         importer-loaded events intact, returning 0.
     """
