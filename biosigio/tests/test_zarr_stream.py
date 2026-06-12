@@ -23,20 +23,21 @@ pytest.importorskip("mne", reason="streaming Zarr export requires the 'meg' extr
 import zarr  # noqa: E402
 
 from biosigio import stream_to_zarr  # noqa: E402
-from biosigio.exporters.zarr import _resample_channel  # noqa: E402
+from biosigio.exporters.zarr import _DISCRETE_TYPES, _resample_channel  # noqa: E402
+from biosigio.importers._mne_common import _MNE_TYPE_TO_biosigIO  # noqa: E402
 
-# Real committed FIF MEG fixture (305 ch, 100 Hz, 30 s); see test_meg_importer.py.
+# Real committed MEG fixtures (see test_meg_importer.py): a FIF file (305 ch,
+# 100 Hz, 30 s) and a CTF .ds directory (244 ch, 1250 Hz, 4 s).
 _REPO = pathlib.Path(__file__).resolve().parents[2]
 MEG_FIF = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
+CTF_DS = _REPO / "examples/ctf/catch-alp-good-f.ds"
 
 
 def _write_edf(path: str, rate: float, duration_s: float, n_ch: int) -> np.ndarray:
     """Write a real n-channel EDF at one rate; return the (n_ch, n_samples) data."""
     n = int(rate * duration_s)
     t = np.arange(n) / rate
-    data = np.vstack(
-        [(30.0 + 5 * c) * np.sin(2 * np.pi * (3 + c) * t) for c in range(n_ch)]
-    )
+    data = np.vstack([(30.0 + 5 * c) * np.sin(2 * np.pi * (3 + c) * t) for c in range(n_ch)])
     headers = []
     for c in range(n_ch):
         row = data[c]
@@ -149,8 +150,7 @@ def test_stream_embeds_events():
     import pandas as pd
 
     ev = pd.DataFrame(
-        {"onset": [0.5, 1.5, 2.5], "duration": [0.0, 0.0, 0.0],
-         "description": ["a", "b", "a"]}
+        {"onset": [0.5, 1.5, 2.5], "duration": [0.0, 0.0, 0.0], "description": ["a", "b", "a"]}
     )
     with _TmpEDF(rate=100.0, duration_s=5.0, n_ch=2) as path:
         with tempfile.TemporaryDirectory() as d:
@@ -188,6 +188,39 @@ def test_stream_real_fif_reproduces_full_load():
         for i in range(full_data.shape[0]):
             rng = float(full_data[i].max() - full_data[i].min()) or 1.0
             assert np.max(np.abs(deq[i] - full_data[i])) <= 2 * rng / 65535
+
+
+@pytest.mark.skipif(not CTF_DS.exists(), reason="CTF .ds fixture missing")
+def test_stream_real_ctf_reproduces_full_load():
+    """Streaming a real CTF .ds *directory* reproduces the resampled full-load
+    signal within int16 quant.
+
+    This is the path the NEMAR driver routes .ds recordings through. catch-alp
+    is 1250 Hz > the 250 Hz MEG cap, so it also exercises the streaming resample
+    on a directory-valued recording (not a single file). The lone TRIG channel
+    resamples discretely; the 243 MEG/EEG/MISC channels continuously -- the
+    reference mirrors that per-channel decision."""
+    import mne
+
+    raw = mne.io.read_raw_ctf(str(CTF_DS), preload=True, verbose="ERROR")
+    full = raw.get_data()  # (244, 5000) in ch_names order
+    native = float(raw.info["sfreq"])  # 1250 Hz
+    mne_types = raw.get_channel_types()
+    with tempfile.TemporaryDirectory() as d:
+        store = os.path.join(d, "rec.zarr")
+        stream_to_zarr(str(CTF_DS), store, force_modality="MEG")
+        groups = dict(zarr.open_group(store, mode="r").attrs)["channel_groups"]
+        assert groups == ["meg_250hz"]  # 1250 -> 250 cap, all channels forced to MEG
+        deq = _dequant(store, "meg_250hz")
+        n_time = int(round(full.shape[1] * 250.0 / native))
+        assert deq.shape == (244, n_time)
+        for i in range(full.shape[0]):
+            ctype = _MNE_TYPE_TO_biosigIO.get(mne_types[i], "OTHER")
+            discrete = ctype in _DISCRETE_TYPES
+            ref = _resample_channel(full[i], native, 250.0, discrete=discrete)
+            rng = float(ref.max() - ref.min()) or 1.0
+            # streamed goes through a float32 memmap; allow a few LSB of slack.
+            assert np.max(np.abs(deq[i] - ref)) <= 5 * rng / 65535
 
 
 @pytest.mark.skipif(not MEG_FIF.exists(), reason="MEG FIF fixture missing")

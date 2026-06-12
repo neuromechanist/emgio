@@ -1,9 +1,14 @@
 """Tests for the MNE-backed MEG importer (issue #53).
 
-Uses the real CTF fixture (ds002908: 305 channels, 100 Hz, 30 s, 58 trigger
-events, Tesla-unit sensors). Verifies that the distinct MEG sensor types are
-preserved (not collapsed), units are carried, stim triggers become events, and
-the Tesla-magnitude signals survive an EDF/BDF round-trip. NO MOCKS.
+Two real fixtures, NO MOCKS:
+
+* a FIF MEG recording (305 channels, 100 Hz, 30 s, 58 trigger events,
+  Tesla-unit sensors) -- exercises sensor-type preservation, units, stim
+  events, and an EDF/BDF round-trip;
+* a CTF ``.ds`` recording (``catch-alp-good-f``, 244 channels: 151 mag + 29
+  reference + 60 EEG, 1250 Hz, 4 s, 2 trigger events) -- exercises the CTF
+  directory reader and the simultaneous-MEG/EEG channel split that single-file
+  formats can't reach.
 
 Skips cleanly if the optional ``meg`` extra (mne) is not installed.
 """
@@ -20,6 +25,7 @@ pytest.importorskip("mne", reason="MEG import requires the optional 'meg' extra 
 
 _REPO = pathlib.Path(__file__).resolve().parents[2]
 MEG = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
+CTF = _REPO / "examples/ctf/catch-alp-good-f.ds"
 
 pytestmark = pytest.mark.skipif(not MEG.exists(), reason="MEG fixture missing")
 
@@ -27,6 +33,11 @@ pytestmark = pytest.mark.skipif(not MEG.exists(), reason="MEG fixture missing")
 @pytest.fixture(scope="module")
 def meg_rec():
     return Recording.from_file(str(MEG))
+
+
+@pytest.fixture(scope="module")
+def ctf_rec():
+    return Recording.from_file(str(CTF))
 
 
 def test_meg_channel_types_preserved(meg_rec):
@@ -88,6 +99,50 @@ def test_meg_roundtrip_preserves_tesla_signals(meg_rec, tmp_path):
             continue
         r = float(np.corrcoef(original, roundtripped)[0, 1])
         assert r > 0.99, f"{ch}: round-trip correlation {r}"
+
+
+# -- Real CTF .ds directory reader (the format single-file fixtures can't cover) --
+
+
+@pytest.mark.skipif(not CTF.exists(), reason="CTF fixture missing")
+def test_ctf_reads_channel_types(ctf_rec):
+    """The CTF .ds directory reads with its sensor types kept distinct."""
+    types = Counter(i["channel_type"] for i in ctf_rec.channels.values())
+    assert types["MEGMAG"] == 151
+    assert types["MEGREFMAG"] == 29
+    assert types["EEG"] == 60  # simultaneous EEG, not collapsed into MEG
+    assert types["TRIG"] == 1
+    assert types["MISC"] == 3
+    assert sum(types.values()) == 244
+
+
+@pytest.mark.skipif(not CTF.exists(), reason="CTF fixture missing")
+def test_ctf_units_and_modalities(ctf_rec):
+    by_type = {i["channel_type"]: i for i in ctf_rec.channels.values()}
+    assert by_type["MEGMAG"]["physical_dimension"] == "T"  # Tesla magnetometers
+    assert by_type["MEGREFMAG"]["physical_dimension"] == "T"
+    assert by_type["EEG"]["physical_dimension"] == "V"
+    assert by_type["MEGMAG"]["modality"] == "MEG"
+    assert by_type["EEG"]["modality"] == "EEG"  # split out from the MEG sensors
+    assert by_type["TRIG"]["modality"] == "MISC"
+
+
+@pytest.mark.skipif(not CTF.exists(), reason="CTF fixture missing")
+def test_ctf_sampling_and_shape(ctf_rec):
+    rates = {i["sample_frequency"] for i in ctf_rec.channels.values()}
+    assert rates == {1250.0}
+    assert ctf_rec.signals.shape == (5000, 244)  # 4 s @ 1250 Hz, 244 channels
+
+
+@pytest.mark.skipif(not CTF.exists(), reason="CTF fixture missing")
+def test_ctf_stim_events(ctf_rec):
+    """Trigger-channel transitions become events (onsets in seconds, sorted)."""
+    assert ctf_rec.events is not None and len(ctf_rec.events) == 2
+    onsets = ctf_rec.events["onset"].to_numpy()
+    assert (onsets[:-1] <= onsets[1:]).all()  # sorted
+    assert onsets.min() >= 0.0 and onsets.max() <= 4.0  # within the recording
+    assert ctf_rec.events["onset"].dtype == np.float64
+    assert all(d.isdigit() for d in ctf_rec.events["description"])
 
 
 # -- Format dispatch (no fixture needed; just the extension -> importer mapping) --

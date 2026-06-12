@@ -15,6 +15,4 @@ KIT systems use both `.sqd` and `.con` extensions for the same format; biosigIO'
 importer dispatches both (plus `.kdf`) to `read_raw_kit`. Reading is covered here;
 the `.con`/`.kdf` extension dispatch is covered in `test_meg_importer.py`.
 
-CTF `.ds` reading has no small public fixture (CTF test data is download-only via
-`mne.datasets.testing`); it is validated on real datasets, with the extension
-dispatch unit-tested in `test_meg_importer.py`.
+CTF `.ds` reading has its own fixture under `examples/ctf/` (see that README).
