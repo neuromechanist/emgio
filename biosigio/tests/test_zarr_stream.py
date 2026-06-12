@@ -10,6 +10,7 @@ Requires the zarr + meg (MNE) extras; skips cleanly otherwise.
 """
 
 import os
+import pathlib
 import tempfile
 
 import numpy as np
@@ -23,6 +24,10 @@ import zarr  # noqa: E402
 
 from biosigio import stream_to_zarr  # noqa: E402
 from biosigio.exporters.zarr import _resample_channel  # noqa: E402
+
+# Real committed FIF MEG fixture (305 ch, 100 Hz, 30 s); see test_meg_importer.py.
+_REPO = pathlib.Path(__file__).resolve().parents[2]
+MEG_FIF = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
 
 
 def _write_edf(path: str, rate: float, duration_s: float, n_ch: int) -> np.ndarray:
@@ -162,3 +167,51 @@ def test_stream_rejects_bad_dtype():
         with tempfile.TemporaryDirectory() as d:
             with pytest.raises(ValueError, match="dtype must be"):
                 stream_to_zarr(path, os.path.join(d, "x.zarr"), dtype="int8")
+
+
+# -- Real FIF MEG (the formats NEMAR actually streams: BrainVision/FIF) ----------
+
+
+@pytest.mark.skipif(not MEG_FIF.exists(), reason="MEG FIF fixture missing")
+def test_stream_real_fif_reproduces_full_load():
+    """Streaming a real .fif reproduces the full-load signal within int16 quant."""
+    import mne
+
+    full = mne.io.read_raw_fif(str(MEG_FIF), preload=True, verbose="ERROR")
+    full_data = full.get_data()  # (n_ch, n_samp); 100 Hz <= MEG cap 250 -> no resample
+    with tempfile.TemporaryDirectory() as d:
+        store = os.path.join(d, "rec.zarr")
+        stream_to_zarr(str(MEG_FIF), store, force_modality="MEG")
+        assert dict(zarr.open_group(store, mode="r").attrs)["channel_groups"] == ["meg_100hz"]
+        deq = _dequant(store, "meg_100hz")
+        assert deq.shape == full_data.shape
+        for i in range(full_data.shape[0]):
+            rng = float(full_data[i].max() - full_data[i].min()) or 1.0
+            assert np.max(np.abs(deq[i] - full_data[i])) <= 2 * rng / 65535
+
+
+@pytest.mark.skipif(not MEG_FIF.exists(), reason="MEG FIF fixture missing")
+def test_stream_split_fif_covers_whole_chain():
+    """Streaming the FIRST split of a multi-file FIF must convert the WHOLE
+    recording, not just the first split's portion (regression guard for the
+    on005261 split-FIF bug: read_raw follows the chain from split-01)."""
+    import mne
+
+    full = mne.io.read_raw_fif(str(MEG_FIF), preload=True, verbose="ERROR")
+    n_full = int(full.n_times)
+    with tempfile.TemporaryDirectory() as d:
+        # The 3.6 MB fixture splits into a 10-part chain at 1.5 MB.
+        full.save(
+            os.path.join(d, "sub-01_task-mouse_meg.fif"),
+            split_size="1.5MB",
+            split_naming="bids",
+            verbose="ERROR",
+        )
+        first = os.path.join(d, "sub-01_task-mouse_split-01_meg.fif")
+        assert os.path.exists(first)
+        assert os.path.exists(os.path.join(d, "sub-01_task-mouse_split-02_meg.fif"))
+        store = os.path.join(d, "rec.zarr")
+        stream_to_zarr(first, store, force_modality="MEG")
+        g = zarr.open_group(store, mode="r")["meg_100hz"]
+        # Whole-chain length, not the ~300-sample first split.
+        assert dict(g.attrs)["n_samples"] == n_full
