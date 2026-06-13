@@ -15,6 +15,8 @@ each format on hand.
 
 import importlib.util
 import os
+import pathlib
+import shutil
 import tempfile
 
 import numpy as np
@@ -34,6 +36,9 @@ from biosigio.exceptions import (
 )
 
 _HAS_MNE = importlib.util.find_spec("mne") is not None
+_REPO = pathlib.Path(__file__).resolve().parents[2]
+_MEG_FIF = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
+_CTF_DS = _REPO / "examples/ctf/catch-alp-good-f.ds"
 
 
 # -- classify_read_error: reader-phrasing -> typed error -----------------------
@@ -59,6 +64,13 @@ def test_classify_filesize_is_corrupt():
 def test_classify_incomplete_split_is_corrupt():
     err = classify_read_error(
         ValueError("Split raw file detected but next file ..._split-02_meg.fif does not exist")
+    )
+    assert isinstance(err, CorruptFileError)
+
+
+def test_classify_ctf_trial_truncation_is_corrupt():
+    err = classify_read_error(
+        ValueError("The number of samples is not an even multiple of the trial size")
     )
     assert isinstance(err, CorruptFileError)
 
@@ -204,3 +216,47 @@ def test_mixed_rate_edf_raises_typed_but_valueerror():
             Recording.from_file(path, mixed_rate="error")
         with pytest.raises(ValueError):  # back-compat
             Recording.from_file(path, mixed_rate="error")
+
+
+@pytest.mark.skipif(
+    not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture"
+)
+def test_incomplete_split_fif_chain_is_corrupt():
+    """A split FIF whose chain is missing a member (split-01 present, split-02
+    gone) -> CorruptFileError, via the real MEG importer (the on005261 split
+    failure mode). read_raw_fif(split-01) follows the chain and raises when the
+    next file is absent."""
+    import mne
+
+    full = mne.io.read_raw_fif(str(_MEG_FIF), preload=True, verbose="ERROR")
+    with tempfile.TemporaryDirectory() as d:
+        full.save(
+            os.path.join(d, "sub-01_task-mouse_meg.fif"),
+            split_size="1.5MB",
+            split_naming="bids",
+            verbose="ERROR",
+        )
+        first = os.path.join(d, "sub-01_task-mouse_split-01_meg.fif")
+        second = os.path.join(d, "sub-01_task-mouse_split-02_meg.fif")
+        assert os.path.exists(first) and os.path.exists(second)
+        os.remove(second)  # break the chain
+        with pytest.raises(CorruptFileError):
+            Recording.from_file(first)
+
+
+@pytest.mark.skipif(
+    not _HAS_MNE or not _CTF_DS.exists(), reason="needs mne + the CTF fixture"
+)
+def test_truncated_ctf_meg4_is_corrupt():
+    """A CTF .ds whose .meg4 is chopped to a non-multiple of its record size
+    (the on004398 truncation) -> CorruptFileError, via the real CTF reader."""
+    with tempfile.TemporaryDirectory() as d:
+        ds = os.path.join(d, "catch-alp-good-f.ds")
+        shutil.copytree(_CTF_DS, ds)
+        meg4 = os.path.join(ds, "catch-alp-good-f.meg4")
+        # Cut a few hundred bytes off the tail: the .meg4 is now (size-8) not a
+        # clean int32*nchan*nsamp multiple, which read_raw_ctf rejects.
+        with open(meg4, "r+b") as fh:
+            fh.truncate(os.path.getsize(meg4) - 333)
+        with pytest.raises(CorruptFileError):
+            Recording.from_file(ds)

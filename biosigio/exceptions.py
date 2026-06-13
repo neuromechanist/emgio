@@ -135,9 +135,13 @@ def classify_read_error(exc: Exception, filepath: str = "") -> BiosigIOError:
         or "not edf" in low
         or "not bdf" in low
         or "compliant" in low
-        or "truncat" in low
+        or "truncate" in low  # matches "truncated" too
         or "corrupt" in low
         or ("split" in low and "does not exist" in low)
+        # CTF .meg4 chopped mid-trial (read_raw_ctf): the data no longer divides
+        # into whole trials -- the on004398 truncation signature.
+        or "even multiple of the trial" in low
+        or "not an even multiple" in low
     ):
         return CorruptFileError(f"Truncated, incomplete, or corrupt file{where}: {msg}")
 

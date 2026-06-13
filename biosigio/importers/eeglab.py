@@ -7,6 +7,7 @@ from scipy.io import loadmat
 
 from ..core.emg import Recording
 from ..core.modality import infer_modality_from_channel_type
+from ..exceptions import classify_read_error
 from .base import BaseImporter
 
 
@@ -430,4 +431,4 @@ class EEGLABImporter(BaseImporter):
             return rec
 
         except Exception as e:
-            raise ValueError(f"Error reading EEGLAB .set file: {str(e)}") from e
+            raise classify_read_error(e, filepath) from e
