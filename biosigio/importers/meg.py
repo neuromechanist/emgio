@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.emg import Recording
+from ..exceptions import classify_read_error
 from ._mne_common import raw_to_recording, require_mne
 from .base import BaseImporter
 
@@ -81,7 +82,12 @@ class MEGImporter(BaseImporter):
         try:
             raw = self._read_raw(mne, filepath)
         except Exception as e:
-            raise ValueError(f"Error reading MEG file {filepath}: {e}") from e
+            # Classify into a typed biosigIO error (not_continuous for an
+            # evoked/epoched derivative, corrupt_or_truncated for a bad/incomplete
+            # file, ...) so callers can surface a specific reason. The Pyright
+            # import-resolution noise here is the editor lacking the venv; the
+            # module exists.
+            raise classify_read_error(e, filepath) from e
 
         rec = raw_to_recording(raw)
         rec.set_metadata("source_file", filepath)

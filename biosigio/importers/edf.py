@@ -5,6 +5,7 @@ import pandas as pd
 import pyedflib
 
 from ..core.emg import Recording
+from ..exceptions import MixedSamplingRateError, classify_read_error
 from .base import BaseImporter
 
 # Accepted `mixed_rate` policies for a recording whose signals carry differing
@@ -236,7 +237,7 @@ class EDFImporter(BaseImporter):
             n_out = 0
             if len(rates) > 1:
                 if mixed_rate == "error":
-                    raise ValueError(
+                    raise MixedSamplingRateError(
                         "EDF/BDF recording has mixed per-channel sampling rates "
                         f"({sorted(rates)} Hz); biosigIO stores one uniform grid. This "
                         "is a real BIDS montage (e.g. polysomnography: EEG ~200 Hz + "
@@ -299,7 +300,11 @@ class EDFImporter(BaseImporter):
             return rec
 
         except Exception as e:
-            raise ValueError(f"Error reading EDF file: {str(e)}") from e
+            # Typed classification: a truncated/non-compliant EDF (pyedflib's
+            # "Filesize" check) becomes CorruptFileError so callers can surface a
+            # specific reason. A BiosigIOError (e.g. the mixed_rate policy error)
+            # passes through unchanged.
+            raise classify_read_error(e, filepath) from e
 
         finally:
             if "edf_reader" in locals():

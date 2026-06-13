@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from ..analysis.verification import compare_signals, report_verification_results
+from ..exceptions import UnsupportedFormatError
 from ..visualization.static import plot_comparison
 from ..visualization.static import plot_signals as static_plot_signals
 from .modality import (
@@ -151,7 +152,7 @@ class Recording:
         elif extension == ".zarr":
             return "zarr"
         else:
-            raise ValueError(f"Unsupported file extension: {extension}")
+            raise UnsupportedFormatError(f"Unsupported file extension: {extension!r}")
 
     @classmethod
     def from_file(
