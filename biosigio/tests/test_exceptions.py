@@ -218,9 +218,7 @@ def test_mixed_rate_edf_raises_typed_but_valueerror():
             Recording.from_file(path, mixed_rate="error")
 
 
-@pytest.mark.skipif(
-    not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture"
-)
+@pytest.mark.skipif(not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture")
 def test_incomplete_split_fif_chain_is_corrupt():
     """A split FIF whose chain is missing a member (split-01 present, split-02
     gone) -> CorruptFileError, via the real MEG importer (the on005261 split
@@ -244,9 +242,7 @@ def test_incomplete_split_fif_chain_is_corrupt():
             Recording.from_file(first)
 
 
-@pytest.mark.skipif(
-    not _HAS_MNE or not _CTF_DS.exists(), reason="needs mne + the CTF fixture"
-)
+@pytest.mark.skipif(not _HAS_MNE or not _CTF_DS.exists(), reason="needs mne + the CTF fixture")
 def test_truncated_ctf_meg4_is_corrupt():
     """A CTF .ds whose .meg4 is chopped to a non-multiple of its record size
     (the on004398 truncation) -> CorruptFileError, via the real CTF reader."""
