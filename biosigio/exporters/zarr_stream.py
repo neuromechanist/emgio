@@ -102,13 +102,15 @@ class _MneSource:
         self.channels: list[dict] = []
         for i, name in enumerate(self._raw.ch_names):
             ctype = _MNE_TYPE_TO_biosigIO.get(types[i], "OTHER")
-            self.channels.append({
-                "idx": i,
-                "label": name,
-                "channel_type": ctype,
-                "modality": force_modality or infer_modality_from_channel_type(ctype),
-                "unit": _FIFF_UNIT_TO_DIM.get(int(self._raw.info["chs"][i]["unit"]), "n/a"),
-            })
+            self.channels.append(
+                {
+                    "idx": i,
+                    "label": name,
+                    "channel_type": ctype,
+                    "modality": force_modality or infer_modality_from_channel_type(ctype),
+                    "unit": _FIFF_UNIT_TO_DIM.get(int(self._raw.info["chs"][i]["unit"]), "n/a"),
+                }
+            )
 
     def read(self, picks: list[int], start: int, stop: int) -> np.ndarray:
         return self._raw.get_data(picks=picks, start=start, stop=stop)
@@ -150,19 +152,19 @@ class _EdfSource:
             label = cast(str, h["label"]).strip()
             transducer = cast(str, h.get("transducer", "")).strip()
             ctype = typer(label, transducer)
-            self.channels.append({
-                "idx": i,
-                "label": label,
-                "channel_type": ctype,
-                "modality": force_modality or infer_modality_from_channel_type(ctype),
-                "unit": cast(str, h.get("dimension", "")).strip() or "n/a",
-            })
+            self.channels.append(
+                {
+                    "idx": i,
+                    "label": label,
+                    "channel_type": ctype,
+                    "modality": force_modality or infer_modality_from_channel_type(ctype),
+                    "unit": cast(str, h.get("dimension", "")).strip() or "n/a",
+                }
+            )
 
     def read(self, picks: list[int], start: int, stop: int) -> np.ndarray:
         n = stop - start
-        return np.stack(
-            [self._reader.readSignal(i, start, n) for i in picks]
-        ).astype(np.float64)
+        return np.stack([self._reader.readSignal(i, start, n) for i in picks]).astype(np.float64)
 
     def close(self) -> None:
         self._reader.close()

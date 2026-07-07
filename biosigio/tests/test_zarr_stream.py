@@ -166,12 +166,28 @@ def test_stream_mixed_rate_edf_rejected():
         n = 400
         w = pyedflib.EdfWriter(path, 2)
         headers = [
-            {"label": "EEG0", "dimension": "uV", "sample_frequency": 200.0,
-             "physical_max": 100.0, "physical_min": -100.0, "digital_max": 32767,
-             "digital_min": -32768, "prefilter": "n/a", "transducer": "n/a"},
-            {"label": "SpO2", "dimension": "%", "sample_frequency": 20.0,
-             "physical_max": 100.0, "physical_min": 0.0, "digital_max": 32767,
-             "digital_min": -32768, "prefilter": "n/a", "transducer": "n/a"},
+            {
+                "label": "EEG0",
+                "dimension": "uV",
+                "sample_frequency": 200.0,
+                "physical_max": 100.0,
+                "physical_min": -100.0,
+                "digital_max": 32767,
+                "digital_min": -32768,
+                "prefilter": "n/a",
+                "transducer": "n/a",
+            },
+            {
+                "label": "SpO2",
+                "dimension": "%",
+                "sample_frequency": 20.0,
+                "physical_max": 100.0,
+                "physical_min": 0.0,
+                "digital_max": 32767,
+                "digital_min": -32768,
+                "prefilter": "n/a",
+                "transducer": "n/a",
+            },
         ]
         w.setSignalHeaders(headers)
         w.writeSamples([np.zeros(n), np.zeros(n // 10)])
