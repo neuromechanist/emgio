@@ -32,6 +32,7 @@ from __future__ import annotations
 import datetime as _dt
 import os
 import tempfile
+from typing import cast
 
 import numpy as np
 
@@ -73,6 +74,109 @@ def _pyramid_level_lengths(
         lengths.append(n_out)
         n = n_out
     return lengths
+
+
+# --- Lazy stream sources (#944) -----------------------------------------------
+# stream_to_zarr needs, per recording: sfreq, n_samples, and per-channel
+# (label / biosigIO type / unit) metadata, plus windowed float64 blocks. MNE
+# (preload=False) covers .fif/.vhdr/.set/CTF. EDF/BDF go through pyedflib INSTEAD
+# -- biosigIO's in-memory path reads EDF via pyedflib, and MNE disagrees on EDF
+# unit scaling (an EDF whose physical dimension is unknown: MNE assumes Volts,
+# pyedflib keeps the file's dimension), so streaming EDF via MNE would NOT match a
+# re-run on the in-memory path. pyedflib.readSignal(chn, start, n) is numerically
+# identical to readSignal(chn) sliced, so the streamed store matches the in-memory
+# store exactly. (EDF-via-stream is not used in production today, so switching its
+# reader changes no existing store.)
+
+
+class _MneSource:
+    """MNE-backed lazy source for the formats MNE reads faithfully
+    (.fif/.vhdr/.set/CTF)."""
+
+    def __init__(self, filepath: str, force_modality: str | None):
+        mne = require_mne()
+        self._raw = mne.io.read_raw(filepath, preload=False, verbose="ERROR")
+        self.sfreq = float(self._raw.info["sfreq"])
+        self.n_samples = int(self._raw.n_times)
+        types = self._raw.get_channel_types()
+        self.channels: list[dict] = []
+        for i, name in enumerate(self._raw.ch_names):
+            ctype = _MNE_TYPE_TO_biosigIO.get(types[i], "OTHER")
+            self.channels.append(
+                {
+                    "idx": i,
+                    "label": name,
+                    "channel_type": ctype,
+                    "modality": force_modality or infer_modality_from_channel_type(ctype),
+                    "unit": _FIFF_UNIT_TO_DIM.get(int(self._raw.info["chs"][i]["unit"]), "n/a"),
+                }
+            )
+
+    def read(self, picks: list[int], start: int, stop: int) -> np.ndarray:
+        return self._raw.get_data(picks=picks, start=start, stop=stop)
+
+    def close(self) -> None:
+        pass
+
+
+class _EdfSource:
+    """pyedflib-backed lazy source for .edf/.bdf, matching biosigIO's in-memory
+    EDF importer (physical-dimension units, label/transducer channel typing).
+
+    Uniform per-channel rate ONLY: a mixed-rate EDF raises MixedSamplingRateError
+    (same as the importer's default), so it stays on the in-memory resample path
+    rather than being silently mis-gridded by a single-rate streaming window."""
+
+    def __init__(self, filepath: str, force_modality: str | None):
+        import pyedflib
+
+        from ..exceptions import MixedSamplingRateError
+        from ..importers.edf import EDFImporter
+
+        self._reader = pyedflib.EdfReader(filepath)
+        headers = self._reader.getSignalHeaders()
+        nsamps = self._reader.getNSamples()
+        rates = {float(h["sample_frequency"]) for h in headers}
+        if len(rates) > 1:
+            self._reader.close()
+            raise MixedSamplingRateError(
+                "EDF/BDF recording has mixed per-channel sampling rates "
+                f"({sorted(rates)} Hz); the streaming path needs a uniform grid. The "
+                'in-memory path handles this with mixed_rate="resample".'
+            )
+        typer = EDFImporter()._determine_channel_type
+        self.sfreq = float(headers[0]["sample_frequency"]) if headers else 0.0
+        self.n_samples = int(nsamps[0]) if len(nsamps) else 0
+        self.channels = []
+        for i, h in enumerate(headers):
+            label = cast(str, h["label"]).strip()
+            transducer = cast(str, h.get("transducer", "")).strip()
+            ctype = typer(label, transducer)
+            self.channels.append(
+                {
+                    "idx": i,
+                    "label": label,
+                    "channel_type": ctype,
+                    "modality": force_modality or infer_modality_from_channel_type(ctype),
+                    "unit": cast(str, h.get("dimension", "")).strip() or "n/a",
+                }
+            )
+
+    def read(self, picks: list[int], start: int, stop: int) -> np.ndarray:
+        n = stop - start
+        return np.stack([self._reader.readSignal(i, start, n) for i in picks]).astype(np.float64)
+
+    def close(self) -> None:
+        self._reader.close()
+
+
+def _open_stream_source(filepath: str, force_modality: str | None):
+    """Open a lazy source, reading EDF/BDF via pyedflib (importer parity) and
+    everything else via MNE. #944"""
+    ext = os.path.splitext(filepath)[1].lower()
+    if ext in (".edf", ".bdf"):
+        return _EdfSource(filepath, force_modality)
+    return _MneSource(filepath, force_modality)
 
 
 def stream_to_zarr(
@@ -120,33 +224,25 @@ def stream_to_zarr(
     zarr = require_zarr()
     from zarr.codecs import BloscCodec
 
-    mne = require_mne()
     rates = dict(DEFAULT_MODALITY_RATES if modality_rates is None else modality_rates)
     if not store_path.endswith(".zarr"):
         store_path = store_path + ".zarr"
     out_np = np.int16 if dtype == "int16" else np.float32
 
-    raw = mne.io.read_raw(filepath, preload=False, verbose="ERROR")
-    sfreq = float(raw.info["sfreq"])
-    n_samples = int(raw.n_times)
-    if n_samples == 0 or len(raw.ch_names) == 0:
+    # EDF/BDF read via pyedflib (importer parity), everything else lazily via MNE.
+    src = _open_stream_source(filepath, force_modality)
+    sfreq = src.sfreq
+    n_samples = src.n_samples
+    if n_samples == 0 or len(src.channels) == 0:
+        src.close()
         raise ValueError("No signals loaded")
-    mne_types = raw.get_channel_types()
 
-    # Per-channel metadata; group by (modality, native rate). MNE Raw is single-rate,
-    # so every channel shares `sfreq`; force_modality collapses to one group.
+    # Per-channel metadata; group by (modality, native rate). The source is
+    # single-rate (a mixed-rate EDF is rejected in _EdfSource), so every channel
+    # shares `sfreq`; force_modality collapses to one group.
     groups: dict[tuple[str, int], list[dict]] = {}
-    for i, name in enumerate(raw.ch_names):
-        ctype = _MNE_TYPE_TO_biosigIO.get(mne_types[i], "OTHER")
-        modality = force_modality if force_modality else infer_modality_from_channel_type(ctype)
-        info = {
-            "idx": i,
-            "label": name,
-            "channel_type": ctype,
-            "modality": modality,
-            "unit": _FIFF_UNIT_TO_DIM.get(int(raw.info["chs"][i]["unit"]), "n/a"),
-        }
-        groups.setdefault((str(modality), int(round(sfreq))), []).append(info)
+    for info in src.channels:
+        groups.setdefault((str(info["modality"]), int(round(sfreq))), []).append(info)
 
     store = zarr.storage.LocalStore(store_path)
     root = zarr.create_group(store=store, overwrite=True)
@@ -166,7 +262,7 @@ def stream_to_zarr(
             read_chunk = max(1, int(round(read_chunk_seconds * native_rate)))
             for s in range(0, n_samples, read_chunk):
                 e = min(n_samples, s + read_chunk)
-                block = raw.get_data(picks=picks, start=s, stop=e)  # (n_ch, e-s) float64
+                block = src.read(picks, s, e)  # (n_ch, e-s) float64
                 mm[:, s:e] = block.astype(np.float32)
             mm.flush()
 
@@ -299,7 +395,7 @@ def stream_to_zarr(
 
         meta = dict(recording_metadata or {})
         meta.setdefault("source_file", filepath)
-        meta.setdefault("number_of_signals", len(raw.ch_names))
+        meta.setdefault("number_of_signals", len(src.channels))
         meta.setdefault("streamed", True)
         root.attrs.update(
             {
@@ -321,4 +417,5 @@ def stream_to_zarr(
                 ),
             }
         )
+    src.close()
     return store_path

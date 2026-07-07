@@ -77,12 +77,18 @@ class _TmpEDF:
         os.unlink(self.path)
 
 
-def _mne_full_data(path):
-    """Ground truth: load the whole EDF with MNE (preload) -> (n_ch, n_samples)."""
-    import mne
-
-    raw = mne.io.read_raw(path, preload=True, verbose="ERROR")
-    return raw.get_data(), float(raw.info["sfreq"])
+def _pyedflib_full_data(path):
+    """Ground truth for EDF: read the whole file with pyedflib (physical units) ->
+    (n_ch, n_samples). biosigIO reads EDF via pyedflib, and the streaming path now
+    does too (#944), so this -- NOT MNE, which rescales EDF to SI volts -- is what
+    both the streaming and in-memory exporters target."""
+    r = pyedflib.EdfReader(path)
+    try:
+        data = np.stack([r.readSignal(i) for i in range(r.signals_in_file)])
+        sfreq = float(r.getSampleFrequency(0))
+    finally:
+        r.close()
+    return data, sfreq
 
 
 def _dequant(store_path, gname):
@@ -96,7 +102,7 @@ def _dequant(store_path, gname):
 def test_stream_no_resample_reproduces_signal():
     """native <= cap: dequantized base matches the full-load signal within 1 LSB."""
     with _TmpEDF(rate=200.0, duration_s=20.0, n_ch=6) as path:
-        full, _sfreq = _mne_full_data(path)
+        full, _sfreq = _pyedflib_full_data(path)  # #944: streaming reads EDF via pyedflib
         with tempfile.TemporaryDirectory() as d:
             store = os.path.join(d, "rec.zarr")
             stream_to_zarr(path, store, force_modality="EEG")
@@ -110,7 +116,7 @@ def test_stream_no_resample_reproduces_signal():
 def test_stream_with_resample_matches_reference():
     """native > cap: streamed base matches resample-then-quantize of the full signal."""
     with _TmpEDF(rate=500.0, duration_s=20.0, n_ch=4) as path:
-        full, _sfreq = _mne_full_data(path)
+        full, _sfreq = _pyedflib_full_data(path)  # #944: streaming reads EDF via pyedflib
         with tempfile.TemporaryDirectory() as d:
             store = os.path.join(d, "rec.zarr")
             stream_to_zarr(path, store, force_modality="EEG")  # 500 -> 250 cap
@@ -122,6 +128,78 @@ def test_stream_with_resample_matches_reference():
                 rng = float(ref.max() - ref.min()) or 1.0
                 # streamed goes through a float32 memmap; allow a few LSB of slack.
                 assert np.max(np.abs(deq[i] - ref)) <= 5 * rng / 65535
+
+
+def test_stream_edf_matches_in_memory_export():
+    """#944: the pyedflib streaming path must produce the SAME store as the
+    in-memory (Recording.from_file -> to_zarr) path for EDF. This is WHY streaming
+    reads EDF via pyedflib, not MNE (which rescales EDF units to SI volts): a large
+    EDF (streamed) and a small one (in-memory) must land on the same scale/unit."""
+    from biosigio import Recording
+
+    with _TmpEDF(rate=200.0, duration_s=10.0, n_ch=4) as path:
+        with tempfile.TemporaryDirectory() as d:
+            s_stream = os.path.join(d, "stream.zarr")
+            s_inmem = os.path.join(d, "inmem.zarr")
+            stream_to_zarr(path, s_stream, force_modality="EEG", dtype="int16")
+            rec = Recording.from_file(path)
+            for label in rec.channels:
+                rec.channels[label]["modality"] = "EEG"
+            rec.to_zarr(s_inmem, dtype="int16")
+            a = _dequant(s_stream, "eeg_200hz")
+            b = _dequant(s_inmem, "eeg_200hz")
+            assert a.shape == b.shape
+            for i in range(a.shape[0]):
+                rng = float(b[i].max() - b[i].min()) or 1.0
+                # streaming's float32 memmap vs the in-memory float64 path: a few LSB.
+                assert np.max(np.abs(a[i] - b[i])) <= 6 * rng / 65535
+
+
+def test_stream_mixed_rate_edf_rejected():
+    """#944: a mixed per-channel-rate EDF can't stream on a single grid -> raises
+    (same as the importer's default), so it stays on the in-memory resample path."""
+    from biosigio.exceptions import MixedSamplingRateError
+
+    fd, path = tempfile.mkstemp(suffix=".edf")
+    os.close(fd)
+    try:
+        n = 400
+        w = pyedflib.EdfWriter(path, 2)
+        headers = [
+            {
+                "label": "EEG0",
+                "dimension": "uV",
+                "sample_frequency": 200.0,
+                "physical_max": 100.0,
+                "physical_min": -100.0,
+                "digital_max": 32767,
+                "digital_min": -32768,
+                "prefilter": "n/a",
+                "transducer": "n/a",
+            },
+            {
+                "label": "SpO2",
+                "dimension": "%",
+                "sample_frequency": 20.0,
+                "physical_max": 100.0,
+                "physical_min": 0.0,
+                "digital_max": 32767,
+                "digital_min": -32768,
+                "prefilter": "n/a",
+                "transducer": "n/a",
+            },
+        ]
+        w.setSignalHeaders(headers)
+        w.writeSamples([np.zeros(n), np.zeros(n // 10)])
+        w.close()
+        with tempfile.TemporaryDirectory() as d:
+            try:
+                stream_to_zarr(path, os.path.join(d, "x.zarr"), force_modality="EEG")
+                raise AssertionError("expected MixedSamplingRateError")
+            except MixedSamplingRateError:
+                pass
+    finally:
+        os.unlink(path)
 
 
 def test_stream_store_structure_and_pyramid():
