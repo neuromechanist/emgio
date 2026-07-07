@@ -108,14 +108,40 @@ def test_zarr_discrete_channel_nearest_not_inference(tmp_path):
     assert root[name]["0"].attrs["usable_for_inference"] is False
 
 
-def test_zarr_int16_rejects_non_finite(tmp_path):
-    """NaN/inf would silently decode to a midrange int16 value, so int16 export rejects it."""
-    data = np.sin(np.arange(1000) / 5.0)
-    data[100] = np.nan
+def test_zarr_int16_zerofills_and_flags_non_finite(tmp_path):
+    """A NaN/inf in one channel must NOT sink the whole recording (a MoBI dataset's
+    aux channel would otherwise take down every good EEG channel with it). int16
+    export zero-fills the non-finite samples -- range computed over finite samples
+    only -- and flags the channel (`nonfinite_samples`, `usable_for_inference` ->
+    False). A clean channel in the same group is untouched."""
+    good = np.sin(np.arange(1000) / 5.0)
+    bad = np.sin(np.arange(1000) / 5.0)
+    bad[100:110] = np.nan  # 10 NaN
+    bad[200] = np.inf  # + 1 inf = 11 non-finite
     rec = Recording()
-    rec.add_channel("C1", data, 250, "uV", "EEG")
-    with pytest.raises(ValueError, match="non-finite"):
-        rec.to_zarr(str(tmp_path / "r"))  # dtype="int16" default
+    rec.add_channel("C_good", good, 250, "uV", "EEG")
+    rec.add_channel("C_bad", bad, 250, "uV", "EEG")
+
+    root = _open(rec.to_zarr(str(tmp_path / "r")))  # dtype="int16" default; must not raise
+    name = next(k for k in root.keys() if k != "events")
+    chans = {c["label"]: c for c in root[name].attrs["channels"]}
+
+    # Clean channel: untouched, inference-usable, unflagged.
+    assert chans["C_good"]["usable_for_inference"] is True
+    assert "nonfinite_samples" not in chans["C_good"]
+
+    # Bad channel: present + viewable, but flagged and demoted.
+    assert chans["C_bad"]["nonfinite_samples"] == 11
+    assert chans["C_bad"]["usable_for_inference"] is False
+
+    # Every decoded sample is finite (the fill never leaves NaN in int16), and the
+    # finite samples still round-trip within one quantization step.
+    arr = root[name]["0"][:]
+    c = chans["C_bad"]
+    decoded = arr[c["row_index"]] * c["scale"] + c["offset"]
+    assert np.all(np.isfinite(decoded))
+    finite_idx = np.isfinite(bad)
+    assert np.allclose(decoded[finite_idx], bad[finite_idx], atol=2 * c["scale"])
 
 
 def test_zarr_float32_preserves_nan(tmp_path):
