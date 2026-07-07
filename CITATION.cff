@@ -18,8 +18,8 @@ authors:
 repository-code: "https://github.com/neuromechanist/biosigio"
 url: "https://neuromechanist.github.io/biosigio/"
 license: BSD-3-Clause
-version: 1.1.7
-date-released: "2026-06-13"
+version: 1.2.0
+date-released: "2026-07-06"
 keywords:
   - biosignal
   - electrophysiology
