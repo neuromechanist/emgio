@@ -120,13 +120,23 @@ def _resample_channel(
     return y
 
 
-def _quantize_int16_channel(row: np.ndarray, index: int = 0) -> tuple[np.ndarray, float, float]:
+def _quantize_int16_channel(row: np.ndarray) -> tuple[np.ndarray, float, float, int]:
     """Map one channel (1-D float) to int16 with scale/offset.
 
     ``physical = digital * scale + offset``. A constant (or empty) channel gets
-    scale=1 and the constant in offset. Non-finite samples (NaN/inf) cannot be
-    represented in int16 and would silently decode to a midrange value, so they
-    are rejected here -- use ``dtype="float32"`` (which preserves NaN) to keep them.
+    scale=1 and the constant in offset.
+
+    Non-finite samples (NaN/inf) cannot be represented in int16. Rather than fail
+    the whole recording for a single bad channel -- a NaN in one MISC/aux channel
+    (an accelerometer, force plate, or sync line in a MoBI dataset) would otherwise
+    sink the entire recording, including every good EEG channel -- the non-finite
+    samples are zero-filled: the physical range (scale/offset) is computed over the
+    FINITE samples only, then each non-finite sample is written as the digital code
+    for physical 0 (clamped into range). The count of filled samples is returned so
+    the caller can flag the channel (``nonfinite_samples``, and demote it to
+    ``usable_for_inference=False``). The fill is lossy, so it is documented rather
+    than silent, and the BIDS source remains authoritative. Callers that must keep
+    NaN exactly (e.g. for training) should export with ``dtype="float32"``.
 
     Operates one channel at a time so the exporter can quantize straight into the
     output array without materializing a float64 copy of the whole group (#95).
@@ -134,21 +144,22 @@ def _quantize_int16_channel(row: np.ndarray, index: int = 0) -> tuple[np.ndarray
     # Quantize in float64 regardless of the caller's dtype (the old batch path
     # cast the whole block up front); a no-op for the float64 resample output.
     row = np.asarray(row, dtype=np.float64)
-    if row.size and not np.all(np.isfinite(row)):
-        raise ValueError(
-            f"Channel index {index} has non-finite (NaN/inf) samples, which int16 storage "
-            "cannot represent without silently corrupting them. Use dtype='float32' "
-            "(preserves NaN) or mask/interpolate the samples before exporting."
-        )
-    pmin = float(np.min(row)) if row.size else 0.0
-    pmax = float(np.max(row)) if row.size else 0.0
-    if pmax == pmin:  # constant (or empty) channel: store the constant in offset
-        return np.zeros(row.shape, dtype=np.int16), 1.0, pmin
+    finite_mask = np.isfinite(row)
+    n_nonfinite = int(row.size - int(np.count_nonzero(finite_mask))) if row.size else 0
+    finite = row[finite_mask] if n_nonfinite else row
+    if finite.size == 0:  # empty, or every sample non-finite: flat zero channel
+        return np.zeros(row.shape, dtype=np.int16), 1.0, 0.0, n_nonfinite
+    pmin = float(np.min(finite))
+    pmax = float(np.max(finite))
+    if pmax == pmin:  # constant channel: store the constant in offset
+        return np.zeros(row.shape, dtype=np.int16), 1.0, pmin, n_nonfinite
     digital_span = _INT16_MAX - _INT16_MIN
     s = (pmax - pmin) / digital_span
     o = pmin - _INT16_MIN * s
+    if n_nonfinite:  # replace NaN/inf with physical 0 before quantizing
+        row = np.where(finite_mask, row, 0.0)
     digital = np.round((row - o) / s)
-    return np.clip(digital, _INT16_MIN, _INT16_MAX).astype(np.int16), s, o
+    return np.clip(digital, _INT16_MIN, _INT16_MAX).astype(np.int16), s, o, n_nonfinite
 
 
 def _build_minmax_pyramid(
@@ -276,29 +287,33 @@ class ZarrExporter:
                 y = _resample_channel(
                     rec.signals[label].values, native_rate, target_rate, discrete=discrete
                 )
+                n_nonfinite = 0
                 if dtype == "int16":
-                    base[i], scale[i], offset[i] = _quantize_int16_channel(y, i)
+                    base[i], scale[i], offset[i], n_nonfinite = _quantize_int16_channel(y)
                 else:
                     base[i] = y.astype(np.float32)
                 del y
-                chan_meta.append(
-                    {
-                        "label": label,
-                        "channel_type": ctype,
-                        "modality": modality,
-                        "unit": info.get("physical_dimension", "n/a"),
-                        "prefilter": info.get("prefilter", "n/a"),
-                        # The true per-channel rate, not the rounded group key, so a
-                        # non-integer acquisition rate is not lost (metadata loss is data loss).
-                        "original_rate": float(info["sample_frequency"]),
-                        "target_rate": float(target_rate),
-                        "anti_aliased": bool((not discrete) and target_rate < native_rate),
-                        "usable_for_inference": (not discrete),
-                        "scale": float(scale[i]),
-                        "offset": float(offset[i]),
-                        "row_index": i,
-                    }
-                )
+                meta = {
+                    "label": label,
+                    "channel_type": ctype,
+                    "modality": modality,
+                    "unit": info.get("physical_dimension", "n/a"),
+                    "prefilter": info.get("prefilter", "n/a"),
+                    # The true per-channel rate, not the rounded group key, so a
+                    # non-integer acquisition rate is not lost (metadata loss is data loss).
+                    "original_rate": float(info["sample_frequency"]),
+                    "target_rate": float(target_rate),
+                    "anti_aliased": bool((not discrete) and target_rate < native_rate),
+                    # A channel whose NaN/inf gaps were zero-filled is lossy: keep it
+                    # viewable but never inferable (int16 fill is not the real signal).
+                    "usable_for_inference": (not discrete) and n_nonfinite == 0,
+                    "scale": float(scale[i]),
+                    "offset": float(offset[i]),
+                    "row_index": i,
+                }
+                if n_nonfinite:
+                    meta["nonfinite_samples"] = n_nonfinite
+                chan_meta.append(meta)
 
             gname = f"{modality.lower()}_{int(round(target_rate))}hz"
             # Disambiguate the rare collision of two native rates -> same target.

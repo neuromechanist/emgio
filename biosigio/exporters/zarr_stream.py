@@ -308,8 +308,9 @@ def stream_to_zarr(
                 discrete = ctype in _DISCRETE_TYPES
                 x = np.asarray(mm[i], dtype=np.float64)
                 y = _resample_channel(x, native_rate, target_rate, discrete=discrete)
+                n_nonfinite = 0
                 if dtype == "int16":
-                    q, scale[i], offset[i] = _quantize_int16_channel(y, i)
+                    q, scale[i], offset[i], n_nonfinite = _quantize_int16_channel(y)
                 else:
                     q = y.astype(np.float32)
                 a0[i, :] = q
@@ -319,22 +320,24 @@ def stream_to_zarr(
                     )
                     for (_li, _eff, av), lvl in zip(view_arrays, pyramid, strict=False):
                         av[:, i, :] = lvl[:, 0, :]
-                chan_meta.append(
-                    {
-                        "label": ci["label"],
-                        "channel_type": ctype,
-                        "modality": modality,
-                        "unit": ci["unit"],
-                        "prefilter": "n/a",
-                        "original_rate": float(native_rate),
-                        "target_rate": float(target_rate),
-                        "anti_aliased": bool((not discrete) and target_rate < native_rate),
-                        "usable_for_inference": (not discrete),
-                        "scale": float(scale[i]),
-                        "offset": float(offset[i]),
-                        "row_index": i,
-                    }
-                )
+                meta = {
+                    "label": ci["label"],
+                    "channel_type": ctype,
+                    "modality": modality,
+                    "unit": ci["unit"],
+                    "prefilter": "n/a",
+                    "original_rate": float(native_rate),
+                    "target_rate": float(target_rate),
+                    "anti_aliased": bool((not discrete) and target_rate < native_rate),
+                    # A zero-filled NaN/inf channel is lossy: viewable, never inferable.
+                    "usable_for_inference": (not discrete) and n_nonfinite == 0,
+                    "scale": float(scale[i]),
+                    "offset": float(offset[i]),
+                    "row_index": i,
+                }
+                if n_nonfinite:
+                    meta["nonfinite_samples"] = n_nonfinite
+                chan_meta.append(meta)
                 del x, y, q
             del mm  # release the memmap before the temp dir is reclaimed
 
