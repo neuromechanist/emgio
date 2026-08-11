@@ -151,13 +151,13 @@ class EEGLABImporter(BaseImporter):
             # Extract channel fields
             for field in field_names:
                 # Get the field value for this channel
-                field_value = element[field]
+                field_value = np.asarray(element[field])
                 if field_value.size == 0:
                     continue
                 # scipy.io.loadmat returns scalar struct fields as nested
                 # (1, 1)-shaped arrays, so field_value[0] is still 1-D and
                 # float()/str() on it fails or mis-formats. Flatten to a scalar.
-                scalar = np.asarray(field_value).ravel()[0]
+                scalar = field_value.ravel()[0]
 
                 # Process based on field name
                 if field == "labels":
@@ -410,7 +410,7 @@ class EEGLABImporter(BaseImporter):
                         f"EEGLAB chanlocs describes {len(channel_info_list)} "
                         f"channel(s) but the data matrix has {n_data_ch} row(s); "
                         f"keeping all data rows",
-                        stacklevel=2,
+                        stacklevel=3,
                     )
                     channel_info_list = channel_info_list[:n_data_ch]
                     for i in range(len(channel_info_list), n_data_ch):
@@ -422,8 +422,29 @@ class EEGLABImporter(BaseImporter):
                     warnings.warn(
                         f"EEGLAB header nbchan={header_nbchan} disagrees with the "
                         f"data matrix ({n_data_ch} rows); using the data matrix",
-                        stacklevel=2,
+                        stacklevel=3,
                     )
+
+                # Labels must be unique: rec.channels is keyed by label and the
+                # exporters slice rec.signals by column name, so a duplicate
+                # (a real channel literally named "Channel4" colliding with a
+                # padded default, or duplicated labels in chanlocs itself)
+                # silently clobbers channel metadata and breaks per-channel
+                # export slicing. Disambiguate with a numeric suffix and warn.
+                used_labels: set[str] = set()
+                for i, channel_info in enumerate(channel_info_list):
+                    label = channel_info.get("label", f"Channel{i + 1}")
+                    if label in used_labels:
+                        k = 2
+                        while f"{label}_{k}" in used_labels:
+                            k += 1
+                        warnings.warn(
+                            f"duplicate EEGLAB channel label {label!r}; renaming to {label}_{k}",
+                            stacklevel=3,
+                        )
+                        label = f"{label}_{k}"
+                    used_labels.add(label)
+                    channel_info["label"] = label
 
                 # Build the frame in a single allocation (samples x channels)
                 # rather than assigning one column at a time. The per-column path
@@ -431,36 +452,34 @@ class EEGLABImporter(BaseImporter):
                 # doubles peak RAM, which OOMs large / high-channel-count .fdt
                 # recordings (#66, #95); the .fdt's native float32 is preserved so
                 # a multi-GB recording is not silently upcast to float64.
-                labels = [
-                    channel_info_list[i].get("label", f"Channel{i + 1}") for i in range(n_data_ch)
-                ]
+                labels = [info["label"] for info in channel_info_list]
                 rec.signals = pd.DataFrame(
                     signal_data.T, columns=labels, index=time_index, copy=False
                 )
                 del signal_data
 
-                # Add channel information
-                for i, channel_info in enumerate(channel_info_list):
-                    if i < n_data_ch:  # Make sure we have data for this channel
-                        channel_label = channel_info.get("label", f"Channel{i + 1}")
+                # Add channel information (the pad/trim above guarantees
+                # channel_info_list has exactly n_data_ch entries with unique labels)
+                for channel_info in channel_info_list:
+                    channel_label = channel_info["label"]
 
-                        # Add channel info (no silent EMG default; carry modality)
-                        ch_type = channel_info.get("channel_type", "OTHER")
-                        rec.channels[channel_label] = {
-                            "sample_frequency": srate,
-                            "physical_dimension": "uV",  # Default unit for EEG/EMG
-                            "prefilter": "n/a",
-                            "channel_type": ch_type,
-                            "modality": infer_modality_from_channel_type(ch_type),
-                        }
+                    # Add channel info (no silent EMG default; carry modality)
+                    ch_type = channel_info.get("channel_type", "OTHER")
+                    rec.channels[channel_label] = {
+                        "sample_frequency": srate,
+                        "physical_dimension": "uV",  # Default unit for EEG/EMG
+                        "prefilter": "n/a",
+                        "channel_type": ch_type,
+                        "modality": infer_modality_from_channel_type(ch_type),
+                    }
 
-                        # Add additional channel metadata
-                        if "X" in channel_info:
-                            rec.channels[channel_label]["X"] = channel_info["X"]
-                        if "Y" in channel_info:
-                            rec.channels[channel_label]["Y"] = channel_info["Y"]
-                        if "Z" in channel_info:
-                            rec.channels[channel_label]["Z"] = channel_info["Z"]
+                    # Add additional channel metadata
+                    if "X" in channel_info:
+                        rec.channels[channel_label]["X"] = channel_info["X"]
+                    if "Y" in channel_info:
+                        rec.channels[channel_label]["Y"] = channel_info["Y"]
+                    if "Z" in channel_info:
+                        rec.channels[channel_label]["Z"] = channel_info["Z"]
 
             return rec
 

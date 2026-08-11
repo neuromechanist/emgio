@@ -565,3 +565,76 @@ def test_eeglab_short_chanlocs_never_truncates_data(tmp_path):
     assert len(rec.channels) == n_channels
     for i, label in enumerate(rec.signals.columns):
         np.testing.assert_allclose(rec.signals[label].to_numpy(), data[i], rtol=0, atol=1e-5)
+
+
+def test_eeglab_header_nbchan_mismatch_warns(tmp_path):
+    """A header nbchan that disagrees with the data matrix warns and keeps the data."""
+    n_channels, n_samples, srate = 4, 100, 250
+    rng = np.random.default_rng(3)
+    data = (rng.standard_normal((n_channels, n_samples)) * 10).astype(np.float32)
+
+    chanlocs = np.zeros((1, n_channels), dtype=[("labels", "O"), ("type", "O")])
+    for i in range(n_channels):
+        chanlocs[0, i] = (np.array([f"C{i + 1}"]), np.array(["EEG"]))
+
+    set_path = str(tmp_path / "nbchan_mismatch.set")
+    scipy.io.savemat(
+        set_path,
+        {
+            "nbchan": np.array([[99]]),  # header lies; data matrix is authoritative
+            "trials": np.array([[1]]),
+            "pnts": np.array([[n_samples]]),
+            "srate": np.array([[srate]]),
+            "data": data,
+            "chanlocs": chanlocs,
+        },
+    )
+
+    with pytest.warns(UserWarning, match="nbchan=99 disagrees"):
+        rec = EEGLABImporter().load(set_path)
+
+    assert rec.signals.shape == (n_samples, n_channels)
+    assert len(rec.channels) == n_channels
+
+
+def test_eeglab_padded_label_collision_stays_unique(tmp_path):
+    """A padded default label colliding with a real channel name is disambiguated.
+
+    A real channel literally named "Channel4" must not merge with the padded
+    default for data row 4: duplicate labels clobber rec.channels entries and
+    break per-channel column slicing in the exporters.
+    """
+    n_channels, n_samples, srate = 5, 100, 250
+    rng = np.random.default_rng(5)
+    data = (rng.standard_normal((n_channels, n_samples)) * 10).astype(np.float32)
+
+    chanlocs = np.zeros((1, 2), dtype=[("labels", "O"), ("type", "O")])
+    chanlocs[0, 0] = (np.array(["C1"]), np.array(["EEG"]))
+    chanlocs[0, 1] = (np.array(["Channel4"]), np.array(["EEG"]))
+
+    set_path = str(tmp_path / "label_collision.set")
+    scipy.io.savemat(
+        set_path,
+        {
+            "nbchan": np.array([[n_channels]]),
+            "trials": np.array([[1]]),
+            "pnts": np.array([[n_samples]]),
+            "srate": np.array([[srate]]),
+            "data": data,
+            "chanlocs": chanlocs,
+        },
+    )
+
+    with pytest.warns(UserWarning):
+        rec = EEGLABImporter().load(set_path)
+
+    labels = list(rec.signals.columns)
+    assert len(labels) == n_channels
+    assert len(set(labels)) == n_channels  # unique -> no dict clobber, no 2-D slice
+    assert len(rec.channels) == n_channels
+    assert labels[:2] == ["C1", "Channel4"]
+    # Every column still slices to a 1-D series with faithful values.
+    for i, label in enumerate(labels):
+        col = rec.signals[label].to_numpy()
+        assert col.ndim == 1
+        np.testing.assert_allclose(col, data[i], rtol=0, atol=1e-5)
