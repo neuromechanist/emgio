@@ -461,3 +461,107 @@ def test_eeglab_to_edf_export(sample_eeglab_set):
             os.unlink(os.path.splitext(edf_path)[0] + ".bdf")
         if os.path.exists(channels_tsv_path):
             os.unlink(channels_tsv_path)
+
+
+def _column_form_set(tmp_path, n_channels=6, n_samples=300, srate=250):
+    """Write a flat-form .set whose chanlocs/event struct arrays are COLUMN
+    vectors ((N, 1) instead of (1, N)), the shape real EEGLAB exports also use
+    (e.g. OpenNeuro ds002718). Returns the .set path and the data matrix.
+    """
+    rng = np.random.default_rng(7)
+    data = (rng.standard_normal((n_channels, n_samples)) * 10).astype(np.float32)
+
+    chanlocs = np.zeros(
+        (n_channels, 1),
+        dtype=[("labels", "O"), ("type", "O"), ("X", "O"), ("Y", "O"), ("Z", "O")],
+    )
+    for i in range(n_channels):
+        chanlocs[i, 0] = (
+            np.array([f"EEG{i + 1:03d}"]),
+            np.array(["EEG"]),
+            np.array([[float(i)]]),
+            np.array([[0.0]]),
+            np.array([[1.0]]),
+        )
+
+    events = np.zeros((3, 1), dtype=[("latency", "O"), ("duration", "O"), ("type", "O")])
+    for i in range(3):
+        events[i, 0] = (np.array([[i * 50 + 25]]), np.array([[0]]), np.array([f"ev{i}"]))
+
+    set_path = str(tmp_path / "column_form.set")
+    scipy.io.savemat(
+        set_path,
+        {
+            "setname": np.array(["column_form"]),
+            "nbchan": np.array([[n_channels]]),
+            "trials": np.array([[1]]),
+            "pnts": np.array([[n_samples]]),
+            "srate": np.array([[srate]]),
+            "data": data,
+            "chanlocs": chanlocs,
+            "event": events,
+        },
+    )
+    return set_path, data
+
+
+def test_eeglab_column_form_chanlocs_loads_all_channels(tmp_path):
+    """Column-vector ((N, 1)) chanlocs/event struct arrays load every channel.
+
+    Regression for the one-channel bug (nemarDatasets/on002718#1): iterating
+    ``chanlocs[0]`` on a column-form file yielded a single channel-info entry,
+    and the loader then silently truncated the 74-channel data matrix to one
+    channel. The raveled walk must see every channel and every event.
+    """
+    n_channels, n_samples = 6, 300
+    set_path, data = _column_form_set(tmp_path, n_channels, n_samples)
+
+    rec = EEGLABImporter().load(set_path)
+
+    assert rec.signals.shape == (n_samples, n_channels)
+    assert list(rec.signals.columns) == [f"EEG{i + 1:03d}" for i in range(n_channels)]
+    assert len(rec.channels) == n_channels
+    for info in rec.channels.values():
+        assert info["channel_type"] == "EEG"
+    for i, label in enumerate(rec.signals.columns):
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), data[i], rtol=0, atol=1e-5)
+    assert len(rec.events) == 3
+    assert list(rec.events["description"]) == ["ev0", "ev1", "ev2"]
+
+
+def test_eeglab_short_chanlocs_never_truncates_data(tmp_path):
+    """A chanlocs shorter than the data matrix pads labels instead of dropping rows.
+
+    The data matrix is authoritative for the channel count: a malformed or
+    partial chanlocs must warn and keep every signal row, never silently
+    truncate (the failure mode behind nemarDatasets/on002718#1).
+    """
+    n_channels, n_samples, srate = 5, 200, 250
+    rng = np.random.default_rng(11)
+    data = (rng.standard_normal((n_channels, n_samples)) * 10).astype(np.float32)
+
+    chanlocs = np.zeros((1, 2), dtype=[("labels", "O"), ("type", "O")])
+    chanlocs[0, 0] = (np.array(["C1"]), np.array(["EEG"]))
+    chanlocs[0, 1] = (np.array(["C2"]), np.array(["EEG"]))
+
+    set_path = str(tmp_path / "short_chanlocs.set")
+    scipy.io.savemat(
+        set_path,
+        {
+            "nbchan": np.array([[n_channels]]),
+            "trials": np.array([[1]]),
+            "pnts": np.array([[n_samples]]),
+            "srate": np.array([[srate]]),
+            "data": data,
+            "chanlocs": chanlocs,
+        },
+    )
+
+    with pytest.warns(UserWarning, match="keeping all data rows"):
+        rec = EEGLABImporter().load(set_path)
+
+    assert rec.signals.shape == (n_samples, n_channels)
+    assert list(rec.signals.columns)[:2] == ["C1", "C2"]
+    assert len(rec.channels) == n_channels
+    for i, label in enumerate(rec.signals.columns):
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), data[i], rtol=0, atol=1e-5)

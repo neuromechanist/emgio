@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import Any
 
 import numpy as np
@@ -139,14 +140,18 @@ class EEGLABImporter(BaseImporter):
         if field_names is None:
             return channel_info_list
 
-        # Process each channel
-        for i in range(len(chanlocs[0])):
+        # EEGLAB saves chanlocs as a struct array whose MATLAB shape survives
+        # loadmat: (1, N) row form OR (N, 1) column form (real exports use both).
+        # Indexing chanlocs[0] assumed the row form and saw exactly ONE channel
+        # on column-form files, silently truncating every later channel; ravel
+        # makes the walk shape-agnostic.
+        for element in np.asarray(chanlocs).ravel():
             channel_info = {}
 
             # Extract channel fields
             for field in field_names:
                 # Get the field value for this channel
-                field_value = chanlocs[0][i][field]
+                field_value = element[field]
                 if field_value.size == 0:
                     continue
                 # scipy.io.loadmat returns scalar struct fields as nested
@@ -194,24 +199,27 @@ class EEGLABImporter(BaseImporter):
         if field_names is None:
             return event_list
 
-        # Process each event
-        for i in range(len(events[0])):
+        # Same row-vs-column shape hazard as chanlocs: walk the raveled struct
+        # array and flatten each field to a scalar instead of assuming (1, 1)
+        # nesting.
+        for element in np.asarray(events).ravel():
             event_info = {}
 
             # Extract event fields
             for field in field_names:
                 # Get the field value for this event
-                field_value = events[0][i][field]
+                field_value = np.asarray(element[field])
+                if field_value.size == 0:
+                    continue
+                scalar = field_value.ravel()[0]
 
                 # Process based on field name
-                if field == "latency" and field_value.size > 0:
-                    event_info["latency"] = float(field_value[0][0])
-                elif field == "type" and field_value.size > 0:
-                    event_info["type"] = str(field_value[0])
-                elif field == "duration" and field_value.size > 0:
-                    event_info["duration"] = (
-                        float(field_value[0][0]) if field_value[0].size > 0 else 0
-                    )
+                if field == "latency":
+                    event_info["latency"] = float(scalar)
+                elif field == "type":
+                    event_info["type"] = str(scalar)
+                elif field == "duration":
+                    event_info["duration"] = float(scalar)
 
             # Add to list if it has required fields
             if "latency" in event_info and "type" in event_info:
@@ -390,18 +398,44 @@ class EEGLABImporter(BaseImporter):
                 # always matches the data length.
                 time_index = np.arange(signal_data.shape[1]) / srate
 
+                # The data matrix is authoritative for the channel count: every
+                # row ships to the caller. chanlocs only NAMES the rows, so a
+                # short/missing chanlocs (or one misread from an odd save form)
+                # must never truncate the signal -- pad with default labels
+                # instead. A longer-than-data chanlocs is trimmed (labels
+                # without signal rows describe nothing).
+                n_data_ch = signal_data.shape[0]
+                if len(channel_info_list) != n_data_ch:
+                    warnings.warn(
+                        f"EEGLAB chanlocs describes {len(channel_info_list)} "
+                        f"channel(s) but the data matrix has {n_data_ch} row(s); "
+                        f"keeping all data rows",
+                        stacklevel=2,
+                    )
+                    channel_info_list = channel_info_list[:n_data_ch]
+                    for i in range(len(channel_info_list), n_data_ch):
+                        channel_info_list.append(
+                            {"label": f"Channel{i + 1}", "channel_type": "OTHER"}
+                        )
+                header_nbchan = int(metadata.get("nbchan", 0))
+                if header_nbchan and header_nbchan != n_data_ch:
+                    warnings.warn(
+                        f"EEGLAB header nbchan={header_nbchan} disagrees with the "
+                        f"data matrix ({n_data_ch} rows); using the data matrix",
+                        stacklevel=2,
+                    )
+
                 # Build the frame in a single allocation (samples x channels)
                 # rather than assigning one column at a time. The per-column path
                 # reallocates the block manager O(n_channels) times and roughly
                 # doubles peak RAM, which OOMs large / high-channel-count .fdt
                 # recordings (#66, #95); the .fdt's native float32 is preserved so
                 # a multi-GB recording is not silently upcast to float64.
-                n_data_ch = min(len(channel_info_list), signal_data.shape[0])
                 labels = [
                     channel_info_list[i].get("label", f"Channel{i + 1}") for i in range(n_data_ch)
                 ]
                 rec.signals = pd.DataFrame(
-                    signal_data[:n_data_ch].T, columns=labels, index=time_index, copy=False
+                    signal_data.T, columns=labels, index=time_index, copy=False
                 )
                 del signal_data
 
