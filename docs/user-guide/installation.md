@@ -53,7 +53,8 @@ uv pip install "biosigio[dev]"
 # Documentation tools (mkdocs, mkdocs-material, mkdocstrings)
 uv pip install "biosigio[docs]"
 
-# MEG (.fif / CTF .ds) and BrainVision (.vhdr) import via MNE
+# MEG (.fif / CTF .ds / KIT .con,.sqd,.kdf / 4D-BTi) and BrainVision (.vhdr)
+# import via MNE
 uv pip install "biosigio[meg]"
 
 # MEF3 iEEG (.mefd) import via MNE + pymef (needs a newer MNE than the `meg`

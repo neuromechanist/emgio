@@ -136,6 +136,22 @@ class Recording:
             # own MNE/pymef version floor -- see importers/mef3.py -- so it is its
             # own importer name rather than folding into "meg".
             return "mef3"
+        elif extension == "" and os.path.isdir(filepath.rstrip("/\\")):
+            # 4D/BTi ships as a directory with NO extension, so it cannot be
+            # recognized above; fall back to content-based detection (a directory
+            # is only accepted as BTi if it directly holds a 'c,rf*' PDF file next
+            # to a 'config' file -- see importers/meg.py:_find_bti_pdf). Lazy
+            # import: avoids importing the importers package (and MNE) just to
+            # infer a name, and avoids a core<->importers import cycle.
+            from ..importers.meg import _find_bti_pdf
+
+            if _find_bti_pdf(filepath.rstrip("/\\")) is not None:
+                return "meg"
+            raise UnsupportedFormatError(
+                f"{filepath!r} is a directory with no extension and does not look "
+                "like a 4D/BTi recording (expected a 'c,rf*' processed-data file "
+                "alongside a 'config' file)."
+            )
         elif extension in {".parquet", ".feather", ".arrow"}:
             return "tabular"
         elif extension in {
@@ -183,7 +199,9 @@ class Recording:
                 - 'csv': Generic CSV (or TXT) files with columnar data
                 - 'wfdb': Waveform Database (WFDB)
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
-                - 'meg': MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf; requires the 'meg' extra)
+                - 'meg': MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf, 4D/BTi
+                  directory (no extension, detected by content); requires the
+                  'meg' extra)
                 - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
                 - 'mef3': MEF3 iEEG via MNE (.mefd directory; requires the 'mef3'
                   extra -- mne>=1.12 plus pymef, stricter than the 'meg' extra)
@@ -227,7 +245,7 @@ class Recording:
             "csv": "CSVImporter",  # Generic CSV/Text files
             "wfdb": "WFDBImporter",  # Waveform Database format
             "xdf": "XDFImporter",  # XDF multi-stream format
-            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)
+            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf, 4D/BTi)
             "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
             "mef3": "MEF3Importer",  # MEF3 iEEG via MNE (.mefd; requires the 'mef3' extra)
             "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
@@ -246,7 +264,7 @@ class Recording:
                 "- csv: Generic CSV/Text files\n"
                 "- wfdb: Waveform Database\n"
                 "- xdf: XDF multi-stream format\n"
-                "- meg: MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)\n"
+                "- meg: MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf, 4D/BTi directory)\n"
                 "- brainvision: BrainVision via MNE (.vhdr)\n"
                 "- mef3: MEF3 iEEG via MNE (.mefd directory; requires the 'mef3' extra)\n"
                 "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)\n"

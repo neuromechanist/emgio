@@ -84,7 +84,7 @@ nav:
     - CSV: formats/csv.md
     - WFDB: formats/wfdb.md
     - XDF: formats/xdf.md
-    - MEG (.fif / CTF .ds): formats/meg.md
+    - MEG (.fif / CTF .ds / KIT / 4D-BTi): formats/meg.md
     - BrainVision: formats/brainvision.md
     - MEF3 (.mefd): formats/mef3.md
     - Proprietary electrophysiology (Neo): formats/neo.md

@@ -1,4 +1,4 @@
-# MEG (.fif / CTF .ds)
+# MEG (.fif / CTF .ds / KIT / 4D-BTi)
 
 biosigIO supports loading magnetoencephalography (MEG) recordings through MNE-Python. MEG files capture the magnetic fields produced by neuronal activity using arrays of superconducting sensors, and a single file typically mixes several sensor types (magnetometers, gradiometers, reference sensors) alongside electroencephalography (EEG), electrooculography (EOG), electrocardiography (ECG), and stimulus/trigger channels.
 
@@ -20,16 +20,30 @@ If MNE-Python is not installed, loading a MEG file raises an `ImportError` with 
 
 ## File Structure
 
-The importer accepts two MEG layouts:
+The importer accepts four MEG layouts:
 
 - **Elekta/Neuromag FIF (`.fif`):** A single FIFF (Functional Imaging File Format) binary file. This is the native format used by MEGIN/Elekta/Neuromag systems and is also MNE-Python's general-purpose container.
 - **CTF (`.ds`):** A directory (with a `.ds` extension) holding the data and metadata files written by CTF MEG systems. Pass the path to the `.ds` directory itself, not to an individual file inside it.
+- **KIT/Yokogawa/RICOH (`.con` / `.sqd` / `.kdf`):** A single binary file.
+- **4D Neuroimaging/BTi:** A directory with **no file extension**. BIDS names it
+  `sub-<label>[_ses-<label>]_task-<label>[_run-<index>]_meg/` and it holds the
+  processed-data file (conventionally named `c,rfDC`) plus a `config` file and,
+  usually, an `hs_file` head-shape file. Because there is no extension to key off,
+  detection is content-based: a directory is recognized as BTi only if it directly
+  contains (not in a subdirectory) both a file whose name starts with `c,rf` and a
+  sibling `config` file. This two-signal check is deliberate -- matching on `config`
+  alone would misfire on the `.datalad/config` that almost every datalad-tracked
+  dataset repo has.
 
-The file extension determines which MNE reader is used: `.fif` files are read with `read_raw_fif` and `.ds` directories are read with `read_raw_ctf`.
+The file extension determines which MNE reader is used: `.fif` files are read with
+`read_raw_fif`, `.ds` directories with `read_raw_ctf`, `.con`/`.sqd`/`.kdf` with
+`read_raw_kit`, and a detected BTi directory with `read_raw_bti` (its PDF file is
+passed as `pdf_fname`; `config`/`hs_file` are resolved as siblings, `hs_file` only
+when present, since it is optional in BIDS).
 
 ## Loading Data
 
-To load a MEG recording, pass the path to the `.fif` file or `.ds` directory to `Recording.from_file`. Both extensions are auto-detected, so the importer is selected automatically:
+To load a MEG recording, pass the path to the file or directory to `Recording.from_file`. Every layout is auto-detected, so the importer is selected automatically:
 
 ```python
 from biosigio import Recording
@@ -39,12 +53,19 @@ rec = Recording.from_file('sample.fif')
 
 # Load a CTF .ds directory (importer inferred from .ds)
 rec = Recording.from_file('recording.ds')
+
+# Load a KIT .sqd file (importer inferred from .sqd)
+rec = Recording.from_file('recording.sqd')
+
+# Load a 4D/BTi directory (importer inferred from directory content)
+rec = Recording.from_file('sub-01_task-rest_meg')
 ```
 
-You can also select the MEG importer explicitly, which is useful if a file does not carry the expected extension:
+You can also select the MEG importer explicitly, which is useful if a file does not carry the expected extension (or you already know a directory is BTi and want to skip the content check):
 
 ```python
 rec = Recording.from_file('sample.fif', importer='meg')
+rec = Recording.from_file('sub-01_task-rest_meg', importer='meg')
 ```
 
 ## Channel Types
@@ -97,7 +118,7 @@ If the file has no stim channel or no trigger transitions, no events are added. 
 
 Loaded MEG recordings include metadata such as:
 
-- `source_file`: Path to the loaded `.fif` file or `.ds` directory.
+- `source_file`: Path to the loaded file or directory.
 - `number_of_signals`: Total channel count across all sensor types.
 
 ## Round-Trip to EDF/BDF
