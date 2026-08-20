@@ -12,7 +12,8 @@ This path keeps peak RAM bounded by ~one channel, independent of recording size:
 
 1. Open the source LAZILY with MNE (``preload=False``) -- works for the formats
    NEMAR serves (``.fif`` / ``.vhdr`` / ``.set`` / ``.edf`` / ``.bdf`` / CTF
-   ``.ds``).
+   ``.ds`` / MEF3 ``.mefd`` / 4D-BTi). MEF3 recordings in particular can be
+   multi-GB iEEG sessions, so bounded-memory streaming is not optional for them.
 2. Pass 1: stream the source in time-windows (``raw.get_data(start, stop)``) into
    a channel-major float32 memmap on scratch. RAM = one time-window; disk I/O is a
    single sequential pass (a per-channel read of a multiplexed source would instead
@@ -79,23 +80,35 @@ def _pyramid_level_lengths(
 # --- Lazy stream sources (#944) -----------------------------------------------
 # stream_to_zarr needs, per recording: sfreq, n_samples, and per-channel
 # (label / biosigIO type / unit) metadata, plus windowed float64 blocks. MNE
-# (preload=False) covers .fif/.vhdr/.set/CTF. EDF/BDF go through pyedflib INSTEAD
-# -- biosigIO's in-memory path reads EDF via pyedflib, and MNE disagrees on EDF
-# unit scaling (an EDF whose physical dimension is unknown: MNE assumes Volts,
-# pyedflib keeps the file's dimension), so streaming EDF via MNE would NOT match a
-# re-run on the in-memory path. pyedflib.readSignal(chn, start, n) is numerically
-# identical to readSignal(chn) sliced, so the streamed store matches the in-memory
-# store exactly. (EDF-via-stream is not used in production today, so switching its
-# reader changes no existing store.)
+# (preload=False) covers .fif/.vhdr/.set/CTF/.mefd/4D-BTi. EDF/BDF go through
+# pyedflib INSTEAD -- biosigIO's in-memory path reads EDF via pyedflib, and MNE
+# disagrees on EDF unit scaling (an EDF whose physical dimension is unknown: MNE
+# assumes Volts, pyedflib keeps the file's dimension), so streaming EDF via MNE
+# would NOT match a re-run on the in-memory path. pyedflib.readSignal(chn, start, n)
+# is numerically identical to readSignal(chn) sliced, so the streamed store matches
+# the in-memory store exactly. (EDF-via-stream is not used in production today, so
+# switching its reader changes no existing store.)
+#
+# .mefd and 4D/BTi need their OWN reader call rather than MNE's generic
+# ``read_raw()`` dispatch: .mefd additionally needs the MEF3 version/pymef gate
+# (see ``..importers.mef3.require_mne_mef``), and a BTi directory has no
+# extension for ``read_raw()`` to dispatch on at all (see
+# ``..importers.meg._find_bti_pdf``, the same content-based detection the
+# in-memory importer uses). Both still end up as a plain MNE ``Raw`` with
+# ``preload=False``, so ``_MneSource`` accepts an already-opened ``raw`` and skips
+# opening it again -- the windowed-read/channel-metadata code below is identical
+# either way.
 
 
 class _MneSource:
     """MNE-backed lazy source for the formats MNE reads faithfully
-    (.fif/.vhdr/.set/CTF)."""
+    (.fif/.vhdr/.set/CTF/.mefd/4D-BTi)."""
 
-    def __init__(self, filepath: str, force_modality: str | None):
-        mne = require_mne()
-        self._raw = mne.io.read_raw(filepath, preload=False, verbose="ERROR")
+    def __init__(self, filepath: str, force_modality: str | None, raw=None):
+        if raw is None:
+            mne = require_mne()
+            raw = mne.io.read_raw(filepath, preload=False, verbose="ERROR")
+        self._raw = raw
         self.sfreq = float(self._raw.info["sfreq"])
         self.n_samples = int(self._raw.n_times)
         types = self._raw.get_channel_types()
@@ -172,10 +185,38 @@ class _EdfSource:
 
 def _open_stream_source(filepath: str, force_modality: str | None):
     """Open a lazy source, reading EDF/BDF via pyedflib (importer parity) and
-    everything else via MNE. #944"""
-    ext = os.path.splitext(filepath)[1].lower()
+    everything else via MNE. #944
+
+    ``.mefd`` and 4D/BTi each need a specific MNE reader call (see the module
+    docstring above) rather than MNE's generic ``read_raw()`` dispatch, so they are
+    opened here and handed to ``_MneSource`` as an already-built ``raw``.
+    """
+    stripped = filepath.rstrip("/\\")
+    ext = os.path.splitext(stripped)[1].lower()
     if ext in (".edf", ".bdf"):
         return _EdfSource(filepath, force_modality)
+    if ext == ".mefd":
+        from ..importers.mef3 import require_mne_mef
+
+        mne = require_mne_mef()
+        raw = mne.io.read_raw_mef(filepath, preload=False, verbose="ERROR")
+        return _MneSource(filepath, force_modality, raw=raw)
+    if ext == "" and os.path.isdir(stripped):
+        from ..importers.meg import _find_bti_pdf
+
+        pdf_fname = _find_bti_pdf(stripped)
+        if pdf_fname is not None:
+            mne = require_mne()
+            hs_fname = os.path.join(stripped, "hs_file")
+            head_shape_fname = "hs_file" if os.path.isfile(hs_fname) else None
+            raw = mne.io.read_raw_bti(
+                pdf_fname,
+                config_fname="config",
+                head_shape_fname=head_shape_fname,
+                preload=False,
+                verbose="ERROR",
+            )
+            return _MneSource(stripped, force_modality, raw=raw)
     return _MneSource(filepath, force_modality)
 
 
@@ -201,7 +242,7 @@ def stream_to_zarr(
 
     Args:
         filepath: Source recording MNE can open (``.fif``/``.vhdr``/``.set``/
-            ``.edf``/``.bdf``/CTF ``.ds``).
+            ``.edf``/``.bdf``/CTF ``.ds``/MEF3 ``.mefd``/a 4D-BTi directory).
         store_path: Output store path (``.zarr`` appended if missing).
         force_modality: If set (e.g. ``"IEEG"`` from a BIDS suffix), assign every
             channel this modality so the recording lands in one coherent group at

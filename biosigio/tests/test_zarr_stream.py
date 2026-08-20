@@ -31,6 +31,7 @@ from biosigio.importers._mne_common import _MNE_TYPE_TO_biosigIO  # noqa: E402
 _REPO = pathlib.Path(__file__).resolve().parents[2]
 MEG_FIF = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
 CTF_DS = _REPO / "examples/ctf/catch-alp-good-f.ds"
+BTI_DIR = _REPO / "examples/bti/sub-01_task-test_meg"
 
 
 def _write_edf(path: str, rate: float, duration_s: float, n_ch: int) -> np.ndarray:
@@ -326,3 +327,149 @@ def test_stream_split_fif_covers_whole_chain():
         g = zarr.open_group(store, mode="r")["meg_100hz"]
         # Whole-chain length, not the ~300-sample first split.
         assert dict(g.attrs)["n_samples"] == n_full
+
+
+# -- 4D/BTi (a directory with no extension, detected by content) ----------------
+
+
+@pytest.mark.skipif(not BTI_DIR.exists(), reason="BTi fixture missing")
+def test_stream_real_bti_reproduces_full_load():
+    """Streaming a real 4D/BTi directory (no extension; content-detected)
+    reproduces the full-load signal within int16 quant. This is the streaming
+    counterpart of biosigio/tests/test_bti_importer.py's in-memory read."""
+    import mne
+
+    full = mne.io.read_raw_bti(
+        str(BTI_DIR / "c,rfDC"),
+        config_fname="config",
+        head_shape_fname="hs_file",
+        preload=True,
+        verbose="ERROR",
+    )
+    full_data = full.get_data()  # (280, 305); 1017.25 Hz > 250 MEG cap -> resample
+    native = float(full.info["sfreq"])
+    mne_types = full.get_channel_types()
+    with tempfile.TemporaryDirectory() as d:
+        store = os.path.join(d, "rec.zarr")
+        stream_to_zarr(str(BTI_DIR), store, force_modality="MEG")
+        groups = dict(zarr.open_group(store, mode="r").attrs)["channel_groups"]
+        assert groups == ["meg_250hz"]
+        deq = _dequant(store, "meg_250hz")
+        n_time = int(round(full_data.shape[1] * 250.0 / native))
+        assert deq.shape == (280, n_time)
+        for i in range(full_data.shape[0]):
+            ctype = _MNE_TYPE_TO_biosigIO.get(mne_types[i], "OTHER")
+            discrete = ctype in _DISCRETE_TYPES
+            ref = _resample_channel(full_data[i], native, 250.0, discrete=discrete)
+            rng = float(ref.max() - ref.min()) or 1.0
+            assert np.max(np.abs(deq[i] - ref)) <= 5 * rng / 65535
+
+
+# -- MEF3 .mefd (bounded-memory streaming matters most here: multi-GB iEEG) ------
+
+
+def _write_mef3_session(session_path, channels, sfreq, start_time=1_700_000_000_000_000):
+    """Write a real, single-segment-per-channel MEF3 session via pymef (mirrors
+    the helper in test_mef3_importer.py; kept local since streaming tests are
+    otherwise self-contained in this file)."""
+    from pymef.mef_session import MefSession
+
+    session_path.mkdir(parents=True, exist_ok=False)
+    n = len(next(iter(channels.values())))
+    end_time = int(start_time + 1e6 * n / sfreq)
+    section3 = {
+        "recording_time_offset": 0,
+        "DST_start_time": 0,
+        "DST_end_time": 0,
+        "GMT_offset": 0,
+        "subject_name_1": b"Test",
+        "subject_name_2": b"Subject",
+        "subject_ID": b"sub-01",
+        "recording_location": b"biosigio-test",
+    }
+    ms = MefSession(str(session_path), "", read_metadata=False)
+    try:
+        for label, data in channels.items():
+            data = np.asarray(data, dtype="int32")
+            section2 = {
+                "channel_description": b"Test_channel",
+                "session_description": b"Test_session",
+                "recording_duration": 1,
+                "reference_description": b"n/a",
+                "acquisition_channel_number": 0,
+                "sampling_frequency": sfreq,
+                "notch_filter_frequency_setting": 0.0,
+                "low_frequency_filter_setting": 0.0,
+                "high_frequency_filter_setting": 0.0,
+                "AC_line_frequency": 60,
+                "units_conversion_factor": 1.0,
+                "units_description": b"uV",
+                "maximum_native_sample_value": float(data.max()),
+                "minimum_native_sample_value": float(data.min()),
+                "start_sample": 0,
+                "number_of_blocks": 0,
+                "maximum_block_bytes": 0,
+                "maximum_block_samples": 0,
+                "maximum_difference_bytes": 0,
+                "block_interval": 0,
+                "number_of_discontinuities": 0,
+                "maximum_contiguous_blocks": 0,
+                "maximum_contiguous_block_bytes": 0,
+                "maximum_contiguous_samples": 0,
+                "number_of_samples": int(data.size),
+            }
+            ms.write_mef_ts_segment_metadata(
+                label, 0, "", "", start_time, end_time, section2, section3
+            )
+            ms.write_mef_ts_segment_data(label, 0, "", "", int(sfreq), data)
+    finally:
+        ms.close()
+
+
+def test_stream_real_mef3_reproduces_full_load(tmp_path):
+    """Streaming a real .mefd session (MNE preload=False + our version/pymef
+    gate) reproduces the full-load (preload=True) signal within int16 quant.
+    MEF3 iEEG sessions can be multi-GB, so this bounded-memory path is not
+    optional in production the way it might be for a small FIF."""
+    pytest.importorskip("pymef", reason="MEF3 streaming requires the 'mef3' extra (pymef)")
+    mne = pytest.importorskip("mne", reason="MEF3 streaming requires the 'mef3' extra (mne)")
+    if not hasattr(mne.io, "read_raw_mef"):
+        pytest.skip("MEF3 streaming needs mne>=1.12 (read_raw_mef)")
+
+    sfreq = 1000.0
+    n = int(sfreq * 3)
+    t = np.arange(n)
+    channels = {
+        "ch01": (t - n // 2).astype("int32"),
+        "ch02": (500 * np.sin(2 * np.pi * 5 * t / sfreq)).astype("int32"),
+    }
+    path = tmp_path / "sub-01_task-test_ieeg.mefd"
+    _write_mef3_session(path, channels, sfreq)
+
+    full = mne.io.read_raw_mef(str(path), preload=True, verbose="ERROR")
+    full_data = full.get_data()  # (2, 3000); 1000 Hz -> IEEG cap 1000, no resample
+    with tempfile.TemporaryDirectory() as d:
+        store = os.path.join(d, "rec.zarr")
+        stream_to_zarr(str(path), store, force_modality="IEEG")
+        groups = dict(zarr.open_group(store, mode="r").attrs)["channel_groups"]
+        assert groups == ["ieeg_1000hz"]
+        deq = _dequant(store, "ieeg_1000hz")
+        assert deq.shape == full_data.shape
+        for i in range(full_data.shape[0]):
+            rng = float(full_data[i].max() - full_data[i].min()) or 1.0
+            assert np.max(np.abs(deq[i] - full_data[i])) <= 2 * rng / 65535
+
+
+def test_stream_mef3_below_min_mne_version_raises_clear_error(tmp_path, monkeypatch):
+    """The version gate (require_mne_mef) fires on the STREAMING path too, not
+    just the in-memory importer -- both route .mefd through the same check."""
+    pytest.importorskip("pymef", reason="MEF3 streaming requires the 'mef3' extra (pymef)")
+    mne = pytest.importorskip("mne", reason="MEF3 streaming requires the 'mef3' extra (mne)")
+    if not hasattr(mne.io, "read_raw_mef"):
+        pytest.skip("MEF3 streaming needs mne>=1.12 (read_raw_mef)")
+
+    monkeypatch.setattr(mne, "__version__", "1.11.0")
+    path = tmp_path / "sub-01_task-test_ieeg.mefd"
+    path.mkdir()
+    with pytest.raises(ImportError, match="mne>=1.12"):
+        stream_to_zarr(str(path), os.path.join(str(tmp_path), "x.zarr"))
