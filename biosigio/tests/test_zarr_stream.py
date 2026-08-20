@@ -302,6 +302,27 @@ def test_stream_real_ctf_reproduces_full_load():
             assert np.max(np.abs(deq[i] - ref)) <= 5 * rng / 65535
 
 
+@pytest.mark.skipif(not CTF_DS.exists(), reason="CTF .ds fixture missing")
+def test_stream_ctf_trailing_slash_dispatches_same_as_without(tmp_path):
+    """_open_stream_source's rstrip fix, exercised on the STREAMING path
+    specifically (Recording._infer_importer's trailing-slash dispatch is
+    covered elsewhere, in test_meg_importer.py, but that does not exercise
+    _open_stream_source at all): a CTF .ds passed with a trailing slash must
+    stream identically to the same path without one, not silently fail to
+    dispatch (the extension check needs the same rstrip _infer_importer uses)."""
+    with_slash = str(CTF_DS) + "/"
+    store_plain = os.path.join(str(tmp_path), "plain.zarr")
+    store_slash = os.path.join(str(tmp_path), "slash.zarr")
+    stream_to_zarr(str(CTF_DS), store_plain, force_modality="MEG")
+    stream_to_zarr(with_slash, store_slash, force_modality="MEG")
+    plain = dict(zarr.open_group(store_plain, mode="r").attrs)
+    slash = dict(zarr.open_group(store_slash, mode="r").attrs)
+    assert plain["channel_groups"] == slash["channel_groups"] == ["meg_250hz"]
+    deq_plain = _dequant(store_plain, "meg_250hz")
+    deq_slash = _dequant(store_slash, "meg_250hz")
+    np.testing.assert_array_equal(deq_plain, deq_slash)
+
+
 @pytest.mark.skipif(not MEG_FIF.exists(), reason="MEG FIF fixture missing")
 def test_stream_split_fif_covers_whole_chain():
     """Streaming the FIRST split of a multi-file FIF must convert the WHOLE
@@ -366,64 +387,12 @@ def test_stream_real_bti_reproduces_full_load():
 
 
 # -- MEF3 .mefd (bounded-memory streaming matters most here: multi-GB iEEG) ------
-
-
-def _write_mef3_session(session_path, channels, sfreq, start_time=1_700_000_000_000_000):
-    """Write a real, single-segment-per-channel MEF3 session via pymef (mirrors
-    the helper in test_mef3_importer.py; kept local since streaming tests are
-    otherwise self-contained in this file)."""
-    from pymef.mef_session import MefSession
-
-    session_path.mkdir(parents=True, exist_ok=False)
-    n = len(next(iter(channels.values())))
-    end_time = int(start_time + 1e6 * n / sfreq)
-    section3 = {
-        "recording_time_offset": 0,
-        "DST_start_time": 0,
-        "DST_end_time": 0,
-        "GMT_offset": 0,
-        "subject_name_1": b"Test",
-        "subject_name_2": b"Subject",
-        "subject_ID": b"sub-01",
-        "recording_location": b"biosigio-test",
-    }
-    ms = MefSession(str(session_path), "", read_metadata=False)
-    try:
-        for label, data in channels.items():
-            data = np.asarray(data, dtype="int32")
-            section2 = {
-                "channel_description": b"Test_channel",
-                "session_description": b"Test_session",
-                "recording_duration": 1,
-                "reference_description": b"n/a",
-                "acquisition_channel_number": 0,
-                "sampling_frequency": sfreq,
-                "notch_filter_frequency_setting": 0.0,
-                "low_frequency_filter_setting": 0.0,
-                "high_frequency_filter_setting": 0.0,
-                "AC_line_frequency": 60,
-                "units_conversion_factor": 1.0,
-                "units_description": b"uV",
-                "maximum_native_sample_value": float(data.max()),
-                "minimum_native_sample_value": float(data.min()),
-                "start_sample": 0,
-                "number_of_blocks": 0,
-                "maximum_block_bytes": 0,
-                "maximum_block_samples": 0,
-                "maximum_difference_bytes": 0,
-                "block_interval": 0,
-                "number_of_discontinuities": 0,
-                "maximum_contiguous_blocks": 0,
-                "maximum_contiguous_block_bytes": 0,
-                "maximum_contiguous_samples": 0,
-                "number_of_samples": int(data.size),
-            }
-            ms.write_mef_ts_segment_metadata(
-                label, 0, "", "", start_time, end_time, section2, section3
-            )
-            ms.write_mef_ts_segment_data(label, 0, "", "", int(sfreq), data)
-    finally:
-        ms.close()
+#
+# _write_mef3_session lives in test_mef3_importer.py (the canonical MEF3 write
+# helper); imported lazily inside each test function below (not at module
+# level) so a pymef/mne-missing environment still collects this file cleanly --
+# test_mef3_importer.py's own module-level importorskip guards would otherwise
+# fire during a top-level import here.
 
 
 def test_stream_real_mef3_reproduces_full_load(tmp_path):
@@ -435,6 +404,7 @@ def test_stream_real_mef3_reproduces_full_load(tmp_path):
     mne = pytest.importorskip("mne", reason="MEF3 streaming requires the 'mef3' extra (mne)")
     if not hasattr(mne.io, "read_raw_mef"):
         pytest.skip("MEF3 streaming needs mne>=1.12 (read_raw_mef)")
+    from .test_mef3_importer import _write_mef3_session
 
     sfreq = 1000.0
     n = int(sfreq * 3)
