@@ -87,6 +87,8 @@ def _write_mef3_session(
     units: bytes = b"uV",
     units_conversion_factor: float = 1.0,
     password: str = "",
+    password_1: str | None = None,
+    password_2: str | None = None,
 ) -> None:
     """Write a real, single-segment-per-channel MEF3 session via pymef.
 
@@ -97,10 +99,21 @@ def _write_mef3_session(
         sfreq: Sampling rate shared by every channel.
         units: MEF3 ``units_description`` (e.g. ``b"uV"``).
         units_conversion_factor: MEF3 ``units_conversion_factor``.
-        password: Level 1 and level 2 password (same value for both; "" for an
-            unencrypted session).
+        password: Level 1 AND level 2 password when both are the same; "" (the
+            default) for an unencrypted session. For a genuinely encrypted
+            session pass DISTINCT ``password_1``/``password_2`` instead --
+            MEF3 requires the two levels to differ (using the same value for
+            both breaks decryption; verified empirically: a session written
+            with password_1 == password_2 fails to read back at all, even with
+            the correct password). Reading an encrypted session needs the
+            level-2 (owner) password.
+        password_1: Level 1 password; overrides ``password`` when given.
+        password_2: Level 2 (owner) password; overrides ``password`` when given.
     """
     from pymef.mef_session import MefSession
+
+    pw1 = password if password_1 is None else password_1
+    pw2 = password if password_2 is None else password_2
 
     session_path.mkdir(parents=True, exist_ok=False)
     n_samples = {len(data) for data in channels.values()}
@@ -109,15 +122,15 @@ def _write_mef3_session(
     n = n_samples.pop()
     end_time = int(_START_TIME + 1e6 * n / sfreq)
 
-    ms = MefSession(str(session_path), password, read_metadata=False)
+    ms = MefSession(str(session_path), pw2, read_metadata=False)
     try:
         for label, data in channels.items():
             data = np.asarray(data, dtype="int32")
             sec2 = _section2(data, sfreq, 0, units, units_conversion_factor)
             ms.write_mef_ts_segment_metadata(
-                label, 0, password, password, _START_TIME, end_time, sec2, _SECTION3
+                label, 0, pw1, pw2, _START_TIME, end_time, sec2, _SECTION3
             )
-            ms.write_mef_ts_segment_data(label, 0, password, password, int(sfreq), data)
+            ms.write_mef_ts_segment_data(label, 0, pw1, pw2, int(sfreq), data)
     finally:
         ms.close()
 
@@ -246,6 +259,103 @@ def test_mef3_password_roundtrips_when_empty(mef3_session):
     assert rec.get_n_channels() == len(channels)
 
 
+# -- Encrypted sessions (real pymef password_1/password_2, no mocks) -------------
+#
+# password="" above only exercises the DEFAULT, already covered by every other
+# test in this file; it says nothing about the encrypted branch. pymef writes
+# real encrypted MEF3 sessions (level 1 + level 2 passwords), so these tests
+# write one and cover both directions: the correct password reads and
+# round-trips exactly, and a wrong/empty password against an encrypted session
+# is rejected.
+
+
+def test_mef3_encrypted_session_correct_password_roundtrips(tmp_path):
+    sfreq = 250.0
+    n = 500
+    data = (np.arange(n, dtype="int32") - 250).astype("int32")
+    path = tmp_path / "sub-04_task-test_ieeg.mefd"
+    _write_mef3_session(
+        path, {"ch01": data}, sfreq, password_1="levelonepw", password_2="leveltwopw"
+    )
+
+    # The level-2 (owner) password is the "correct" one for a full read.
+    rec = Recording.from_file(str(path), importer="mef3", password="leveltwopw")
+    assert rec.get_n_channels() == 1
+    recovered_uv = rec.signals["ch01"].to_numpy() * 1e6
+    np.testing.assert_allclose(recovered_uv, data.astype(np.float64), atol=1e-6)
+
+
+def test_mef3_encrypted_session_wrong_password_raises_typed_error(tmp_path):
+    """A wrong password raises a typed BiosigIOError (specifically FileReadError,
+    the generic fallback -- classify_read_error has no rule matching "password"
+    or "invalid", so it does not get its own error code). Verified by executing
+    the real pymef/MNE path: pymef raises RuntimeError("MEF password is
+    invalid"), which classify_read_error wraps as FileReadError rather than
+    leaving it a bare RuntimeError.
+
+    Judgement call: NOT adding a dedicated error code for this. It is a narrow,
+    low-frequency failure mode that is already correctly typed (a stable
+    BiosigIOError/.code="file_read_error"); a new taxonomy entry has downstream
+    effects on how NEMAR surfaces failure reasons and is out of scope here.
+    """
+    from biosigio.exceptions import FileReadError
+
+    sfreq = 250.0
+    n = 500
+    data = (np.arange(n, dtype="int32") - 250).astype("int32")
+    path = tmp_path / "sub-05_task-test_ieeg.mefd"
+    _write_mef3_session(
+        path, {"ch01": data}, sfreq, password_1="levelonepw", password_2="leveltwopw"
+    )
+
+    with pytest.raises(FileReadError, match="(?i)password"):
+        Recording.from_file(str(path), importer="mef3", password="wrongpassword")
+
+
+def test_mef3_encrypted_session_empty_password_raises_typed_error(tmp_path):
+    """An empty password against a session that IS encrypted is rejected the
+    same way an outright wrong password is (both surface as pymef's "MEF
+    password is invalid", classified as FileReadError)."""
+    from biosigio.exceptions import FileReadError
+
+    sfreq = 250.0
+    n = 500
+    data = (np.arange(n, dtype="int32") - 250).astype("int32")
+    path = tmp_path / "sub-06_task-test_ieeg.mefd"
+    _write_mef3_session(
+        path, {"ch01": data}, sfreq, password_1="levelonepw", password_2="leveltwopw"
+    )
+
+    with pytest.raises(FileReadError, match="(?i)password"):
+        Recording.from_file(str(path), importer="mef3", password="")
+
+
+def test_mef3_nonmonotonic_channel_labels_do_not_get_reordered(tmp_path):
+    """Labels that sort differently alphabetically than they were inserted
+    (ch1, ch2, ch3, ch10, ch20 alphabetically vs. the insertion order below)
+    must not get silently reshuffled anywhere in the pipeline. Each channel
+    carries a distinct constant value equal to its own numeric suffix, so a
+    label/data mismatch (e.g. an accidental alphabetical sort somewhere)
+    shows up immediately as a wrong value under a channel's own name, not just
+    as a count/shape mismatch. The real on006392 dataset has 194 channels, so
+    ordering at scale is a real condition, not a hypothetical one."""
+    sfreq = 200.0
+    n = 100
+    labels = ["ch10", "ch2", "ch1", "ch20", "ch3"]  # deliberately non-monotonic
+    channels = {label: np.full(n, int(label[2:]), dtype="int32") for label in labels}
+    path = tmp_path / "sub-07_task-test_ieeg.mefd"
+    _write_mef3_session(path, channels, sfreq)
+
+    rec = Recording.from_file(str(path))
+    assert set(rec.channels.keys()) == set(labels)
+    for label in labels:
+        expected_uv = float(label[2:])
+        recovered_uv = rec.signals[label].to_numpy() * 1e6
+        np.testing.assert_allclose(
+            recovered_uv, np.full(n, expected_uv), atol=1e-6, err_msg=f"channel {label}"
+        )
+
+
 # -- Format dispatch (no fixture needed; just the extension -> importer mapping) --
 
 
@@ -269,6 +379,21 @@ def test_mne_version_tuple_parses_plain_and_prerelease():
 
 def test_mne_version_tuple_unparseable_is_lowest():
     assert _mne_version_tuple("not-a-version") == (0, 0)
+
+
+def test_mne_version_tuple_compares_numerically_not_lexicographically():
+    """ "1.9" < "1.12" as strings is FALSE ("1.9" > "1.12" lexicographically,
+    since '9' > '1'); the parsed tuple comparison must get this right."""
+    assert _mne_version_tuple("1.9") < _mne_version_tuple("1.12")
+    assert not ("1.9" < "1.12")  # sanity check: confirms the string trap is real
+
+
+def test_require_mne_mef_accepts_exact_floor_version(monkeypatch):
+    """ "1.12.0" is the exact floor -- it must NOT raise (a strictly-greater-than
+    check would wrongly reject the floor version itself)."""
+    monkeypatch.setattr(mne, "__version__", "1.12.0")
+    mne_mod = require_mne_mef()
+    assert mne_mod is mne
 
 
 def test_require_mne_mef_succeeds_with_real_environment():
@@ -305,9 +430,18 @@ def test_require_mne_mef_raises_when_pymef_missing(monkeypatch):
     importable. ``sys.modules["pymef"] = None`` is the standard way to make
     Python's own import machinery raise ImportError for a module without
     actually uninstalling it (see the import system docs); the code under test
-    (``require_mne_mef``) still runs its real try/except for real."""
+    (``require_mne_mef``) still runs its real try/except for real.
+
+    Matches on "uv sync --extra mef3" (our own install-hint text), NOT on the
+    bare word "pymef": Python's own ModuleNotFoundError message for a
+    sys.modules-halted import ("import of pymef halted; None in sys.modules")
+    already contains "pymef", so a match="pymef" assertion would pass even if
+    biosigio's own try/except-and-reraise around the import were deleted
+    entirely -- it needs to prove OUR message fired, not just that some
+    ImportError mentioning "pymef" propagated.
+    """
     import sys
 
     monkeypatch.setitem(sys.modules, "pymef", None)
-    with pytest.raises(ImportError, match="pymef"):
+    with pytest.raises(ImportError, match="uv sync --extra mef3"):
         require_mne_mef()
