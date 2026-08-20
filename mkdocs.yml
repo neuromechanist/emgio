@@ -86,6 +86,7 @@ nav:
     - XDF: formats/xdf.md
     - MEG (.fif / CTF .ds): formats/meg.md
     - BrainVision: formats/brainvision.md
+    - MEF3 (.mefd): formats/mef3.md
     - Proprietary electrophysiology (Neo): formats/neo.md
   - Serialization & Serving:
     - Overview (Parquet/Arrow/Zarr): formats/serialization.md
@@ -107,6 +108,7 @@ nav:
       - XDF Importer: api/importers/xdf.md
       - MEG Importer: api/importers/meg.md
       - BrainVision Importer: api/importers/brainvision.md
+      - MEF3 Importer: api/importers/mef3.md
       - Neo Importer: api/importers/neo.md
       - Tabular Importer (Parquet/Arrow): api/importers/tabular.md
       - Zarr Importer: api/importers/zarr.md

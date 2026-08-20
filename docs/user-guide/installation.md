@@ -56,6 +56,10 @@ uv pip install "biosigio[docs]"
 # MEG (.fif / CTF .ds) and BrainVision (.vhdr) import via MNE
 uv pip install "biosigio[meg]"
 
+# MEF3 iEEG (.mefd) import via MNE + pymef (needs a newer MNE than the `meg`
+# extra alone; see the Data Formats > MEF3 page for the version requirement)
+uv pip install "biosigio[mef3]"
+
 # Parquet / Arrow / Feather serialization via pyarrow
 uv pip install "biosigio[arrow]"
 

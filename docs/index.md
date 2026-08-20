@@ -28,6 +28,7 @@ biosigIO simplifies this process by providing a standardized interface for loadi
   - XDF/Lab Streaming Layer (supported, multi-stream)
   - MEG: `.fif` and CTF `.ds` via MNE (supported; `meg` extra)
   - BrainVision `.vhdr` via MNE (supported; `meg` extra)
+  - MEF3 iEEG `.mefd` via MNE (supported; `mef3` extra -- mne>=1.12 plus pymef)
   - Proprietary electrophysiology via python-neo: Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx (supported; `neo` extra)
   - Generic CSV (supported with auto-detection)
   - Noraxon (planned)

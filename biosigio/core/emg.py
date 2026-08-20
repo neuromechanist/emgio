@@ -35,6 +35,7 @@ ImporterName = Literal[
     "xdf",
     "meg",
     "brainvision",
+    "mef3",
     "tabular",
     "neo",
     "zarr",
@@ -130,6 +131,11 @@ class Recording:
             return "meg"
         elif extension in {".vhdr"}:
             return "brainvision"
+        elif extension == ".mefd":
+            # MEF3 (a directory, like CTF .ds) is a distinct iEEG modality with its
+            # own MNE/pymef version floor -- see importers/mef3.py -- so it is its
+            # own importer name rather than folding into "meg".
+            return "mef3"
         elif extension in {".parquet", ".feather", ".arrow"}:
             return "tabular"
         elif extension in {
@@ -179,6 +185,8 @@ class Recording:
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
                 - 'meg': MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf; requires the 'meg' extra)
                 - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
+                - 'mef3': MEF3 iEEG via MNE (.mefd directory; requires the 'mef3'
+                  extra -- mne>=1.12 plus pymef, stricter than the 'meg' extra)
                 - 'tabular': biosigIO Parquet/Arrow/Feather (requires the 'arrow' extra)
                 - 'neo': proprietary electrophysiology formats via python-neo
                   (Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...;
@@ -221,6 +229,7 @@ class Recording:
             "xdf": "XDFImporter",  # XDF multi-stream format
             "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)
             "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
+            "mef3": "MEF3Importer",  # MEF3 iEEG via MNE (.mefd; requires the 'mef3' extra)
             "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
             "neo": "NeoImporter",  # proprietary ephys via python-neo
             "zarr": "ZarrImporter",  # biosigIO Zarr serving store
@@ -239,6 +248,7 @@ class Recording:
                 "- xdf: XDF multi-stream format\n"
                 "- meg: MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)\n"
                 "- brainvision: BrainVision via MNE (.vhdr)\n"
+                "- mef3: MEF3 iEEG via MNE (.mefd directory; requires the 'mef3' extra)\n"
                 "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)\n"
                 "- neo: proprietary electrophysiology formats via python-neo "
                 "(Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...)\n"
