@@ -26,6 +26,27 @@ and, usually, ``hs_file``), so it cannot be recognized by extension the way
 a ``c,rf*``-prefixed file (the actual PDF data) and a sibling ``config`` file --
 checked non-recursively, so an unrelated nested ``config`` (every datalad-tracked
 dataset has one at ``.datalad/config``) can never false-positive.
+
+When a directory holds MORE THAN ONE ``c,rf*`` file (e.g. the conventional
+unfiltered ``c,rfDC`` alongside a hardware-filtered copy such as
+``c,rfDC,fn50,o``), an exact ``c,rfDC`` is always preferred -- a serving copy
+should default to the least-processed signal -- with ``c,rf*`` candidates in
+``sorted()`` order as a deterministic fallback otherwise. ``os.listdir`` order
+is filesystem/OS-dependent and MUST NEVER decide this (verified to matter in
+practice: a real directory holding both files returned the filtered copy FIRST
+from ``os.listdir`` on at least one filesystem). Whenever the choice falls back
+to a non-canonical name, OR more than one candidate exists at all (even if
+``c,rfDC`` itself was chosen), a ``logging.warning`` names the file chosen and
+the ones skipped, and the importer records which file was actually read in
+``Recording.metadata["bti_pdf_file"]`` so a caller can tell what was read without
+digging through logs.
+
+Detection (:func:`_find_bti_pdf`) and reader-kwargs resolution
+(:func:`_resolve_bti_reader_kwargs`) are used by three call sites --
+``Recording._infer_importer`` (auto-detection), :meth:`MEGImporter._read_raw`
+(in-memory reads), and :func:`biosigio.exporters.zarr_stream._open_stream_source`
+(streaming reads) -- so the precedence rule and the ``config``/``hs_file``
+sidecar-resolution rule each live in exactly one place rather than three.
 """
 
 import logging
@@ -44,54 +65,119 @@ def _find_bti_pdf(dirpath: str) -> str | None:
     """Return the path to a 4D/BTi processed-data file directly inside ``dirpath``,
     or None if this doesn't look like a BTi recording directory.
 
-    Looks for a top-level entry whose name starts with ``c,rf`` (the conventional
+    Looks for top-level entries whose name starts with ``c,rf`` (the conventional
     PDF basename is ``c,rfDC``; filtered copies such as ``c,rfDC,fn50,o`` also
     match) alongside a sibling ``config`` file. Both checks are non-recursive and
     look only at ``dirpath`` itself -- never a subdirectory -- so a dataset's
     ``.datalad/config`` (present in almost every datalad-tracked repo) can never
     be mistaken for the BTi sidecar.
+
+    Precedence when more than one ``c,rf*`` candidate exists: see the module
+    docstring. A genuine :class:`PermissionError` on ``dirpath`` itself is
+    re-raised rather than swallowed (a directory that cannot even be listed is
+    not "not BTi", it is a permissions problem the caller needs to see); any
+    other :class:`OSError` (missing path, not a directory, ...) is treated as
+    "not BTi" and returns None, matching every other extension/content check in
+    this codebase.
     """
     try:
         entries = os.listdir(dirpath)
+    except PermissionError:
+        raise
     except OSError:
         return None
     if "config" not in entries or not os.path.isfile(os.path.join(dirpath, "config")):
         return None
-    for name in entries:
-        candidate = os.path.join(dirpath, name)
-        if name.startswith("c,rf") and os.path.isfile(candidate):
-            return candidate
-    return None
+    candidates = sorted(
+        name
+        for name in entries
+        if name.startswith("c,rf") and os.path.isfile(os.path.join(dirpath, name))
+    )
+    if not candidates:
+        return None
+    fell_back = "c,rfDC" not in candidates
+    chosen = candidates[0] if fell_back else "c,rfDC"
+    ambiguous = len(candidates) > 1
+    # Warn on EITHER condition independently: falling back to a non-canonical
+    # name is worth knowing about even with a single candidate (the data may be
+    # filtered), and multiple candidates are worth knowing about even when the
+    # canonical 'c,rfDC' was the one chosen (a filtered copy was sitting right
+    # next to it).
+    if fell_back or ambiguous:
+        detail = (
+            f"multiple processed-data files ({', '.join(candidates)})"
+            if ambiguous
+            else (f"a non-canonical processed-data file ({chosen!r})")
+        )
+        logging.warning(
+            "4D/BTi directory %s has %s; reading %r%s.",
+            dirpath,
+            detail,
+            chosen,
+            " (no unfiltered 'c,rfDC' present; falling back to the first candidate in sorted order)"
+            if fell_back
+            else "",
+        )
+    return os.path.join(dirpath, chosen)
+
+
+def _resolve_bti_reader_kwargs(dirpath: str) -> dict:
+    """Resolve ``dirpath`` into ``mne.io.read_raw_bti`` kwargs, or raise
+    :class:`UnsupportedFormatError` if it doesn't look like a 4D/BTi recording.
+
+    This is the ONE place that decides "is this extension-less directory a
+    valid BTi layout" and resolves its ``config``/``hs_file`` sidecars; every
+    call site (auto-detection, in-memory read, streaming read -- see the module
+    docstring) raises through this same function, so there is exactly one error
+    message and one precedence rule to keep in sync, not three.
+
+    ``config_fname``/``head_shape_fname`` are returned as the plain BIDS
+    basenames (``"config"``/``"hs_file"``); MNE resolves a non-absolute name
+    against ``dirname(pdf_fname)`` internally, which is exactly this directory,
+    so no path-joining is needed for them. ``hs_file`` is optional in BIDS (not
+    every BTi recording ships digitized head-shape points), so it resolves to
+    None rather than a guessed filename when absent; MNE raises on a missing
+    file it was never told to skip.
+    """
+    pdf_fname = _find_bti_pdf(dirpath)
+    if pdf_fname is None:
+        raise UnsupportedFormatError(
+            f"{dirpath!r} has no file extension and does not look like a 4D/BTi "
+            "recording directory (expected a 'c,rf*' processed-data file "
+            "alongside a 'config' file). MEG import supports .fif, CTF .ds, KIT "
+            ".con/.sqd/.kdf, and 4D/BTi directories."
+        )
+    hs_fname = os.path.join(dirpath, "hs_file")
+    return {
+        "pdf_fname": pdf_fname,
+        "config_fname": "config",
+        "head_shape_fname": "hs_file" if os.path.isfile(hs_fname) else None,
+    }
 
 
 class MEGImporter(BaseImporter):
     """Importer for MEG recordings via MNE-Python (.fif, CTF .ds, KIT .con/.sqd/.kdf,
     4D/BTi)."""
 
-    def _read_bti(self, mne, dirpath: str, pdf_fname: str):
-        """Read a 4D/BTi recording found at ``pdf_fname`` inside ``dirpath``.
+    def _read_bti(self, mne, dirpath: str):
+        """Read a 4D/BTi recording found in ``dirpath``.
 
-        ``config_fname``/``head_shape_fname`` are passed as the plain BIDS basenames
-        (``"config"``/``"hs_file"``); MNE resolves a non-absolute name against
-        ``dirname(pdf_fname)`` internally, which is exactly this directory -- so no
-        path-joining is needed here. ``hs_file`` is optional in BIDS (not every BTi
-        recording ships digitized head-shape points), so it is passed as None rather
-        than a guessed filename when absent; MNE raises on a missing file it was
-        never told to skip.
+        Returns ``(raw, extra_metadata)``; ``extra_metadata["bti_pdf_file"]``
+        records exactly which processed-data file was read (see
+        :func:`_resolve_bti_reader_kwargs` for the precedence rule when more
+        than one candidate exists), so a caller can tell what was read without
+        digging through logs.
         """
-        hs_fname = os.path.join(dirpath, "hs_file")
-        head_shape_fname = "hs_file" if os.path.isfile(hs_fname) else None
-        return mne.io.read_raw_bti(
-            pdf_fname,
-            config_fname="config",
-            head_shape_fname=head_shape_fname,
-            preload=True,
-            verbose="ERROR",
-        )
+        kwargs = _resolve_bti_reader_kwargs(dirpath)
+        raw = mne.io.read_raw_bti(preload=True, verbose="ERROR", **kwargs)
+        return raw, {"bti_pdf_file": kwargs["pdf_fname"]}
 
     def _read_raw(self, mne, filepath: str):
         """Read the recording into an MNE Raw object, dispatching by extension
         (or, for 4D/BTi, by directory content -- see :func:`_find_bti_pdf`).
+
+        Returns ``(raw, extra_metadata)``; ``extra_metadata`` is empty for every
+        format except 4D/BTi (see :meth:`_read_bti`).
 
         ``.ds`` is a CTF directory; ``.con``/``.sqd``/``.kdf`` are KIT/Yokogawa
         single files (markers/headshape sidecars are optional and not needed for
@@ -101,20 +187,12 @@ class MEGImporter(BaseImporter):
         stripped = filepath.rstrip("/\\")
         ext = os.path.splitext(stripped)[1].lower()
         if ext == ".ds":
-            return mne.io.read_raw_ctf(filepath, preload=True, verbose="ERROR")
+            return mne.io.read_raw_ctf(filepath, preload=True, verbose="ERROR"), {}
         if ext in (".con", ".sqd", ".kdf"):
-            return mne.io.read_raw_kit(filepath, preload=True, verbose="ERROR")
+            return mne.io.read_raw_kit(filepath, preload=True, verbose="ERROR"), {}
         if ext == "" and os.path.isdir(stripped):
-            pdf_fname = _find_bti_pdf(stripped)
-            if pdf_fname is not None:
-                return self._read_bti(mne, stripped, pdf_fname)
-            raise UnsupportedFormatError(
-                f"{filepath!r} has no file extension and does not look like a "
-                "4D/BTi recording directory (expected a 'c,rf*' processed-data "
-                "file alongside a 'config' file). MEG import supports .fif, CTF "
-                ".ds, KIT .con/.sqd/.kdf, and 4D/BTi directories."
-            )
-        return mne.io.read_raw_fif(filepath, preload=True, verbose="ERROR")
+            return self._read_bti(mne, stripped)
+        return mne.io.read_raw_fif(filepath, preload=True, verbose="ERROR"), {}
 
     def _read_events(self, mne, raw, sfreq: float) -> pd.DataFrame:
         """Read stim-channel triggers into an events DataFrame (onsets in seconds)."""
@@ -156,7 +234,7 @@ class MEGImporter(BaseImporter):
         """
         mne = require_mne()
         try:
-            raw = self._read_raw(mne, filepath)
+            raw, extra_metadata = self._read_raw(mne, filepath)
         except Exception as e:
             # Classify into a typed biosigIO error (not_continuous for an
             # evoked/epoched derivative, corrupt_or_truncated for a bad/incomplete
@@ -167,6 +245,8 @@ class MEGImporter(BaseImporter):
 
         rec = raw_to_recording(raw)
         rec.set_metadata("source_file", filepath)
+        for key, value in extra_metadata.items():
+            rec.set_metadata(key, value)
 
         events = self._read_events(mne, raw, float(raw.info["sfreq"]))
         if not events.empty:

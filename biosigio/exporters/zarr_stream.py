@@ -93,22 +93,31 @@ def _pyramid_level_lengths(
 # ``read_raw()`` dispatch: .mefd additionally needs the MEF3 version/pymef gate
 # (see ``..importers.mef3.require_mne_mef``), and a BTi directory has no
 # extension for ``read_raw()`` to dispatch on at all (see
-# ``..importers.meg._find_bti_pdf``, the same content-based detection the
-# in-memory importer uses). Both still end up as a plain MNE ``Raw`` with
-# ``preload=False``, so ``_MneSource`` accepts an already-opened ``raw`` and skips
-# opening it again -- the windowed-read/channel-metadata code below is identical
-# either way.
+# ``..importers.meg._resolve_bti_reader_kwargs``, the same content-based
+# detection AND config/hs_file sidecar resolution the in-memory importer uses --
+# shared so the BTi precedence rule lives in exactly one place). Both still end
+# up as a plain MNE ``Raw`` with ``preload=False``, so ``_MneSource`` accepts an
+# already-opened ``raw`` (and an optional ``extra_metadata`` dict, e.g. which
+# BTi processed-data file was actually read) and skips opening it again -- the
+# windowed-read/channel-metadata code below is identical either way.
 
 
 class _MneSource:
     """MNE-backed lazy source for the formats MNE reads faithfully
     (.fif/.vhdr/.set/CTF/.mefd/4D-BTi)."""
 
-    def __init__(self, filepath: str, force_modality: str | None, raw=None):
+    def __init__(
+        self,
+        filepath: str,
+        force_modality: str | None,
+        raw=None,
+        extra_metadata: dict | None = None,
+    ):
         if raw is None:
             mne = require_mne()
             raw = mne.io.read_raw(filepath, preload=False, verbose="ERROR")
         self._raw = raw
+        self.extra_metadata = dict(extra_metadata or {})
         self.sfreq = float(self._raw.info["sfreq"])
         self.n_samples = int(self._raw.n_times)
         types = self._raw.get_channel_types()
@@ -146,6 +155,7 @@ class _EdfSource:
         from ..exceptions import MixedSamplingRateError
         from ..importers.edf import EDFImporter
 
+        self.extra_metadata: dict = {}
         self._reader = pyedflib.EdfReader(filepath)
         headers = self._reader.getSignalHeaders()
         nsamps = self._reader.getNSamples()
@@ -202,21 +212,22 @@ def _open_stream_source(filepath: str, force_modality: str | None):
         raw = mne.io.read_raw_mef(filepath, preload=False, verbose="ERROR")
         return _MneSource(filepath, force_modality, raw=raw)
     if ext == "" and os.path.isdir(stripped):
-        from ..importers.meg import _find_bti_pdf
+        # Raises UnsupportedFormatError with a clear message if this doesn't
+        # look like a BTi directory (same check the in-memory importer uses),
+        # rather than silently falling through to _MneSource's generic
+        # read_raw(), which cannot dispatch an extension-less directory anyway
+        # and would only produce a less specific error.
+        from ..importers.meg import _resolve_bti_reader_kwargs
 
-        pdf_fname = _find_bti_pdf(stripped)
-        if pdf_fname is not None:
-            mne = require_mne()
-            hs_fname = os.path.join(stripped, "hs_file")
-            head_shape_fname = "hs_file" if os.path.isfile(hs_fname) else None
-            raw = mne.io.read_raw_bti(
-                pdf_fname,
-                config_fname="config",
-                head_shape_fname=head_shape_fname,
-                preload=False,
-                verbose="ERROR",
-            )
-            return _MneSource(stripped, force_modality, raw=raw)
+        kwargs = _resolve_bti_reader_kwargs(stripped)
+        mne = require_mne()
+        raw = mne.io.read_raw_bti(preload=False, verbose="ERROR", **kwargs)
+        return _MneSource(
+            stripped,
+            force_modality,
+            raw=raw,
+            extra_metadata={"bti_pdf_file": kwargs["pdf_fname"]},
+        )
     return _MneSource(filepath, force_modality)
 
 
@@ -438,6 +449,8 @@ def stream_to_zarr(
             eg.attrs["n_events"] = 0
 
         meta = dict(recording_metadata or {})
+        for key, value in src.extra_metadata.items():
+            meta.setdefault(key, value)
         meta.setdefault("source_file", filepath)
         meta.setdefault("number_of_signals", len(src.channels))
         meta.setdefault("streamed", True)

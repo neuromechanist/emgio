@@ -138,20 +138,19 @@ class Recording:
             return "mef3"
         elif extension == "" and os.path.isdir(filepath.rstrip("/\\")):
             # 4D/BTi ships as a directory with NO extension, so it cannot be
-            # recognized above; fall back to content-based detection (a directory
-            # is only accepted as BTi if it directly holds a 'c,rf*' PDF file next
-            # to a 'config' file -- see importers/meg.py:_find_bti_pdf). Lazy
+            # recognized above; fall back to content-based detection. Lazy
             # import: avoids importing the importers package (and MNE) just to
             # infer a name, and avoids a core<->importers import cycle.
-            from ..importers.meg import _find_bti_pdf
+            #
+            # _resolve_bti_reader_kwargs is the ONE place that decides "is this
+            # a valid BTi layout" and raises UnsupportedFormatError if not --
+            # shared with MEGImporter._read_raw and the streaming path (see
+            # importers/meg.py's module docstring) so there is exactly one
+            # raise site to keep correct, not one per call site.
+            from ..importers.meg import _resolve_bti_reader_kwargs
 
-            if _find_bti_pdf(filepath.rstrip("/\\")) is not None:
-                return "meg"
-            raise UnsupportedFormatError(
-                f"{filepath!r} is a directory with no extension and does not look "
-                "like a 4D/BTi recording (expected a 'c,rf*' processed-data file "
-                "alongside a 'config' file)."
-            )
+            _resolve_bti_reader_kwargs(filepath.rstrip("/\\"))
+            return "meg"
         elif extension in {".parquet", ".feather", ".arrow"}:
             return "tabular"
         elif extension in {

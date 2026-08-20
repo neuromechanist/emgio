@@ -75,10 +75,10 @@ meg = [
 # plus pymef (the MEF3 C-library wrapper MNE's reader delegates to). Kept as
 # its own extra rather than folded into `meg` so installing `meg` alone never
 # forces the newer MNE floor onto users who only need .fif/.ds/.con/.bti.
-# `uv sync --extra mef3` (pulls in a compatible MNE transitively via the
-# version resolver); the MEF3Importer also checks the installed MNE version at
+# `uv sync --extra mef3` pulls in a compatible MNE transitively via the
+# version resolver; the MEF3Importer also checks the installed MNE version at
 # runtime and raises a clear error if an older MNE is present (e.g. installed
-# separately via the `meg` extra). Install with `uv sync --extra mef3`.
+# separately via the `meg` extra).
 mef3 = [
     "mne>=1.12",
     "pymef>=1.4.8",
