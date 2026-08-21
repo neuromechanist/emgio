@@ -1,3 +1,22 @@
+"""Importer for EEGLAB ``.set`` files.
+
+EEGLAB saves two on-disk forms under the same ``.set`` extension:
+
+* Classic MATLAB v5/v7 (a zlib-compressed MAT container) -- read via
+  ``scipy.io.loadmat`` in :meth:`EEGLABImporter._load`, unchanged by the v7.3
+  support added here.
+* MATLAB v7.3 (an HDF5 container, which MATLAB/EEGLAB switches to automatically
+  once a variable exceeds ~2 GB, or on an explicit ``-v7.3`` save) --
+  ``scipy.io.loadmat`` (and MNE's EEGLAB reader) refuse these outright
+  ("Please use HDF reader for matlab v7.3 files, e.g. h5py"), so they are read
+  via h5py in :meth:`EEGLABImporter._load_v73` instead. :func:`_is_matlab_v73`
+  tells the two forms apart by sniffing the leading header text, since the
+  ``.set`` extension alone cannot.
+
+h5py is an optional dependency (the ``hdf5`` extra), imported lazily via
+:func:`require_h5py`; classic ``.set`` files need no extra at all.
+"""
+
 import os
 import warnings
 from typing import Any
@@ -8,8 +27,48 @@ from scipy.io import loadmat
 
 from ..core.emg import Recording
 from ..core.modality import infer_modality_from_channel_type
-from ..exceptions import classify_read_error
+from ..exceptions import NotContinuousRecordingError, classify_read_error
 from .base import BaseImporter
+
+# MATLAB .mat files (any version) open with a 128-byte descriptive text header.
+# A v7.3 (HDF5) file's header literally starts with this text; classic v5/v7
+# files start with "MATLAB 5.0 MAT-file" instead. Sniffing just this prefix is
+# format-declared and cheap -- unlike trying an h5py open as control flow, it
+# never mistakes a truncated/corrupt classic file for a v7.3 one.
+_MATLAB_V73_MAGIC = b"MATLAB 7.3 MAT-file"
+_MAGIC_SNIFF_BYTES = 128
+
+
+def require_h5py():
+    """Import h5py lazily, raising a clear install hint when it is absent."""
+    try:
+        import h5py  # noqa: F401
+    except ImportError as e:
+        raise ImportError(
+            "Reading a MATLAB v7.3 (HDF5) EEGLAB .set file requires h5py, an "
+            "optional dependency. Install it with: uv sync --extra hdf5  (or, for "
+            "an existing install, uv pip install 'biosigio[hdf5]')."
+        ) from e
+    import h5py
+
+    return h5py
+
+
+def _is_matlab_v73(filepath: str) -> bool:
+    """Sniff whether ``filepath`` is a MATLAB v7.3 (HDF5) ``.set`` file.
+
+    Both v5/v7 and v7.3 EEGLAB exports use the ``.set`` extension, so the
+    extension cannot distinguish them; the leading header text can (see
+    ``_MATLAB_V73_MAGIC``). Any I/O failure (missing file, permissions) is
+    treated as "not v7.3" here -- the caller's own open of the file surfaces
+    the real error with a clearer message.
+    """
+    try:
+        with open(filepath, "rb") as fh:
+            header = fh.read(_MAGIC_SNIFF_BYTES)
+    except OSError:
+        return False
+    return header.startswith(_MATLAB_V73_MAGIC)
 
 
 class EEGLABImporter(BaseImporter):
@@ -231,12 +290,20 @@ class EEGLABImporter(BaseImporter):
         """
         Load EMG data from EEGLAB .set file.
 
+        Dispatches on the file's actual content, not its extension: a
+        MATLAB v7.3 (HDF5) ``.set`` is read via h5py (:meth:`_load_v73`);
+        every other ``.set`` (classic v5/v7) goes through the unchanged
+        ``scipy.io.loadmat``-based path (:meth:`_load`). See
+        :func:`_is_matlab_v73` for how the two are told apart.
+
         Args:
             filepath: Path to the EEGLAB .set file
 
         Returns:
             Recording: Recording object containing the loaded data
         """
+        if _is_matlab_v73(filepath):
+            return self._load_v73(filepath)
         return self._load(filepath)
 
     @staticmethod
@@ -335,6 +402,309 @@ class EEGLABImporter(BaseImporter):
             )
         # MATLAB stores column-major, so the matrix is (nbchan, samples).
         return raw.reshape((nbchan, pnts * trials), order="F")
+
+    # -- MATLAB v7.3 (HDF5) support --------------------------------------------
+    #
+    # The methods below are the h5py-backed equivalents of the scipy/loadmat
+    # helpers above. They are kept separate (not a shared code path) so the
+    # well-tested classic v5/v7 reader stays untouched by this addition.
+
+    @staticmethod
+    def _h5_scalar(group: Any, name: str, default: float) -> float:
+        """Read a MATLAB v7.3 header scalar (e.g. ``nbchan``, ``srate``) as a float.
+
+        These round-trip through HDF5 as 1x1 (or 1-D) float arrays, not true
+        scalars -- e.g. ``EEG["nbchan"][()]`` comes back as ``129.0``, not the
+        plain int ``129`` -- so the value must be flattened to a 1-D array
+        before being cast, rather than indexed as if its shape were known.
+        Returns ``default`` when the field is absent or empty.
+        """
+        if name not in group:
+            return default
+        arr = np.asarray(group[name][()], dtype=float).reshape(-1)
+        return float(arr[0]) if arr.size else default
+
+    @staticmethod
+    def _h5_scalar_or_none(group: Any, name: str) -> float | None:
+        """Like :meth:`_h5_scalar`, for optional fields (e.g. ``xmin``/``xmax``)."""
+        if name not in group:
+            return None
+        arr = np.asarray(group[name][()], dtype=float).reshape(-1)
+        return float(arr[0]) if arr.size else None
+
+    @staticmethod
+    def _h5_decode_chars(codes: np.ndarray) -> str:
+        """Decode a MATLAB v7.3 char array (Unicode code-point integers) to ``str``.
+
+        MATLAB's HDF5 writer stores char arrays as arrays of integer code
+        points (uint16), not as an HDF5 string type, so ``chr()`` per element
+        is the correct decode; casting the array to a numpy string dtype would
+        stringify the *numbers* instead of the characters they encode.
+        """
+        return "".join(chr(int(c)) for c in np.asarray(codes).ravel())
+
+    def _deref_h5_value(self, h5py_mod: Any, h5file: Any, entry: Any) -> Any:
+        """Resolve one struct-array element: dereference a reference, or pass a bare value.
+
+        ``chanlocs``/``event`` are MATLAB struct ARRAYS (one element per
+        channel/event). Because elements can differ in type, length, or be
+        empty, MATLAB's HDF5 writer stores each field as an array of HDF5
+        object references into ``#refs#`` rather than as a flat array of
+        values. A reference read raw is an opaque ``h5py.Reference``, not the
+        value it points to, so every field needs this dereferencing, not just
+        text ones (labels/type).
+        """
+        if isinstance(entry, h5py_mod.Reference):
+            if not entry:  # null reference -- MATLAB's "no value" for this element
+                return None
+            target = h5file[entry]
+            arr = np.asarray(target[()])
+            if arr.size == 0:
+                return None
+            is_char = target.attrs.get("MATLAB_class") == b"char" or arr.dtype.kind == "u"
+            return self._h5_decode_chars(arr) if is_char else float(arr.ravel()[0])
+        if isinstance(entry, bytes):
+            return entry.decode()
+        return entry
+
+    def _deref_struct_array(self, h5py_mod: Any, h5file: Any, group: Any) -> list[dict[str, Any]]:
+        """Resolve a MATLAB v7.3 struct-array HDF5 group (``chanlocs`` or ``event``).
+
+        Returns one flat dict per element (channel/event), mapping field name
+        to its dereferenced value.
+        """
+        field_values: dict[str, list[Any]] = {}
+        n = 0
+        for field in group.keys():
+            raw = np.asarray(group[field][()]).ravel()
+            field_values[field] = [self._deref_h5_value(h5py_mod, h5file, e) for e in raw]
+            n = max(n, len(field_values[field]))
+        return [
+            {field: values[i] for field, values in field_values.items() if i < len(values)}
+            for i in range(n)
+        ]
+
+    def _process_chanlocs_v73(
+        self, h5py_mod: Any, h5file: Any, chanlocs_group: Any
+    ) -> list[dict[str, Any]]:
+        """v7.3 equivalent of :meth:`_process_channel_info`, from dereferenced records."""
+        channel_info_list = []
+        for record in self._deref_struct_array(h5py_mod, h5file, chanlocs_group):
+            channel_info: dict[str, Any] = {}
+            if record.get("labels") is not None:
+                channel_info["label"] = str(record["labels"])
+            if record.get("type") is not None:
+                channel_info["type"] = str(record["type"])
+            for axis in ("X", "Y", "Z"):
+                if record.get(axis) is not None:
+                    channel_info[axis] = float(record[axis])
+            # Same type-determination rule as the classic path (label
+            # fallback when `type` is absent/unrecognized).
+            channel_info["channel_type"] = self._determine_channel_type(channel_info)
+            channel_info_list.append(channel_info)
+        return channel_info_list
+
+    def _process_events_v73(
+        self, h5py_mod: Any, h5file: Any, event_group: Any
+    ) -> list[dict[str, Any]]:
+        """v7.3 equivalent of :meth:`_process_events`, from dereferenced records."""
+        event_list = []
+        for record in self._deref_struct_array(h5py_mod, h5file, event_group):
+            if record.get("latency") is None or record.get("type") is None:
+                continue
+            duration = record.get("duration")
+            event_list.append(
+                {
+                    "latency": float(record["latency"]),
+                    "type": str(record["type"]),
+                    "duration": float(duration) if duration is not None else 0.0,
+                }
+            )
+        return event_list
+
+    def _load_v73(self, filepath: str) -> Recording:
+        """Load an EEGLAB ``.set`` file saved in MATLAB v7.3 (HDF5) format.
+
+        Mirrors :meth:`_load`'s field extraction (header scalars, channel
+        info, events, signal matrix) but reads through h5py instead of
+        ``scipy.io.loadmat``, which refuses v7.3 files outright. See the
+        module docstring and ``_is_matlab_v73`` for why a separate method.
+        """
+        h5py = require_h5py()
+        try:
+            with h5py.File(filepath, "r") as f:
+                if "EEG" not in f:
+                    raise ValueError(
+                        f"MATLAB v7.3 file is missing the top-level 'EEG' struct; "
+                        f"the file may be corrupt ({filepath})"
+                    )
+                eeg = f["EEG"]
+
+                # nbchan/srate/pnts/trials come back as float arrays (see
+                # `_h5_scalar`), so they are flattened and coerced to the
+                # int/float the rest of the importer expects.
+                nbchan = int(round(self._h5_scalar(eeg, "nbchan", 0.0)))
+                srate = self._h5_scalar(eeg, "srate", 1000.0) or 1000.0
+                pnts = int(round(self._h5_scalar(eeg, "pnts", 0.0)))
+                trials = int(round(self._h5_scalar(eeg, "trials", 1.0))) or 1
+
+                # trials > 1 means the file is epoched, not continuous. Raise
+                # the same typed error the classic path's classify_read_error
+                # signals for other non-continuous derivatives, rather than
+                # silently flattening epochs into a fake continuous stream.
+                if trials > 1:
+                    raise NotContinuousRecordingError(
+                        f"EEGLAB v7.3 file holds {trials} epochs, not a "
+                        f"continuous recording ({filepath})"
+                    )
+
+                rec = Recording()
+                rec.set_metadata("device", "EEGLAB")
+                rec.set_metadata("source_file", filepath)
+                rec.set_metadata("srate", srate)
+                rec.set_metadata("nbchan", nbchan)
+                rec.set_metadata("trials", trials)
+                rec.set_metadata("pnts", pnts)
+                for key in ("xmin", "xmax"):
+                    value = self._h5_scalar_or_none(eeg, key)
+                    if value is not None:
+                        rec.set_metadata(key, value)
+                for key in ("setname", "subject", "group", "condition", "session", "comments"):
+                    if key not in eeg:
+                        continue
+                    raw_value = np.asarray(eeg[key][()]).ravel()
+                    if raw_value.size and raw_value.dtype.kind == "u":
+                        rec.set_metadata(key, self._h5_decode_chars(raw_value))
+
+                channel_info_list: list[dict[str, Any]] = []
+                if "chanlocs" in eeg:
+                    channel_info_list = self._process_chanlocs_v73(h5py, f, eeg["chanlocs"])
+                if not channel_info_list:
+                    channel_info_list = [
+                        {"label": f"Channel{i + 1}", "channel_type": "OTHER"} for i in range(nbchan)
+                    ]
+
+                if "event" in eeg:
+                    for ev in self._process_events_v73(h5py, f, eeg["event"]):
+                        rec.add_event(
+                            onset=(ev["latency"] - 1) / srate,
+                            duration=ev.get("duration", 0.0) / srate,
+                            description=ev["type"],
+                        )
+
+                if "data" not in eeg or eeg["data"].size == 0:
+                    return rec
+
+                data_ds = eeg["data"]
+                if data_ds.dtype.kind == "f":
+                    # HDF5/v7.3 stores the array TRANSPOSED relative to MATLAB:
+                    # h5py hands back (n_samples, n_channels) -- verified
+                    # against a real affected file in issue #113 -- while the
+                    # rest of biosigio, and the classic loadmat path above, is
+                    # channel-major, (n_channels, n_samples). Getting this
+                    # backwards silently swaps samples and channels; for a
+                    # near-square channel count it would still "work" and
+                    # produce garbage, so transpose explicitly by default
+                    # rather than letting shape sort itself out downstream.
+                    #
+                    # The header's nbchan cross-checks *which* axis is
+                    # channels (the same defensive check sccn/eegprep's
+                    # pop_loadset_h5 uses) rather than transposing blindly:
+                    # if the array is unambiguously already channel-major
+                    # (axis 0 already matches nbchan and axis 1 does not),
+                    # a second transpose would swap it right back into the
+                    # wrong orientation, so that one case is skipped.
+                    raw = np.asarray(data_ds[()])
+                    if raw.ndim != 2:
+                        signal_data = raw.reshape(1, -1)
+                    elif raw.shape[0] == nbchan and raw.shape[1] != nbchan:
+                        signal_data = raw  # already channel-major
+                    else:
+                        signal_data = raw.T
+                else:
+                    # EEG.data holds the companion .fdt's filename as a char
+                    # array (Unicode code points), not the numeric matrix.
+                    # Decode it to a plain string and reuse the classic
+                    # path's sibling-.fdt resolution (same nbchan/pnts/trials
+                    # reshape, same sibling-over-embedded-name preference).
+                    codes = np.asarray(data_ds[()]).ravel()
+                    filename_field = np.array(list(self._h5_decode_chars(codes)))
+                    signal_data = self._read_fdt(
+                        filepath,
+                        filename_field,
+                        {"nbchan": nbchan, "pnts": pnts, "trials": trials},
+                    )
+
+                time_index = np.arange(signal_data.shape[1]) / srate
+
+                # The data matrix is authoritative for channel count, same
+                # rule as the classic path: chanlocs only names the rows, so
+                # a short/missing chanlocs must never truncate the signal.
+                n_data_ch = signal_data.shape[0]
+                if nbchan and nbchan != n_data_ch:
+                    warnings.warn(
+                        f"EEGLAB v7.3 header nbchan={nbchan} disagrees with the "
+                        f"data matrix ({n_data_ch} rows); using the data matrix",
+                        stacklevel=3,
+                    )
+                if len(channel_info_list) != n_data_ch:
+                    warnings.warn(
+                        f"EEGLAB chanlocs describes {len(channel_info_list)} "
+                        f"channel(s) but the data matrix has {n_data_ch} row(s); "
+                        f"keeping all data rows",
+                        stacklevel=3,
+                    )
+                    channel_info_list = channel_info_list[:n_data_ch]
+                    for i in range(len(channel_info_list), n_data_ch):
+                        channel_info_list.append(
+                            {"label": f"Channel{i + 1}", "channel_type": "OTHER"}
+                        )
+
+                # Labels must be unique (rec.channels is keyed by label, and
+                # the exporters slice rec.signals by column name); disambiguate
+                # collisions with a numeric suffix and warn, same as _load.
+                used_labels: set[str] = set()
+                for i, channel_info in enumerate(channel_info_list):
+                    label = channel_info.get("label", f"Channel{i + 1}")
+                    if label in used_labels:
+                        k = 2
+                        while f"{label}_{k}" in used_labels:
+                            k += 1
+                        warnings.warn(
+                            f"duplicate EEGLAB channel label {label!r}; renaming to {label}_{k}",
+                            stacklevel=3,
+                        )
+                        label = f"{label}_{k}"
+                    used_labels.add(label)
+                    channel_info["label"] = label
+
+                labels = [info["label"] for info in channel_info_list]
+                rec.signals = pd.DataFrame(
+                    signal_data.T, columns=labels, index=time_index, copy=False
+                )
+                del signal_data
+
+                for channel_info in channel_info_list:
+                    channel_label = channel_info["label"]
+                    ch_type = channel_info.get("channel_type", "OTHER")
+                    rec.channels[channel_label] = {
+                        "sample_frequency": srate,
+                        "physical_dimension": "uV",  # Default unit for EEG/EMG
+                        "prefilter": "n/a",
+                        "channel_type": ch_type,
+                        "modality": infer_modality_from_channel_type(ch_type),
+                    }
+                    if "X" in channel_info:
+                        rec.channels[channel_label]["X"] = channel_info["X"]
+                    if "Y" in channel_info:
+                        rec.channels[channel_label]["Y"] = channel_info["Y"]
+                    if "Z" in channel_info:
+                        rec.channels[channel_label]["Z"] = channel_info["Z"]
+
+                return rec
+
+        except Exception as e:
+            raise classify_read_error(e, filepath) from e
 
     def _load(self, filepath: str) -> Recording:
         """Internal loader (see :meth:`load`)."""
