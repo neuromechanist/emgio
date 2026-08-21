@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -577,6 +577,8 @@
       
         
       
+        
+      
     
     
     
@@ -829,7 +831,7 @@
   <span class="md-ellipsis">
     
   
-    MEG (.fif / CTF .ds)
+    MEG (.fif / CTF .ds / KIT / 4D-BTi)
   
 
     
@@ -858,6 +860,34 @@
     
   
     BrainVision
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../formats/mef3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MEF3 (.mefd)
   
 
     
@@ -1268,6 +1298,8 @@
       
         
       
+        
+      
     
     
     
@@ -1577,6 +1609,34 @@
     
   
     BrainVision Importer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../importers/mef3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MEF3 Importer
   
 
     
@@ -2699,7 +2759,7 @@ dynamic range calculation, and format suitability determination.</p>
 
 
 <h3 id="biosigio.analysis.signal.analyze_signal" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">analyze_signal</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;svd&#39;</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">analyze_signal</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">'svd'</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">svd_rank</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#biosigio.analysis.signal.analyze_signal" class="headerlink" title="Permanent link">&para;</a></h3>
 
@@ -2827,29 +2887,29 @@ dynamic range calculation, and format suitability determination.</p>
 <span class="normal"><a href="#__codelineno-0-273">273</a></span>
 <span class="normal"><a href="#__codelineno-0-274">274</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-167" name="__codelineno-0-167"></a><span class="k">def</span><span class="w"> </span><span class="nf">analyze_signal</span><span class="p">(</span>
 <a id="__codelineno-0-168" name="__codelineno-0-168"></a>    <span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-<a id="__codelineno-0-169" name="__codelineno-0-169"></a>    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;svd&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-169" name="__codelineno-0-169"></a>    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"svd"</span><span class="p">,</span>
 <a id="__codelineno-0-170" name="__codelineno-0-170"></a>    <span class="n">fft_noise_range</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-171" name="__codelineno-0-171"></a>    <span class="n">svd_rank</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="sd">    Analyze signal characteristics including noise floor and dynamic range.</span>
 <a id="__codelineno-0-175" name="__codelineno-0-175"></a>
 <a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-177" name="__codelineno-0-177"></a><span class="sd">        signal: Input signal array</span>
-<a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="sd">        method: Method for noise floor estimation: &#39;svd&#39; (default), &#39;fft&#39;, or &#39;both&#39;</span>
+<a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="sd">        method: Method for noise floor estimation: 'svd' (default), 'fft', or 'both'</span>
 <a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="sd">        fft_noise_range: Optional tuple (min_freq, max_freq) for FFT method</span>
 <a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="sd">        svd_rank: Optional rank cutoff for SVD method</span>
 <a id="__codelineno-0-181" name="__codelineno-0-181"></a>
 <a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="sd">        dict: Analysis results including range, noise floor, and dynamic range in dB</span>
-<a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">    """</span>
 <a id="__codelineno-0-185" name="__codelineno-0-185"></a>    <span class="c1"># Handle zero signal case</span>
 <a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
 <a id="__codelineno-0-187" name="__codelineno-0-187"></a>        <span class="k">return</span> <span class="p">{</span>
-<a id="__codelineno-0-188" name="__codelineno-0-188"></a>            <span class="s2">&quot;range&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
-<a id="__codelineno-0-189" name="__codelineno-0-189"></a>            <span class="s2">&quot;noise_floor&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span>
-<a id="__codelineno-0-190" name="__codelineno-0-190"></a>            <span class="s2">&quot;dynamic_range_db&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
-<a id="__codelineno-0-191" name="__codelineno-0-191"></a>            <span class="s2">&quot;is_zero&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-188" name="__codelineno-0-188"></a>            <span class="s2">"range"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a>            <span class="s2">"noise_floor"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a>            <span class="s2">"dynamic_range_db"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a>            <span class="s2">"is_zero"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a>        <span class="p">}</span>
 <a id="__codelineno-0-193" name="__codelineno-0-193"></a>
 <a id="__codelineno-0-194" name="__codelineno-0-194"></a>    <span class="c1"># Remove DC offset for better analysis</span>
@@ -2860,40 +2920,40 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-199" name="__codelineno-0-199"></a>
 <a id="__codelineno-0-200" name="__codelineno-0-200"></a>    <span class="c1"># Use both methods and take the minimum noise floor for better accuracy</span>
 <a id="__codelineno-0-201" name="__codelineno-0-201"></a>    <span class="c1"># This helps preserve high dynamic range signals</span>
-<a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;both&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"both"</span><span class="p">:</span>
 <a id="__codelineno-0-203" name="__codelineno-0-203"></a>        <span class="c1"># Try SVD first, fall back to FFT if it fails</span>
 <a id="__codelineno-0-204" name="__codelineno-0-204"></a>        <span class="k">try</span><span class="p">:</span>
 <a id="__codelineno-0-205" name="__codelineno-0-205"></a>            <span class="n">noise_floor_svd</span> <span class="o">=</span> <span class="n">analyze_signal_svd</span><span class="p">(</span><span class="n">detrended</span><span class="p">,</span> <span class="n">svd_rank</span><span class="p">)</span>
 <a id="__codelineno-0-206" name="__codelineno-0-206"></a>            <span class="k">try</span><span class="p">:</span>
 <a id="__codelineno-0-207" name="__codelineno-0-207"></a>                <span class="n">noise_floor_fft</span> <span class="o">=</span> <span class="n">analyze_signal_fft</span><span class="p">(</span><span class="n">detrended</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="p">)</span>
 <a id="__codelineno-0-208" name="__codelineno-0-208"></a>                <span class="n">noise_floor</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">noise_floor_svd</span><span class="p">,</span> <span class="n">noise_floor_fft</span><span class="p">)</span>
-<a id="__codelineno-0-209" name="__codelineno-0-209"></a>                <span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;both (min)&quot;</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a>                <span class="n">method</span> <span class="o">=</span> <span class="s2">"both (min)"</span>
 <a id="__codelineno-0-210" name="__codelineno-0-210"></a>            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
 <a id="__codelineno-0-211" name="__codelineno-0-211"></a>                <span class="c1"># If FFT fails but SVD worked, use SVD result</span>
 <a id="__codelineno-0-212" name="__codelineno-0-212"></a>                <span class="n">noise_floor</span> <span class="o">=</span> <span class="n">noise_floor_svd</span>
-<a id="__codelineno-0-213" name="__codelineno-0-213"></a>                <span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;svd (fallback)&quot;</span>
+<a id="__codelineno-0-213" name="__codelineno-0-213"></a>                <span class="n">method</span> <span class="o">=</span> <span class="s2">"svd (fallback)"</span>
 <a id="__codelineno-0-214" name="__codelineno-0-214"></a>        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
 <a id="__codelineno-0-215" name="__codelineno-0-215"></a>            <span class="c1"># If SVD fails, try FFT</span>
 <a id="__codelineno-0-216" name="__codelineno-0-216"></a>            <span class="k">try</span><span class="p">:</span>
 <a id="__codelineno-0-217" name="__codelineno-0-217"></a>                <span class="n">noise_floor</span> <span class="o">=</span> <span class="n">analyze_signal_fft</span><span class="p">(</span><span class="n">detrended</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="p">)</span>
-<a id="__codelineno-0-218" name="__codelineno-0-218"></a>                <span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;fft (fallback)&quot;</span>
+<a id="__codelineno-0-218" name="__codelineno-0-218"></a>                <span class="n">method</span> <span class="o">=</span> <span class="s2">"fft (fallback)"</span>
 <a id="__codelineno-0-219" name="__codelineno-0-219"></a>            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
 <a id="__codelineno-0-220" name="__codelineno-0-220"></a>                <span class="c1"># If both methods fail, use a simple statistical approach</span>
 <a id="__codelineno-0-221" name="__codelineno-0-221"></a>                <span class="n">noise_floor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">detrended</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-<a id="__codelineno-0-222" name="__codelineno-0-222"></a>                <span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;statistical (fallback)&quot;</span>
+<a id="__codelineno-0-222" name="__codelineno-0-222"></a>                <span class="n">method</span> <span class="o">=</span> <span class="s2">"statistical (fallback)"</span>
 <a id="__codelineno-0-223" name="__codelineno-0-223"></a>    <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-224" name="__codelineno-0-224"></a>        <span class="c1"># Choose noise floor estimation method</span>
 <a id="__codelineno-0-225" name="__codelineno-0-225"></a>        <span class="k">try</span><span class="p">:</span>
-<a id="__codelineno-0-226" name="__codelineno-0-226"></a>            <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;svd&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-226" name="__codelineno-0-226"></a>            <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"svd"</span><span class="p">:</span>
 <a id="__codelineno-0-227" name="__codelineno-0-227"></a>                <span class="n">noise_floor</span> <span class="o">=</span> <span class="n">analyze_signal_svd</span><span class="p">(</span><span class="n">detrended</span><span class="p">,</span> <span class="n">svd_rank</span><span class="p">)</span>
-<a id="__codelineno-0-228" name="__codelineno-0-228"></a>            <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;fft&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-228" name="__codelineno-0-228"></a>            <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"fft"</span><span class="p">:</span>
 <a id="__codelineno-0-229" name="__codelineno-0-229"></a>                <span class="n">noise_floor</span> <span class="o">=</span> <span class="n">analyze_signal_fft</span><span class="p">(</span><span class="n">detrended</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="p">)</span>
 <a id="__codelineno-0-230" name="__codelineno-0-230"></a>            <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-231" name="__codelineno-0-231"></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">. Use &#39;svd&#39;, &#39;fft&#39;, or &#39;both&#39;.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-231" name="__codelineno-0-231"></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">. Use 'svd', 'fft', or 'both'."</span><span class="p">)</span>
 <a id="__codelineno-0-232" name="__codelineno-0-232"></a>        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
 <a id="__codelineno-0-233" name="__codelineno-0-233"></a>            <span class="c1"># Fallback to simple statistical approach if the chosen method fails</span>
 <a id="__codelineno-0-234" name="__codelineno-0-234"></a>            <span class="n">noise_floor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">detrended</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-<a id="__codelineno-0-235" name="__codelineno-0-235"></a>            <span class="n">method</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> failed, using statistical (fallback)&quot;</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>            <span class="n">method</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> failed, using statistical (fallback)"</span>
 <a id="__codelineno-0-236" name="__codelineno-0-236"></a>
 <a id="__codelineno-0-237" name="__codelineno-0-237"></a>    <span class="c1"># Ensure minimum noise floor</span>
 <a id="__codelineno-0-238" name="__codelineno-0-238"></a>    <span class="n">noise_floor</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">noise_floor</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
@@ -2904,7 +2964,7 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-243" name="__codelineno-0-243"></a>    <span class="c1"># Cap dynamic range at realistic values based on format capabilities</span>
 <a id="__codelineno-0-244" name="__codelineno-0-244"></a>    <span class="c1"># For high dynamic range test, we need to preserve at least 90dB</span>
 <a id="__codelineno-0-245" name="__codelineno-0-245"></a>    <span class="c1"># 16-bit ADC theoretical max is ~96dB, 24-bit is ~144dB</span>
-<a id="__codelineno-0-246" name="__codelineno-0-246"></a>    <span class="c1"># In practice, most signals don&#39;t exceed these values</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a>    <span class="c1"># In practice, most signals don't exceed these values</span>
 <a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="n">max_realistic_dr</span> <span class="o">=</span> <span class="mi">90</span>  <span class="c1"># Default for EDF format (16-bit)</span>
 <a id="__codelineno-0-248" name="__codelineno-0-248"></a>
 <a id="__codelineno-0-249" name="__codelineno-0-249"></a>    <span class="c1"># For high dynamic range signals, allow up to 140dB (for BDF format)</span>
@@ -2926,12 +2986,12 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-265" name="__codelineno-0-265"></a>        <span class="n">snr_db</span> <span class="o">=</span> <span class="n">max_realistic_snr</span>
 <a id="__codelineno-0-266" name="__codelineno-0-266"></a>
 <a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="k">return</span> <span class="p">{</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a>        <span class="s2">&quot;range&quot;</span><span class="p">:</span> <span class="n">signal_range</span><span class="p">,</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a>        <span class="s2">&quot;noise_floor&quot;</span><span class="p">:</span> <span class="n">noise_floor</span><span class="p">,</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a>        <span class="s2">&quot;dynamic_range_db&quot;</span><span class="p">:</span> <span class="n">dynamic_range_db</span><span class="p">,</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a>        <span class="s2">&quot;snr_db&quot;</span><span class="p">:</span> <span class="n">snr_db</span><span class="p">,</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a>        <span class="s2">&quot;is_zero&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a>        <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>        <span class="s2">"range"</span><span class="p">:</span> <span class="n">signal_range</span><span class="p">,</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a>        <span class="s2">"noise_floor"</span><span class="p">:</span> <span class="n">noise_floor</span><span class="p">,</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a>        <span class="s2">"dynamic_range_db"</span><span class="p">:</span> <span class="n">dynamic_range_db</span><span class="p">,</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a>        <span class="s2">"snr_db"</span><span class="p">:</span> <span class="n">snr_db</span><span class="p">,</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a>        <span class="s2">"is_zero"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a>        <span class="s2">"method"</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
 <a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3012,7 +3072,7 @@ dynamic range calculation, and format suitability determination.</p>
 <span class="normal"><a href="#__codelineno-0-161">161</a></span>
 <span class="normal"><a href="#__codelineno-0-162">162</a></span>
 <span class="normal"><a href="#__codelineno-0-163">163</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-112" name="__codelineno-0-112"></a><span class="k">def</span><span class="w"> </span><span class="nf">analyze_signal_fft</span><span class="p">(</span><span class="n">detrended</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fft_noise_range</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-113" name="__codelineno-0-113"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-113" name="__codelineno-0-113"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-114" name="__codelineno-0-114"></a><span class="sd">    Estimate noise floor using enhanced FFT-based method.</span>
 <a id="__codelineno-0-115" name="__codelineno-0-115"></a>
 <a id="__codelineno-0-116" name="__codelineno-0-116"></a><span class="sd">    Args:</span>
@@ -3021,7 +3081,7 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-119" name="__codelineno-0-119"></a>
 <a id="__codelineno-0-120" name="__codelineno-0-120"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-121" name="__codelineno-0-121"></a><span class="sd">        float: Estimated noise floor</span>
-<a id="__codelineno-0-122" name="__codelineno-0-122"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-122" name="__codelineno-0-122"></a><span class="sd">    """</span>
 <a id="__codelineno-0-123" name="__codelineno-0-123"></a>    <span class="c1"># Compute FFT</span>
 <a id="__codelineno-0-124" name="__codelineno-0-124"></a>    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">detrended</span><span class="p">)</span>
 <a id="__codelineno-0-125" name="__codelineno-0-125"></a>    <span class="c1"># Apply Blackman window for better spectral resolution</span>
@@ -3161,7 +3221,7 @@ dynamic range calculation, and format suitability determination.</p>
 <span class="normal"><a href="#__codelineno-0-106">106</a></span>
 <span class="normal"><a href="#__codelineno-0-107">107</a></span>
 <span class="normal"><a href="#__codelineno-0-108">108</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-38" name="__codelineno-0-38"></a><span class="k">def</span><span class="w"> </span><span class="nf">analyze_signal_svd</span><span class="p">(</span><span class="n">detrended</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">svd_rank</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="sd">    Estimate noise floor using SVD-based method with automatic elbow detection.</span>
 <a id="__codelineno-0-41" name="__codelineno-0-41"></a>
 <a id="__codelineno-0-42" name="__codelineno-0-42"></a><span class="sd">    Args:</span>
@@ -3170,7 +3230,7 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-45" name="__codelineno-0-45"></a>
 <a id="__codelineno-0-46" name="__codelineno-0-46"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-47" name="__codelineno-0-47"></a><span class="sd">        float: Estimated noise floor</span>
-<a id="__codelineno-0-48" name="__codelineno-0-48"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-48" name="__codelineno-0-48"></a><span class="sd">    """</span>
 <a id="__codelineno-0-49" name="__codelineno-0-49"></a>    <span class="c1"># Create Hankel matrix (time-delay embedding)</span>
 <a id="__codelineno-0-50" name="__codelineno-0-50"></a>    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">detrended</span><span class="p">)</span>
 <a id="__codelineno-0-51" name="__codelineno-0-51"></a>    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>  <span class="c1"># For very short signals, use simpler methods</span>
@@ -3298,7 +3358,7 @@ dynamic range calculation, and format suitability determination.</p>
 <span class="normal"><a href="#__codelineno-0-315">315</a></span>
 <span class="normal"><a href="#__codelineno-0-316">316</a></span>
 <span class="normal"><a href="#__codelineno-0-317">317</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="k">def</span><span class="w"> </span><span class="nf">determine_format_suitability</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">analysis</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">    Determine whether EDF or BDF format is suitable for the signal.</span>
 <a id="__codelineno-0-281" name="__codelineno-0-281"></a>
 <a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">    Args:</span>
@@ -3307,10 +3367,10 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-285" name="__codelineno-0-285"></a>
 <a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">        tuple: (use_bdf, reason, snr_db)</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">    """</span>
 <a id="__codelineno-0-289" name="__codelineno-0-289"></a>    <span class="c1"># Handle zero signal case</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a>    <span class="k">if</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;is_zero&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Zero signal, using EDF format&quot;</span><span class="p">,</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a>    <span class="k">if</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"is_zero"</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"Zero signal, using EDF format"</span><span class="p">,</span> <span class="mf">0.0</span>
 <a id="__codelineno-0-292" name="__codelineno-0-292"></a>
 <a id="__codelineno-0-293" name="__codelineno-0-293"></a>    <span class="c1"># Theoretical format capabilities</span>
 <a id="__codelineno-0-294" name="__codelineno-0-294"></a>    <span class="n">edf_dynamic_range</span> <span class="o">=</span> <span class="mi">90</span>  <span class="c1"># dB (16-bit) - slightly reduced from theoretical 96dB for safety</span>
@@ -3318,23 +3378,23 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-296" name="__codelineno-0-296"></a>    <span class="n">safety_margin</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># dB - reduced to better preserve high dynamic range signals</span>
 <a id="__codelineno-0-297" name="__codelineno-0-297"></a>
 <a id="__codelineno-0-298" name="__codelineno-0-298"></a>    <span class="c1"># Get signal characteristics</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a>    <span class="n">signal_dr</span> <span class="o">=</span> <span class="n">analysis</span><span class="p">[</span><span class="s2">&quot;dynamic_range_db&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-300" name="__codelineno-0-300"></a>    <span class="n">signal_snr</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;snr_db&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>    <span class="c1"># signal_range = analysis[&#39;range&#39;]  # Not used for format selection</span>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a>    <span class="n">signal_dr</span> <span class="o">=</span> <span class="n">analysis</span><span class="p">[</span><span class="s2">"dynamic_range_db"</span><span class="p">]</span>
+<a id="__codelineno-0-300" name="__codelineno-0-300"></a>    <span class="n">signal_snr</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"snr_db"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a>    <span class="c1"># signal_range = analysis['range']  # Not used for format selection</span>
 <a id="__codelineno-0-302" name="__codelineno-0-302"></a>
 <a id="__codelineno-0-303" name="__codelineno-0-303"></a>    <span class="c1"># # Check amplitude first - if signal range is very large, use BDF</span>
 <a id="__codelineno-0-304" name="__codelineno-0-304"></a>    <span class="c1"># if signal_range &gt; 1e5:  # Reduced threshold to catch more high-amplitude signals</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>    <span class="c1">#     return True, f&quot;Large amplitude signal ({signal_range:.1f}), using BDF&quot;, signal_snr</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>    <span class="c1">#     return True, f"Large amplitude signal ({signal_range:.1f}), using BDF", signal_snr</span>
 <a id="__codelineno-0-306" name="__codelineno-0-306"></a>
 <a id="__codelineno-0-307" name="__codelineno-0-307"></a>    <span class="c1"># Then check dynamic range with safety margin</span>
 <a id="__codelineno-0-308" name="__codelineno-0-308"></a>    <span class="k">if</span> <span class="n">signal_dr</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">edf_dynamic_range</span> <span class="o">-</span> <span class="n">safety_margin</span><span class="p">):</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;EDF dynamic range (</span><span class="si">{</span><span class="n">edf_dynamic_range</span><span class="si">}</span><span class="s2"> dB) is sufficient&quot;</span><span class="p">,</span> <span class="n">signal_snr</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"EDF dynamic range (</span><span class="si">{</span><span class="n">edf_dynamic_range</span><span class="si">}</span><span class="s2"> dB) is sufficient"</span><span class="p">,</span> <span class="n">signal_snr</span>
 <a id="__codelineno-0-310" name="__codelineno-0-310"></a>    <span class="k">elif</span> <span class="n">signal_dr</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">bdf_dynamic_range</span> <span class="o">-</span> <span class="n">safety_margin</span><span class="p">):</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Signal requires BDF format (DR: </span><span class="si">{</span><span class="n">signal_dr</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> dB)&quot;</span><span class="p">,</span> <span class="n">signal_snr</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Signal requires BDF format (DR: </span><span class="si">{</span><span class="n">signal_dr</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> dB)"</span><span class="p">,</span> <span class="n">signal_snr</span>
 <a id="__codelineno-0-312" name="__codelineno-0-312"></a>    <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-313" name="__codelineno-0-313"></a>        <span class="k">return</span> <span class="p">(</span>
 <a id="__codelineno-0-314" name="__codelineno-0-314"></a>            <span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-315" name="__codelineno-0-315"></a>            <span class="sa">f</span><span class="s2">&quot;Signal may require higher resolution than BDF (DR: </span><span class="si">{</span><span class="n">signal_dr</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> dB)&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>            <span class="sa">f</span><span class="s2">"Signal may require higher resolution than BDF (DR: </span><span class="si">{</span><span class="n">signal_dr</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> dB)"</span><span class="p">,</span>
 <a id="__codelineno-0-316" name="__codelineno-0-316"></a>            <span class="n">signal_snr</span><span class="p">,</span>
 <a id="__codelineno-0-317" name="__codelineno-0-317"></a>        <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -3387,7 +3447,7 @@ dynamic range calculation, and format suitability determination.</p>
 <span class="normal"><a href="#__codelineno-0-33">33</a></span>
 <span class="normal"><a href="#__codelineno-0-34">34</a></span>
 <span class="normal"><a href="#__codelineno-0-35">35</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-12" name="__codelineno-0-12"></a><span class="k">def</span><span class="w"> </span><span class="nf">find_elbow_point</span><span class="p">(</span><span class="n">singular_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14"></a><span class="sd">    Find the elbow point in singular values using the second derivative method.</span>
 <a id="__codelineno-0-15" name="__codelineno-0-15"></a>
 <a id="__codelineno-0-16" name="__codelineno-0-16"></a><span class="sd">    Args:</span>
@@ -3395,7 +3455,7 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-18" name="__codelineno-0-18"></a>
 <a id="__codelineno-0-19" name="__codelineno-0-19"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-20" name="__codelineno-0-20"></a><span class="sd">        int: Index of the elbow point</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21"></a><span class="sd">    """</span>
 <a id="__codelineno-0-22" name="__codelineno-0-22"></a>    <span class="c1"># Calculate normalized cumulative energy</span>
 <a id="__codelineno-0-23" name="__codelineno-0-23"></a>    <span class="n">cumulative_energy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">singular_values</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
 <a id="__codelineno-0-24" name="__codelineno-0-24"></a>    <span class="n">cumulative_energy</span> <span class="o">=</span> <span class="n">cumulative_energy</span> <span class="o">/</span> <span class="n">cumulative_energy</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -3408,7 +3468,7 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-31" name="__codelineno-0-31"></a>    <span class="c1"># Add 2 to account for the two diff operations</span>
 <a id="__codelineno-0-32" name="__codelineno-0-32"></a>    <span class="n">elbow_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">second_derivative</span><span class="p">))</span> <span class="o">+</span> <span class="mi">2</span>
 <a id="__codelineno-0-33" name="__codelineno-0-33"></a>
-<a id="__codelineno-0-34" name="__codelineno-0-34"></a>    <span class="c1"># Ensure we don&#39;t return too small a value (at least 1)</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34"></a>    <span class="c1"># Ensure we don't return too small a value (at least 1)</span>
 <a id="__codelineno-0-35" name="__codelineno-0-35"></a>    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">elbow_idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">singular_values</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)))</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3466,7 +3526,7 @@ dynamic range calculation, and format suitability determination.</p>
 <span class="normal"><a href="#__codelineno-0-346">346</a></span>
 <span class="normal"><a href="#__codelineno-0-347">347</a></span>
 <span class="normal"><a href="#__codelineno-0-348">348</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="k">def</span><span class="w"> </span><span class="nf">quantization_analysis</span><span class="p">(</span><span class="n">signal</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">bits</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-322" name="__codelineno-0-322"></a><span class="sd">    Perform detailed quantization error analysis.</span>
 <a id="__codelineno-0-323" name="__codelineno-0-323"></a>
 <a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="sd">    Args:</span>
@@ -3475,7 +3535,7 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-327" name="__codelineno-0-327"></a>
 <a id="__codelineno-0-328" name="__codelineno-0-328"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-329" name="__codelineno-0-329"></a><span class="sd">        dict: Analysis results including step size, errors, and SNR</span>
-<a id="__codelineno-0-330" name="__codelineno-0-330"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a><span class="sd">    """</span>
 <a id="__codelineno-0-331" name="__codelineno-0-331"></a>    <span class="n">signal_range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">signal</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">signal</span><span class="p">)</span>
 <a id="__codelineno-0-332" name="__codelineno-0-332"></a>    <span class="n">step_size</span> <span class="o">=</span> <span class="n">signal_range</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">bits</span><span class="p">)</span>
 <a id="__codelineno-0-333" name="__codelineno-0-333"></a>
@@ -3493,7 +3553,7 @@ dynamic range calculation, and format suitability determination.</p>
 <a id="__codelineno-0-345" name="__codelineno-0-345"></a>        <span class="n">noise_power</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
 <a id="__codelineno-0-346" name="__codelineno-0-346"></a>    <span class="n">snr</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">signal_power</span> <span class="o">/</span> <span class="n">noise_power</span><span class="p">)</span>
 <a id="__codelineno-0-347" name="__codelineno-0-347"></a>
-<a id="__codelineno-0-348" name="__codelineno-0-348"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;step_size&quot;</span><span class="p">:</span> <span class="n">step_size</span><span class="p">,</span> <span class="s2">&quot;max_error&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">abs_error</span><span class="p">),</span> <span class="s2">&quot;rmse&quot;</span><span class="p">:</span> <span class="n">rmse</span><span class="p">,</span> <span class="s2">&quot;snr&quot;</span><span class="p">:</span> <span class="n">snr</span><span class="p">}</span>
+<a id="__codelineno-0-348" name="__codelineno-0-348"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">"step_size"</span><span class="p">:</span> <span class="n">step_size</span><span class="p">,</span> <span class="s2">"max_error"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">abs_error</span><span class="p">),</span> <span class="s2">"rmse"</span><span class="p">:</span> <span class="n">rmse</span><span class="p">,</span> <span class="s2">"snr"</span><span class="p">:</span> <span class="n">snr</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3559,7 +3619,7 @@ dynamic range calculation, and format suitability determination.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.expand", "navigation.indexes", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

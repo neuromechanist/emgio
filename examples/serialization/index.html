@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -577,6 +577,8 @@
       
         
       
+        
+      
     
     
     
@@ -829,7 +831,7 @@
   <span class="md-ellipsis">
     
   
-    MEG (.fif / CTF .ds)
+    MEG (.fif / CTF .ds / KIT / 4D-BTi)
   
 
     
@@ -858,6 +860,34 @@
     
   
     BrainVision
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../formats/mef3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MEF3 (.mefd)
   
 
     
@@ -1268,6 +1298,8 @@
       
         
       
+        
+      
     
     
     
@@ -1577,6 +1609,34 @@
     
   
     BrainVision Importer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/importers/mef3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MEF3 Importer
   
 
     
@@ -2620,8 +2680,8 @@ multi-resolution view pyramid.</p>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>zarr<span class="w">       </span><span class="c1"># Zarr serving store</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Or into an existing environment (UV-only project; use uv pip)</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;biosigio[arrow]&#39;</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;biosigio[zarr]&#39;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'biosigio[arrow]'</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'biosigio[zarr]'</span>
 </code></pre></div>
 <p>The examples below build a small <code>Recording</code> in memory so they run without any
 external data file. In practice you would load a recording from any supported
@@ -2633,9 +2693,9 @@ format (EDF, WFDB, XDF, ...) and serialize that instead.</p>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">fs</span> <span class="o">=</span> <span class="mf">1000.0</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">fs</span><span class="p">)</span> <span class="o">/</span> <span class="n">fs</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="p">()</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">rec</span><span class="o">.</span><span class="n">add_channel</span><span class="p">(</span><span class="s1">&#39;EMG1&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">t</span><span class="p">),</span> <span class="n">fs</span><span class="p">,</span> <span class="s1">&#39;mV&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">rec</span><span class="o">.</span><span class="n">add_channel</span><span class="p">(</span><span class="s1">&#39;EMG2&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">35</span> <span class="o">*</span> <span class="n">t</span><span class="p">),</span> <span class="n">fs</span><span class="p">,</span> <span class="s1">&#39;mV&#39;</span><span class="p">,</span> <span class="s1">&#39;EMG&#39;</span><span class="p">)</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">rec</span><span class="o">.</span><span class="n">add_event</span><span class="p">(</span><span class="n">onset</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mf">0.10</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;burst&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">rec</span><span class="o">.</span><span class="n">add_channel</span><span class="p">(</span><span class="s1">'EMG1'</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">t</span><span class="p">),</span> <span class="n">fs</span><span class="p">,</span> <span class="s1">'mV'</span><span class="p">,</span> <span class="s1">'EMG'</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">rec</span><span class="o">.</span><span class="n">add_channel</span><span class="p">(</span><span class="s1">'EMG2'</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">35</span> <span class="o">*</span> <span class="n">t</span><span class="p">),</span> <span class="n">fs</span><span class="p">,</span> <span class="s1">'mV'</span><span class="p">,</span> <span class="s1">'EMG'</span><span class="p">)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">rec</span><span class="o">.</span><span class="n">add_event</span><span class="p">(</span><span class="n">onset</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mf">0.10</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">'burst'</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="parquet-round-trip">Parquet Round-Trip<a class="headerlink" href="#parquet-round-trip" title="Permanent link">&para;</a></h2>
 <p><code>Recording.to_parquet()</code> writes a single self-describing columnar table: signal
@@ -2644,15 +2704,15 @@ recording metadata travel in the file's schema metadata. The round trip is
 <strong>lossless and bit-exact</strong>; sample values are stored verbatim, so no quantization
 or resampling occurs.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Export</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="s1">&#39;out.parquet&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="s1">'out.parquet'</span><span class="p">)</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Read back; the &#39;.parquet&#39; extension selects the tabular importer automatically</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">restored</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;out.parquet&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Read back; the '.parquet' extension selects the tabular importer automatically</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">restored</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'out.parquet'</span><span class="p">)</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Signals are recovered exactly</span>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">restored</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>   <span class="c1"># [&#39;EMG1&#39;, &#39;EMG2&#39;]</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;description&#39;</span><span class="p">])</span>  <span class="c1"># &#39;burst&#39;</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>   <span class="c1"># ['EMG1', 'EMG2']</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'description'</span><span class="p">])</span>  <span class="c1"># 'burst'</span>
 </code></pre></div>
 <p>Parquet is a good choice when you want to query signals with analytics engines
 (DuckDB, Polars, pandas, Spark) while keeping the full biosigIO metadata intact.</p>
@@ -2661,10 +2721,10 @@ or resampling occurs.</p>
 the Arrow/Feather inter-process communication (IPC) format for fast, zero-copy
 reads. It is also lossless and bit-exact.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Export (.feather or .arrow are both accepted)</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_arrow</span><span class="p">(</span><span class="s1">&#39;out.feather&#39;</span><span class="p">)</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_arrow</span><span class="p">(</span><span class="s1">'out.feather'</span><span class="p">)</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Read back; the extension selects the tabular importer automatically</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">restored</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;out.feather&#39;</span><span class="p">)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">restored</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'out.feather'</span><span class="p">)</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">restored</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
 </code></pre></div>
@@ -2678,13 +2738,13 @@ pyramid stacked above it for fast viewing. Channels are grouped by
 named like <code>emg_1000hz</code>.</p>
 <p>By default the store uses <code>int16</code> with a per-channel scale and offset (half the
 bytes of <code>float32</code>). Pass <code>dtype='float32'</code> for a lossless store.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Lossless store (float32). The default dtype=&#39;int16&#39; is smaller but quantized.</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">&#39;out.zarr&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Lossless store (float32). The default dtype='int16' is smaller but quantized.</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">'out.zarr'</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">'float32'</span><span class="p">)</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Read back; the &#39;.zarr&#39; extension selects the Zarr importer automatically.</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Read back; the '.zarr' extension selects the Zarr importer automatically.</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># With a single channel group, no group= selector is needed.</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">served</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;out.zarr&#39;</span><span class="p">)</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">served</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>   <span class="c1"># [&#39;EMG1&#39;, &#39;EMG2&#39;]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">served</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'out.zarr'</span><span class="p">)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">served</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>   <span class="c1"># ['EMG1', 'EMG2']</span>
 </code></pre></div>
 <h3 id="reading-the-serving-signal-not-the-original">Reading the serving signal, not the original<a class="headerlink" href="#reading-the-serving-signal-not-the-original" title="Permanent link">&para;</a></h3>
 <p>The Zarr read returns the <strong>downsampled serving signal</strong>, not the original
@@ -2695,7 +2755,7 @@ recording (for example a BIDS or EDF archive) as authoritative when you need the
 exact acquisition signal.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># level 0 rate is the per-modality canonical rate (EMG caps at 1000 Hz by default),</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># capped to never exceed the native rate.</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">fs_served</span> <span class="o">=</span> <span class="n">served</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="s1">&#39;EMG1&#39;</span><span class="p">][</span><span class="s1">&#39;sample_frequency&#39;</span><span class="p">]</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">fs_served</span> <span class="o">=</span> <span class="n">served</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="s1">'EMG1'</span><span class="p">][</span><span class="s1">'sample_frequency'</span><span class="p">]</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">fs_served</span><span class="p">)</span>   <span class="c1"># 1000.0 here; lower than native for, e.g., a 2048 Hz source</span>
 </code></pre></div>
 <h3 id="selecting-a-group-in-a-multi-rate-store">Selecting a group in a multi-rate store<a class="headerlink" href="#selecting-a-group-in-a-multi-rate-store" title="Permanent link">&para;</a></h3>
@@ -2704,8 +2764,8 @@ single time grid (for example an EEG group at 250 Hz and an EMG group at
 1000 Hz). When more than one group is present, pass the <code>group=</code> selector to
 choose which one to reconstruct:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Explicit importer plus group selector for a multi-rate store</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;rec.zarr&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;zarr&#39;</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s1">&#39;emg_1000hz&#39;</span><span class="p">)</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">eeg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;rec.zarr&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;zarr&#39;</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s1">&#39;eeg_250hz&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'rec.zarr'</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">'zarr'</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s1">'emg_1000hz'</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">eeg</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'rec.zarr'</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">'zarr'</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s1">'eeg_250hz'</span><span class="p">)</span>
 </code></pre></div>
 <p>If you omit <code>group=</code> on a multi-group store, <code>from_file</code> raises a <code>ValueError</code>
 listing the available group names.</p>
@@ -2765,7 +2825,7 @@ lossless-versus-serving trade-offs and the on-disk store contract, see the
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.expand", "navigation.indexes", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -23,15 +23,15 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>MEG (.fif / CTF .ds) - biosigIO Documentation</title>
+        <title>MEG (.fif / CTF .ds / KIT / 4D-BTi) - biosigIO Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#meg-fif-ctf-ds" class="md-skip">
+        <a href="#meg-fif-ctf-ds-kit-4d-bti" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              MEG (.fif / CTF .ds)
+              MEG (.fif / CTF .ds / KIT / 4D-BTi)
             
           </span>
         </div>
@@ -579,6 +579,8 @@
       
         
       
+        
+      
     
     
     
@@ -838,7 +840,7 @@
   <span class="md-ellipsis">
     
   
-    MEG (.fif / CTF .ds)
+    MEG (.fif / CTF .ds / KIT / 4D-BTi)
   
 
     
@@ -856,7 +858,7 @@
   <span class="md-ellipsis">
     
   
-    MEG (.fif / CTF .ds)
+    MEG (.fif / CTF .ds / KIT / 4D-BTi)
   
 
     
@@ -993,6 +995,34 @@
     
   
     BrainVision
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mef3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MEF3 (.mefd)
   
 
     
@@ -1403,6 +1433,8 @@
       
         
       
+        
+      
     
     
     
@@ -1712,6 +1744,34 @@
     
   
     BrainVision Importer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/importers/mef3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MEF3 Importer
   
 
     
@@ -2640,35 +2700,56 @@
   
 
 
-<h1 id="meg-fif-ctf-ds">MEG (.fif / CTF .ds)<a class="headerlink" href="#meg-fif-ctf-ds" title="Permanent link">&para;</a></h1>
+<h1 id="meg-fif-ctf-ds-kit-4d-bti">MEG (.fif / CTF .ds / KIT / 4D-BTi)<a class="headerlink" href="#meg-fif-ctf-ds-kit-4d-bti" title="Permanent link">&para;</a></h1>
 <p>biosigIO supports loading magnetoencephalography (MEG) recordings through MNE-Python. MEG files capture the magnetic fields produced by neuronal activity using arrays of superconducting sensors, and a single file typically mixes several sensor types (magnetometers, gradiometers, reference sensors) alongside electroencephalography (EEG), electrooculography (EOG), electrocardiography (ECG), and stimulus/trigger channels.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>The MEG importer depends on MNE-Python, which is a heavy optional dependency and is not installed by default. Install it through the <code>meg</code> extra:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>meg
 </code></pre></div>
 <p>For an existing installation, you can install the extra directly:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;biosigio[meg]&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'biosigio[meg]'</span>
 </code></pre></div>
 <p>If MNE-Python is not installed, loading a MEG file raises an <code>ImportError</code> with the install hint above.</p>
 <h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
-<p>The importer accepts two MEG layouts:</p>
+<p>The importer accepts four MEG layouts:</p>
 <ul>
 <li><strong>Elekta/Neuromag FIF (<code>.fif</code>):</strong> A single FIFF (Functional Imaging File Format) binary file. This is the native format used by MEGIN/Elekta/Neuromag systems and is also MNE-Python's general-purpose container.</li>
 <li><strong>CTF (<code>.ds</code>):</strong> A directory (with a <code>.ds</code> extension) holding the data and metadata files written by CTF MEG systems. Pass the path to the <code>.ds</code> directory itself, not to an individual file inside it.</li>
+<li><strong>KIT/Yokogawa/RICOH (<code>.con</code> / <code>.sqd</code> / <code>.kdf</code>):</strong> A single binary file.</li>
+<li><strong>4D Neuroimaging/BTi:</strong> A directory with <strong>no file extension</strong>. BIDS names it
+  <code>sub-&lt;label&gt;[_ses-&lt;label&gt;]_task-&lt;label&gt;[_run-&lt;index&gt;]_meg/</code> and it holds the
+  processed-data file (conventionally named <code>c,rfDC</code>) plus a <code>config</code> file and,
+  usually, an <code>hs_file</code> head-shape file. Because there is no extension to key off,
+  detection is content-based: a directory is recognized as BTi only if it directly
+  contains (not in a subdirectory) both a file whose name starts with <code>c,rf</code> and a
+  sibling <code>config</code> file. This two-signal check is deliberate -- matching on <code>config</code>
+  alone would misfire on the <code>.datalad/config</code> that almost every datalad-tracked
+  dataset repo has.</li>
 </ul>
-<p>The file extension determines which MNE reader is used: <code>.fif</code> files are read with <code>read_raw_fif</code> and <code>.ds</code> directories are read with <code>read_raw_ctf</code>.</p>
+<p>The file extension determines which MNE reader is used: <code>.fif</code> files are read with
+<code>read_raw_fif</code>, <code>.ds</code> directories with <code>read_raw_ctf</code>, <code>.con</code>/<code>.sqd</code>/<code>.kdf</code> with
+<code>read_raw_kit</code>, and a detected BTi directory with <code>read_raw_bti</code> (its PDF file is
+passed as <code>pdf_fname</code>; <code>config</code>/<code>hs_file</code> are resolved as siblings, <code>hs_file</code> only
+when present, since it is optional in BIDS).</p>
 <h2 id="loading-data">Loading Data<a class="headerlink" href="#loading-data" title="Permanent link">&para;</a></h2>
-<p>To load a MEG recording, pass the path to the <code>.fif</code> file or <code>.ds</code> directory to <code>Recording.from_file</code>. Both extensions are auto-detected, so the importer is selected automatically:</p>
+<p>To load a MEG recording, pass the path to the file or directory to <code>Recording.from_file</code>. Every layout is auto-detected, so the importer is selected automatically:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">biosigio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Load an Elekta/Neuromag FIF file (importer inferred from .fif)</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;sample.fif&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'sample.fif'</span><span class="p">)</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Load a CTF .ds directory (importer inferred from .ds)</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;recording.ds&#39;</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'recording.ds'</span><span class="p">)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># Load a KIT .sqd file (importer inferred from .sqd)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'recording.sqd'</span><span class="p">)</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Load a 4D/BTi directory (importer inferred from directory content)</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'sub-01_task-rest_meg'</span><span class="p">)</span>
 </code></pre></div>
-<p>You can also select the MEG importer explicitly, which is useful if a file does not carry the expected extension:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">&#39;sample.fif&#39;</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">&#39;meg&#39;</span><span class="p">)</span>
+<p>You can also select the MEG importer explicitly, which is useful if a file does not carry the expected extension (or you already know a directory is BTi and want to skip the content check):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'sample.fif'</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">'meg'</span><span class="p">)</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'sub-01_task-rest_meg'</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">'meg'</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="channel-types">Channel Types<a class="headerlink" href="#channel-types" title="Permanent link">&para;</a></h2>
 <p>MEG files contain many channel kinds in a single recording. The importer keeps each MNE channel type distinct rather than collapsing everything into one generic "MEG" type, so magnetometers, gradiometers, and reference sensors remain separable downstream. The mapping from MNE channel types to biosigIO channel types is:</p>
@@ -2795,7 +2876,7 @@
 <h2 id="metadata">Metadata<a class="headerlink" href="#metadata" title="Permanent link">&para;</a></h2>
 <p>Loaded MEG recordings include metadata such as:</p>
 <ul>
-<li><code>source_file</code>: Path to the loaded <code>.fif</code> file or <code>.ds</code> directory.</li>
+<li><code>source_file</code>: Path to the loaded file or directory.</li>
 <li><code>number_of_signals</code>: Total channel count across all sensor types.</li>
 </ul>
 <h2 id="round-trip-to-edfbdf">Round-Trip to EDF/BDF<a class="headerlink" href="#round-trip-to-edfbdf" title="Permanent link">&para;</a></h2>
@@ -2852,7 +2933,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.expand", "navigation.indexes", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
