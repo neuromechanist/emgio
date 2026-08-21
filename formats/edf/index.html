@@ -841,6 +841,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Importer Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tolerant-fallback-for-non-compliant-but-readable-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tolerant fallback for non-compliant-but-readable files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2690,6 +2707,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Importer Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tolerant-fallback-for-non-compliant-but-readable-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tolerant fallback for non-compliant-but-readable files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2807,6 +2841,59 @@
 <li>Convert channel information to biosigIO's format</li>
 <li>Read EDF+/BDF+ annotations into the <code>events</code> DataFrame</li>
 </ol>
+<h3 id="tolerant-fallback-for-non-compliant-but-readable-files">Tolerant fallback for non-compliant-but-readable files<a class="headerlink" href="#tolerant-fallback-for-non-compliant-but-readable-files" title="Permanent link">&para;</a></h3>
+<p><code>pyedflib</code>'s compliance checker rejects some real-world EDF/BDF files outright
+even though the data is byte-intact and other tools (MNE-Python) read them
+without complaint. The importer recovers three such conditions instead of
+discarding the recording:</p>
+<ul>
+<li>a channel with <code>physical_min == physical_max</code> (a reference electrode in a
+  referential montage, constant by construction; issue #109)</li>
+<li>a numeric header field padded with NUL bytes instead of ASCII spaces</li>
+<li>a file correctly marked EDF+D (discontinuous)</li>
+</ul>
+<p>When one of these is detected, biosigIO re-reads the file through MNE and
+rescales its SI-volt output back to the same native physical units a normal
+<code>pyedflib</code> read would have produced, so the recovered values are numerically
+identical to what <code>pyedflib</code> would report for the same channel. A channel with
+a degenerate <code>physical_min == physical_max</code> has no defined scale, so its output
+is the constant <code>physical_min</code> (== <code>physical_max</code>) throughout -- exactly zero in
+the common grounded/referential case. Recovering this way requires the <code>meg</code>
+extra (MNE); without it, the file still raises the same
+<code>CorruptFileError</code>/<code>FileReadError</code> it did before.</p>
+<p>A channel MNE auto-detects as a trigger/status channel (by default, one
+literally named <code>"Status"</code> or <code>"Trigger"</code>) is read with that detection
+turned off (<code>stim_channel=False</code>): MNE would otherwise give such a channel
+its own uncalibrated, bitmasked treatment unrelated to the header's declared
+physical range, which would silently disagree with a normal <code>pyedflib</code> read
+of that channel. With detection off, it is calibrated the same way as every
+other channel, preserving the same unit-parity guarantee for it too.</p>
+<p>A recovered read is flagged in the recording's metadata:</p>
+<ul>
+<li><code>edf_tolerant_read</code> (<code>True</code>) and <code>edf_tolerant_read_reason</code> (one of
+  <code>degenerate_physical_range</code>, <code>malformed_numeric_field</code>,
+  <code>discontinuous_datarecords</code>)</li>
+<li>each affected channel additionally carries <code>degenerate_physical_range: True</code></li>
+</ul>
+<p>A genuinely truncated or corrupt file is unaffected by this: only the three
+conditions above are treated as recoverable, and a size check runs before any
+recovery attempt so a file that is <em>also</em> truncated still raises
+<code>CorruptFileError</code> rather than being silently read short.</p>
+<p><strong>Scope of a recovered read:</strong> all signal-level data is fully populated --
+per-channel units, physical/digital min/max, transducer, prefilter, sample
+rate, channel type, and EDF+/BDF+ annotations/events. The one thing NOT
+populated is the patient/recording free-text metadata a normal read parses
+out of the header's <code>patient_id</code>/<code>recording_id</code> fields (<code>patientcode</code>,
+<code>gender</code>, <code>birthdate</code>, <code>patient_name</code>, <code>admincode</code>, <code>technician</code>, <code>equipment</code>,
+<code>recording_additional</code>): these keys are simply absent on a recovered read,
+not defaulted to empty strings, since biosigIO does not re-implement
+<code>pyedflib</code>'s own sub-parsing of those two free-text fields for the fallback
+path.</p>
+<p>A file with two on-disk channels sharing the same label is also not covered:
+MNE renames the second one to keep channel names unique, which the header
+probe (independent of MNE by design) cannot predict, so this fails loud with
+a clear error rather than silently pairing the wrong header row with the
+wrong channel's data.</p>
 <h2 id="exporter-implementation">Exporter Implementation<a class="headerlink" href="#exporter-implementation" title="Permanent link">&para;</a></h2>
 <p>The EDF exporter in biosigIO (<code>biosigio.exporters.edf</code>) also uses <code>pyedflib</code> to:</p>
 <ol>
