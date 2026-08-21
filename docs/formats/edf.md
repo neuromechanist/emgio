@@ -55,6 +55,65 @@ The EDF importer in biosigIO (`biosigio.importers.edf`) uses the `pyedflib` pack
 3. Convert channel information to biosigIO's format
 4. Read EDF+/BDF+ annotations into the `events` DataFrame
 
+### Tolerant fallback for non-compliant-but-readable files
+
+`pyedflib`'s compliance checker rejects some real-world EDF/BDF files outright
+even though the data is byte-intact and other tools (MNE-Python) read them
+without complaint. The importer recovers three such conditions instead of
+discarding the recording:
+
+- a channel with `physical_min == physical_max` (a reference electrode in a
+  referential montage, constant by construction; issue #109)
+- a numeric header field padded with NUL bytes instead of ASCII spaces
+- a file correctly marked EDF+D (discontinuous)
+
+When one of these is detected, biosigIO re-reads the file through MNE and
+rescales its SI-volt output back to the same native physical units a normal
+`pyedflib` read would have produced, so the recovered values are numerically
+identical to what `pyedflib` would report for the same channel. A channel with
+a degenerate `physical_min == physical_max` has no defined scale, so its output
+is the constant `physical_min` (== `physical_max`) throughout -- exactly zero in
+the common grounded/referential case. Recovering this way requires the `meg`
+extra (MNE); without it, the file still raises the same
+`CorruptFileError`/`FileReadError` it did before.
+
+A channel MNE auto-detects as a trigger/status channel (by default, one
+literally named `"Status"` or `"Trigger"`) is read with that detection
+turned off (`stim_channel=False`): MNE would otherwise give such a channel
+its own uncalibrated, bitmasked treatment unrelated to the header's declared
+physical range, which would silently disagree with a normal `pyedflib` read
+of that channel. With detection off, it is calibrated the same way as every
+other channel, preserving the same unit-parity guarantee for it too.
+
+A recovered read is flagged in the recording's metadata:
+
+- `edf_tolerant_read` (`True`) and `edf_tolerant_read_reason` (one of
+  `degenerate_physical_range`, `malformed_numeric_field`,
+  `discontinuous_datarecords`)
+- each affected channel additionally carries `degenerate_physical_range: True`
+
+A genuinely truncated or corrupt file is unaffected by this: only the three
+conditions above are treated as recoverable, and a size check runs before any
+recovery attempt so a file that is *also* truncated still raises
+`CorruptFileError` rather than being silently read short.
+
+**Scope of a recovered read:** all signal-level data is fully populated --
+per-channel units, physical/digital min/max, transducer, prefilter, sample
+rate, channel type, and EDF+/BDF+ annotations/events. The one thing NOT
+populated is the patient/recording free-text metadata a normal read parses
+out of the header's `patient_id`/`recording_id` fields (`patientcode`,
+`gender`, `birthdate`, `patient_name`, `admincode`, `technician`, `equipment`,
+`recording_additional`): these keys are simply absent on a recovered read,
+not defaulted to empty strings, since biosigIO does not re-implement
+`pyedflib`'s own sub-parsing of those two free-text fields for the fallback
+path.
+
+A file with two on-disk channels sharing the same label is also not covered:
+MNE renames the second one to keep channel names unique, which the header
+probe (independent of MNE by design) cannot predict, so this fails loud with
+a clear error rather than silently pairing the wrong header row with the
+wrong channel's data.
+
 ## Exporter Implementation
 
 The EDF exporter in biosigIO (`biosigio.exporters.edf`) also uses `pyedflib` to:
