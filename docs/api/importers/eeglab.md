@@ -25,12 +25,19 @@ rec = EEGLABImporter().load('data.set')
 
 ## File Format Support
 
-The EEGLAB importer reads `.set` files with `scipy.io.loadmat`, so it supports:
+The EEGLAB importer dispatches on the file's actual content (a leading
+`"MATLAB 7.3 MAT-file"` header vs. a classic MAT header), not the `.set`
+extension, so it supports:
 
-1. Pre-v7.3 (non-HDF5) MATLAB `.set` files. MATLAB v7.3 / HDF5-format `.set`
-   files are not supported.
-2. Multiple channel types (EMG, EEG, ACC, etc.)
-3. Event markers (stored in metadata)
+1. Classic (pre-v7.3, non-HDF5) MATLAB `.set` files, via `scipy.io.loadmat`.
+2. MATLAB v7.3 (HDF5) `.set` files, via
+   [h5py](https://www.h5py.org/) -- an optional dependency (the `hdf5` extra:
+   `uv sync --extra hdf5`); a clear `ImportError` with an install hint is
+   raised if a v7.3 file is loaded without it installed. An epoched v7.3 file
+   (`EEG.trials > 1`) raises `NotContinuousRecordingError` instead of being
+   read as a fake continuous recording.
+3. Multiple channel types (EMG, EEG, ACC, etc.)
+4. Event markers (stored in metadata)
 
 ## Channel Type Detection
 
