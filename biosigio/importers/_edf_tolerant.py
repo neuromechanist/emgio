@@ -29,12 +29,16 @@ back to the SAME native physical units ``pyedflib`` would have produced --
 MNE and pyedflib apply an *identical* digital-to-physical calibration
 (``(physical_max - physical_min) / (digital_max - digital_min)``), MNE just
 additionally multiplies by a unit-to-SI factor pyedflib does not apply. That
-factor is read back off the just-opened ``Raw`` (:func:`_channel_gains`) rather
-than recomputed independently from the dimension string, so it is exactly what
-MNE actually multiplied in -- including any of MNE's own edge cases in matching
-that string -- not a best-effort duplicate that could silently disagree.
-Dividing back out by it makes a recovered read numerically identical to a
-normal pyedflib read for any channel a normal read would have produced -- see
+factor is read back off the just-opened ``Raw`` (:func:`_channel_gains`), which
+is exactly what MNE actually multiplied in -- including any of MNE's own edge
+cases in matching the dimension string -- rather than a best-effort duplicate
+that could silently disagree. It is, however, cross-checked (still in
+:func:`_channel_gains`) against an independent recomputation from the same
+dimension string, so that a *future* MNE release changing what that private
+attribute means -- not merely whether it exists -- is caught as a loud failure
+rather than silently trusted. Dividing back out by the (verified) factor makes
+a recovered read numerically identical to a normal pyedflib read for any
+channel a normal read would have produced -- see
 ``test_edf_fallback.py::test_fallback_matches_pyedflib_reading``, which is the
 load-bearing proof, not an assumption.
 
@@ -274,27 +278,81 @@ class EdfFallbackRecording:
     datarecord_duration: float
 
 
-def _channel_gains(raw) -> np.ndarray:
+def _expected_gain(dimension: str) -> float:
+    """The native-unit -> SI(volts) multiplier MNE's EDF/BDF reader SHOULD apply.
+
+    Copied verbatim from ``mne.io.edf.edf._get_info``'s own lookup table:
+    ``"uV"`` plus three micro-sign codepoint variants -> 1e-6, ``"mV"`` -> 1e-3,
+    anything else (including empty/unrecognized) -> 1 (already-volts). This is
+    NOT the value :func:`_channel_gains` returns -- it is an independent
+    cross-check against what MNE's ``Raw`` actually used, so that if a future
+    MNE release changes what its internal gain array *means* (not merely
+    whether it exists), the disagreement is caught as a loud, immediate error
+    rather than a silent, wrong-but-plausible rescale. See :func:`_channel_gains`.
+    """
+    if dimension in ("μV", "µV", "\x83\xcaV", "uV"):
+        return 1e-6
+    if dimension == "mV":
+        return 1e-3
+    return 1.0
+
+
+def _channel_gains(raw, dimensions: list[str]) -> np.ndarray:
     """The per-channel native-unit -> SI(volts) multiplier MNE applied.
 
     Read directly off MNE's internal ``_raw_extras[0]["units"]`` -- the exact
     array MNE's own segment reader multiplies into the digital-to-physical
-    calibration -- rather than recomputed independently from the dimension
-    string. MNE's unit-string matching has its own edge cases (e.g. a NUL byte
-    surviving in the dimension field, which its ``bytes.strip()`` does not
-    remove), so reading the value MNE actually used avoids silently disagreeing
-    with it in exactly the kind of malformed file this module exists to handle.
+    calibration -- rather than used blindly. Two things can go wrong with a
+    private attribute like this, and each is guarded separately:
+
+    - **Shape**: if a future MNE's ``"units"`` array does not align 1:1 with
+      ``raw.ch_names`` (``dimensions``, in the same order), indexing it later
+      would raise a bare, uninformative ``IndexError`` instead of a clear one.
+    - **Meaning**: even with the right shape, a future MNE could change what
+      the array's values represent without changing its shape or key name at
+      all -- the single worst outcome available here, since it would produce
+      wrong-but-plausible data with no error and no warning. Guarding against
+      it means not trusting the private attribute on faith: ``dimensions`` is
+      independently rederived (:func:`_expected_gain`) from each channel's own
+      physical-dimension string (already parsed independently of MNE, by
+      :func:`probe_edf_header`), and any disagreement is a loud failure. This
+      is deliberately a value check rather than a version pin -- the ``meg``
+      extra floors at ``mne>=1.6`` with no ceiling, so nothing else would
+      catch a future MNE changing this.
     """
     from ..exceptions import FileReadError
 
     try:
-        return np.asarray(raw._raw_extras[0]["units"], dtype=float)
+        gains = np.asarray(raw._raw_extras[0]["units"], dtype=float)
     except (AttributeError, IndexError, KeyError, TypeError) as exc:
         raise FileReadError(
             "EDF/BDF fallback reader could not read MNE's per-channel unit "
             f"gains ({type(exc).__name__}: {exc}); this MNE version may have "
             "changed its internal EDF/BDF reader layout"
         ) from exc
+
+    if len(gains) != len(dimensions):
+        raise FileReadError(
+            "EDF/BDF fallback reader: MNE reported "
+            f"{len(gains)} per-channel unit gain(s) for {len(dimensions)} "
+            "channel(s); this MNE version may have changed its internal "
+            "EDF/BDF reader layout"
+        )
+
+    expected = np.array([_expected_gain(d) for d in dimensions], dtype=float)
+    mismatched = np.flatnonzero(gains != expected)
+    if mismatched.size:
+        raise FileReadError(
+            "EDF/BDF fallback reader: MNE's per-channel unit gain disagrees "
+            "with the value biosigIO independently computed from the "
+            f"physical-dimension string for channel index(es) {mismatched.tolist()} "
+            f"(MNE: {gains[mismatched].tolist()}, expected: {expected[mismatched].tolist()}); "
+            "this MNE version may have changed how it interprets EDF/BDF "
+            "physical-dimension units, which would otherwise make a recovered "
+            "read silently disagree with a normal pyedflib read"
+        )
+
+    return gains
 
 
 def _events_from_mne_annotations(raw) -> pd.DataFrame:
@@ -324,8 +382,14 @@ def read_edf_tolerant(filepath: str, reason: str) -> EdfFallbackRecording:
 
     Raises ``ImportError`` if MNE (the ``meg`` extra) is not installed, and
     ``OSError``/``FileReadError`` for anything that turns out not to be
-    recoverable after all (a truncation the safety net catches, or a channel
-    MNE's reader dropped/renamed in a way this probe can't match back up).
+    recoverable after all: a truncation the safety net catches, a per-channel
+    unit gain that disagrees with what biosigIO independently expects (see
+    :func:`_channel_gains`), or a channel MNE's reader renamed in a way this
+    header probe can't match back up -- notably, a file with two on-disk
+    channels sharing a label: MNE's own ``_unique_ch_names`` de-duplication
+    would rename the second one (e.g. ``"EEG-1"``), which this probe (by
+    design independent of MNE) has no way to predict, so it fails loud here
+    rather than risk pairing the wrong header row with the wrong data.
     """
     from ..exceptions import FileReadError
     from ._mne_common import require_mne
@@ -336,19 +400,24 @@ def read_edf_tolerant(filepath: str, reason: str) -> EdfFallbackRecording:
     _check_not_truncated(filepath, probe, probe.number_of_datarecords)
 
     raw = mne.io.read_raw(filepath, preload=True, verbose="ERROR")
-    gains = _channel_gains(raw)
     data = raw.get_data()
     sfreq = float(raw.info["sfreq"])
 
     by_label = {ch["label"]: ch for ch in probe.channels}
-    channels: list[EdfFallbackChannel] = []
-    for i, name in enumerate(raw.ch_names):
+    probed_channels: list[dict[str, Any]] = []
+    for name in raw.ch_names:
         probed = by_label.get(name)
         if probed is None:
             raise FileReadError(
                 f"{filepath}: fallback reader could not match channel {name!r} "
                 "read by MNE back to a channel in the file's own header"
             )
+        probed_channels.append(probed)
+
+    gains = _channel_gains(raw, [p["dimension"] for p in probed_channels])
+
+    channels: list[EdfFallbackChannel] = []
+    for i, (name, probed) in enumerate(zip(raw.ch_names, probed_channels, strict=True)):
         degenerate = probed["physical_min"] == probed["physical_max"]
         if degenerate:
             # The digital-to-physical slope is 0/0; the only value the scaling

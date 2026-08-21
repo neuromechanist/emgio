@@ -21,6 +21,7 @@ numerically identical to pyedflib's own physical values, not an assumption.
 
 import os
 import struct
+import tempfile
 
 import numpy as np
 import pyedflib
@@ -222,8 +223,11 @@ def test_degenerate_physical_range_recovered(tmp_path):
     np.testing.assert_array_equal(ref_values, np.full(n, -200.0))
 
     # The two normal channels must round-trip exactly like a normal read.
-    np.testing.assert_allclose(rec.signals["C0"].to_numpy(), ground_truth["C0"], atol=1e-9)
-    np.testing.assert_allclose(rec.signals["C1"].to_numpy(), ground_truth["C1"], atol=1e-9)
+    # rtol (not a fixed atol): a fixed atol would silently loosen for a
+    # small-native-magnitude channel, hiding exactly the drift this is meant
+    # to catch (see test_fallback_matches_pyedflib_reading's "VLF" channel).
+    np.testing.assert_allclose(rec.signals["C0"].to_numpy(), ground_truth["C0"], rtol=1e-9)
+    np.testing.assert_allclose(rec.signals["C1"].to_numpy(), ground_truth["C1"], rtol=1e-9)
 
 
 def test_degenerate_physical_range_nonzero_constant(tmp_path):
@@ -272,7 +276,7 @@ def test_malformed_numeric_field_recovered(tmp_path):
     assert rec.get_n_channels() == 2
     for label in ("C0", "C1"):
         assert len(rec.signals[label]) == n
-        np.testing.assert_allclose(rec.signals[label].to_numpy(), ground_truth[label], atol=1e-9)
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), ground_truth[label], rtol=1e-9)
 
 
 # --- Problem 3: discontinuous EDF+D --------------------------------------------
@@ -303,7 +307,7 @@ def test_discontinuous_edfd_recovered(tmp_path):
     assert rec.metadata["edf_tolerant_read_reason"] == DISCONTINUOUS_DATARECORDS
     for label in ("C0", "C1"):
         assert len(rec.signals[label]) == n
-        np.testing.assert_allclose(rec.signals[label].to_numpy(), ground_truth[label], atol=1e-9)
+        np.testing.assert_allclose(rec.signals[label].to_numpy(), ground_truth[label], rtol=1e-9)
 
     assert not rec.events.empty
     assert rec.events.iloc[0]["description"] == "trial_start"
@@ -319,7 +323,13 @@ def test_fallback_matches_pyedflib_reading(tmp_path):
     pyedflib read -- not merely close, not merely 'reasonable'. This is proven,
     not assumed, precisely because this fixture has none of the three
     conditions and so is readable by pyedflib directly, giving a real ground
-    truth to compare against on the exact same bytes."""
+    truth to compare against on the exact same bytes.
+
+    Includes one deliberately small-magnitude, "V"-native channel (VLF, an
+    unrecognized-as-uV/mV dimension string so MNE and biosigIO both default
+    its gain to 1): the comparison below uses `rtol`, not a fixed `atol`, so
+    this channel's tiny native values are checked at the SAME relative
+    precision as the volt-scale ones, not silently looser."""
     path = str(tmp_path / "compliant.edf")
     rng = np.random.default_rng(944)
     n = 1000
@@ -327,11 +337,13 @@ def test_fallback_matches_pyedflib_reading(tmp_path):
         _channel("EEG1", 250.0, -400.0, 400.0),
         _channel("EEG2", 250.0, -123.45, 678.9),
         _channel("EMG1", 250.0, -1000.0, 1000.0),
+        {**_channel("VLF", 250.0, -1e-5, 1e-5), "dimension": "V"},
     ]
     data = [
         rng.uniform(-400, 400, n),
         rng.uniform(-123.45, 678.9, n),
         rng.uniform(-1000, 1000, n),
+        rng.uniform(-1e-5, 1e-5, n),
     ]
     _write_edf(path, channels, data)
 
@@ -345,7 +357,7 @@ def test_fallback_matches_pyedflib_reading(tmp_path):
         np.testing.assert_allclose(
             by_label[label].data,
             expected,
-            atol=1e-9,
+            rtol=1e-9,
             err_msg=f"unit-parity mismatch on channel {label!r}",
         )
         assert by_label[label].degenerate_physical_range is False
@@ -367,7 +379,7 @@ def test_fallback_matches_pyedflib_reading_bdf(tmp_path):
     fallback = read_edf_tolerant(path, reason=MALFORMED_NUMERIC_FIELD)
     by_label = {ch.label: ch for ch in fallback.channels}
     for label, expected in ground_truth.items():
-        np.testing.assert_allclose(by_label[label].data, expected, atol=1e-6)
+        np.testing.assert_allclose(by_label[label].data, expected, rtol=1e-9)
 
 
 # --- Negative tests: genuine corruption must still be reported as such --------
@@ -486,3 +498,202 @@ def test_probe_edf_header_rejects_short_file(tmp_path):
     path.write_bytes(struct.pack("B", 0) * 100)  # far short of the 256-byte main header
     with pytest.raises(OSError):
         probe_edf_header(str(path))
+
+
+# --- Streaming path (zarr_stream._EdfSource) must agree with the in-memory path -
+
+# #944 kept EDF/BDF off the MNE streaming path specifically because a streamed
+# read and an in-memory read disagreeing on units would be a silent
+# correctness bug -- exactly the hazard a fallback that *also* uses MNE could
+# reintroduce if the two call sites drifted. These tests exercise
+# `_EdfSource`'s fallback branch (zarr_stream.py) directly, not just
+# `EDFImporter.load`.
+
+
+def _dequant(store_path: str, gname: str) -> np.ndarray:
+    import zarr
+
+    g = zarr.open_group(store_path, mode="r")[gname]
+    base = np.asarray(g["0"][:])
+    scale = np.asarray(g["0"].attrs["scale"])[:, None]
+    offset = np.asarray(g["0"].attrs["offset"])[:, None]
+    return base * scale + offset
+
+
+def test_edf_source_fallback_matches_edf_importer_degenerate(tmp_path):
+    """Direct, full-precision check of `_EdfSource`'s fallback branch
+    (zarr_stream.py:179-217, the read at :352-353) against `EDFImporter.load`
+    for the degenerate-physical-range condition. No int16 quantization is
+    involved here, unlike the store-level test below, so this pins the
+    streaming path's raw values exactly, not just "close enough"."""
+    from biosigio.exporters.zarr_stream import _EdfSource
+
+    path = str(tmp_path / "source_degenerate.edf")
+    rng = np.random.default_rng(217)
+    n = 400
+    channels = [_channel("C0", 100.0, -100.0, 100.0), _channel("REF", 100.0, -100.0, 100.0)]
+    data = [rng.uniform(-100, 100, n), rng.uniform(-100, 100, n)]
+    _write_edf(path, channels, data)
+    _patch_signal_field(path, 1, "physical_max", b"-100")
+    with pytest.raises(OSError, match=r"(?i)physical maximum"):
+        pyedflib.EdfReader(path)
+
+    rec = Recording.from_file(path, importer="edf")
+    assert rec.metadata["edf_tolerant_read"] is True
+
+    source = _EdfSource(path, force_modality="EEG")
+    try:
+        assert source.extra_metadata["edf_tolerant_read"] is True
+        assert source.extra_metadata["edf_tolerant_read_reason"] == DEGENERATE_PHYSICAL_RANGE
+        assert source.n_samples == n
+        labels = [ch["label"] for ch in source.channels]
+        streamed = source.read(list(range(len(labels))), 0, n)
+    finally:
+        source.close()
+
+    for i, label in enumerate(labels):
+        np.testing.assert_array_equal(streamed[i], rec.signals[label].to_numpy())
+        if label == "REF":
+            np.testing.assert_array_equal(streamed[i], np.full(n, -100.0))
+
+
+def test_edf_source_fallback_matches_edf_importer_discontinuous(tmp_path):
+    """Same direct check, for the discontinuous-EDF+D condition."""
+    from biosigio.exporters.zarr_stream import _EdfSource
+
+    path = str(tmp_path / "source_discontinuous.edf")
+    rng = np.random.default_rng(6910)
+    n = 500
+    channels = [_channel("C0", 100.0, -400.0, 400.0), _channel("C1", 100.0, -400.0, 400.0)]
+    data = [rng.uniform(-400, 400, n), rng.uniform(-400, 400, n)]
+    _write_edf(path, channels, data)
+    _patch_main_header_field(path, 192, 44, b"EDF+D", pad=b" ")
+    with pytest.raises(OSError, match=r"(?i)discontinuous"):
+        pyedflib.EdfReader(path)
+
+    rec = Recording.from_file(path, importer="edf")
+
+    source = _EdfSource(path, force_modality="EEG")
+    try:
+        assert source.extra_metadata["edf_tolerant_read_reason"] == DISCONTINUOUS_DATARECORDS
+        labels = [ch["label"] for ch in source.channels]
+        streamed = source.read(list(range(len(labels))), 0, n)
+    finally:
+        source.close()
+
+    for i, label in enumerate(labels):
+        np.testing.assert_array_equal(streamed[i], rec.signals[label].to_numpy())
+
+
+def test_stream_edf_degenerate_range_matches_in_memory_export(tmp_path):
+    """End-to-end: `stream_to_zarr` on a physical_min == physical_max file must
+    produce the SAME Zarr store (up to int16 quantization) as the in-memory
+    `Recording.from_file` -> `to_zarr` path -- the reviewer-requested
+    store-level regression test for the streaming fallback."""
+    pytest.importorskip("zarr", reason="requires the 'zarr' extra")
+    import biosigio
+
+    path = str(tmp_path / "stream_degenerate.edf")
+    rng = np.random.default_rng(944109)
+    n = 1000  # 100 Hz x 10 s
+    channels = [
+        _channel("C0", 100.0, -200.0, 200.0),
+        _channel("REF", 100.0, -200.0, 200.0),
+        _channel("C1", 100.0, -400.0, 400.0),
+    ]
+    data = [rng.uniform(-200, 200, n), rng.uniform(-200, 200, n), rng.uniform(-400, 400, n)]
+    _write_edf(path, channels, data)
+    _patch_signal_field(path, 1, "physical_max", b"-200")
+    with pytest.raises(OSError, match=r"(?i)physical maximum"):
+        pyedflib.EdfReader(path)
+
+    with tempfile.TemporaryDirectory() as d:
+        s_stream = os.path.join(d, "stream.zarr")
+        s_inmem = os.path.join(d, "inmem.zarr")
+        biosigio.stream_to_zarr(path, s_stream, force_modality="EEG", dtype="int16")
+        rec = biosigio.Recording.from_file(path, importer="edf")
+        for label in rec.channels:
+            rec.channels[label]["modality"] = "EEG"
+        rec.to_zarr(s_inmem, dtype="int16")
+
+        a = _dequant(s_stream, "eeg_100hz")
+        b = _dequant(s_inmem, "eeg_100hz")
+        assert a.shape == b.shape
+        for i in range(a.shape[0]):
+            span = float(b[i].max() - b[i].min()) or 1.0
+            assert np.max(np.abs(a[i] - b[i])) <= 6 * span / 65535
+
+
+# --- _channel_gains: shape and semantic-drift guards ---------------------------
+
+# These construct a REAL MNE `Raw` (by reading a real, fully-compliant file)
+# and then perturb its own `_raw_extras[0]["units"]` in place -- not a mock
+# class standing in for MNE, but MNE's real object with one field pushed into
+# a state a future MNE release could plausibly produce on its own.
+
+
+def test_channel_gains_shape_mismatch_raises(tmp_path):
+    """A future MNE whose `units` array does not align 1:1 with `ch_names`
+    must fail here, with a clear message, instead of a bare IndexError later
+    at `gains[i]`."""
+    import mne
+
+    from biosigio.exceptions import FileReadError
+    from biosigio.importers._edf_tolerant import _channel_gains
+
+    path = str(tmp_path / "gains_shape.edf")
+    channels = [_channel("C0", 100.0, -100.0, 100.0), _channel("C1", 100.0, -50.0, 50.0)]
+    data = [np.zeros(100), np.zeros(100)]
+    _write_edf(path, channels, data)
+
+    raw = mne.io.read_raw(path, preload=True, verbose="ERROR")
+    raw._raw_extras[0]["units"] = raw._raw_extras[0]["units"][:1]  # drop one entry
+
+    with pytest.raises(FileReadError, match=r"(?i)per-channel unit gain"):
+        _channel_gains(raw, ["uV", "uV"])
+
+
+def test_channel_gains_semantic_drift_raises(tmp_path):
+    """The critical guard: same key, same shape, but the VALUE disagrees with
+    what biosigIO independently computes from the dimension string -- exactly
+    what a future MNE release changing what `_raw_extras[0]["units"]` means
+    (not just whether it exists) would look like, and which nothing else in
+    this module could otherwise catch (it is correct against mne 1.12.1, and
+    the `meg` extra has no upper version bound)."""
+    import mne
+
+    from biosigio.exceptions import FileReadError
+    from biosigio.importers._edf_tolerant import _channel_gains
+
+    path = str(tmp_path / "gains_drift.edf")
+    channels = [_channel("C0", 100.0, -100.0, 100.0)]
+    data = [np.zeros(100)]
+    _write_edf(path, channels, data)
+
+    raw = mne.io.read_raw(path, preload=True, verbose="ERROR")
+    assert raw._raw_extras[0]["units"][0] == pytest.approx(1e-6)  # sanity: uV, as expected
+    raw._raw_extras[0]["units"] = np.array([2e-6])  # simulate a future MNE meaning something else
+
+    with pytest.raises(FileReadError, match=r"(?i)disagrees"):
+        _channel_gains(raw, ["uV"])
+
+
+def test_channel_gains_matches_expected_for_known_units(tmp_path):
+    """Sanity check for the guard itself: uV, mV, and an unrecognized/absent
+    unit (treated as already-volts, same as MNE) do not raise."""
+    import mne
+
+    from biosigio.importers._edf_tolerant import _channel_gains
+
+    path = str(tmp_path / "gains_normal.edf")
+    channels = [
+        _channel("C_uV", 100.0, -100.0, 100.0),
+        {**_channel("C_mV", 100.0, -1.0, 1.0), "dimension": "mV"},
+        {**_channel("C_none", 100.0, -1.0, 1.0), "dimension": ""},
+    ]
+    data = [np.zeros(100), np.zeros(100), np.zeros(100)]
+    _write_edf(path, channels, data)
+
+    raw = mne.io.read_raw(path, preload=True, verbose="ERROR")
+    gains = _channel_gains(raw, ["uV", "mV", ""])
+    np.testing.assert_allclose(gains, [1e-6, 1e-3, 1.0])

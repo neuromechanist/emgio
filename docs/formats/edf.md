@@ -89,6 +89,23 @@ conditions above are treated as recoverable, and a size check runs before any
 recovery attempt so a file that is *also* truncated still raises
 `CorruptFileError` rather than being silently read short.
 
+**Scope of a recovered read:** all signal-level data is fully populated --
+per-channel units, physical/digital min/max, transducer, prefilter, sample
+rate, channel type, and EDF+/BDF+ annotations/events. The one thing NOT
+populated is the patient/recording free-text metadata a normal read parses
+out of the header's `patient_id`/`recording_id` fields (`patientcode`,
+`gender`, `birthdate`, `patient_name`, `admincode`, `technician`, `equipment`,
+`recording_additional`): these keys are simply absent on a recovered read,
+not defaulted to empty strings, since biosigIO does not re-implement
+`pyedflib`'s own sub-parsing of those two free-text fields for the fallback
+path.
+
+A file with two on-disk channels sharing the same label is also not covered:
+MNE renames the second one to keep channel names unique, which the header
+probe (independent of MNE by design) cannot predict, so this fails loud with
+a clear error rather than silently pairing the wrong header row with the
+wrong channel's data.
+
 ## Exporter Implementation
 
 The EDF exporter in biosigIO (`biosigio.exporters.edf`) also uses `pyedflib` to:
