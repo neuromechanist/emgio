@@ -99,6 +99,15 @@ neo = [
 zarr = [
     "zarr>=3",
 ]
+# HDF5 reading of MATLAB v7.3 EEGLAB .set files (h5py). Classic v5/v7 .set
+# files need no extra -- scipy.io.loadmat, a core dep, already reads them --
+# but scipy (and MNE's EEGLAB reader) refuse v7.3 (HDF5) files outright, so
+# reading those is opt-in via this extra rather than a core dep, matching how
+# `neo`/`zarr`/`mef3` isolate other niche-or-heavy per-format dependencies.
+# Install with `uv sync --extra hdf5`.
+hdf5 = [
+    "h5py>=3.8",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -109,6 +118,7 @@ dev = [
     "pyarrow>=14",
     "neo>=0.13",
     "zarr>=3",
+    "h5py>=3.8",
 ]
 docs = [
     "mkdocs>=1.6.0",
@@ -119,7 +129,7 @@ docs = [
     "mike>=2.1.0",
 ]
 all = [
-    "biosigio[dev,docs,meg,mef3,arrow,neo,zarr]",
+    "biosigio[dev,docs,meg,mef3,arrow,neo,zarr,hdf5]",
 ]
 
 [project.urls]
