@@ -35,6 +35,7 @@ ImporterName = Literal[
     "xdf",
     "meg",
     "brainvision",
+    "mef3",
     "tabular",
     "neo",
     "zarr",
@@ -130,6 +131,26 @@ class Recording:
             return "meg"
         elif extension in {".vhdr"}:
             return "brainvision"
+        elif extension == ".mefd":
+            # MEF3 (a directory, like CTF .ds) is a distinct iEEG modality with its
+            # own MNE/pymef version floor -- see importers/mef3.py -- so it is its
+            # own importer name rather than folding into "meg".
+            return "mef3"
+        elif extension == "" and os.path.isdir(filepath.rstrip("/\\")):
+            # 4D/BTi ships as a directory with NO extension, so it cannot be
+            # recognized above; fall back to content-based detection. Lazy
+            # import: avoids importing the importers package (and MNE) just to
+            # infer a name, and avoids a core<->importers import cycle.
+            #
+            # _resolve_bti_reader_kwargs is the ONE place that decides "is this
+            # a valid BTi layout" and raises UnsupportedFormatError if not --
+            # shared with MEGImporter._read_raw and the streaming path (see
+            # importers/meg.py's module docstring) so there is exactly one
+            # raise site to keep correct, not one per call site.
+            from ..importers.meg import _resolve_bti_reader_kwargs
+
+            _resolve_bti_reader_kwargs(filepath.rstrip("/\\"))
+            return "meg"
         elif extension in {".parquet", ".feather", ".arrow"}:
             return "tabular"
         elif extension in {
@@ -177,8 +198,12 @@ class Recording:
                 - 'csv': Generic CSV (or TXT) files with columnar data
                 - 'wfdb': Waveform Database (WFDB)
                 - 'xdf': XDF format (multi-stream Lab Streaming Layer files)
-                - 'meg': MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf; requires the 'meg' extra)
+                - 'meg': MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf, 4D/BTi
+                  directory (no extension, detected by content); requires the
+                  'meg' extra)
                 - 'brainvision': BrainVision .vhdr via MNE (requires the 'meg' extra)
+                - 'mef3': MEF3 iEEG via MNE (.mefd directory; requires the 'mef3'
+                  extra -- mne>=1.12 plus pymef, stricter than the 'meg' extra)
                 - 'tabular': biosigIO Parquet/Arrow/Feather (requires the 'arrow' extra)
                 - 'neo': proprietary electrophysiology formats via python-neo
                   (Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...;
@@ -219,8 +244,9 @@ class Recording:
             "csv": "CSVImporter",  # Generic CSV/Text files
             "wfdb": "WFDBImporter",  # Waveform Database format
             "xdf": "XDFImporter",  # XDF multi-stream format
-            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)
+            "meg": "MEGImporter",  # MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf, 4D/BTi)
             "brainvision": "BrainVisionImporter",  # BrainVision via MNE (.vhdr)
+            "mef3": "MEF3Importer",  # MEF3 iEEG via MNE (.mefd; requires the 'mef3' extra)
             "tabular": "TabularImporter",  # biosigIO Parquet / Arrow / Feather
             "neo": "NeoImporter",  # proprietary ephys via python-neo
             "zarr": "ZarrImporter",  # biosigIO Zarr serving store
@@ -237,8 +263,9 @@ class Recording:
                 "- csv: Generic CSV/Text files\n"
                 "- wfdb: Waveform Database\n"
                 "- xdf: XDF multi-stream format\n"
-                "- meg: MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf)\n"
+                "- meg: MEG via MNE (.fif, CTF .ds, KIT .con/.sqd/.kdf, 4D/BTi directory)\n"
                 "- brainvision: BrainVision via MNE (.vhdr)\n"
+                "- mef3: MEF3 iEEG via MNE (.mefd directory; requires the 'mef3' extra)\n"
                 "- tabular: biosigIO Parquet/Arrow/Feather (.parquet, .feather, .arrow)\n"
                 "- neo: proprietary electrophysiology formats via python-neo "
                 "(Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx, ...)\n"

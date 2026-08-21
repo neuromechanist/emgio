@@ -64,10 +64,24 @@ dependencies = [
 biosigio = "biosigio.cli:main"
 
 [project.optional-dependencies]
-# MEG (.fif / CTF .ds / KIT .con/.sqd/.kdf) and BrainVision (.vhdr) import are
-# backed by MNE, kept out of the core deps (MNE is heavy). `uv sync --extra meg`.
+# MEG (.fif / CTF .ds / KIT .con/.sqd/.kdf / 4D-BTi) and BrainVision (.vhdr)
+# import are backed by MNE, kept out of the core deps (MNE is heavy).
+# `uv sync --extra meg`. mne>=1.6 covers every format in this extra except
+# MEF3 (see the `mef3` extra below, which pins a newer MNE on its own).
 meg = [
     "mne>=1.6",
+]
+# MEF3 (.mefd) iEEG import needs mne>=1.12 (mne.io.read_raw_mef, new in 1.12)
+# plus pymef (the MEF3 C-library wrapper MNE's reader delegates to). Kept as
+# its own extra rather than folded into `meg` so installing `meg` alone never
+# forces the newer MNE floor onto users who only need .fif/.ds/.con/.bti.
+# `uv sync --extra mef3` pulls in a compatible MNE transitively via the
+# version resolver; the MEF3Importer also checks the installed MNE version at
+# runtime and raises a clear error if an older MNE is present (e.g. installed
+# separately via the `meg` extra).
+mef3 = [
+    "mne>=1.12",
+    "pymef>=1.4.8",
 ]
 # Parquet + Arrow/Feather serialization (analytics, fast IPC). Install with
 # `uv sync --extra arrow`. Zarr will get its own extra in a later phase.
@@ -90,7 +104,8 @@ dev = [
     "pytest-cov>=4.0.0",
     "ruff>=0.14",
     "ty",
-    "mne>=1.6",
+    "mne>=1.12",
+    "pymef>=1.4.8",
     "pyarrow>=14",
     "neo>=0.13",
     "zarr>=3",
@@ -104,7 +119,7 @@ docs = [
     "mike>=2.1.0",
 ]
 all = [
-    "biosigio[dev,docs,meg,arrow,neo,zarr]",
+    "biosigio[dev,docs,meg,mef3,arrow,neo,zarr]",
 ]
 
 [project.urls]
