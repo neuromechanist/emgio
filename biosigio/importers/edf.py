@@ -6,6 +6,7 @@ import pyedflib
 
 from ..core.emg import Recording
 from ..exceptions import MixedSamplingRateError, classify_read_error
+from ._edf_tolerant import classify_pyedflib_error, read_edf_tolerant
 from .base import BaseImporter
 
 # Accepted `mixed_rate` policies for a recording whose signals carry differing
@@ -185,9 +186,57 @@ class EDFImporter(BaseImporter):
             events["duration"] = events["duration"].astype("float64")
         return events
 
+    def _collect_via_fallback(
+        self, filepath: str, reason: str
+    ) -> tuple[list[tuple[dict, np.ndarray]], pd.DataFrame, dict]:
+        """Recover a file pyedflib refuses to open (see ``_edf_tolerant``).
+
+        Returns the same ``(signal_info, signal_data)`` pairs the normal path
+        builds from ``_read_signal_data``, plus events and a ``file_info`` dict,
+        so the rest of :meth:`load` runs unchanged regardless of which path
+        produced them.
+        """
+        fallback = read_edf_tolerant(filepath, reason)
+        pairs = [
+            (
+                {
+                    "label": ch.label,
+                    "transducer": ch.transducer,
+                    "physical_dimension": ch.physical_dimension,
+                    "physical_min": ch.physical_min,
+                    "physical_max": ch.physical_max,
+                    "digital_min": ch.digital_min,
+                    "digital_max": ch.digital_max,
+                    "prefilter": ch.prefilter,
+                    "sample_frequency": ch.sample_frequency,
+                    "degenerate_physical_range": ch.degenerate_physical_range,
+                },
+                ch.data,
+            )
+            for ch in fallback.channels
+        ]
+        file_info = {
+            "filetype": fallback.filetype,
+            "number_of_signals": len(fallback.channels),
+            "file_duration": fallback.file_duration,
+            "datarecord_duration": fallback.datarecord_duration,
+        }
+        return pairs, fallback.events, file_info
+
     def load(self, filepath: str, *, mixed_rate: str = "error") -> Recording:
         """
         Load EMG data from EDF/EDF+/BDF file.
+
+        Three conditions pyedflib's compliance checker rejects outright are
+        instead recovered via a tolerant MNE-backed fallback, rescaled back to
+        pyedflib-equivalent physical units (see ``_edf_tolerant`` for the full
+        rationale and the unit-parity proof): a channel with
+        ``physical_min == physical_max`` (issue #109), a numeric header field
+        padded with NUL bytes instead of spaces, and a file correctly marked
+        EDF+D (discontinuous). A recovered read is flagged in metadata via
+        ``edf_tolerant_read`` / ``edf_tolerant_read_reason``. Anything else --
+        including a genuinely truncated/corrupt file -- still raises
+        :class:`~biosigio.exceptions.CorruptFileError` as before.
 
         Args:
             filepath: Path to the EDF file
@@ -203,18 +252,41 @@ class EDFImporter(BaseImporter):
         """
         if mixed_rate not in MIXED_RATE_POLICIES:
             raise ValueError(f"mixed_rate must be one of {MIXED_RATE_POLICIES}, got {mixed_rate!r}")
+        edf_reader: pyedflib.EdfReader | None = None
         try:
-            edf_reader = pyedflib.EdfReader(filepath)
+            fallback_reason: str | None
+            try:
+                edf_reader = pyedflib.EdfReader(filepath)
+            except Exception as open_exc:
+                fallback_reason = classify_pyedflib_error(open_exc)
+                if fallback_reason is None:
+                    raise
+                try:
+                    pairs, events, file_info = self._collect_via_fallback(filepath, fallback_reason)
+                except ImportError:
+                    # MNE (the `meg` extra) isn't installed -- degrade to the
+                    # original pyedflib error rather than leaving this silent.
+                    raise open_exc from None
+                recording_info: dict = {}
+            else:
+                fallback_reason = None
+                metadata = self._extract_metadata(edf_reader)
+                recording_info = metadata["recording_info"]
+                file_info = metadata["file_info"]
+                pairs = []
+                for i in range(edf_reader.signals_in_file):
+                    signal_data, signal_info = self._read_signal_data(edf_reader, i)
+                    pairs.append((signal_info, signal_data))
+                events = self._read_annotations(edf_reader)
 
             # Create Recording object
             rec = Recording()
 
             # Extract and store metadata
-            metadata = self._extract_metadata(edf_reader)
-            for key, value in metadata["recording_info"].items():
+            for key, value in recording_info.items():
                 if value:  # Only store non-empty values
                     rec.set_metadata(key, value)
-            for key, value in metadata["file_info"].items():
+            for key, value in file_info.items():
                 rec.set_metadata(key, value)
 
             # Store source file information
@@ -225,8 +297,7 @@ class EDFImporter(BaseImporter):
             # cannot share the Recording's single time grid, so add_channel would
             # raise mid-load. Each entry: (signal_info, signal_data, channel_type).
             collected: list[tuple[dict, np.ndarray, str]] = []
-            for i in range(edf_reader.signals_in_file):
-                signal_data, signal_info = self._read_signal_data(edf_reader, i)
+            for signal_info, signal_data in pairs:
                 channel_type = self._determine_channel_type(
                     signal_info["label"], signal_info["transducer"]
                 )
@@ -280,6 +351,14 @@ class EDFImporter(BaseImporter):
                 if resampled:
                     # Preserve the true acquisition rate (metadata loss is data loss).
                     channel_metadata["original_sample_frequency"] = native
+                if signal_info.get("degenerate_physical_range"):
+                    # physical_min == physical_max: the scale factor is undefined
+                    # and the fallback path emitted a constant channel (see
+                    # _edf_tolerant.read_edf_tolerant). Flag it the same way
+                    # nonfinite_samples flags a suspect channel, so downstream
+                    # consumers (e.g. the Zarr exporter) can tell this channel's
+                    # data is a physically-forced constant, not a measurement.
+                    channel_metadata["degenerate_physical_range"] = True
                 rec.channels[signal_info["label"]].update(channel_metadata)
 
             if target_rate is not None:
@@ -288,12 +367,19 @@ class EDFImporter(BaseImporter):
                 rec.set_metadata("mixed_rate_resampled", True)
                 rec.set_metadata("mixed_rate_target_hz", float(target_rate))
 
-            # Read EDF+/BDF+ annotations into events so they survive the
-            # import->export->import round-trip (issue #47). Assigned directly
-            # (not via add_event) for a single sort; _read_annotations already
-            # returns the same schema add_event produces (float64 onset/duration,
-            # sorted by onset). Left as the empty __init__ frame when none exist.
-            events = self._read_annotations(edf_reader)
+            if fallback_reason is not None:
+                # Flag that this recording only loaded because of the tolerant
+                # fallback (see module docstring / _edf_tolerant), so downstream
+                # consumers can tell a recovered read from a fully-compliant one.
+                rec.set_metadata("edf_tolerant_read", True)
+                rec.set_metadata("edf_tolerant_read_reason", fallback_reason)
+
+            # Events (EDF+/BDF+ annotations) survive the import->export->import
+            # round-trip (issue #47): assigned directly (not via add_event) for a
+            # single sort, since both `_read_annotations` and the fallback's
+            # `_events_from_mne_annotations` already return the same schema
+            # add_event produces (float64 onset/duration, sorted by onset). Left
+            # as the empty __init__ frame when none exist.
             if not events.empty:
                 rec.events = events
 
@@ -307,5 +393,5 @@ class EDFImporter(BaseImporter):
             raise classify_read_error(e, filepath) from e
 
         finally:
-            if "edf_reader" in locals():
+            if edf_reader is not None:
                 edf_reader.close()

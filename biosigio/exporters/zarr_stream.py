@@ -87,7 +87,10 @@ def _pyramid_level_lengths(
 # would NOT match a re-run on the in-memory path. pyedflib.readSignal(chn, start, n)
 # is numerically identical to readSignal(chn) sliced, so the streamed store matches
 # the in-memory store exactly. (EDF-via-stream is not used in production today, so
-# switching its reader changes no existing store.)
+# switching its reader changes no existing store.) When pyedflib itself refuses to
+# open the file (issue #109 and friends -- see ``..importers._edf_tolerant``),
+# ``_EdfSource`` falls back to the SAME tolerant MNE-backed, unit-rescaled read the
+# in-memory importer uses, so the two paths keep agreeing even on a recovered file.
 #
 # .mefd and 4D/BTi need their OWN reader call rather than MNE's generic
 # ``read_raw()`` dispatch: .mefd additionally needs the MEF3 version/pymef gate
@@ -147,16 +150,73 @@ class _EdfSource:
 
     Uniform per-channel rate ONLY: a mixed-rate EDF raises MixedSamplingRateError
     (same as the importer's default), so it stays on the in-memory resample path
-    rather than being silently mis-gridded by a single-rate streaming window."""
+    rather than being silently mis-gridded by a single-rate streaming window.
+
+    Three conditions pyedflib's compliance checker rejects outright (a
+    ``physical_min == physical_max`` channel, a NUL-padded numeric header field,
+    a correctly-marked-discontinuous EDF+D) are recovered the same way the
+    in-memory importer recovers them -- see ``importers._edf_tolerant`` for the
+    unit-parity rationale. That path preloads the whole recording (there is no
+    windowed pyedflib reader for a file pyedflib itself refuses to open), so it
+    trades this module's bounded-memory guarantee for correctness on these rare,
+    already-exceptional files; ``read()`` still serves windows from the
+    preloaded array so callers see the same interface either way."""
 
     def __init__(self, filepath: str, force_modality: str | None):
         import pyedflib
 
         from ..exceptions import MixedSamplingRateError
+        from ..importers._edf_tolerant import classify_pyedflib_error, read_edf_tolerant
         from ..importers.edf import EDFImporter
 
         self.extra_metadata: dict = {}
-        self._reader = pyedflib.EdfReader(filepath)
+        self._reader = None
+        self._fallback_data: np.ndarray | None = None
+        typer = EDFImporter()._determine_channel_type
+
+        try:
+            reader = pyedflib.EdfReader(filepath)
+        except Exception as open_exc:
+            reason = classify_pyedflib_error(open_exc)
+            if reason is None:
+                raise
+            # ImportError (MNE/`meg` extra missing) is deliberately NOT caught
+            # here: it propagates with its own clear install hint, same as the
+            # in-memory importer degrading only when it also can't recover.
+            fallback = read_edf_tolerant(filepath, reason)
+            self.extra_metadata["edf_tolerant_read"] = True
+            self.extra_metadata["edf_tolerant_read_reason"] = reason
+
+            rates = {ch.sample_frequency for ch in fallback.channels}
+            if len(rates) > 1:
+                raise MixedSamplingRateError(
+                    "EDF/BDF recording has mixed per-channel sampling rates "
+                    f"({sorted(rates)} Hz); the streaming path needs a uniform "
+                    'grid. The in-memory path handles this with mixed_rate="resample".'
+                ) from None
+
+            self.sfreq = float(fallback.channels[0].sample_frequency) if fallback.channels else 0.0
+            self.n_samples = len(fallback.channels[0].data) if fallback.channels else 0
+            self._fallback_data = (
+                np.stack([ch.data for ch in fallback.channels])
+                if fallback.channels
+                else np.empty((0, 0))
+            )
+            self.channels = []
+            for i, ch in enumerate(fallback.channels):
+                ctype = typer(ch.label, ch.transducer)
+                self.channels.append(
+                    {
+                        "idx": i,
+                        "label": ch.label,
+                        "channel_type": ctype,
+                        "modality": force_modality or infer_modality_from_channel_type(ctype),
+                        "unit": ch.physical_dimension or "n/a",
+                    }
+                )
+            return
+
+        self._reader = reader
         headers = self._reader.getSignalHeaders()
         nsamps = self._reader.getNSamples()
         rates = {float(h["sample_frequency"]) for h in headers}
@@ -167,7 +227,6 @@ class _EdfSource:
                 f"({sorted(rates)} Hz); the streaming path needs a uniform grid. The "
                 'in-memory path handles this with mixed_rate="resample".'
             )
-        typer = EDFImporter()._determine_channel_type
         self.sfreq = float(headers[0]["sample_frequency"]) if headers else 0.0
         self.n_samples = int(nsamps[0]) if len(nsamps) else 0
         self.channels = []
@@ -186,11 +245,15 @@ class _EdfSource:
             )
 
     def read(self, picks: list[int], start: int, stop: int) -> np.ndarray:
+        if self._fallback_data is not None:
+            return self._fallback_data[picks, start:stop].astype(np.float64)
+        assert self._reader is not None  # only unset when _fallback_data is set instead
         n = stop - start
         return np.stack([self._reader.readSignal(i, start, n) for i in picks]).astype(np.float64)
 
     def close(self) -> None:
-        self._reader.close()
+        if self._reader is not None:
+            self._reader.close()
 
 
 def _open_stream_source(filepath: str, force_modality: str | None):

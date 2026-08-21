@@ -55,6 +55,40 @@ The EDF importer in biosigIO (`biosigio.importers.edf`) uses the `pyedflib` pack
 3. Convert channel information to biosigIO's format
 4. Read EDF+/BDF+ annotations into the `events` DataFrame
 
+### Tolerant fallback for non-compliant-but-readable files
+
+`pyedflib`'s compliance checker rejects some real-world EDF/BDF files outright
+even though the data is byte-intact and other tools (MNE-Python) read them
+without complaint. The importer recovers three such conditions instead of
+discarding the recording:
+
+- a channel with `physical_min == physical_max` (a reference electrode in a
+  referential montage, constant by construction; issue #109)
+- a numeric header field padded with NUL bytes instead of ASCII spaces
+- a file correctly marked EDF+D (discontinuous)
+
+When one of these is detected, biosigIO re-reads the file through MNE and
+rescales its SI-volt output back to the same native physical units a normal
+`pyedflib` read would have produced, so the recovered values are numerically
+identical to what `pyedflib` would report for the same channel. A channel with
+a degenerate `physical_min == physical_max` has no defined scale, so its output
+is the constant `physical_min` (== `physical_max`) throughout -- exactly zero in
+the common grounded/referential case. Recovering this way requires the `meg`
+extra (MNE); without it, the file still raises the same
+`CorruptFileError`/`FileReadError` it did before.
+
+A recovered read is flagged in the recording's metadata:
+
+- `edf_tolerant_read` (`True`) and `edf_tolerant_read_reason` (one of
+  `degenerate_physical_range`, `malformed_numeric_field`,
+  `discontinuous_datarecords`)
+- each affected channel additionally carries `degenerate_physical_range: True`
+
+A genuinely truncated or corrupt file is unaffected by this: only the three
+conditions above are treated as recoverable, and a size check runs before any
+recovery attempt so a file that is *also* truncated still raises
+`CorruptFileError` rather than being silently read short.
+
 ## Exporter Implementation
 
 The EDF exporter in biosigIO (`biosigio.exporters.edf`) also uses `pyedflib` to:
