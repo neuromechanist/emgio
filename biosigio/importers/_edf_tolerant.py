@@ -49,6 +49,23 @@ correct simplification of the scaling formula when the physical range collapses
 to a point, and exactly zero for the common real-world case of a
 grounded/referential channel with ``physical_min == physical_max == 0``.
 
+MNE has its own, unrelated notion of a "stim" channel that would otherwise
+break this for one real-world channel shape: by default (``stim_channel=
+"auto"``) it auto-detects any channel literally named ``"status"`` or
+``"trigger"`` and, for it alone, (a) skips the physical calibration entirely
+(``cal=1``, ``offset=0``, ``units=1``) AND (b) additionally reinterprets the
+result with a ``bitwise_and(x, 2**17 - 1)`` trigger-code mask (see
+``mne.io.edf.edf._read_segment_file``) -- a transform with no relationship at
+all to the header's declared physical range. ``pyedflib`` has no notion of
+"stim"; it always applies the header's calibration uniformly to every
+channel, including one named ``"Status"`` (issue #109's own probe file,
+`on004444`, has exactly this: channel 129 is ``"Status"``, declared physical
+dimension ``"uV"``). :func:`read_edf_tolerant` therefore opens with
+``stim_channel=False``, which turns this special-casing off entirely so every
+channel -- ``"Status"`` included -- takes the SAME calibration+unit-scaling
+path as any other channel, matching pyedflib exactly rather than needing a
+per-channel carve-out.
+
 A truncation safety net (:func:`_check_not_truncated`) still runs before any
 fallback read: the on-disk file size is compared against the size the tolerantly
 -parsed header implies, and a short file is treated as genuinely corrupt (the
@@ -318,7 +335,10 @@ def _channel_gains(raw, dimensions: list[str]) -> np.ndarray:
       :func:`probe_edf_header`), and any disagreement is a loud failure. This
       is deliberately a value check rather than a version pin -- the ``meg``
       extra floors at ``mne>=1.6`` with no ceiling, so nothing else would
-      catch a future MNE changing this.
+      catch a future MNE changing this. (No per-channel exemption is needed
+      here: ``read_edf_tolerant`` opens with ``stim_channel=False``, so every
+      channel -- including one MNE would otherwise auto-detect as ``stim`` --
+      is calibrated the normal way and this check applies uniformly.)
     """
     from ..exceptions import FileReadError
 
@@ -380,6 +400,15 @@ def read_edf_tolerant(filepath: str, reason: str) -> EdfFallbackRecording:
     condition is handled the same way here (read via MNE, rescale, zero out any
     degenerate channel), since a real file can combine more than one of them.
 
+    Opens with ``stim_channel=False`` -- see the module docstring -- so a
+    channel MNE would otherwise auto-detect as a trigger/status channel (e.g.
+    one literally named ``"Status"``) is calibrated the same way as any other
+    channel instead of being given MNE's unrelated, non-calibrated trigger-code
+    treatment, which would otherwise silently disagree with a normal pyedflib
+    read of that one channel (issue #109's own probe file has exactly this
+    shape: a degenerate reference channel AND a "Status" channel in the same
+    recording).
+
     Raises ``ImportError`` if MNE (the ``meg`` extra) is not installed, and
     ``OSError``/``FileReadError`` for anything that turns out not to be
     recoverable after all: a truncation the safety net catches, a per-channel
@@ -399,7 +428,11 @@ def read_edf_tolerant(filepath: str, reason: str) -> EdfFallbackRecording:
     probe = probe_edf_header(filepath)
     _check_not_truncated(filepath, probe, probe.number_of_datarecords)
 
-    raw = mne.io.read_raw(filepath, preload=True, verbose="ERROR")
+    # stim_channel=False: see the module docstring -- without it, MNE would
+    # auto-detect a channel named e.g. "Status" as a trigger channel and give
+    # it its own uncalibrated, bitmasked treatment instead of the header's
+    # declared physical scaling, breaking unit parity with pyedflib for it.
+    raw = mne.io.read_raw(filepath, preload=True, verbose="ERROR", stim_channel=False)
     data = raw.get_data()
     sfreq = float(raw.info["sfreq"])
 

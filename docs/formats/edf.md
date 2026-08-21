@@ -77,6 +77,14 @@ the common grounded/referential case. Recovering this way requires the `meg`
 extra (MNE); without it, the file still raises the same
 `CorruptFileError`/`FileReadError` it did before.
 
+A channel MNE auto-detects as a trigger/status channel (by default, one
+literally named `"Status"` or `"Trigger"`) is read with that detection
+turned off (`stim_channel=False`): MNE would otherwise give such a channel
+its own uncalibrated, bitmasked treatment unrelated to the header's declared
+physical range, which would silently disagree with a normal `pyedflib` read
+of that channel. With detection off, it is calibrated the same way as every
+other channel, preserving the same unit-parity guarantee for it too.
+
 A recovered read is flagged in the recording's metadata:
 
 - `edf_tolerant_read` (`True`) and `edf_tolerant_read_reason` (one of

@@ -249,6 +249,57 @@ def test_degenerate_physical_range_nonzero_constant(tmp_path):
     np.testing.assert_array_equal(rec.signals["REF"].to_numpy(), np.full(n, 37.5))
 
 
+def test_degenerate_range_with_stim_channel_recovered(tmp_path):
+    """Regression test for the real on004444 failure shape: a degenerate
+    reference channel AND a "Status" channel declared in a voltage dimension,
+    in the SAME recording. Neither condition alone reproduces this: MNE
+    auto-detects "Status" as a `stim` channel and gives it its own
+    uncalibrated, bitmasked treatment (see the module docstring in
+    `_edf_tolerant.py`) that has nothing to do with the header's declared
+    physical range, and would silently disagree with a normal pyedflib read
+    of that channel if not handled -- this is exactly what broke on the real
+    file before `read_edf_tolerant` started opening with `stim_channel=False`."""
+    path = str(tmp_path / "degenerate_with_stim.edf")
+    rng = np.random.default_rng(4444)
+    n = 300
+    channels = [
+        _channel("C0", 100.0, -200.0, 200.0),
+        _channel("REF", 100.0, -200.0, 200.0),
+        _channel("Status", 100.0, -200.0, 200.0),
+    ]
+    # A real status/trigger channel carries small integer codes, not a
+    # smoothly varying signal -- distinct enough from C0's data to catch a
+    # channel-alignment bug, not just a scaling one.
+    data = [
+        rng.uniform(-200, 200, n),
+        rng.uniform(-200, 200, n),
+        rng.integers(-100, 100, n).astype(float),
+    ]
+    _write_edf(path, channels, data)
+
+    # Ground truth captured before the file is degenerated (see
+    # test_degenerate_physical_range_recovered for why this must happen
+    # first): pyedflib has no notion of "stim" and always applies the
+    # header's calibration uniformly, so this is what a normal read of
+    # "Status" -- scaled into its declared (if nonsensical) microvolts --
+    # actually looks like.
+    ground_truth = _pyedflib_ground_truth(path)
+
+    _patch_signal_field(path, 1, "physical_max", b"-200")
+    with pytest.raises(OSError, match=r"(?i)physical maximum"):
+        pyedflib.EdfReader(path)
+
+    rec = Recording.from_file(path, importer="edf")
+
+    assert rec.metadata["edf_tolerant_read_reason"] == DEGENERATE_PHYSICAL_RANGE
+    np.testing.assert_array_equal(rec.signals["REF"].to_numpy(), np.full(n, -200.0))
+    np.testing.assert_allclose(rec.signals["C0"].to_numpy(), ground_truth["C0"], rtol=1e-9)
+    # The channel this regression is actually about: must match pyedflib's
+    # calibrated value, NOT MNE's raw/bitmasked stim-channel treatment (which
+    # would produce values far outside the declared [-200, 200] uV range).
+    np.testing.assert_allclose(rec.signals["Status"].to_numpy(), ground_truth["Status"], rtol=1e-9)
+
+
 # --- Problem 2: NUL-padded numeric header field --------------------------------
 
 
@@ -329,7 +380,12 @@ def test_fallback_matches_pyedflib_reading(tmp_path):
     unrecognized-as-uV/mV dimension string so MNE and biosigIO both default
     its gain to 1): the comparison below uses `rtol`, not a fixed `atol`, so
     this channel's tiny native values are checked at the SAME relative
-    precision as the volt-scale ones, not silently looser."""
+    precision as the volt-scale ones, not silently looser. Also includes a
+    "Status" channel: MNE auto-detects that name as a trigger/status channel
+    and gives it its OWN uncalibrated treatment unrelated to the header's
+    declared range (see `_edf_tolerant.py`'s module docstring) -- without
+    `read_edf_tolerant` opening with `stim_channel=False`, this channel alone
+    would fail this exact parity claim (this was a real, shipped bug)."""
     path = str(tmp_path / "compliant.edf")
     rng = np.random.default_rng(944)
     n = 1000
@@ -338,12 +394,14 @@ def test_fallback_matches_pyedflib_reading(tmp_path):
         _channel("EEG2", 250.0, -123.45, 678.9),
         _channel("EMG1", 250.0, -1000.0, 1000.0),
         {**_channel("VLF", 250.0, -1e-5, 1e-5), "dimension": "V"},
+        _channel("Status", 250.0, -200.0, 200.0),
     ]
     data = [
         rng.uniform(-400, 400, n),
         rng.uniform(-123.45, 678.9, n),
         rng.uniform(-1000, 1000, n),
         rng.uniform(-1e-5, 1e-5, n),
+        rng.integers(-100, 100, n).astype(float),
     ]
     _write_edf(path, channels, data)
 
@@ -364,15 +422,22 @@ def test_fallback_matches_pyedflib_reading(tmp_path):
 
 
 def test_fallback_matches_pyedflib_reading_bdf(tmp_path):
-    """Same unit-parity proof, on a BDF (24-bit, 3 bytes/sample) file."""
+    """Same unit-parity proof, on a BDF (24-bit, 3 bytes/sample) file, again
+    including a "Trigger"-named channel (MNE's other default auto-stim name,
+    alongside "Status")."""
     path = str(tmp_path / "compliant.bdf")
     rng = np.random.default_rng(945)
     n = 800
     channels = [
         _channel("C0", 200.0, -1000.0, 1000.0, dmin=-8388608, dmax=8388607),
         _channel("C1", 200.0, -50.0, 50.0, dmin=-8388608, dmax=8388607),
+        _channel("Trigger", 200.0, -100.0, 100.0, dmin=-8388608, dmax=8388607),
     ]
-    data = [rng.uniform(-1000, 1000, n), rng.uniform(-50, 50, n)]
+    data = [
+        rng.uniform(-1000, 1000, n),
+        rng.uniform(-50, 50, n),
+        rng.integers(-100, 100, n).astype(float),
+    ]
     _write_edf(path, channels, data, file_type=pyedflib.FILETYPE_BDFPLUS)
 
     ground_truth = _pyedflib_ground_truth(path)
