@@ -752,6 +752,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Importer Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#classic-v5v7-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classic (v5/v7) path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matlab-v73-hdf5-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MATLAB v7.3 (HDF5) path
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2613,6 +2641,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Importer Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#classic-v5v7-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classic (v5/v7) path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matlab-v73-hdf5-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MATLAB v7.3 (HDF5) path
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2732,9 +2788,22 @@
 </tbody>
 </table>
 <h2 id="importer-implementation">Importer Implementation<a class="headerlink" href="#importer-implementation" title="Permanent link">&para;</a></h2>
-<p>The EEGLAB importer in biosigIO (<code>biosigio.importers.eeglab</code>) works by:</p>
+<p>EEGLAB saves <code>.set</code> files in two MATLAB container formats, both read by
+<code>biosigio.importers.eeglab.EEGLABImporter</code> under the same <code>.set</code> extension:</p>
+<ul>
+<li><strong>Classic MATLAB v5/v7</strong> (a zlib-compressed MAT container), via
+  <code>scipy.io.loadmat</code>.</li>
+<li><strong>MATLAB v7.3</strong> (an HDF5 container -- MATLAB/EEGLAB switch to this
+  automatically once a variable exceeds ~2 GB, or on an explicit <code>-v7.3</code>
+  save), via <a href="https://www.h5py.org/">h5py</a>, an optional dependency (the
+  <code>hdf5</code> extra: <code>uv sync --extra hdf5</code>).</li>
+</ul>
+<p>The importer tells the two apart by sniffing the file's leading header text
+(<code>b"MATLAB 7.3 MAT-file"</code> vs. the classic <code>"MATLAB 5.0 MAT-file"</code>), not by
+extension -- both forms are <code>.set</code>.</p>
+<h3 id="classic-v5v7-path">Classic (v5/v7) path<a class="headerlink" href="#classic-v5v7-path" title="Permanent link">&para;</a></h3>
 <ol>
-<li>Loading the <code>.set</code> file using <code>scipy.io.loadmat</code> (pre-v7.3, non-HDF5 MAT-files only)</li>
+<li>Loading the <code>.set</code> file using <code>scipy.io.loadmat</code></li>
 <li>Normalizing the two EEGLAB save forms to a flat field map. Real EEGLAB saves a
    dataset as a single MATLAB struct named <code>EEG</code>, so <code>loadmat</code> returns
    <code>{'EEG': struct}</code> with every field nested one level down; the legacy form
@@ -2748,6 +2817,28 @@
 <li>Converting channel information to biosigIO's channel format</li>
 <li>Creating appropriate metadata dictionary</li>
 <li>Loading event markers into the recording's <code>events</code> table (onset/duration in seconds)</li>
+</ol>
+<h3 id="matlab-v73-hdf5-path">MATLAB v7.3 (HDF5) path<a class="headerlink" href="#matlab-v73-hdf5-path" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Opening the file with h5py and reading the top-level <code>EEG</code> group's fields
+   directly (<code>nbchan</code>, <code>srate</code>, <code>pnts</code>, <code>trials</code>, <code>data</code>, ...). Header scalars
+   round-trip through HDF5 as 1x1 float arrays rather than true scalars, so
+   they are flattened and coerced to int/float explicitly</li>
+<li>Reading the signal matrix from <code>EEG.data</code>. HDF5 stores the matrix
+   TRANSPOSED relative to MATLAB -- <code>(n_samples, n_channels)</code> instead of
+   biosigIO's channel-major <code>(n_channels, n_samples)</code> -- so it is transposed
+   back explicitly; getting this backwards would silently swap samples and
+   channels. When <code>EEG.data</code> holds a <code>.fdt</code> filename (a char array) instead of
+   the numeric matrix, the sibling <code>.fdt</code> is resolved the same way as the
+   classic path</li>
+<li>Resolving <code>chanlocs</code>/<code>event</code> struct-array fields (labels, types, X/Y/Z,
+   latency, ...), each stored as an array of HDF5 object references into a
+   <code>#refs#</code> group rather than as flat values. Every field is dereferenced
+   through <code>#refs#</code>, and char arrays are decoded from their Unicode
+   code-point representation</li>
+<li>Raising the same <code>NotContinuousRecordingError</code> the rest of biosigIO uses
+   when <code>EEG.trials &gt; 1</code> (an epoched file), instead of silently flattening
+   epochs into a fake continuous stream</li>
 </ol>
 <h2 id="code-example">Code Example<a class="headerlink" href="#code-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">biosigio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
@@ -2779,10 +2870,11 @@
 <h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Both EEGLAB save forms load: the standard single <code>EEG</code> struct (<code>loadmat</code> returns <code>{'EEG': struct}</code>, which is what real EEGLAB writes) and the legacy flat layout. The importer normalizes them before reading, so a nested-struct file no longer imports as an empty recording</li>
-<li>Only pre-v7.3 (non-HDF5) <code>.set</code> files are supported, via <code>scipy.io.loadmat</code>; MATLAB v7.3/HDF5 <code>.set</code> files are not supported</li>
-<li>Signal data stored inline in the <code>.set</code> or in a separate float32 <code>.fdt</code> file is supported; the sibling <code>.fdt</code> is resolved by the <code>.set</code> path (so BIDS-renamed files load even though <code>EEG.data</code> keeps the original <code>.fdt</code> name)</li>
+<li>Both classic (v5/v7) and MATLAB v7.3 (HDF5) <code>.set</code> files are supported; the v7.3 path requires the optional <code>hdf5</code> extra (<code>uv sync --extra hdf5</code>) and raises a clear install-hint error if h5py is missing</li>
+<li>Signal data stored inline in the <code>.set</code> or in a separate float32 <code>.fdt</code> file is supported for both save forms; the sibling <code>.fdt</code> is resolved by the <code>.set</code> path (so BIDS-renamed files load even though <code>EEG.data</code> keeps the original <code>.fdt</code> name)</li>
 <li>Event markers are loaded into the <code>events</code> table (<code>rec.events</code>): EEGLAB event latency/duration (samples) are converted to onset/duration in seconds and the event <code>type</code> becomes the description</li>
 <li>Channel locations (if available) are preserved in the channel information</li>
+<li>An epoched MATLAB v7.3 file (<code>EEG.trials &gt; 1</code>) raises <code>NotContinuousRecordingError</code> rather than being read as a fake continuous recording. The classic path's separate, pre-existing behavior for an epoched <code>.fdt</code> is unchanged here: it concatenates trials into one continuous series instead (see <code>test_eeglab_reads_epoched_fdt</code>). The two paths therefore disagree on what an epoched file should become; that inconsistency predates this change and is tracked separately rather than resolved here.</li>
 <li>Some EEGLAB-specific information may not be fully preserved in the conversion</li>
 <li>Time information is properly handled to maintain accurate timing in the imported data </li>
 </ul>
