@@ -37,10 +37,28 @@ h5py = pytest.importorskip(
     "h5py", reason="v7.3 .set reading requires the optional 'hdf5' extra (h5py)"
 )
 
-from ..exceptions import NotContinuousRecordingError  # noqa: E402
+from ..exceptions import CorruptFileError, NotContinuousRecordingError  # noqa: E402
 from ..importers.eeglab import EEGLABImporter, _is_matlab_v73  # noqa: E402
 
 _HEADER_SIZE = 512  # MAT header text + padding; see module docstring
+
+
+def _wrap_matlab_v73_header(body: bytes) -> bytes:
+    """Prefix an HDF5 byte string with a MATLAB v7.3 MAT-file text header.
+
+    Shared by ``_write_v73_set`` and any fixture that needs a v7.3-magic file
+    around a hand-built HDF5 body (e.g. one with no top-level ``EEG`` group,
+    to exercise the "v7.3 magic but not an EEGLAB set" error path).
+    """
+    header_text = b"MATLAB 7.3 MAT-file, Platform: biosigio-test"
+    header = header_text[:116].ljust(116, b"\x20")
+    subsystem_offset = b"\x00" * 8
+    version = (0x0200).to_bytes(2, "little")  # major=2 -> v7.3, per scipy's decoder
+    endian_indicator = b"IM"  # little-endian
+    prefix = header + subsystem_offset + version + endian_indicator
+    assert len(prefix) == 128
+    padded_prefix = prefix + b"\x00" * (_HEADER_SIZE - len(prefix))
+    return padded_prefix + body
 
 
 def _write_v73_set(
@@ -58,6 +76,14 @@ def _write_v73_set(
     events=None,
     header_nbchan=None,
     already_channel_major=False,
+    xmin=None,
+    xmax=None,
+    setname=None,
+    subject=None,
+    group_name=None,
+    condition=None,
+    session=None,
+    comments=None,
 ):
     """Write a MATLAB-v7.3-shaped ``.set``: a MAT text header + an HDF5 body.
 
@@ -88,6 +114,12 @@ def _write_v73_set(
             already channel-major array" branch. Real v7.3 files are always
             sample-major (see the module docstring); this is purely a
             defensive-code exercise, not a claim about real files.
+        xmin, xmax: ``EEG.xmin``/``EEG.xmax`` floats, written directly (not
+            through ``#refs#`` -- these are top-level EEG scalar fields, not
+            struct-array elements).
+        setname, subject, group_name, condition, session, comments: Top-level
+            EEG string metadata fields, written as direct char-code (uint16)
+            datasets, same as the ``data_filename`` char array.
     """
     inner_path = path + ".inner"
     with h5py.File(inner_path, "w") as f:
@@ -98,6 +130,22 @@ def _write_v73_set(
         eeg.create_dataset("srate", data=np.array([[float(srate)]]))
         eeg.create_dataset("pnts", data=np.array([[float(pnts)]]))
         eeg.create_dataset("trials", data=np.array([[float(trials)]]))
+        if xmin is not None:
+            eeg.create_dataset("xmin", data=np.array([[float(xmin)]]))
+        if xmax is not None:
+            eeg.create_dataset("xmax", data=np.array([[float(xmax)]]))
+        for field_name, value in (
+            ("setname", setname),
+            ("subject", subject),
+            ("group", group_name),
+            ("condition", condition),
+            ("session", session),
+            ("comments", comments),
+        ):
+            if value is not None:
+                eeg.create_dataset(
+                    field_name, data=np.array([ord(c) for c in value], dtype=np.uint16)
+                )
 
         ref_counter = [0]
 
@@ -160,16 +208,8 @@ def _write_v73_set(
         body = fh.read()
     os.remove(inner_path)
 
-    header_text = b"MATLAB 7.3 MAT-file, Platform: biosigio-test"
-    header = header_text[:116].ljust(116, b"\x20")
-    subsystem_offset = b"\x00" * 8
-    version = (0x0200).to_bytes(2, "little")  # major=2 -> v7.3, per scipy's decoder
-    endian_indicator = b"IM"  # little-endian
-    prefix = header + subsystem_offset + version + endian_indicator
-    assert len(prefix) == 128
-    padded_prefix = prefix + b"\x00" * (_HEADER_SIZE - len(prefix))
     with open(path, "wb") as fh:
-        fh.write(padded_prefix + body)
+        fh.write(_wrap_matlab_v73_header(body))
 
 
 def test_v73_magic_sniff_detects_v73(tmp_path):
@@ -228,6 +268,57 @@ def test_v73_channel_count_and_sampling_rate(tmp_path):
         assert info["sample_frequency"] == srate
         assert info["physical_dimension"] == "uV"
         assert info["prefilter"] == "n/a"
+
+
+def test_v73_metadata_fields_extracted(tmp_path):
+    """Top-level EEG scalar/string metadata fields load into `rec.metadata`,
+    the same fields the classic path's `_extract_metadata` populates."""
+    path = str(tmp_path / "metadata.set")
+    nbchan, pnts, srate = 2, 10, 100.0
+    _write_v73_set(
+        path,
+        nbchan=nbchan,
+        pnts=pnts,
+        srate=srate,
+        data=np.zeros((nbchan, pnts), dtype=np.float32),
+        xmin=0.0,
+        xmax=pnts / srate,
+        setname="v73_test",
+        subject="sub-01",
+        group_name="controls",
+        condition="rest",
+        session="001",
+        comments="synthesized fixture",
+    )
+
+    rec = EEGLABImporter().load(path)
+
+    assert rec.get_metadata("xmin") == pytest.approx(0.0)
+    assert rec.get_metadata("xmax") == pytest.approx(pnts / srate)
+    assert rec.get_metadata("setname") == "v73_test"
+    assert rec.get_metadata("subject") == "sub-01"
+    assert rec.get_metadata("group") == "controls"
+    assert rec.get_metadata("condition") == "rest"
+    assert rec.get_metadata("session") == "001"
+    assert rec.get_metadata("comments") == "synthesized fixture"
+
+
+def test_v73_non_eeg_top_level_raises_corrupt_file_error(tmp_path):
+    """A v7.3-magic file that isn't an EEGLAB set (no top-level `EEG` group)
+    raises the typed corrupt-file error instead of an unhandled crash."""
+    path = str(tmp_path / "not_eeglab.set")
+    inner_path = path + ".inner"
+    with h5py.File(inner_path, "w") as f:
+        f.create_group("SomeOtherMatlabVariable")
+    with open(inner_path, "rb") as fh:
+        body = fh.read()
+    os.remove(inner_path)
+    with open(path, "wb") as fh:
+        fh.write(_wrap_matlab_v73_header(body))
+
+    assert _is_matlab_v73(path) is True  # magic still says v7.3
+    with pytest.raises(CorruptFileError):
+        EEGLABImporter().load(path)
 
 
 def test_v73_sample_values_round_trip_exactly(tmp_path):
@@ -402,6 +493,32 @@ def test_v73_channel_type_dereferenced(tmp_path):
         assert info["modality"] == "EEG"
 
 
+def test_v73_chanlocs_xyz_dereferenced_including_zero(tmp_path):
+    """`chanlocs.X` resolves through #refs# for every value, including 0.0.
+
+    `_process_chanlocs_v73`/`_deref_h5_value` gate on `is not None`, not
+    truthiness, so a channel legitimately positioned at X=0.0 must not be
+    dropped the way a truthiness check (`if value:`) would drop it.
+    """
+    path = str(tmp_path / "xyz.set")
+    nbchan, pnts, srate = 3, 5, 100.0
+    x_values = [1.5, -2.25, 0.0]
+    _write_v73_set(
+        path,
+        nbchan=nbchan,
+        pnts=pnts,
+        srate=srate,
+        data=np.zeros((nbchan, pnts), dtype=np.float32),
+        labels=["A", "B", "C"],
+        x=x_values,
+    )
+
+    rec = EEGLABImporter().load(path)
+
+    for label, expected_x in zip(["A", "B", "C"], x_values, strict=True):
+        assert rec.channels[label]["X"] == pytest.approx(expected_x)
+
+
 def test_v73_trials_greater_than_one_raises_not_continuous(tmp_path):
     """Epoched (trials > 1) v7.3 files raise the typed not-continuous error,
     not a silently-flattened continuous stream."""
@@ -515,3 +632,36 @@ def test_v73_via_recording_from_file(tmp_path):
     assert rec.signals.shape == (pnts, nbchan)
     np.testing.assert_array_equal(rec.signals["A"].to_numpy(), np.arange(pnts))
     np.testing.assert_array_equal(rec.signals["B"].to_numpy(), np.arange(pnts) * 2)
+
+
+def test_is_matlab_v73_missing_file_returns_false(tmp_path):
+    """A missing/unreadable file is treated as "not v7.3" by the sniff --
+    the OSError is swallowed here, and the caller's own open (inside
+    `EEGLABImporter._load`/`_load_v73`) surfaces the real error instead."""
+    missing = str(tmp_path / "does_not_exist.set")
+    assert _is_matlab_v73(missing) is False
+
+
+def test_deref_h5_value_null_empty_bytes_and_bare_value(tmp_path):
+    """Direct exercise of `_deref_h5_value`'s four branches, against real
+    h5py objects (a null reference, a reference to an empty target, a
+    reference to real char data, and non-reference bare values) rather than
+    only indirectly through a full chanlocs/event struct array."""
+    path = str(tmp_path / "deref_branches.h5")
+    importer = EEGLABImporter()
+    with h5py.File(path, "w") as f:
+        store = f.create_group("store")
+        full = store.create_dataset("full", data=np.array([ord(c) for c in "hi"], dtype=np.uint16))
+        full.attrs["MATLAB_class"] = np.bytes_(b"char")
+        empty = store.create_dataset("empty", data=np.array([], dtype=np.float64))
+
+        # Null reference -- MATLAB's "no value" for a struct-array element.
+        assert importer._deref_h5_value(h5py, f, h5py.Reference()) is None
+        # Reference to an empty target (MATLAB's `[]`).
+        assert importer._deref_h5_value(h5py, f, empty.ref) is None
+        # Reference to real char data resolves through #refs#-style indirection.
+        assert importer._deref_h5_value(h5py, f, full.ref) == "hi"
+        # Bare bytes value (no indirection) decodes directly.
+        assert importer._deref_h5_value(h5py, f, b"raw") == "raw"
+        # Bare non-reference, non-bytes value passes through unchanged.
+        assert importer._deref_h5_value(h5py, f, 3.5) == 3.5
