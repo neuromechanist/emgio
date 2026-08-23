@@ -155,6 +155,57 @@ def _resolve_bti_reader_kwargs(dirpath: str) -> dict:
     }
 
 
+#: CTF head-coil names, mapped to the coil each one identifies. ``lpa``/``rpa``
+#: are an alternate vocabulary for the ear coils, not a casing difference, so
+#: they have to be listed rather than derived.
+_CTF_COIL_NAMES = {
+    "nasion": "CTFV_COIL_NAS",
+    "left ear": "CTFV_COIL_LPA",
+    "right ear": "CTFV_COIL_RPA",
+    "lpa": "CTFV_COIL_LPA",
+    "rpa": "CTFV_COIL_RPA",
+}
+
+
+def _patch_ctf_coil_aliases() -> None:
+    """Teach MNE's ``.hc`` reader the ``Nasion``/``LPA``/``RPA`` coil spelling.
+
+    MNE classifies each head-coil point by substring-matching the ``.hc``
+    descriptor line against a literal, case-sensitive table that only knows
+    ``nasion``/``left ear``/``right ear``. Datasets spelling the coils
+    ``Nasion``/``LPA``/``RPA`` therefore parse every point as "unknown", and the
+    read fails with *"Some of the mandatory HPI device-coordinate info was not
+    there."* even though the coordinates are present and correct. CTF's own
+    reference reader (``readHc`` in ``readCTFds.m``) takes the coil name
+    positionally and does not check it against a vocabulary at all.
+
+    Fixed upstream in mne-tools/mne-python#14191, which both lower-cases the
+    match and adds the aliases. Until a release carries that, add the alternate
+    spellings to the table MNE already consults. Case-insensitivity cannot be
+    injected the same way -- MNE tests ``key in descriptor`` against the raw
+    line -- so the plausible casings are enumerated instead. Appending leaves
+    the canonical names first, so a conventional ``.hc`` matches as before.
+
+    No-ops when the installed MNE carries the fix, or if the private table it
+    patches has moved -- neither is worth failing a read over, since MNE then
+    either handles the file or raises its own error (biosigio#117).
+    """
+    try:
+        from mne.io.ctf import hc
+        from mne.io.ctf.constants import CTF
+    except ImportError:  # pragma: no cover - MNE layout changed
+        return
+    kind_dict = getattr(hc, "_kind_dict", None)
+    if not isinstance(kind_dict, dict) or "lpa" in kind_dict:
+        return  # MNE already understands these, or there is nothing to patch
+    for name, constant in _CTF_COIL_NAMES.items():
+        kind = getattr(CTF, constant, None)
+        if kind is None:  # pragma: no cover - MNE constants renamed
+            continue
+        for spelling in (name, name.title(), name.upper()):
+            kind_dict.setdefault(spelling, kind)
+
+
 class MEGImporter(BaseImporter):
     """Importer for MEG recordings via MNE-Python (.fif, CTF .ds, KIT .con/.sqd/.kdf,
     4D/BTi)."""
@@ -187,6 +238,7 @@ class MEGImporter(BaseImporter):
         stripped = filepath.rstrip("/\\")
         ext = os.path.splitext(stripped)[1].lower()
         if ext == ".ds":
+            _patch_ctf_coil_aliases()
             return mne.io.read_raw_ctf(filepath, preload=True, verbose="ERROR"), {}
         if ext in (".con", ".sqd", ".kdf"):
             return mne.io.read_raw_kit(filepath, preload=True, verbose="ERROR"), {}
