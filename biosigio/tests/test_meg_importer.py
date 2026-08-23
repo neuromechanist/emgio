@@ -14,6 +14,7 @@ Skips cleanly if the optional ``meg`` extra (mne) is not installed.
 """
 
 import pathlib
+import shutil
 from collections import Counter
 
 import numpy as np
@@ -157,3 +158,38 @@ def test_meg_extensions_dispatch_to_meg_importer():
 def test_ctf_ds_trailing_slash_dispatches_to_meg():
     """A CTF .ds passed as a directory path (trailing slash) still resolves."""
     assert Recording._infer_importer("sub-01/meg/sub-01_task-x_meg.ds/") == "meg"
+
+
+# -- Alternate .hc head-coil descriptors (issue #117) --------------------------
+
+
+@pytest.mark.skipif(not CTF.exists(), reason="CTF fixture missing")
+@pytest.mark.parametrize(
+    "names",
+    [
+        pytest.param(("Nasion", "LPA", "RPA"), id="Nasion-LPA-RPA"),
+        pytest.param(("NASION", "Left Ear", "RIGHT EAR"), id="mixed-case"),
+    ],
+)
+def test_ctf_alternate_coil_descriptors(tmp_path, ctf_rec, names):
+    """A .ds spelling its head coils differently reads identically.
+
+    Some CTF datasets name the coils ``Nasion``/``LPA``/``RPA``; the MNE
+    versions we support match the ``.hc`` descriptor case-sensitively against
+    ``nasion``/``left ear``/``right ear`` and reject them outright. Only the
+    labels are rewritten here, so the recording that comes back must equal the
+    one read from the untouched fixture (biosigio#117).
+    """
+    ds = tmp_path / CTF.name
+    shutil.copytree(CTF, ds)
+    hc_file = ds / f"{CTF.stem}.hc"
+    hc_text = hc_file.read_text()
+    for canonical, alternate in zip(("nasion", "left ear", "right ear"), names, strict=True):
+        assert canonical in hc_text
+        hc_text = hc_text.replace(canonical, alternate)
+    hc_file.write_text(hc_text)
+
+    rec = Recording.from_file(str(ds))
+
+    assert list(rec.channels) == list(ctf_rec.channels)
+    np.testing.assert_array_equal(rec.signals.to_numpy(), ctf_rec.signals.to_numpy())
