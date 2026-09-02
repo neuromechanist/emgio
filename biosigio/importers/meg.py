@@ -251,6 +251,13 @@ class MEGImporter(BaseImporter):
         try:
             events = mne.find_events(raw, verbose="ERROR")
         except (ValueError, RuntimeError) as exc:
+            # Resource exhaustion (e.g. a saturated host's "can't start new
+            # thread" RuntimeError) is a host condition, not "no stim channels":
+            # absorbing it into empty events would return a "successful"
+            # Recording and hide the real cause (see
+            # biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(exc):
+                raise
             # "No stim channels found" is the common, benign case (many MEG
             # recordings carry no triggers, or events come from a BIDS events.tsv
             # applied separately) -- stay quiet for that. Any OTHER failure
