@@ -330,7 +330,8 @@ def _resolve_channels_tsv(
 ) -> str | os.PathLike | pd.DataFrame | None:
     """Turn ``stream_to_zarr``'s ``bids_channels`` argument into a sidecar to apply.
 
-    ``"auto"`` resolves the sibling ``_channels.tsv`` with the same inheritance
+    ``"auto"`` resolves the sibling ``_channels.tsv`` through the same
+    :func:`~biosigio.bids.find_channels_tsv`
     :meth:`~biosigio.core.emg.Recording.from_file` uses, so both export paths pick
     the same file for the same recording; ``"off"`` (and None) disable the lookup;
     anything else is a path or a DataFrame the caller chose explicitly.
@@ -525,7 +526,12 @@ def stream_to_zarr(
                 # order the in-memory path uses (rescale the column, then export),
                 # so the two stores' values agree to within int16 quantization.
                 factor = float(ci.get("unit_factor", 1.0))
-                x = np.asarray(mm[i], dtype=np.float64)
+                # np.array, not np.asarray: the in-place multiply below must land
+                # on this pass's own copy, never back through a view into the
+                # scratch memmap. (The float32 -> float64 change already forces a
+                # copy today; stating it means a future dtype change cannot
+                # silently turn the conversion into a write to scratch.)
+                x = np.array(mm[i], dtype=np.float64)
                 if factor != 1.0:
                     x *= factor
                 y = _resample_channel(x, native_rate, target_rate, discrete=discrete)
