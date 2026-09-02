@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.emg import Recording
+from ..exceptions import is_resource_exhaustion
 from .base import BaseImporter
 
 
@@ -128,6 +129,11 @@ class CSVImporter(BaseImporter):
             # Pass through file not found errors
             raise
         except Exception as e:
+            # Resource exhaustion is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             raise ValueError(f"Failed to read CSV file: {str(e)}") from e
 
         # If no header, generate column names

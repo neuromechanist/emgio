@@ -5,7 +5,7 @@ import pandas as pd
 import pyedflib
 
 from ..core.emg import Recording
-from ..exceptions import MixedSamplingRateError, classify_read_error
+from ..exceptions import MixedSamplingRateError, classify_read_error, is_resource_exhaustion
 from ._edf_tolerant import classify_pyedflib_error, read_edf_tolerant
 from .base import BaseImporter
 
@@ -386,6 +386,16 @@ class EDFImporter(BaseImporter):
             return rec
 
         except Exception as e:
+            # Resource exhaustion (MemoryError -- incl. numpy's _ArrayMemoryError
+            # from the per-channel readSignal loop above -- or a thread/allocation
+            # -exhaustion OSError/RuntimeError) is a host condition, not a file
+            # problem: propagate it unchanged rather than reclassifying it as a
+            # permanent read failure (issue #123; see
+            # biosigio.exceptions.is_resource_exhaustion). This also covers an
+            # EdfReader-open failure above that classify_pyedflib_error found no
+            # recoverable cause for, which reaches here via a bare re-raise.
+            if is_resource_exhaustion(e):
+                raise
             # Typed classification: a truncated/non-compliant EDF (pyedflib's
             # "Filesize" check) becomes CorruptFileError so callers can surface a
             # specific reason. A BiosigIOError (e.g. the mixed_rate policy error)

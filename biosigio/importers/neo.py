@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.emg import Recording
+from ..exceptions import is_resource_exhaustion
 from .base import BaseImporter
 
 
@@ -111,6 +112,11 @@ class NeoImporter(BaseImporter):
             reader = neo.io.get_io(filepath)
             block = reader.read_block(lazy=False)
         except Exception as e:
+            # Resource exhaustion is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             raise ValueError(f"Error reading neo file {filepath}: {e}") from e
 
         segments = block.segments

@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 from ..core.emg import Recording
+from ..exceptions import is_resource_exhaustion
 from .base import BaseImporter
 
 
@@ -50,6 +51,11 @@ class OTBImporter(BaseImporter):
             return temp_dir
 
         except Exception as e:
+            # Resource exhaustion is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             print(f"Error during extraction: {str(e)}")
             raise ValueError(f"Could not extract OTB file: {str(e)}") from e
 

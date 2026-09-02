@@ -3,6 +3,7 @@ import os
 import wfdb
 
 from ..core.emg import Recording
+from ..exceptions import is_resource_exhaustion
 
 # import numpy as np # Keep commented out until needed
 # from typing import List, Dict # Keep commented out until needed
@@ -148,5 +149,10 @@ class WFDBImporter(BaseImporter):
                 f"Error reading WFDB record '{record_name}': Data file missing or unreadable ({fnf_e})"
             ) from fnf_e
         except Exception as e:
+            # Resource exhaustion is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             # Catch any other exceptions during record/annotation reading
             raise ValueError(f"Error reading WFDB file '{filepath}': {str(e)}") from e
