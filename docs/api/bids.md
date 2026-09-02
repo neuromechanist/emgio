@@ -8,6 +8,40 @@ by `Recording.from_file` (unless `bids_channels="off"`); `apply_events_tsv` is
 called explicitly when the sidecar events should override the data file's own
 markers.
 
+`apply_channels_tsv_to_stream` is the same thing for a recording that is never
+loaded into a `Recording` at all: the streaming Zarr exporter
+(`stream_to_zarr`, also `bids_channels="auto"` by default) has only a channel
+table and reads the samples window by window afterwards, so it takes a
+per-channel conversion factor to apply later instead of rescaling a column now.
+Both functions decide every per-channel question with the same internal table,
+so the two export paths cannot disagree about what a sidecar means.
+
+## Choosing the sidecar: `bids_channels`
+
+`Recording.from_file` and `stream_to_zarr` take the same `bids_channels`
+argument with the same meanings, resolved by the same `resolve_channels_tsv`, so
+a caller can move a recording between the two paths without its units changing:
+
+| Value | Meaning |
+|---|---|
+| `"auto"` (default) | resolve the sibling `_channels.tsv` via `find_channels_tsv`; a recording with no sidecar is left as the importer read it |
+| `"off"`, or `None` | do not look for a sidecar at all |
+| a path (`str` or `PathLike`) | use this sidecar, wherever it lives |
+| a `pandas.DataFrame` | use this table, already loaded |
+
+The path and DataFrame forms exist for a recording whose sidecar is not next to
+it: a converter that filters or rewrites a recording into a scratch directory
+still has to apply the *original* recording's `channels.tsv`, and must pass it
+explicitly, because `"auto"` looks beside the file it is given.
+
+A trailing slash on a directory-valued recording (a CTF `.ds`, a 4D/BTi
+directory) is stripped before the lookup, so `.ds` and `.ds/` resolve the same
+sidecar on both paths.
+
+`apply_channels_tsv` itself accepts either a path or a DataFrame, and treats
+them identically (missing cells in a supplied frame become the empty cell that
+means "declares nothing", matching how the TSV is read).
+
 ## Units are converted, not relabelled
 
 The `units` column describes the numbers, so adopting it **rescales the

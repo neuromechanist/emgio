@@ -7,8 +7,18 @@ and apply it to an :class:`~biosigio.core.emg.Recording` object so imported chan
 their real BIDS types (e.g. ``SEEG``) instead of header/label guesses.
 
 The ``units`` column is a claim about the numbers, not just a label, so adopting
-it rescales the samples (see :func:`_adopt_units`). Applying a sidecar therefore
+it rescales the samples (see :func:`_decide_unit`). Applying a sidecar therefore
 leaves values and unit in agreement, which relabelling alone did not.
+
+**Two callers, one decision table.** :func:`apply_channels_tsv` serves the
+in-memory path (a whole :class:`~biosigio.core.emg.Recording` in RAM, whose
+columns are rescaled in place), and :func:`apply_channels_tsv_to_stream` serves
+the bounded-memory streaming exporter (no Recording exists; the samples arrive
+window by window later). Both route every per-channel question through
+:func:`_decide_unit`, which decides and returns rather than mutating, so the two
+export paths cannot drift on what a sidecar means -- the failure issue #127
+reports, where a dataset's small runs served microvolts and its large ones served
+volts.
 """
 
 from __future__ import annotations
@@ -16,11 +26,12 @@ from __future__ import annotations
 import logging
 import math
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import pandas as pd
 
 from .core.channel_types import DISCRETE_CHANNEL_TYPES
+from .core.modality import infer_modality_from_channel_type, validate_channel_type
 from .units import conversion_factor
 
 if TYPE_CHECKING:
@@ -74,9 +85,43 @@ _RELABELLED = "relabelled"
 _KEPT = "kept_importer_unit"
 
 
+class _UnitDecision(NamedTuple):
+    """What one sidecar ``units`` cell does to one channel.
+
+    A decision is data, not an edit: it says what the channel's unit label
+    becomes, what its samples must be multiplied by to still mean that label,
+    and what its recorded ``bids_unit`` should be afterwards. That is what lets
+    the in-memory path (which has the samples in a DataFrame and rescales them
+    now) and the streaming path (which will see them window by window, later)
+    share one decision table instead of two implementations of the same rules.
+
+    Attributes:
+        outcome: ``_UNCHANGED``, ``_CONVERTED``, ``_RELABELLED`` or ``_KEPT``;
+            the key this channel contributes to the ``channels_tsv_units`` report.
+        unit: The unit label the channel ends up with. Only meaningful to write
+            when the outcome adopted the sidecar's unit (``_CONVERTED`` /
+            ``_RELABELLED``); otherwise it is the unit the channel already had.
+        factor: The multiplier the samples need, always exactly ``1.0`` unless
+            the outcome is ``_CONVERTED``.
+        bids_unit: What the channel's ``bids_unit`` key should hold afterwards --
+            the sidecar's declared unit when it was recorded rather than adopted,
+            or **None** meaning "there is no unresolved conflict, drop it".
+    """
+
+    outcome: str
+    unit: str
+    factor: float
+    bids_unit: str | None
+
+
 def _keep_importer_unit(
-    info: dict, label: str, current: str, declared: str, reason: str, channels_tsv_path: str
-) -> str:
+    label: str,
+    current: str,
+    declared: str,
+    reason: str,
+    origin: str,
+    recorded_bids_unit: str | None,
+) -> _UnitDecision:
     """Record the sidecar's unit without asserting it over contradicting values.
 
     The BIDS metadata is real and worth keeping, so it lands under ``bids_unit``
@@ -84,21 +129,20 @@ def _keep_importer_unit(
     ``physical_dimension`` that correctly describes the samples.
 
     Args:
-        info: The channel's metadata dict, mutated in place.
         label: Channel name, for the warning.
         current: The unit the samples are actually in.
         declared: The sidecar's ``units`` value.
         reason: Why the sidecar's unit was not adopted, for the warning.
-        channels_tsv_path: The sidecar's path, for the warning.
+        origin: The sidecar's path, or ``<DataFrame>``, for the warning.
+        recorded_bids_unit: The channel's existing ``bids_unit``, if any.
 
     Returns:
-        ``_KEPT`` when the record changed, or ``_UNCHANGED`` when this exact
+        A ``_KEPT`` decision, or an ``_UNCHANGED`` one when this exact
         ``bids_unit`` was already recorded -- so re-applying a sidecar neither
         re-warns nor re-counts.
     """
-    if info.get("bids_unit") == declared:
-        return _UNCHANGED
-    info["bids_unit"] = declared
+    if recorded_bids_unit == declared:
+        return _UnitDecision(_UNCHANGED, current, 1.0, declared)
     logging.warning(
         "channels.tsv declares units %r for channel %r, whose values are in %r and %s; "
         "keeping the importer's values and unit, and recording the declared unit "
@@ -107,9 +151,9 @@ def _keep_importer_unit(
         label,
         current,
         reason,
-        channels_tsv_path,
+        origin,
     )
-    return _KEPT
+    return _UnitDecision(_KEPT, current, 1.0, declared)
 
 
 def _rescale(column: pd.Series, factor: float) -> pd.Series:
@@ -132,12 +176,29 @@ def _rescale(column: pd.Series, factor: float) -> pd.Series:
     return scaled
 
 
-def _adopt_units(rec: Recording, label: str, declared: str, channels_tsv_path: str) -> str:
-    """Move one channel onto the sidecar's unit, rescaling its samples to match.
+def _decide_unit(
+    *,
+    label: str,
+    current: str,
+    declared: str,
+    channel_type: str,
+    has_samples: bool,
+    origin: str,
+    recorded_bids_unit: str | None = None,
+) -> _UnitDecision:
+    """Decide what moving one channel onto the sidecar's unit means.
+
+    **The single decision table for both export paths.** It answers the question
+    and returns it (see :class:`_UnitDecision`); the caller performs whatever
+    edit that implies -- rescaling a DataFrame column now
+    (:func:`apply_channels_tsv`) or carrying a factor into a later windowed read
+    (:func:`apply_channels_tsv_to_stream`). Splitting the answer from the edit is
+    the whole point: a store built by streaming and a store built in memory must
+    disagree about nothing (issue #127).
 
     A unit label is a claim about the numbers next to it, so the two move
     together or not at all. The sidecar's ``units`` describes the values *as the
-    data file stores them*, while ``physical_dimension`` describes the values
+    data file stores them*, while the importer's unit describes the values
     biosigIO currently holds -- and those differ whenever the importer rescaled
     on the way in (every MNE-backed importer returns SI volts regardless of the
     file's own µV). Adopting the label without the conversion is what issue #122
@@ -157,7 +218,8 @@ def _adopt_units(rec: Recording, label: str, declared: str, channels_tsv_path: s
     3. **No samples**: a channel with metadata but no column cannot be rescaled,
        so it is not relabelled either -- checked before the conversion so even a
        same-magnitude spelling change cannot slip through on a channel whose
-       numbers are not there to agree with it.
+       numbers are not there to agree with it. (Always false for a streamed
+       channel: every channel the source lists has a row in the transpose memmap.)
     4. **Convertible** (same quantity, e.g. ``V`` -> ``uV``): multiply the samples
        by the ratio and set the label. A ratio of exactly 1 (``uV`` -> ``µV``, a
        spelling difference) sets the label alone, which is not a semantic relabel.
@@ -170,59 +232,154 @@ def _adopt_units(rec: Recording, label: str, declared: str, channels_tsv_path: s
     earlier disagreement is dropped, so the two never both describe the channel.
 
     Args:
-        rec: The Recording object to update in place.
-        label: Channel name, already known to exist in ``rec.channels``.
+        label: Channel name, for warnings.
+        current: The unit the channel's values are in now, already stripped.
         declared: The sidecar's ``units`` value, already known to be non-empty
             and not ``n/a``.
-        channels_tsv_path: The sidecar's path, for warnings.
+        channel_type: The channel's type, for the discrete-code exemption.
+        has_samples: Whether there are samples this decision can apply to.
+        origin: The sidecar's path, or ``<DataFrame>``, for warnings.
+        recorded_bids_unit: The channel's existing ``bids_unit``, if any.
 
     Returns:
-        One of ``_UNCHANGED``, ``_CONVERTED``, ``_RELABELLED`` or ``_KEPT``.
+        The :class:`_UnitDecision` for this channel.
     """
-    info = rec.channels[label]
-    current = str(info.get("physical_dimension") or "").strip()
     if current == declared:
-        info.pop("bids_unit", None)
-        return _UNCHANGED
+        return _UnitDecision(_UNCHANGED, current, 1.0, None)
 
-    if str(info.get("channel_type") or "").upper() in DISCRETE_CHANNEL_TYPES:
+    if str(channel_type or "").upper() in DISCRETE_CHANNEL_TYPES:
         return _keep_importer_unit(
-            info,
             label,
             current,
             declared,
             "holds discrete codes rather than a measured quantity",
-            channels_tsv_path,
+            origin,
+            recorded_bids_unit,
         )
 
-    signals = rec.signals
-    if signals is None or label not in signals:
+    if not has_samples:
         return _keep_importer_unit(
-            info, label, current, declared, "has no samples to rescale", channels_tsv_path
+            label,
+            current,
+            declared,
+            "has no samples to rescale",
+            origin,
+            recorded_bids_unit,
         )
 
     factor = conversion_factor(current, declared)
     if factor is None:
         return _keep_importer_unit(
-            info,
             label,
             current,
             declared,
             f"is not convertible to {declared!r}",
-            channels_tsv_path,
+            origin,
+            recorded_bids_unit,
         )
 
-    outcome = _RELABELLED
-    if factor != 1.0:
-        signals[label] = _rescale(signals[label], factor)
-        outcome = _CONVERTED
-
-    info["physical_dimension"] = declared
-    info.pop("bids_unit", None)
-    return outcome
+    return _UnitDecision(_CONVERTED if factor != 1.0 else _RELABELLED, declared, factor, None)
 
 
-def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
+def _adopt_units(rec: Recording, label: str, declared: str, origin: str) -> str:
+    """Apply :func:`_decide_unit` to one in-memory channel, rescaling its column.
+
+    Args:
+        rec: The Recording object to update in place.
+        label: Channel name, already known to exist in ``rec.channels``.
+        declared: The sidecar's ``units`` value, already known to be non-empty
+            and not ``n/a``.
+        origin: The sidecar's path, or ``<DataFrame>``, for warnings.
+
+    Returns:
+        One of ``_UNCHANGED``, ``_CONVERTED``, ``_RELABELLED`` or ``_KEPT``.
+    """
+    info = rec.channels[label]
+    signals = rec.signals
+    decision = _decide_unit(
+        label=label,
+        current=str(info.get("physical_dimension") or "").strip(),
+        declared=declared,
+        channel_type=str(info.get("channel_type") or ""),
+        has_samples=signals is not None and label in signals,
+        origin=origin,
+        recorded_bids_unit=info.get("bids_unit"),
+    )
+    if decision.outcome in (_CONVERTED, _RELABELLED):
+        if decision.factor != 1.0:
+            assert signals is not None  # a conversion decision implies has_samples
+            signals[label] = _rescale(signals[label], decision.factor)
+        info["physical_dimension"] = decision.unit
+    if decision.bids_unit is None:
+        info.pop("bids_unit", None)
+    else:
+        info["bids_unit"] = decision.bids_unit
+    return decision.outcome
+
+
+def _read_channels_tsv(channels_tsv: str | os.PathLike | pd.DataFrame) -> pd.DataFrame:
+    """Return a ``channels.tsv`` as an all-string frame, from a path or a frame.
+
+    Reading with ``dtype=str, keep_default_na=False`` is what keeps a literal
+    ``n/a`` cell (BIDS's own spelling for "not applicable") a string the callers
+    can test for, rather than a float NaN. A caller-supplied DataFrame gets the
+    equivalent treatment -- stringified, with genuine missing values flattened to
+    the empty cell that means "declares nothing" -- so passing a frame and passing
+    the file it was read from behave identically.
+    """
+    if isinstance(channels_tsv, pd.DataFrame):
+        return channels_tsv.astype(str).mask(channels_tsv.isna(), "")
+    return pd.read_csv(channels_tsv, sep="\t", dtype=str, keep_default_na=False)
+
+
+def _sidecar_origin(channels_tsv: str | os.PathLike | pd.DataFrame) -> str:
+    """What to call the sidecar in a log message: its path, or that it was a frame.
+
+    A DataFrame has no path, and interpolating one into a warning would dump the
+    whole table into the log.
+    """
+    return "<DataFrame>" if isinstance(channels_tsv, pd.DataFrame) else str(channels_tsv)
+
+
+def resolve_channels_tsv(
+    filepath: str, bids_channels: str | os.PathLike | pd.DataFrame | None
+) -> str | os.PathLike | pd.DataFrame | None:
+    """Turn a ``bids_channels`` argument into the sidecar to apply, or None.
+
+    The one place the ``bids_channels`` vocabulary is interpreted, shared by
+    :meth:`~biosigio.core.emg.Recording.from_file` and
+    :func:`~biosigio.exporters.zarr_stream.stream_to_zarr` so the two export
+    paths cannot come to differ about what an argument means -- which is the
+    same reason :func:`_decide_unit` is shared (issue #127).
+
+    - ``"auto"`` (the default both callers use) resolves the sibling
+      ``_channels.tsv`` through :func:`find_channels_tsv`, and yields None when
+      the recording has none.
+    - ``"off"``, and None as its synonym, disable the lookup.
+    - Anything else is a path or a DataFrame the caller chose explicitly. NEMAR's
+      MaxShield path needs this: it converts a filtered copy written to scratch,
+      where the recording's real sidecar is not adjacent.
+
+    The string cases are tested first because a DataFrame compared against
+    ``"auto"`` compares elementwise and has no truth value.
+
+    Args:
+        filepath: The recording, used only to resolve ``"auto"``.
+        bids_channels: ``"auto"``, ``"off"``, None, a path, or a DataFrame.
+
+    Returns:
+        A path, a DataFrame, or **None** when no sidecar should be applied.
+    """
+    if isinstance(bids_channels, str):
+        if bids_channels == "auto":
+            # rstrip for the directory-valued recordings (CTF .ds, 4D/BTi), so a
+            # trailing slash does not leave os.path.split with an empty filename.
+            return find_channels_tsv(filepath.rstrip("/\\"))
+        return None if bids_channels == "off" else bids_channels
+    return bids_channels
+
+
+def apply_channels_tsv(rec: Recording, channels_tsv: str | os.PathLike | pd.DataFrame) -> int:
     """Override per-channel ``type``/``units`` in ``rec`` from a ``_channels.tsv``.
 
     Rows are matched to channels by the ``name`` column; ``n/a`` and empty
@@ -231,7 +388,7 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
 
     Adopting the sidecar's ``units`` **converts the channel's samples** into that
     unit rather than merely relabelling them (issue #122); see
-    :func:`_adopt_units` for the per-channel rule, including the channel types
+    :func:`_decide_unit` for the per-channel rule, including the channel types
     and situations that are exempt. Type and units are applied independently, so
     an unrecognized ``type`` no longer costs the row its unit correction.
 
@@ -243,7 +400,9 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
 
     Args:
         rec: The Recording object to update in place.
-        channels_tsv_path: Path to the BIDS ``_channels.tsv``.
+        channels_tsv: Path to the BIDS ``_channels.tsv``, or an already-loaded
+            DataFrame of it (the two are equivalent; see
+            :func:`_read_channels_tsv`).
 
     Returns:
         The number of **distinct channels** whose record changed -- type adopted,
@@ -251,14 +410,15 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
         by a sidecar applied twice, counts once; a row naming a channel the
         recording does not have counts not at all.
     """
-    df = pd.read_csv(channels_tsv_path, sep="\t", dtype=str, keep_default_na=False)
+    df = _read_channels_tsv(channels_tsv)
+    origin = _sidecar_origin(channels_tsv)
     if "name" not in df.columns:
-        logging.warning("channels.tsv has no 'name' column: %s", channels_tsv_path)
+        logging.warning("channels.tsv has no 'name' column: %s", origin)
         return 0
 
     units_present = "units" in df.columns
     if not units_present:
-        logging.warning("channels.tsv has no 'units' column: %s", channels_tsv_path)
+        logging.warning("channels.tsv has no 'units' column: %s", origin)
 
     report = {_CONVERTED: 0, _RELABELLED: 0, _KEPT: 0, "units_column_present": units_present}
     changed: set[str] = set()
@@ -279,20 +439,17 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
                     "keeping the importer-inferred type: %s",
                     ctype,
                     name,
-                    channels_tsv_path,
+                    origin,
                 )
         units = str(row.get("units", "")).strip()
         if units and units.lower() != "n/a":
-            outcome = _adopt_units(rec, name, units, channels_tsv_path)
+            outcome = _adopt_units(rec, name, units, origin)
             if outcome != _UNCHANGED:
                 report[outcome] += 1
                 changed.add(name)
         elif units_present:
             logging.debug(
-                "channels.tsv declares no unit (%r) for channel %r: %s",
-                units,
-                name,
-                channels_tsv_path,
+                "channels.tsv declares no unit (%r) for channel %r: %s", units, name, origin
             )
 
     uncovered = [label for label in rec.channels if label not in matched]
@@ -301,11 +458,137 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
             "channels.tsv names no row for %d of the recording's channels (e.g. %s): %s",
             len(uncovered),
             ", ".join(repr(label) for label in uncovered[:5]),
-            channels_tsv_path,
+            origin,
         )
 
     rec.set_metadata("channels_tsv_units", report)
     return len(changed)
+
+
+def apply_channels_tsv_to_stream(
+    channels: list[dict],
+    channels_tsv: str | os.PathLike | pd.DataFrame,
+    *,
+    force_modality: str | None = None,
+) -> dict | None:
+    """Apply a ``_channels.tsv`` to a **streaming** source's channel table.
+
+    The streaming Zarr exporter has no :class:`~biosigio.core.emg.Recording` and
+    no samples in memory: it knows each channel's label, type, modality and unit,
+    and will read the values window by window afterwards. So this settles every
+    per-channel question through the same :func:`_decide_unit` table the
+    in-memory path uses and leaves the *arithmetic* for later, as a per-channel
+    ``unit_factor`` the exporter multiplies into each channel exactly once. Without
+    it, a dataset whose recordings straddle a streaming size threshold serves its
+    small runs in the sidecar's unit and its large ones in the importer's native
+    unit -- a 10^6 disagreement inside one dataset (issue #127).
+
+    Each entry in ``channels`` is mutated in place: ``channel_type`` (and, unless
+    ``force_modality`` pins it, ``modality``) from the sidecar's ``type``;
+    ``unit`` and ``unit_factor`` from its ``units``; ``bids_unit`` when a declared
+    unit was recorded rather than adopted. Entries the sidecar does not name are
+    left exactly as the importer built them.
+
+    Rows are matched by the ``name`` column, and several rows naming one channel
+    compose in file order, the same as :func:`apply_channels_tsv`. Unlike a
+    Recording -- whose channels are a dict and so unique by label -- a streaming
+    source may list the same label twice (EDF permits it); every entry with that
+    label gets the same treatment, so duplicate labels cannot end up in different
+    units inside one store.
+
+    Args:
+        channels: The source's per-channel dicts (``label``, ``channel_type``,
+            ``modality``, ``unit``), mutated in place.
+        channels_tsv: Path to the sidecar, or an already-loaded DataFrame.
+        force_modality: When set, the caller has pinned every channel to one
+            modality (the BIDS datatype suffix, say) and the sidecar's ``type``
+            must not move it. The ``type`` is still adopted per channel.
+
+    Returns:
+        The ``channels_tsv_units`` report, in the same shape
+        :func:`apply_channels_tsv` leaves in ``rec.metadata``, or **None** when
+        the sidecar has no ``name`` column and nothing could be applied -- so the
+        exporter records an attr exactly when the in-memory path would.
+    """
+    df = _read_channels_tsv(channels_tsv)
+    origin = _sidecar_origin(channels_tsv)
+    if "name" not in df.columns:
+        logging.warning("channels.tsv has no 'name' column: %s", origin)
+        return None
+
+    units_present = "units" in df.columns
+    if not units_present:
+        logging.warning("channels.tsv has no 'units' column: %s", origin)
+
+    report = {_CONVERTED: 0, _RELABELLED: 0, _KEPT: 0, "units_column_present": units_present}
+    rows_by_name: dict[str, list[pd.Series]] = {}
+    for _, row in df.iterrows():
+        rows_by_name.setdefault(str(row["name"]).strip(), []).append(row)
+
+    uncovered: list[str] = []
+    for entry in channels:
+        # The label is NOT stripped, and must not be: apply_channels_tsv matches a
+        # stripped row name against the Recording's channel keys as they are, so
+        # stripping here would match rows on this path that the in-memory path
+        # leaves unmatched -- a difference between the two exports, which is the
+        # one thing this function exists to prevent.
+        label = str(entry["label"])
+        rows = rows_by_name.get(label)
+        if not rows:
+            uncovered.append(label)
+            continue
+        for row in rows:
+            ctype = str(row.get("type", "")).strip()
+            if ctype and ctype.lower() != "n/a":
+                try:
+                    entry["channel_type"] = validate_channel_type(ctype)
+                    if force_modality is None:
+                        entry["modality"] = infer_modality_from_channel_type(entry["channel_type"])
+                except ValueError:
+                    logging.warning(
+                        "channels.tsv type %r for channel %r is not a known channel type; "
+                        "keeping the importer-inferred type: %s",
+                        ctype,
+                        label,
+                        origin,
+                    )
+            units = str(row.get("units", "")).strip()
+            if units and units.lower() != "n/a":
+                decision = _decide_unit(
+                    label=label,
+                    current=str(entry.get("unit") or "").strip(),
+                    declared=units,
+                    channel_type=str(entry.get("channel_type") or ""),
+                    # Every channel the source lists has a row in the exporter's
+                    # transpose memmap, so the "no samples to rescale" branch --
+                    # which exists for a Recording carrying channel metadata
+                    # without a column -- cannot apply here.
+                    has_samples=True,
+                    origin=origin,
+                    recorded_bids_unit=entry.get("bids_unit"),
+                )
+                if decision.outcome != _UNCHANGED:
+                    report[decision.outcome] += 1
+                if decision.outcome in (_CONVERTED, _RELABELLED):
+                    entry["unit"] = decision.unit
+                    entry["unit_factor"] = float(entry.get("unit_factor", 1.0)) * decision.factor
+                if decision.bids_unit is None:
+                    entry.pop("bids_unit", None)
+                else:
+                    entry["bids_unit"] = decision.bids_unit
+            elif units_present:
+                logging.debug(
+                    "channels.tsv declares no unit (%r) for channel %r: %s", units, label, origin
+                )
+
+    if uncovered:
+        logging.debug(
+            "channels.tsv names no row for %d of the recording's channels (e.g. %s): %s",
+            len(uncovered),
+            ", ".join(repr(label) for label in uncovered[:5]),
+            origin,
+        )
+    return report
 
 
 def read_events_tsv(

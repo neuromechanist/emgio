@@ -181,7 +181,7 @@ class Recording:
         filepath: str,
         importer: ImporterName | None = None,
         force_csv: bool = False,
-        bids_channels: str = "auto",
+        bids_channels: "str | os.PathLike | pd.DataFrame | None" = "auto",
         mixed_rate: str = "error",
         **kwargs,
     ) -> "Recording":
@@ -213,10 +213,16 @@ class Recording:
                 Automatic import is supported for CSV/TXT files.
             force_csv: If True and importer is 'csv', forces using the generic CSV
                       importer even if the file appears to match a specialized format.
-            bids_channels: When 'auto' (default), look for a sibling BIDS
-                      _channels.tsv next to the file and apply its per-channel
-                      type/units over the importer's inferred values. Pass 'off'
-                      to disable.
+            bids_channels: Which BIDS ``_channels.tsv`` to apply over the
+                      importer's inferred per-channel type/units. 'auto'
+                      (default) looks for the sibling sidecar next to the file;
+                      'off' (or None) disables the lookup; a path or a pandas
+                      DataFrame is used as given, for a recording whose sidecar
+                      is not adjacent to it (a filtered copy on scratch, say).
+                      Adopting a declared unit converts the samples into it, not
+                      just the label. ``stream_to_zarr`` takes the same argument
+                      with the same meanings, so the in-memory and streaming
+                      export paths agree on a recording (issue #127).
             mixed_rate: Policy for an EDF/BDF file whose signals carry differing
                       per-channel sampling rates (ignored for every other format,
                       which is single-rate). 'error' (default) raises -- biosigIO
@@ -298,13 +304,14 @@ class Recording:
 
         # In a BIDS layout, the sibling _channels.tsv is the authoritative source
         # of per-channel type/units; apply it over the importer's header/label
-        # guesses unless explicitly disabled with bids_channels="off".
-        if bids_channels != "off":
-            from ..bids import apply_channels_tsv, find_channels_tsv
+        # guesses unless explicitly disabled with bids_channels="off". The
+        # argument is interpreted by bids.resolve_channels_tsv, shared with
+        # stream_to_zarr so the two export paths cannot read it differently.
+        from ..bids import apply_channels_tsv, resolve_channels_tsv
 
-            channels_tsv = find_channels_tsv(filepath)
-            if channels_tsv:
-                apply_channels_tsv(rec, channels_tsv)
+        channels_tsv = resolve_channels_tsv(filepath, bids_channels)
+        if channels_tsv is not None:
+            apply_channels_tsv(rec, channels_tsv)
 
         return rec
 

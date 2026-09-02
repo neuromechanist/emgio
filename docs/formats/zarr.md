@@ -36,7 +36,8 @@ One Zarr v3 root group holds the whole recording. Both the writer and the reader
   attrs: biosigio_version, format="biosigio-zarr", format_version,
          source_format, modality_rates, dtype, view_downsample,
          view_chunk_columns, anti_alias_filter, channel_groups,
-         recording_metadata, created_utc, note
+         recording_metadata, channels_tsv_units (only when a BIDS
+         channels.tsv was applied), created_utc, note
 
   <modality>_<rate>hz/         one group per (modality, native rate)
     attrs: modality, rate, original_rate, n_channels, n_samples, channels[],
@@ -74,6 +75,8 @@ Per-channel metadata lives in each group's `channels` attribute, one object per 
 `label`, `channel_type`, `modality`, `unit`, `prefilter`, `original_rate`, `target_rate`, `anti_aliased`, `usable_for_inference`, `scale`, `offset`, `row_index`.
 
 The `row_index` maps a channel to its row in the `(n_ch, n_time)` level-0 array.
+
+Two keys are present only when they apply: `nonfinite_samples`, the count of NaN or inf samples that were zero-filled, and `bids_unit`, a unit a BIDS `channels.tsv` declared that the exporter recorded rather than adopted (see [BIDS units in a store](#bids-units-in-a-store)).
 
 ## Level 0 vs view/*
 
@@ -129,6 +132,26 @@ rec.to_zarr('recording.zarr', dtype='float32')
 **Discrete channels.** Trigger and clock channel types (`TRIG`, `SYSCLOCK`, `CTRL`) are resampled by nearest sample with no anti-alias filter so step edges survive, and they are flagged `usable_for_inference=false`.
 
 **Heterogeneous channels.** Channels are grouped by (modality, native rate), so each array stays length-consistent. A common single-rate recording yields one group per modality; a genuinely mixed-rate source yields one group per rate, which is faithful rather than silently resampled together.
+
+## BIDS units in a store
+
+When the recording sits in a BIDS layout, the sibling `_channels.tsv` is authoritative for each channel's `type` and `units`, and adopting a declared unit **converts the samples** into it rather than relabelling them (see [BIDS Helpers](../api/bids.md)). Both export paths apply it and by the same rules, so which path built a store is not something a consumer has to know:
+
+- `Recording.from_file` applies the sidecar on import, and `to_zarr` then exports the converted values.
+- `stream_to_zarr`, the bounded-memory path for recordings too large to load, folds each channel's conversion into its single streaming pass.
+
+Both take the same `bids_channels` argument, with the same values and the same resolution: `"auto"` (default), `"off"` or `None`, an explicit path, or a DataFrame. See [`bids_channels`](../api/bids.md#choosing-the-sidecar-bids_channels) for what each means and when a converter has to pass a sidecar explicitly.
+
+That parity is the contract: one recording and one sidecar produce the same `unit`, `channel_type`, `scale`, `offset` and values whichever path ran, so a dataset whose recordings straddle a size threshold cannot serve microvolts for its small runs and volts for its large ones.
+
+Two attributes record what the sidecar did:
+
+- `channels[].bids_unit` on a channel whose declared unit was recorded rather than adopted (a discrete trigger channel, or a unit that is not convertible from the importer's), so the BIDS claim survives without being asserted over values that contradict it.
+- `channels_tsv_units` on the root group, the per-file summary (`converted`, `relabelled`, `kept_importer_unit`, `units_column_present`). It is absent when no sidecar was applied.
+
+Both are additive, so `format_version` stays at 2.
+
+`force_modality` (streaming only) still wins over the sidecar for **grouping**: it pins every channel to one modality, matching the BIDS datatype suffix a converter is working from, while the sidecar's `type` still sets each channel's `channel_type`.
 
 ## Reading a store
 

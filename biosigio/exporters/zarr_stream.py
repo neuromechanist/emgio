@@ -18,9 +18,18 @@ This path keeps peak RAM bounded by ~one channel, independent of recording size:
    a channel-major float32 memmap on scratch. RAM = one time-window; disk I/O is a
    single sequential pass (a per-channel read of a multiplexed source would instead
    scan the file once per channel).
-3. Pass 2: for each channel, read its full row from the memmap, resample +
-   quantize it, and write it straight into the Zarr arrays (base row + its slice of
-   each min/max pyramid level). RAM = one channel.
+3. Pass 2: for each channel, read its full row from the memmap, apply the BIDS
+   unit conversion, resample + quantize it, and write it straight into the Zarr
+   arrays (base row + its slice of each min/max pyramid level). RAM = one channel.
+
+Between the two passes there is nothing to rescale in memory, so the BIDS
+``_channels.tsv`` is applied to the *channel table* instead (``bids_channels``,
+default ``"auto"``, mirroring ``Recording.from_file``): types and modalities move
+immediately, and each declared unit becomes a per-channel factor pass 2 folds in
+exactly once. Without that, a dataset whose recordings straddle a size threshold
+served its small runs in the sidecar's unit and its large ones in the importer's
+native unit -- self-consistent stores that disagree with each other by 10^6
+(issue #127).
 
 The resulting store is structurally identical to :meth:`ZarrExporter.export` and
 numerically equal within int16 quantization: same layout, same attrs, same chunk
@@ -39,10 +48,11 @@ from __future__ import annotations
 import datetime as _dt
 import os
 import tempfile
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
+from ..bids import apply_channels_tsv_to_stream, resolve_channels_tsv
 from ..core.modality import infer_modality_from_channel_type
 from ..importers._mne_common import _FIFF_UNIT_TO_DIM, _MNE_TYPE_TO_biosigIO, require_mne
 from ..tabular_schema import metadata_to_mapping
@@ -60,6 +70,11 @@ from .zarr import (
     _view_chunk_columns,
     require_zarr,
 )
+
+if TYPE_CHECKING:
+    # Only for the `bids_channels` annotation: a DataFrame is a valid sidecar,
+    # but nothing here touches pandas at runtime (biosigio.bids does).
+    import pandas as pd
 
 
 def _pyramid_level_lengths(
@@ -136,6 +151,7 @@ class _MneSource:
             mne = require_mne()
             raw = mne.io.read_raw(filepath, preload=False, verbose="ERROR")
         self._raw = raw
+        self._closed = False
         self.extra_metadata = dict(extra_metadata or {})
         self.sfreq = float(self._raw.info["sfreq"])
         self.n_samples = int(self._raw.n_times)
@@ -157,7 +173,16 @@ class _MneSource:
         return self._raw.get_data(picks=picks, start=start, stop=stop)
 
     def close(self) -> None:
-        pass
+        # MNE's lazy Raw owns no handle to release, but the flag is still set:
+        # `closed` is the interface both sources share, and a caller (or a test)
+        # asking whether a source was released must get the same answer whichever
+        # one it holds.
+        self._closed = True
+
+    @property
+    def closed(self) -> bool:
+        """Whether :meth:`close` has run."""
+        return self._closed
 
 
 class _EdfSource:
@@ -187,6 +212,7 @@ class _EdfSource:
 
         self.extra_metadata: dict = {}
         self._reader = None
+        self._closed = False
         self._fallback_data: np.ndarray | None = None
         typer = EDFImporter()._determine_channel_type
 
@@ -270,6 +296,12 @@ class _EdfSource:
     def close(self) -> None:
         if self._reader is not None:
             self._reader.close()
+        self._closed = True
+
+    @property
+    def closed(self) -> bool:
+        """Whether :meth:`close` has run (and with it pyedflib's file handle)."""
+        return self._closed
 
 
 def _open_stream_source(filepath: str, force_modality: str | None):
@@ -318,6 +350,7 @@ def stream_to_zarr(
     modality_rates: dict[str, int] | None = None,
     dtype: str = "int16",
     events_df=None,
+    bids_channels: str | os.PathLike | pd.DataFrame | None = "auto",
     recording_metadata: dict | None = None,
     view_downsample: int = 4,
     min_view_samples: int = 512,
@@ -339,10 +372,25 @@ def stream_to_zarr(
             channel this modality so the recording lands in one coherent group at
             the modality's rate cap -- matching the NEMAR driver's suffix-driven
             grouping. If None, modality is inferred per channel from its type.
+            **Precedence with the sidecar:** ``force_modality`` always wins for
+            *grouping*, and a ``channels.tsv`` never moves a channel out of the
+            forced modality; the sidecar's ``type`` still sets each channel's
+            ``channel_type`` (and, when ``force_modality`` is None, the modality
+            derived from it).
         modality_rates: Per-modality rate cap (defaults to
             :data:`~biosigio.exporters.zarr.DEFAULT_MODALITY_RATES`).
         dtype: ``"int16"`` (scaled) or ``"float32"`` (lossless).
         events_df: Optional events table (onset/duration/description).
+        bids_channels: The BIDS ``_channels.tsv`` to apply over the importer's
+            per-channel guesses, mirroring
+            :meth:`~biosigio.core.emg.Recording.from_file`'s parameter of the same
+            name so both export paths read the same sidecar by default. ``"auto"``
+            (default) looks for the sibling sidecar next to ``filepath``; ``"off"``
+            (or None) disables it; a path or a DataFrame is used as given. Adopting
+            a declared unit **converts the samples** into it, so a store built here
+            and one built via ``Recording.from_file(...).to_zarr(...)`` agree on
+            units, types and values (issue #127). See
+            :func:`~biosigio.bids.apply_channels_tsv_to_stream`.
         recording_metadata: Optional metadata dict stored in the store root attrs.
         min_view_samples: Pyramid floor. For the exact stopping rule -- and why the
             last level written can be shorter than this -- see
@@ -376,6 +424,30 @@ def stream_to_zarr(
     if n_samples == 0 or len(src.channels) == 0:
         src.close()
         raise ValueError("No signals loaded")
+
+    # The BIDS sidecar is authoritative for per-channel type and units, exactly as
+    # it is on the in-memory path (Recording.from_file's bids_channels). Applied
+    # BEFORE the grouping below, because adopting a type can change a channel's
+    # modality and therefore which group it belongs to. Each channel's declared
+    # unit becomes a `unit_factor` that pass 2 multiplies in once.
+    #
+    # A sidecar is caller-supplied input and can be absent, a directory, or
+    # unparsable, so this is the one step between opening the source and the
+    # `with` block below that can raise. The source holds an OS file handle
+    # (pyedflib) or an MNE reader, so it is closed on the way out rather than
+    # left to the garbage collector.
+    try:
+        channels_tsv = resolve_channels_tsv(filepath, bids_channels)
+        units_report = (
+            None
+            if channels_tsv is None
+            else apply_channels_tsv_to_stream(
+                src.channels, channels_tsv, force_modality=force_modality
+            )
+        )
+    except BaseException:
+        src.close()
+        raise
 
     # Per-channel metadata; group by (modality, native rate). The source is
     # single-rate (a mixed-rate EDF is rejected in _EdfSource), so every channel
@@ -451,7 +523,19 @@ def stream_to_zarr(
             for i, ci in enumerate(members):
                 ctype = str(ci["channel_type"]).upper()
                 discrete = ctype in _DISCRETE_TYPES
-                x = np.asarray(mm[i], dtype=np.float64)
+                # The channels.tsv conversion, applied here and only here: in
+                # float64, on the whole channel, before the resample -- the same
+                # order the in-memory path uses (rescale the column, then export),
+                # so the two stores' values agree to within int16 quantization.
+                factor = float(ci.get("unit_factor", 1.0))
+                # np.array, not np.asarray: the in-place multiply below must land
+                # on this pass's own copy, never back through a view into the
+                # scratch memmap. (The float32 -> float64 change already forces a
+                # copy today; stating it means a future dtype change cannot
+                # silently turn the conversion into a write to scratch.)
+                x = np.array(mm[i], dtype=np.float64)
+                if factor != 1.0:
+                    x *= factor
                 y = _resample_channel(x, native_rate, target_rate, discrete=discrete)
                 n_nonfinite = 0
                 if dtype == "int16":
@@ -482,6 +566,11 @@ def stream_to_zarr(
                 }
                 if n_nonfinite:
                     meta["nonfinite_samples"] = n_nonfinite
+                # A unit the sidecar declared but the values contradict is kept as
+                # metadata rather than asserted (see biosigio.bids._decide_unit);
+                # the in-memory exporter carries it the same way.
+                if ci.get("bids_unit"):
+                    meta["bids_unit"] = ci["bids_unit"]
                 chan_meta.append(meta)
                 del x, y, q
             del mm  # release the memmap before the temp dir is reclaimed
@@ -557,6 +646,10 @@ def stream_to_zarr(
         meta.setdefault("source_file", filepath)
         meta.setdefault("number_of_signals", len(src.channels))
         meta.setdefault("streamed", True)
+        if units_report is not None:
+            # Where the in-memory path finds it: apply_channels_tsv leaves this in
+            # rec.metadata, which ZarrExporter copies into recording_metadata.
+            meta["channels_tsv_units"] = units_report
         root.attrs.update(
             {
                 "biosigio_version": _BIOSIGIO_VERSION,
@@ -570,6 +663,7 @@ def stream_to_zarr(
                 "anti_alias_filter": "scipy.signal.resample_poly (polyphase FIR)",
                 "channel_groups": written_groups,
                 "recording_metadata": metadata_to_mapping(meta),
+                **({} if units_report is None else {"channels_tsv_units": units_report}),
                 "created_utc": _dt.datetime.now(_dt.UTC).isoformat(),
                 "note": (
                     "Derived serving copy (streamed, bounded-memory conversion). level 0 "
