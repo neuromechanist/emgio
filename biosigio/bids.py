@@ -5,6 +5,10 @@ metadata lives in a sibling ``*_channels.tsv`` (the ``type`` and ``units``
 columns), not in the data file's own headers. These helpers locate that sidecar
 and apply it to an :class:`~biosigio.core.emg.Recording` object so imported channels get
 their real BIDS types (e.g. ``SEEG``) instead of header/label guesses.
+
+The ``units`` column is a claim about the numbers, not just a label, so adopting
+it rescales the samples (see :func:`_adopt_units`). Applying a sidecar therefore
+leaves values and unit in agreement, which relabelling alone did not.
 """
 
 from __future__ import annotations
@@ -15,6 +19,8 @@ import os
 from typing import TYPE_CHECKING
 
 import pandas as pd
+
+from .units import conversion_factor
 
 if TYPE_CHECKING:
     from .core.emg import Recording
@@ -59,6 +65,91 @@ def find_events_tsv(data_filepath: str) -> str | None:
     return _find_sidecar(data_filepath, "events")
 
 
+def _keep_importer_unit(info: dict, label: str, current: str, declared: str, reason: str) -> bool:
+    """Record the sidecar's unit without asserting it over contradicting values.
+
+    The BIDS metadata is real and worth keeping, so it lands under ``bids_unit``
+    rather than being dropped; what it must not do is overwrite a
+    ``physical_dimension`` that correctly describes the samples.
+
+    Args:
+        info: The channel's metadata dict, mutated in place.
+        label: Channel name, for the warning.
+        current: The unit the samples are actually in.
+        declared: The sidecar's ``units`` value.
+        reason: Why the sidecar's unit was not adopted, for the warning.
+
+    Returns:
+        True, always: the channel record changed.
+    """
+    info["bids_unit"] = declared
+    logging.warning(
+        "channels.tsv declares units %r for channel %r, whose values are in %r and %s; "
+        "keeping the importer's values and unit, and recording the declared unit "
+        "as 'bids_unit'.",
+        declared,
+        label,
+        current,
+        reason,
+    )
+    return True
+
+
+def _adopt_units(rec: Recording, label: str, declared: str) -> bool:
+    """Move one channel onto the sidecar's unit, rescaling its samples to match.
+
+    A unit label is a claim about the numbers next to it, so the two move
+    together or not at all. The sidecar's ``units`` describes the values *as the
+    data file stores them*, while ``physical_dimension`` describes the values
+    biosigIO currently holds -- and those differ whenever the importer rescaled
+    on the way in (every MNE-backed importer returns SI volts regardless of the
+    file's own µV). Adopting the label without the conversion is what issue #122
+    reports: volts relabelled as microvolts, wrong by 10^6.
+
+    Three outcomes, and only the first one touches the samples:
+
+    - **Convertible** (same quantity, e.g. ``V`` -> ``uV``): multiply the samples
+      by the ratio and set the label. A ratio of exactly 1 (``uV`` -> ``µV``, a
+      spelling difference) sets the label alone, which is not a semantic relabel.
+    - **Already there** (labels equal): nothing at all, which is what makes
+      repeated application idempotent -- the second pass finds the units already
+      adopted and cannot double-convert.
+    - **Not convertible** (unparsable on either side, different quantities, or no
+      samples to scale): keep the importer's values *and* its label, and record
+      the sidecar's claim under ``bids_unit`` so the BIDS metadata is preserved
+      without being asserted over numbers that would contradict it.
+
+    Args:
+        rec: The Recording object to update in place.
+        label: Channel name, already known to exist in ``rec.channels``.
+        declared: The sidecar's ``units`` value, already known to be non-empty
+            and not ``n/a``.
+
+    Returns:
+        True if the channel record changed (unit adopted, or ``bids_unit``
+        recorded), False if it was already in the sidecar's unit.
+    """
+    info = rec.channels[label]
+    current = str(info.get("physical_dimension") or "").strip()
+    if current == declared:
+        return False
+
+    factor = conversion_factor(current, declared)
+    if factor is None:
+        return _keep_importer_unit(
+            info, label, current, declared, f"is not convertible to {declared!r}"
+        )
+
+    if factor != 1.0:
+        signals = rec.signals
+        if signals is None or label not in signals:
+            return _keep_importer_unit(info, label, current, declared, "has no samples to rescale")
+        signals[label] = signals[label] * factor
+
+    info["physical_dimension"] = declared
+    return True
+
+
 def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
     """Override per-channel ``type``/``units`` in ``rec`` from a ``_channels.tsv``.
 
@@ -66,12 +157,18 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
     values are skipped (the importer-inferred value is kept). An unrecognized
     ``type`` is warned about and skipped rather than raising.
 
+    Adopting the sidecar's ``units`` **converts the channel's samples** into that
+    unit rather than merely relabelling them (issue #122); see
+    :func:`_adopt_units` for the per-channel rule and for what happens when the
+    two units are not convertible. Type and units are applied independently, so
+    an unrecognized ``type`` no longer costs the row its unit correction.
+
     Args:
         rec: The Recording object to update in place.
         channels_tsv_path: Path to the BIDS ``_channels.tsv``.
 
     Returns:
-        The number of channels updated.
+        The number of channels whose record changed.
     """
     df = pd.read_csv(channels_tsv_path, sep="\t", dtype=str, keep_default_na=False)
     if "name" not in df.columns:
@@ -83,25 +180,24 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
         name = str(row["name"]).strip()
         if name not in rec.channels:
             continue
-        kwargs: dict[str, str] = {}
+        changed = False
         ctype = str(row.get("type", "")).strip()
-        units = str(row.get("units", "")).strip()
         if ctype and ctype.lower() != "n/a":
-            kwargs["channel_type"] = ctype
+            try:
+                rec.set_channel(name, channel_type=ctype)
+                changed = True
+            except ValueError:
+                logging.warning(
+                    "channels.tsv type %r for channel %r is not a known channel type; "
+                    "keeping the importer-inferred type.",
+                    ctype,
+                    name,
+                )
+        units = str(row.get("units", "")).strip()
         if units and units.lower() != "n/a":
-            kwargs["physical_dimension"] = units
-        if not kwargs:
-            continue
-        try:
-            rec.set_channel(name, **kwargs)
+            changed = _adopt_units(rec, name, units) or changed
+        if changed:
             updated += 1
-        except ValueError:
-            logging.warning(
-                "channels.tsv type %r for channel %r is not a known channel type; "
-                "keeping the importer-inferred type.",
-                ctype,
-                name,
-            )
     return updated
 
 
