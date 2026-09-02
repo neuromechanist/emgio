@@ -1119,6 +1119,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#chunk-geometry-and-the-declared-pyramid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk geometry and the declared pyramid
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#per-modality-rates-and-dtype" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2643,6 +2654,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#chunk-geometry-and-the-declared-pyramid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk geometry and the declared pyramid
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#per-modality-rates-and-dtype" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2757,22 +2779,26 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/                              root group
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  attrs: biosigio_version, format="biosigio-zarr", format_version,
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>         source_format, modality_rates, dtype, view_downsample,
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>         anti_alias_filter, channel_groups, recording_metadata, created_utc
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  &lt;modality&gt;_&lt;rate&gt;hz/         one group per (modality, native rate)
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    attrs: modality, rate, original_rate, n_channels, n_samples, channels[]
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    0                          (n_ch, n_time) level-0 signal, sharded
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>      attrs: level=0, rate, downsample_factor=1, kind="signal",
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>             usable_for_inference, scale[], offset[],
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>             physical_formula="physical = digital * scale + offset"
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    view/                      min/max render pyramid (not sharded)
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>      1, 2, ...                (2, n_ch, n_time_L), axis0 = [min, max]
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        attrs: level, downsample_factor, rate_effective,
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>               kind="minmax_envelope", usable_for_inference=false
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>  events/
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    onset (f64), duration (f64), code (i32)
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>    attrs: label_map {code: description}, n_events
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>         view_chunk_columns, anti_alias_filter, channel_groups,
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>         recording_metadata, created_utc, note
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  &lt;modality&gt;_&lt;rate&gt;hz/         one group per (modality, native rate)
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    attrs: modality, rate, original_rate, n_channels, n_samples, channels[],
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>           n_view_levels, view_levels[], view_downsample, view_chunk_columns,
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>           chunk_seconds, shard_seconds
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    0                          (n_ch, n_time) level-0 signal, sharded
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>      attrs: level=0, rate, source_rate_hz, downsample_factor=1, kind="signal",
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>             chunk_samples, shard_samples, anti_aliased, usable_for_inference,
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>             scale[], offset[],
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>             physical_formula="physical = digital * scale + offset"
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    view/                      min/max render pyramid (not sharded)
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>      1, 2, ...                (2, n_ch, n_time_L), axis0 = [min, max]
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>        attrs: level, downsample_factor, rate_effective, chunk_columns,
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>               kind="minmax_envelope", usable_for_inference=false
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>  events/
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>    onset (f64), duration (f64), code (i32)
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>    attrs: label_map {code: description}, n_events
 </code></pre></div>
 <p>The group name encodes the served (target) rate, not the source rate, for example <code>eeg_250hz</code> even when the source was recorded at 500 Hz. The two rates are both kept in the group attributes:</p>
 <ul>
@@ -2793,6 +2819,20 @@
 <li><strong>view/*</strong> are min/max render envelopes. Each level stores two values per downsample bin, the minimum and the maximum, on axis 0 (<code>[min, max]</code>). Envelopes preserve visible transients so brief spikes do not vanish when zoomed out, which is why they are nonlinear and are flagged <code>usable_for_inference=false</code>. Never train or run inference on the view tier.</li>
 </ul>
 <p>The two downsampling philosophies coexist on purpose: anti-aliased polyphase resampling for level 0, min/max binning for view/*.</p>
+<h2 id="chunk-geometry-and-the-declared-pyramid">Chunk geometry and the declared pyramid<a class="headerlink" href="#chunk-geometry-and-the-declared-pyramid" title="Permanent link">&para;</a></h2>
+<p>The two tiers are also chunked by different rules, for the same reason they are downsampled by different rules.</p>
+<ul>
+<li><strong>Level 0 is chunked on time.</strong> Its inner chunk spans <code>chunk_seconds</code> (4 s by default) and its shard spans <code>shard_seconds</code> (300 s), rounded to a whole number of chunks. Inference and training read a time span, so a time-based grain is the right unit. The array attributes record the resolved lengths in samples as <code>chunk_samples</code> and <code>shard_samples</code>, and <code>source_rate_hz</code> alongside <code>rate</code> so the native acquisition rate is explicit next to the served (capped) one.</li>
+<li><strong>view/* levels are chunked on a constant column count</strong>, <code>view_chunk_columns</code> (1024 by default), capped by the level's own length so a short level is a single chunk. Each level's resolved width is in its <code>chunk_columns</code> attribute. A viewport needs roughly 1000 to 2500 columns whatever level it picks, so columns, not seconds, are the unit a render request is measured in. A time-based rule would shrink the chunk by the pyramid factor at every level and shatter one screenful into hundreds of tiny requests: on the 40-minute, 129-channel, 250 Hz store the <code>nemarOrg/nemar-cli#1178</code> transfer-efficiency audit measured, a whole-recording render at level 4 was 594 requests for 1.16 MB (about 2 KB each) and the level-6 minimap was 148 requests for 77 KB. At 1024 columns the same reads are 3 requests and 1 request. The chunk counts are pinned by a test; the byte figures are the audit's.</li>
+</ul>
+<p>Each channel group also <strong>declares its pyramid</strong>, so a reader learns which <code>view/*</code> paths exist without probing for a 404:</p>
+<ul>
+<li><code>n_view_levels</code> is the number of <code>view/*</code> arrays actually written for that group.</li>
+<li><code>view_levels</code> lists them, always contiguous from 1, for example <code>[1, 2, 3]</code>.</li>
+<li><code>view_downsample</code>, <code>view_chunk_columns</code>, <code>chunk_seconds</code>, and <code>shard_seconds</code> describe the geometry to expect, so a client knows the shape of the store before it fetches anything.</li>
+</ul>
+<p>The declaration replaces existence probing, not array opening: a client still opens each level's array to read its exact shape and its resolved <code>chunk_columns</code>, which is <code>view_chunk_columns</code> capped by that level's length.</p>
+<p>These are additive attributes plus a change of chunk shape, and every Zarr v3 reader takes chunk shapes from the array metadata it must already parse, so <code>format_version</code> stays at 2.</p>
 <h2 id="per-modality-rates-and-dtype">Per-modality rates and dtype<a class="headerlink" href="#per-modality-rates-and-dtype" title="Permanent link">&para;</a></h2>
 <p><strong>Rate caps.</strong> Level 0 is resampled to <code>target = min(native, cap)</code> per modality, and the store never upsamples. The default caps are:</p>
 <table>
@@ -2866,7 +2906,7 @@
 <p><strong>A Content Delivery Network (CDN) is recommended for a public production viewer.</strong> A viewport pulls several small chunk objects; an edge CDN with HTTP/2 or HTTP/3 multiplexing shares one connection across those fetches, caches the small, shared coarse pyramid levels at the edge, and collapses request count and origin egress. The viewer code is identical with or without a CDN, since zarrita reads object URLs; ship on object storage plus CORS, then front it with a CDN by changing the base URL. The hot viewing path stays CDN-friendly because the view levels are not sharded.</p>
 <p><strong>Reader contracts</strong> for the three consumers:</p>
 <ul>
-<li><strong>Viewer:</strong> read the root and group attributes, pick the pyramid level whose <code>rate_effective</code> puts roughly one sample per screen pixel, fetch the chunks covering the viewport, and render the min/max band using each channel's <code>scale</code> and <code>offset</code>. At maximum zoom, read level 0 directly. Group the display by modality and overlay events from the <code>events</code> group.</li>
+<li><strong>Viewer:</strong> read the root and group attributes, take the list of <code>view/*</code> levels from the group's <code>view_levels</code> or <code>n_view_levels</code> rather than probing for a 404, then open those levels and pick the one whose <code>rate_effective</code> puts roughly one sample per screen pixel. Fetch the chunks covering the viewport and render the min/max band using each channel's <code>scale</code> and <code>offset</code>. At maximum zoom, read level 0 directly. Group the display by modality and overlay events from the <code>events</code> group.</li>
 <li><strong>Inference:</strong> read level 0 of the relevant group, apply scale and offset, and window the signal. Never read view/*. For a lower analysis rate, derive it on read from level 0 with an anti-aliased resample rather than persisting a third tier.</li>
 <li><strong>Training:</strong> iterate shards of level 0 sequentially, one object per shard and many windows per object, shuffling at the shard level plus a within-shard buffer.</li>
 </ul>
@@ -2899,17 +2939,27 @@
 <tr>
 <td><code>min_view_samples</code></td>
 <td>512</td>
-<td>Stop building pyramid levels at this length</td>
+<td>Pyramid floor; see the stopping rule below</td>
+</tr>
+<tr>
+<td><code>max_view_levels</code></td>
+<td>12</td>
+<td>Hard cap on pyramid depth</td>
 </tr>
 <tr>
 <td><code>chunk_seconds</code></td>
 <td>4</td>
-<td>Random-access grain</td>
+<td>Level-0 random-access grain</td>
 </tr>
 <tr>
 <td><code>shard_seconds</code></td>
 <td>300</td>
-<td>Sequential-read grain, rounded to whole chunks</td>
+<td>Level-0 sequential-read grain, rounded to whole chunks</td>
+</tr>
+<tr>
+<td><code>view_chunk_columns</code></td>
+<td>1024</td>
+<td>Columns per <code>view/*</code> chunk, capped by the level's length</td>
 </tr>
 <tr>
 <td><code>compressor_level</code></td>
@@ -2918,6 +2968,7 @@
 </tr>
 </tbody>
 </table>
+<p><strong>The pyramid stopping rule.</strong> A level is built, and then the loop stops once the level just built is at or below <code>min_view_samples</code>. So the floor bounds the level a further one would have been built <em>from</em>, not the shortest level in the store: the final level can itself be shorter than <code>min_view_samples</code>. A 30000-sample level 0 at the defaults gives 7500, 1875, and 468; the 468 is written because 1875 was still above the floor, and no level 4 follows because 468 is not.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># A lossless store with a shorter sequential-read grain</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">rec</span><span class="o">.</span><span class="n">to_zarr</span><span class="p">(</span><span class="s1">'recording.zarr'</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">'float32'</span><span class="p">,</span> <span class="n">shard_seconds</span><span class="o">=</span><span class="mi">120</span><span class="p">)</span>
 </code></pre></div>

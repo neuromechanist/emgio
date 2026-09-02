@@ -6238,7 +6238,8 @@ imported from any supported format.</p>
 <span class="normal"><a href="#__codelineno-0-954">954</a></span>
 <span class="normal"><a href="#__codelineno-0-955">955</a></span>
 <span class="normal"><a href="#__codelineno-0-956">956</a></span>
-<span class="normal"><a href="#__codelineno-0-957">957</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-45" name="__codelineno-0-45"></a><span class="k">class</span><span class="w"> </span><span class="nc">Recording</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-957">957</a></span>
+<span class="normal"><a href="#__codelineno-0-958">958</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-45" name="__codelineno-0-45"></a><span class="k">class</span><span class="w"> </span><span class="nc">Recording</span><span class="p">:</span>
 <a id="__codelineno-0-46" name="__codelineno-0-46"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-47" name="__codelineno-0-47"></a><span class="sd">    Core biosignal recording: signals + channels + events + metadata.</span>
 <a id="__codelineno-0-48" name="__codelineno-0-48"></a>
@@ -6963,194 +6964,195 @@ imported from any supported format.</p>
 <a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="sd">        render pyramid above it (flagged not-for-inference). A derived serving copy,</span>
 <a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">        not the archival source (BIDS/EDF stay authoritative). Requires the ``zarr``</span>
 <a id="__codelineno-0-769" name="__codelineno-0-769"></a><span class="sd">        extra (zarr v3). See :class:`~biosigio.exporters.zarr.ZarrExporter` for the</span>
-<a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="sd">        tuning knobs (``modality_rates``, ``dtype``, chunk/shard sizing, ...).</span>
-<a id="__codelineno-0-771" name="__codelineno-0-771"></a>
-<a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">            filepath: Output store path (``.zarr`` appended if missing).</span>
-<a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">            **kwargs: Forwarded to :meth:`ZarrExporter.export`.</span>
-<a id="__codelineno-0-775" name="__codelineno-0-775"></a>
-<a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="sd">            str: The written store path.</span>
-<a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">        """</span>
-<a id="__codelineno-0-779" name="__codelineno-0-779"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.zarr</span><span class="w"> </span><span class="kn">import</span> <span class="n">ZarrExporter</span>
-<a id="__codelineno-0-780" name="__codelineno-0-780"></a>
-<a id="__codelineno-0-781" name="__codelineno-0-781"></a>        <span class="c1"># The empty-signal guard lives once, in ZarrExporter.export ("No signals</span>
-<a id="__codelineno-0-782" name="__codelineno-0-782"></a>        <span class="c1"># loaded"), matching the tabular path; no duplicate guard here.</span>
-<a id="__codelineno-0-783" name="__codelineno-0-783"></a>        <span class="k">return</span> <span class="n">ZarrExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-<a id="__codelineno-0-784" name="__codelineno-0-784"></a>
-<a id="__codelineno-0-785" name="__codelineno-0-785"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-786" name="__codelineno-0-786"></a><span class="w">        </span><span class="sd">"""</span>
-<a id="__codelineno-0-787" name="__codelineno-0-787"></a><span class="sd">        Set metadata value.</span>
-<a id="__codelineno-0-788" name="__codelineno-0-788"></a>
-<a id="__codelineno-0-789" name="__codelineno-0-789"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-790" name="__codelineno-0-790"></a><span class="sd">            key: Metadata key</span>
-<a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">            value: Metadata value</span>
-<a id="__codelineno-0-792" name="__codelineno-0-792"></a><span class="sd">        """</span>
-<a id="__codelineno-0-793" name="__codelineno-0-793"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-<a id="__codelineno-0-794" name="__codelineno-0-794"></a>
-<a id="__codelineno-0-795" name="__codelineno-0-795"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<a id="__codelineno-0-796" name="__codelineno-0-796"></a><span class="w">        </span><span class="sd">"""</span>
-<a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="sd">        Get metadata value.</span>
-<a id="__codelineno-0-798" name="__codelineno-0-798"></a>
-<a id="__codelineno-0-799" name="__codelineno-0-799"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">            key: Metadata key</span>
-<a id="__codelineno-0-801" name="__codelineno-0-801"></a>
-<a id="__codelineno-0-802" name="__codelineno-0-802"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">            Value associated with the key</span>
-<a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">        """</span>
-<a id="__codelineno-0-805" name="__codelineno-0-805"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-<a id="__codelineno-0-806" name="__codelineno-0-806"></a>
-<a id="__codelineno-0-807" name="__codelineno-0-807"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">has_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="w">        </span><span class="sd">"""Return True if ``key`` is present in the recording metadata."""</span>
-<a id="__codelineno-0-809" name="__codelineno-0-809"></a>        <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span>
-<a id="__codelineno-0-810" name="__codelineno-0-810"></a>
-<a id="__codelineno-0-811" name="__codelineno-0-811"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<a id="__codelineno-0-812" name="__codelineno-0-812"></a><span class="w">        </span><span class="sd">"""Number of channels in the recording."""</span>
-<a id="__codelineno-0-813" name="__codelineno-0-813"></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
-<a id="__codelineno-0-814" name="__codelineno-0-814"></a>
-<a id="__codelineno-0-815" name="__codelineno-0-815"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<a id="__codelineno-0-816" name="__codelineno-0-816"></a><span class="w">        </span><span class="sd">"""Number of time samples per channel (0 if no signals are loaded)."""</span>
-<a id="__codelineno-0-817" name="__codelineno-0-817"></a>        <span class="k">return</span> <span class="mi">0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span>
-<a id="__codelineno-0-818" name="__codelineno-0-818"></a>
-<a id="__codelineno-0-819" name="__codelineno-0-819"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_sampling_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-820" name="__codelineno-0-820"></a><span class="w">        </span><span class="sd">"""Sampling frequency in Hz, when all channels share a single rate.</span>
-<a id="__codelineno-0-821" name="__codelineno-0-821"></a>
-<a id="__codelineno-0-822" name="__codelineno-0-822"></a><span class="sd">        Raises:</span>
-<a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">            ValueError: if no channels are loaded, or channels have differing</span>
-<a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="sd">                sampling frequencies; for a mixed-rate recording read</span>
-<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">                ``channels[ch]["sample_frequency"]`` per channel instead.</span>
-<a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">        """</span>
-<a id="__codelineno-0-827" name="__codelineno-0-827"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
-<a id="__codelineno-0-828" name="__codelineno-0-828"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No channels loaded"</span><span class="p">)</span>
-<a id="__codelineno-0-829" name="__codelineno-0-829"></a>        <span class="n">rates</span> <span class="o">=</span> <span class="p">{</span><span class="n">info</span><span class="p">[</span><span class="s2">"sample_frequency"</span><span class="p">]</span> <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
-<a id="__codelineno-0-830" name="__codelineno-0-830"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rates</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-<a id="__codelineno-0-831" name="__codelineno-0-831"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-832" name="__codelineno-0-832"></a>                <span class="s2">"Channels have differing sampling frequencies; read "</span>
-<a id="__codelineno-0-833" name="__codelineno-0-833"></a>                <span class="s2">"channels[ch]['sample_frequency'] per channel instead."</span>
-<a id="__codelineno-0-834" name="__codelineno-0-834"></a>            <span class="p">)</span>
-<a id="__codelineno-0-835" name="__codelineno-0-835"></a>        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">rates</span><span class="p">)))</span>
-<a id="__codelineno-0-836" name="__codelineno-0-836"></a>
-<a id="__codelineno-0-837" name="__codelineno-0-837"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_duration</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="w">        </span><span class="sd">"""Total recording duration in seconds (n_samples / sampling_frequency).</span>
-<a id="__codelineno-0-839" name="__codelineno-0-839"></a>
-<a id="__codelineno-0-840" name="__codelineno-0-840"></a><span class="sd">        Computed from the time index spacing, so it is the full window length</span>
-<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">        (one sample period longer than the last sample's timestamp). Returns 0.0</span>
-<a id="__codelineno-0-842" name="__codelineno-0-842"></a><span class="sd">        when fewer than two samples are loaded (a single sample has no inferable</span>
-<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">        sample period).</span>
-<a id="__codelineno-0-844" name="__codelineno-0-844"></a><span class="sd">        """</span>
-<a id="__codelineno-0-845" name="__codelineno-0-845"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-<a id="__codelineno-0-846" name="__codelineno-0-846"></a>            <span class="k">return</span> <span class="mf">0.0</span>
-<a id="__codelineno-0-847" name="__codelineno-0-847"></a>        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">index</span>
-<a id="__codelineno-0-848" name="__codelineno-0-848"></a>        <span class="n">sample_period</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-0-849" name="__codelineno-0-849"></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">*</span> <span class="n">sample_period</span>
-<a id="__codelineno-0-850" name="__codelineno-0-850"></a>
-<a id="__codelineno-0-851" name="__codelineno-0-851"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
-<a id="__codelineno-0-852" name="__codelineno-0-852"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-853" name="__codelineno-0-853"></a>        <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-0-854" name="__codelineno-0-854"></a>        <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-<a id="__codelineno-0-855" name="__codelineno-0-855"></a>        <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<a id="__codelineno-0-856" name="__codelineno-0-856"></a>        <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-0-857" name="__codelineno-0-857"></a>        <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-0-858" name="__codelineno-0-858"></a>        <span class="o">*</span><span class="p">,</span>
-<a id="__codelineno-0-859" name="__codelineno-0-859"></a>        <span class="n">modality</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-860" name="__codelineno-0-860"></a>        <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"n/a"</span><span class="p">,</span>
-<a id="__codelineno-0-861" name="__codelineno-0-861"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-862" name="__codelineno-0-862"></a><span class="w">        </span><span class="sd">"""</span>
-<a id="__codelineno-0-863" name="__codelineno-0-863"></a><span class="sd">        Add a new channel to the recording.</span>
-<a id="__codelineno-0-864" name="__codelineno-0-864"></a>
-<a id="__codelineno-0-865" name="__codelineno-0-865"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-866" name="__codelineno-0-866"></a><span class="sd">            label: Channel label or name (as per EDF specification)</span>
-<a id="__codelineno-0-867" name="__codelineno-0-867"></a><span class="sd">            data: Channel data</span>
-<a id="__codelineno-0-868" name="__codelineno-0-868"></a><span class="sd">            sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
-<a id="__codelineno-0-869" name="__codelineno-0-869"></a><span class="sd">            physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
-<a id="__codelineno-0-870" name="__codelineno-0-870"></a><span class="sd">            channel_type: BIDS channel type ('EEG', 'EMG', 'ECG', 'ACC', 'SEEG', ...).</span>
-<a id="__codelineno-0-871" name="__codelineno-0-871"></a><span class="sd">                Required; validated against the modality vocabulary. There is no</span>
-<a id="__codelineno-0-872" name="__codelineno-0-872"></a><span class="sd">                default (a missing type must be explicit, e.g. 'OTHER'/'MISC').</span>
-<a id="__codelineno-0-873" name="__codelineno-0-873"></a><span class="sd">            modality: Coarse modality ('EEG', 'EMG', 'IEEG', 'MEG', 'BEH', 'MISC').</span>
-<a id="__codelineno-0-874" name="__codelineno-0-874"></a><span class="sd">                If None, it is inferred from ``channel_type``.</span>
-<a id="__codelineno-0-875" name="__codelineno-0-875"></a><span class="sd">            prefilter: Pre-filtering applied to the channel (keyword-only).</span>
-<a id="__codelineno-0-876" name="__codelineno-0-876"></a><span class="sd">        """</span>
-<a id="__codelineno-0-877" name="__codelineno-0-877"></a>        <span class="n">canonical_type</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
-<a id="__codelineno-0-878" name="__codelineno-0-878"></a>        <span class="n">canonical_modality</span> <span class="o">=</span> <span class="p">(</span>
-<a id="__codelineno-0-879" name="__codelineno-0-879"></a>            <span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">canonical_type</span><span class="p">)</span>
-<a id="__codelineno-0-880" name="__codelineno-0-880"></a>            <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="kc">None</span>
-<a id="__codelineno-0-881" name="__codelineno-0-881"></a>            <span class="k">else</span> <span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
-<a id="__codelineno-0-882" name="__codelineno-0-882"></a>        <span class="p">)</span>
-<a id="__codelineno-0-883" name="__codelineno-0-883"></a>
-<a id="__codelineno-0-884" name="__codelineno-0-884"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-885" name="__codelineno-0-885"></a>            <span class="c1"># Create DataFrame with time index</span>
-<a id="__codelineno-0-886" name="__codelineno-0-886"></a>            <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
-<a id="__codelineno-0-887" name="__codelineno-0-887"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
-<a id="__codelineno-0-888" name="__codelineno-0-888"></a>
-<a id="__codelineno-0-889" name="__codelineno-0-889"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
-<a id="__codelineno-0-890" name="__codelineno-0-890"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-891" name="__codelineno-0-891"></a>            <span class="s2">"sample_frequency"</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
-<a id="__codelineno-0-892" name="__codelineno-0-892"></a>            <span class="s2">"physical_dimension"</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
-<a id="__codelineno-0-893" name="__codelineno-0-893"></a>            <span class="s2">"prefilter"</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
-<a id="__codelineno-0-894" name="__codelineno-0-894"></a>            <span class="s2">"channel_type"</span><span class="p">:</span> <span class="n">canonical_type</span><span class="p">,</span>
-<a id="__codelineno-0-895" name="__codelineno-0-895"></a>            <span class="s2">"modality"</span><span class="p">:</span> <span class="n">canonical_modality</span><span class="p">,</span>
-<a id="__codelineno-0-896" name="__codelineno-0-896"></a>        <span class="p">}</span>
-<a id="__codelineno-0-897" name="__codelineno-0-897"></a>
-<a id="__codelineno-0-898" name="__codelineno-0-898"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_channel</span><span class="p">(</span>
-<a id="__codelineno-0-899" name="__codelineno-0-899"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-900" name="__codelineno-0-900"></a>        <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-0-901" name="__codelineno-0-901"></a>        <span class="o">*</span><span class="p">,</span>
-<a id="__codelineno-0-902" name="__codelineno-0-902"></a>        <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-903" name="__codelineno-0-903"></a>        <span class="n">modality</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-904" name="__codelineno-0-904"></a>        <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-905" name="__codelineno-0-905"></a>        <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-906" name="__codelineno-0-906"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-907" name="__codelineno-0-907"></a><span class="w">        </span><span class="sd">"""</span>
-<a id="__codelineno-0-908" name="__codelineno-0-908"></a><span class="sd">        Update metadata of an existing channel (the supported relabel path).</span>
-<a id="__codelineno-0-909" name="__codelineno-0-909"></a>
-<a id="__codelineno-0-910" name="__codelineno-0-910"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-911" name="__codelineno-0-911"></a><span class="sd">            label: Existing channel label.</span>
-<a id="__codelineno-0-912" name="__codelineno-0-912"></a><span class="sd">            channel_type: New BIDS channel type (validated). When given without an</span>
-<a id="__codelineno-0-913" name="__codelineno-0-913"></a><span class="sd">                explicit ``modality``, the modality is re-derived from it.</span>
-<a id="__codelineno-0-914" name="__codelineno-0-914"></a><span class="sd">            modality: New coarse modality (validated).</span>
-<a id="__codelineno-0-915" name="__codelineno-0-915"></a><span class="sd">            physical_dimension: New physical unit.</span>
-<a id="__codelineno-0-916" name="__codelineno-0-916"></a><span class="sd">            prefilter: New prefilter string.</span>
-<a id="__codelineno-0-917" name="__codelineno-0-917"></a>
-<a id="__codelineno-0-918" name="__codelineno-0-918"></a><span class="sd">        Raises:</span>
-<a id="__codelineno-0-919" name="__codelineno-0-919"></a><span class="sd">            KeyError: If ``label`` is not an existing channel.</span>
-<a id="__codelineno-0-920" name="__codelineno-0-920"></a><span class="sd">            ValueError: If ``channel_type`` or ``modality`` is not in the</span>
-<a id="__codelineno-0-921" name="__codelineno-0-921"></a><span class="sd">                modality vocabulary.</span>
-<a id="__codelineno-0-922" name="__codelineno-0-922"></a><span class="sd">        """</span>
-<a id="__codelineno-0-923" name="__codelineno-0-923"></a>        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
-<a id="__codelineno-0-924" name="__codelineno-0-924"></a>            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Channel not found: </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<a id="__codelineno-0-925" name="__codelineno-0-925"></a>        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
-<a id="__codelineno-0-926" name="__codelineno-0-926"></a>        <span class="k">if</span> <span class="n">channel_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-927" name="__codelineno-0-927"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"channel_type"</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
-<a id="__codelineno-0-928" name="__codelineno-0-928"></a>            <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-929" name="__codelineno-0-929"></a>                <span class="n">info</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span> <span class="o">=</span> <span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">"channel_type"</span><span class="p">])</span>
-<a id="__codelineno-0-930" name="__codelineno-0-930"></a>        <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-931" name="__codelineno-0-931"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
-<a id="__codelineno-0-932" name="__codelineno-0-932"></a>        <span class="k">if</span> <span class="n">physical_dimension</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-933" name="__codelineno-0-933"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"physical_dimension"</span><span class="p">]</span> <span class="o">=</span> <span class="n">physical_dimension</span>
-<a id="__codelineno-0-934" name="__codelineno-0-934"></a>        <span class="k">if</span> <span class="n">prefilter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-935" name="__codelineno-0-935"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"prefilter"</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefilter</span>
-<a id="__codelineno-0-936" name="__codelineno-0-936"></a>
-<a id="__codelineno-0-937" name="__codelineno-0-937"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">onset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-938" name="__codelineno-0-938"></a><span class="w">        </span><span class="sd">"""</span>
-<a id="__codelineno-0-939" name="__codelineno-0-939"></a><span class="sd">        Add an event/annotation to the recording.</span>
-<a id="__codelineno-0-940" name="__codelineno-0-940"></a>
-<a id="__codelineno-0-941" name="__codelineno-0-941"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-942" name="__codelineno-0-942"></a><span class="sd">            onset: Event onset time in seconds.</span>
-<a id="__codelineno-0-943" name="__codelineno-0-943"></a><span class="sd">            duration: Event duration in seconds.</span>
-<a id="__codelineno-0-944" name="__codelineno-0-944"></a><span class="sd">            description: Event description string.</span>
-<a id="__codelineno-0-945" name="__codelineno-0-945"></a><span class="sd">        """</span>
-<a id="__codelineno-0-946" name="__codelineno-0-946"></a>        <span class="n">new_event</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<a id="__codelineno-0-947" name="__codelineno-0-947"></a>            <span class="p">[{</span><span class="s2">"onset"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">onset</span><span class="p">),</span> <span class="s2">"duration"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">),</span> <span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">}]</span>
-<a id="__codelineno-0-948" name="__codelineno-0-948"></a>        <span class="p">)</span>
-<a id="__codelineno-0-949" name="__codelineno-0-949"></a>        <span class="c1"># Avoid concatenating onto the empty, object-dtype events frame, which</span>
-<a id="__codelineno-0-950" name="__codelineno-0-950"></a>        <span class="c1"># would coerce the numeric columns to object. Start from the typed</span>
-<a id="__codelineno-0-951" name="__codelineno-0-951"></a>        <span class="c1"># new_event when there are no existing events.</span>
-<a id="__codelineno-0-952" name="__codelineno-0-952"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-<a id="__codelineno-0-953" name="__codelineno-0-953"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">new_event</span>
-<a id="__codelineno-0-954" name="__codelineno-0-954"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-955" name="__codelineno-0-955"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">new_event</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-956" name="__codelineno-0-956"></a>        <span class="c1"># Sort events by onset time for consistency</span>
-<a id="__codelineno-0-957" name="__codelineno-0-957"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">"onset"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="sd">        tuning knobs (``modality_rates``, ``dtype``, level-0 chunk/shard sizing,</span>
+<a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">        ``view_chunk_columns`` for the view pyramid, ...).</span>
+<a id="__codelineno-0-772" name="__codelineno-0-772"></a>
+<a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">            filepath: Output store path (``.zarr`` appended if missing).</span>
+<a id="__codelineno-0-775" name="__codelineno-0-775"></a><span class="sd">            **kwargs: Forwarded to :meth:`ZarrExporter.export`.</span>
+<a id="__codelineno-0-776" name="__codelineno-0-776"></a>
+<a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="sd">        Returns:</span>
+<a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">            str: The written store path.</span>
+<a id="__codelineno-0-779" name="__codelineno-0-779"></a><span class="sd">        """</span>
+<a id="__codelineno-0-780" name="__codelineno-0-780"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.zarr</span><span class="w"> </span><span class="kn">import</span> <span class="n">ZarrExporter</span>
+<a id="__codelineno-0-781" name="__codelineno-0-781"></a>
+<a id="__codelineno-0-782" name="__codelineno-0-782"></a>        <span class="c1"># The empty-signal guard lives once, in ZarrExporter.export ("No signals</span>
+<a id="__codelineno-0-783" name="__codelineno-0-783"></a>        <span class="c1"># loaded"), matching the tabular path; no duplicate guard here.</span>
+<a id="__codelineno-0-784" name="__codelineno-0-784"></a>        <span class="k">return</span> <span class="n">ZarrExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<a id="__codelineno-0-785" name="__codelineno-0-785"></a>
+<a id="__codelineno-0-786" name="__codelineno-0-786"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-787" name="__codelineno-0-787"></a><span class="w">        </span><span class="sd">"""</span>
+<a id="__codelineno-0-788" name="__codelineno-0-788"></a><span class="sd">        Set metadata value.</span>
+<a id="__codelineno-0-789" name="__codelineno-0-789"></a>
+<a id="__codelineno-0-790" name="__codelineno-0-790"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">            key: Metadata key</span>
+<a id="__codelineno-0-792" name="__codelineno-0-792"></a><span class="sd">            value: Metadata value</span>
+<a id="__codelineno-0-793" name="__codelineno-0-793"></a><span class="sd">        """</span>
+<a id="__codelineno-0-794" name="__codelineno-0-794"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<a id="__codelineno-0-795" name="__codelineno-0-795"></a>
+<a id="__codelineno-0-796" name="__codelineno-0-796"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="w">        </span><span class="sd">"""</span>
+<a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="sd">        Get metadata value.</span>
+<a id="__codelineno-0-799" name="__codelineno-0-799"></a>
+<a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-801" name="__codelineno-0-801"></a><span class="sd">            key: Metadata key</span>
+<a id="__codelineno-0-802" name="__codelineno-0-802"></a>
+<a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">        Returns:</span>
+<a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">            Value associated with the key</span>
+<a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="sd">        """</span>
+<a id="__codelineno-0-806" name="__codelineno-0-806"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+<a id="__codelineno-0-807" name="__codelineno-0-807"></a>
+<a id="__codelineno-0-808" name="__codelineno-0-808"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">has_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<a id="__codelineno-0-809" name="__codelineno-0-809"></a><span class="w">        </span><span class="sd">"""Return True if ``key`` is present in the recording metadata."""</span>
+<a id="__codelineno-0-810" name="__codelineno-0-810"></a>        <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span>
+<a id="__codelineno-0-811" name="__codelineno-0-811"></a>
+<a id="__codelineno-0-812" name="__codelineno-0-812"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<a id="__codelineno-0-813" name="__codelineno-0-813"></a><span class="w">        </span><span class="sd">"""Number of channels in the recording."""</span>
+<a id="__codelineno-0-814" name="__codelineno-0-814"></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+<a id="__codelineno-0-815" name="__codelineno-0-815"></a>
+<a id="__codelineno-0-816" name="__codelineno-0-816"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_n_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<a id="__codelineno-0-817" name="__codelineno-0-817"></a><span class="w">        </span><span class="sd">"""Number of time samples per channel (0 if no signals are loaded)."""</span>
+<a id="__codelineno-0-818" name="__codelineno-0-818"></a>        <span class="k">return</span> <span class="mi">0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span>
+<a id="__codelineno-0-819" name="__codelineno-0-819"></a>
+<a id="__codelineno-0-820" name="__codelineno-0-820"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_sampling_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-0-821" name="__codelineno-0-821"></a><span class="w">        </span><span class="sd">"""Sampling frequency in Hz, when all channels share a single rate.</span>
+<a id="__codelineno-0-822" name="__codelineno-0-822"></a>
+<a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">        Raises:</span>
+<a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="sd">            ValueError: if no channels are loaded, or channels have differing</span>
+<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">                sampling frequencies; for a mixed-rate recording read</span>
+<a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">                ``channels[ch]["sample_frequency"]`` per channel instead.</span>
+<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">        """</span>
+<a id="__codelineno-0-828" name="__codelineno-0-828"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
+<a id="__codelineno-0-829" name="__codelineno-0-829"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No channels loaded"</span><span class="p">)</span>
+<a id="__codelineno-0-830" name="__codelineno-0-830"></a>        <span class="n">rates</span> <span class="o">=</span> <span class="p">{</span><span class="n">info</span><span class="p">[</span><span class="s2">"sample_frequency"</span><span class="p">]</span> <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
+<a id="__codelineno-0-831" name="__codelineno-0-831"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rates</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+<a id="__codelineno-0-832" name="__codelineno-0-832"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-833" name="__codelineno-0-833"></a>                <span class="s2">"Channels have differing sampling frequencies; read "</span>
+<a id="__codelineno-0-834" name="__codelineno-0-834"></a>                <span class="s2">"channels[ch]['sample_frequency'] per channel instead."</span>
+<a id="__codelineno-0-835" name="__codelineno-0-835"></a>            <span class="p">)</span>
+<a id="__codelineno-0-836" name="__codelineno-0-836"></a>        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">rates</span><span class="p">)))</span>
+<a id="__codelineno-0-837" name="__codelineno-0-837"></a>
+<a id="__codelineno-0-838" name="__codelineno-0-838"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_duration</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-0-839" name="__codelineno-0-839"></a><span class="w">        </span><span class="sd">"""Total recording duration in seconds (n_samples / sampling_frequency).</span>
+<a id="__codelineno-0-840" name="__codelineno-0-840"></a>
+<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">        Computed from the time index spacing, so it is the full window length</span>
+<a id="__codelineno-0-842" name="__codelineno-0-842"></a><span class="sd">        (one sample period longer than the last sample's timestamp). Returns 0.0</span>
+<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">        when fewer than two samples are loaded (a single sample has no inferable</span>
+<a id="__codelineno-0-844" name="__codelineno-0-844"></a><span class="sd">        sample period).</span>
+<a id="__codelineno-0-845" name="__codelineno-0-845"></a><span class="sd">        """</span>
+<a id="__codelineno-0-846" name="__codelineno-0-846"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+<a id="__codelineno-0-847" name="__codelineno-0-847"></a>            <span class="k">return</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-848" name="__codelineno-0-848"></a>        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">index</span>
+<a id="__codelineno-0-849" name="__codelineno-0-849"></a>        <span class="n">sample_period</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-850" name="__codelineno-0-850"></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">*</span> <span class="n">sample_period</span>
+<a id="__codelineno-0-851" name="__codelineno-0-851"></a>
+<a id="__codelineno-0-852" name="__codelineno-0-852"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
+<a id="__codelineno-0-853" name="__codelineno-0-853"></a>        <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-854" name="__codelineno-0-854"></a>        <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-855" name="__codelineno-0-855"></a>        <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<a id="__codelineno-0-856" name="__codelineno-0-856"></a>        <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-857" name="__codelineno-0-857"></a>        <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-858" name="__codelineno-0-858"></a>        <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-859" name="__codelineno-0-859"></a>        <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-860" name="__codelineno-0-860"></a>        <span class="n">modality</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-861" name="__codelineno-0-861"></a>        <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"n/a"</span><span class="p">,</span>
+<a id="__codelineno-0-862" name="__codelineno-0-862"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-863" name="__codelineno-0-863"></a><span class="w">        </span><span class="sd">"""</span>
+<a id="__codelineno-0-864" name="__codelineno-0-864"></a><span class="sd">        Add a new channel to the recording.</span>
+<a id="__codelineno-0-865" name="__codelineno-0-865"></a>
+<a id="__codelineno-0-866" name="__codelineno-0-866"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-867" name="__codelineno-0-867"></a><span class="sd">            label: Channel label or name (as per EDF specification)</span>
+<a id="__codelineno-0-868" name="__codelineno-0-868"></a><span class="sd">            data: Channel data</span>
+<a id="__codelineno-0-869" name="__codelineno-0-869"></a><span class="sd">            sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
+<a id="__codelineno-0-870" name="__codelineno-0-870"></a><span class="sd">            physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
+<a id="__codelineno-0-871" name="__codelineno-0-871"></a><span class="sd">            channel_type: BIDS channel type ('EEG', 'EMG', 'ECG', 'ACC', 'SEEG', ...).</span>
+<a id="__codelineno-0-872" name="__codelineno-0-872"></a><span class="sd">                Required; validated against the modality vocabulary. There is no</span>
+<a id="__codelineno-0-873" name="__codelineno-0-873"></a><span class="sd">                default (a missing type must be explicit, e.g. 'OTHER'/'MISC').</span>
+<a id="__codelineno-0-874" name="__codelineno-0-874"></a><span class="sd">            modality: Coarse modality ('EEG', 'EMG', 'IEEG', 'MEG', 'BEH', 'MISC').</span>
+<a id="__codelineno-0-875" name="__codelineno-0-875"></a><span class="sd">                If None, it is inferred from ``channel_type``.</span>
+<a id="__codelineno-0-876" name="__codelineno-0-876"></a><span class="sd">            prefilter: Pre-filtering applied to the channel (keyword-only).</span>
+<a id="__codelineno-0-877" name="__codelineno-0-877"></a><span class="sd">        """</span>
+<a id="__codelineno-0-878" name="__codelineno-0-878"></a>        <span class="n">canonical_type</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
+<a id="__codelineno-0-879" name="__codelineno-0-879"></a>        <span class="n">canonical_modality</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-0-880" name="__codelineno-0-880"></a>            <span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">canonical_type</span><span class="p">)</span>
+<a id="__codelineno-0-881" name="__codelineno-0-881"></a>            <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="kc">None</span>
+<a id="__codelineno-0-882" name="__codelineno-0-882"></a>            <span class="k">else</span> <span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
+<a id="__codelineno-0-883" name="__codelineno-0-883"></a>        <span class="p">)</span>
+<a id="__codelineno-0-884" name="__codelineno-0-884"></a>
+<a id="__codelineno-0-885" name="__codelineno-0-885"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-886" name="__codelineno-0-886"></a>            <span class="c1"># Create DataFrame with time index</span>
+<a id="__codelineno-0-887" name="__codelineno-0-887"></a>            <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
+<a id="__codelineno-0-888" name="__codelineno-0-888"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
+<a id="__codelineno-0-889" name="__codelineno-0-889"></a>
+<a id="__codelineno-0-890" name="__codelineno-0-890"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+<a id="__codelineno-0-891" name="__codelineno-0-891"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-892" name="__codelineno-0-892"></a>            <span class="s2">"sample_frequency"</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
+<a id="__codelineno-0-893" name="__codelineno-0-893"></a>            <span class="s2">"physical_dimension"</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
+<a id="__codelineno-0-894" name="__codelineno-0-894"></a>            <span class="s2">"prefilter"</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
+<a id="__codelineno-0-895" name="__codelineno-0-895"></a>            <span class="s2">"channel_type"</span><span class="p">:</span> <span class="n">canonical_type</span><span class="p">,</span>
+<a id="__codelineno-0-896" name="__codelineno-0-896"></a>            <span class="s2">"modality"</span><span class="p">:</span> <span class="n">canonical_modality</span><span class="p">,</span>
+<a id="__codelineno-0-897" name="__codelineno-0-897"></a>        <span class="p">}</span>
+<a id="__codelineno-0-898" name="__codelineno-0-898"></a>
+<a id="__codelineno-0-899" name="__codelineno-0-899"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_channel</span><span class="p">(</span>
+<a id="__codelineno-0-900" name="__codelineno-0-900"></a>        <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-901" name="__codelineno-0-901"></a>        <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-902" name="__codelineno-0-902"></a>        <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-903" name="__codelineno-0-903"></a>        <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-904" name="__codelineno-0-904"></a>        <span class="n">modality</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-905" name="__codelineno-0-905"></a>        <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-906" name="__codelineno-0-906"></a>        <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-907" name="__codelineno-0-907"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-908" name="__codelineno-0-908"></a><span class="w">        </span><span class="sd">"""</span>
+<a id="__codelineno-0-909" name="__codelineno-0-909"></a><span class="sd">        Update metadata of an existing channel (the supported relabel path).</span>
+<a id="__codelineno-0-910" name="__codelineno-0-910"></a>
+<a id="__codelineno-0-911" name="__codelineno-0-911"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-912" name="__codelineno-0-912"></a><span class="sd">            label: Existing channel label.</span>
+<a id="__codelineno-0-913" name="__codelineno-0-913"></a><span class="sd">            channel_type: New BIDS channel type (validated). When given without an</span>
+<a id="__codelineno-0-914" name="__codelineno-0-914"></a><span class="sd">                explicit ``modality``, the modality is re-derived from it.</span>
+<a id="__codelineno-0-915" name="__codelineno-0-915"></a><span class="sd">            modality: New coarse modality (validated).</span>
+<a id="__codelineno-0-916" name="__codelineno-0-916"></a><span class="sd">            physical_dimension: New physical unit.</span>
+<a id="__codelineno-0-917" name="__codelineno-0-917"></a><span class="sd">            prefilter: New prefilter string.</span>
+<a id="__codelineno-0-918" name="__codelineno-0-918"></a>
+<a id="__codelineno-0-919" name="__codelineno-0-919"></a><span class="sd">        Raises:</span>
+<a id="__codelineno-0-920" name="__codelineno-0-920"></a><span class="sd">            KeyError: If ``label`` is not an existing channel.</span>
+<a id="__codelineno-0-921" name="__codelineno-0-921"></a><span class="sd">            ValueError: If ``channel_type`` or ``modality`` is not in the</span>
+<a id="__codelineno-0-922" name="__codelineno-0-922"></a><span class="sd">                modality vocabulary.</span>
+<a id="__codelineno-0-923" name="__codelineno-0-923"></a><span class="sd">        """</span>
+<a id="__codelineno-0-924" name="__codelineno-0-924"></a>        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
+<a id="__codelineno-0-925" name="__codelineno-0-925"></a>            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Channel not found: </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-0-926" name="__codelineno-0-926"></a>        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+<a id="__codelineno-0-927" name="__codelineno-0-927"></a>        <span class="k">if</span> <span class="n">channel_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-928" name="__codelineno-0-928"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"channel_type"</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
+<a id="__codelineno-0-929" name="__codelineno-0-929"></a>            <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-930" name="__codelineno-0-930"></a>                <span class="n">info</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span> <span class="o">=</span> <span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">"channel_type"</span><span class="p">])</span>
+<a id="__codelineno-0-931" name="__codelineno-0-931"></a>        <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-932" name="__codelineno-0-932"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
+<a id="__codelineno-0-933" name="__codelineno-0-933"></a>        <span class="k">if</span> <span class="n">physical_dimension</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-934" name="__codelineno-0-934"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"physical_dimension"</span><span class="p">]</span> <span class="o">=</span> <span class="n">physical_dimension</span>
+<a id="__codelineno-0-935" name="__codelineno-0-935"></a>        <span class="k">if</span> <span class="n">prefilter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-936" name="__codelineno-0-936"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"prefilter"</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefilter</span>
+<a id="__codelineno-0-937" name="__codelineno-0-937"></a>
+<a id="__codelineno-0-938" name="__codelineno-0-938"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">onset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-939" name="__codelineno-0-939"></a><span class="w">        </span><span class="sd">"""</span>
+<a id="__codelineno-0-940" name="__codelineno-0-940"></a><span class="sd">        Add an event/annotation to the recording.</span>
+<a id="__codelineno-0-941" name="__codelineno-0-941"></a>
+<a id="__codelineno-0-942" name="__codelineno-0-942"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-943" name="__codelineno-0-943"></a><span class="sd">            onset: Event onset time in seconds.</span>
+<a id="__codelineno-0-944" name="__codelineno-0-944"></a><span class="sd">            duration: Event duration in seconds.</span>
+<a id="__codelineno-0-945" name="__codelineno-0-945"></a><span class="sd">            description: Event description string.</span>
+<a id="__codelineno-0-946" name="__codelineno-0-946"></a><span class="sd">        """</span>
+<a id="__codelineno-0-947" name="__codelineno-0-947"></a>        <span class="n">new_event</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+<a id="__codelineno-0-948" name="__codelineno-0-948"></a>            <span class="p">[{</span><span class="s2">"onset"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">onset</span><span class="p">),</span> <span class="s2">"duration"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">),</span> <span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">}]</span>
+<a id="__codelineno-0-949" name="__codelineno-0-949"></a>        <span class="p">)</span>
+<a id="__codelineno-0-950" name="__codelineno-0-950"></a>        <span class="c1"># Avoid concatenating onto the empty, object-dtype events frame, which</span>
+<a id="__codelineno-0-951" name="__codelineno-0-951"></a>        <span class="c1"># would coerce the numeric columns to object. Start from the typed</span>
+<a id="__codelineno-0-952" name="__codelineno-0-952"></a>        <span class="c1"># new_event when there are no existing events.</span>
+<a id="__codelineno-0-953" name="__codelineno-0-953"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+<a id="__codelineno-0-954" name="__codelineno-0-954"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">new_event</span>
+<a id="__codelineno-0-955" name="__codelineno-0-955"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-956" name="__codelineno-0-956"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">new_event</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-957" name="__codelineno-0-957"></a>        <span class="c1"># Sort events by onset time for consistency</span>
+<a id="__codelineno-0-958" name="__codelineno-0-958"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">"onset"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -7229,8 +7231,7 @@ imported from any supported format.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-851">851</a></span>
-<span class="normal"><a href="#__codelineno-0-852">852</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-852">852</a></span>
 <span class="normal"><a href="#__codelineno-0-853">853</a></span>
 <span class="normal"><a href="#__codelineno-0-854">854</a></span>
 <span class="normal"><a href="#__codelineno-0-855">855</a></span>
@@ -7274,52 +7275,53 @@ imported from any supported format.</p>
 <span class="normal"><a href="#__codelineno-0-893">893</a></span>
 <span class="normal"><a href="#__codelineno-0-894">894</a></span>
 <span class="normal"><a href="#__codelineno-0-895">895</a></span>
-<span class="normal"><a href="#__codelineno-0-896">896</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-851" name="__codelineno-0-851"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
-<a id="__codelineno-0-852" name="__codelineno-0-852"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-853" name="__codelineno-0-853"></a>    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-0-854" name="__codelineno-0-854"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-<a id="__codelineno-0-855" name="__codelineno-0-855"></a>    <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<a id="__codelineno-0-856" name="__codelineno-0-856"></a>    <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-0-857" name="__codelineno-0-857"></a>    <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-0-858" name="__codelineno-0-858"></a>    <span class="o">*</span><span class="p">,</span>
-<a id="__codelineno-0-859" name="__codelineno-0-859"></a>    <span class="n">modality</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-860" name="__codelineno-0-860"></a>    <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"n/a"</span><span class="p">,</span>
-<a id="__codelineno-0-861" name="__codelineno-0-861"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-862" name="__codelineno-0-862"></a><span class="w">    </span><span class="sd">"""</span>
-<a id="__codelineno-0-863" name="__codelineno-0-863"></a><span class="sd">    Add a new channel to the recording.</span>
-<a id="__codelineno-0-864" name="__codelineno-0-864"></a>
-<a id="__codelineno-0-865" name="__codelineno-0-865"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-866" name="__codelineno-0-866"></a><span class="sd">        label: Channel label or name (as per EDF specification)</span>
-<a id="__codelineno-0-867" name="__codelineno-0-867"></a><span class="sd">        data: Channel data</span>
-<a id="__codelineno-0-868" name="__codelineno-0-868"></a><span class="sd">        sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
-<a id="__codelineno-0-869" name="__codelineno-0-869"></a><span class="sd">        physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
-<a id="__codelineno-0-870" name="__codelineno-0-870"></a><span class="sd">        channel_type: BIDS channel type ('EEG', 'EMG', 'ECG', 'ACC', 'SEEG', ...).</span>
-<a id="__codelineno-0-871" name="__codelineno-0-871"></a><span class="sd">            Required; validated against the modality vocabulary. There is no</span>
-<a id="__codelineno-0-872" name="__codelineno-0-872"></a><span class="sd">            default (a missing type must be explicit, e.g. 'OTHER'/'MISC').</span>
-<a id="__codelineno-0-873" name="__codelineno-0-873"></a><span class="sd">        modality: Coarse modality ('EEG', 'EMG', 'IEEG', 'MEG', 'BEH', 'MISC').</span>
-<a id="__codelineno-0-874" name="__codelineno-0-874"></a><span class="sd">            If None, it is inferred from ``channel_type``.</span>
-<a id="__codelineno-0-875" name="__codelineno-0-875"></a><span class="sd">        prefilter: Pre-filtering applied to the channel (keyword-only).</span>
-<a id="__codelineno-0-876" name="__codelineno-0-876"></a><span class="sd">    """</span>
-<a id="__codelineno-0-877" name="__codelineno-0-877"></a>    <span class="n">canonical_type</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
-<a id="__codelineno-0-878" name="__codelineno-0-878"></a>    <span class="n">canonical_modality</span> <span class="o">=</span> <span class="p">(</span>
-<a id="__codelineno-0-879" name="__codelineno-0-879"></a>        <span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">canonical_type</span><span class="p">)</span>
-<a id="__codelineno-0-880" name="__codelineno-0-880"></a>        <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="kc">None</span>
-<a id="__codelineno-0-881" name="__codelineno-0-881"></a>        <span class="k">else</span> <span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
-<a id="__codelineno-0-882" name="__codelineno-0-882"></a>    <span class="p">)</span>
-<a id="__codelineno-0-883" name="__codelineno-0-883"></a>
-<a id="__codelineno-0-884" name="__codelineno-0-884"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-885" name="__codelineno-0-885"></a>        <span class="c1"># Create DataFrame with time index</span>
-<a id="__codelineno-0-886" name="__codelineno-0-886"></a>        <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
-<a id="__codelineno-0-887" name="__codelineno-0-887"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
-<a id="__codelineno-0-888" name="__codelineno-0-888"></a>
-<a id="__codelineno-0-889" name="__codelineno-0-889"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
-<a id="__codelineno-0-890" name="__codelineno-0-890"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-891" name="__codelineno-0-891"></a>        <span class="s2">"sample_frequency"</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
-<a id="__codelineno-0-892" name="__codelineno-0-892"></a>        <span class="s2">"physical_dimension"</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
-<a id="__codelineno-0-893" name="__codelineno-0-893"></a>        <span class="s2">"prefilter"</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
-<a id="__codelineno-0-894" name="__codelineno-0-894"></a>        <span class="s2">"channel_type"</span><span class="p">:</span> <span class="n">canonical_type</span><span class="p">,</span>
-<a id="__codelineno-0-895" name="__codelineno-0-895"></a>        <span class="s2">"modality"</span><span class="p">:</span> <span class="n">canonical_modality</span><span class="p">,</span>
-<a id="__codelineno-0-896" name="__codelineno-0-896"></a>    <span class="p">}</span>
+<span class="normal"><a href="#__codelineno-0-896">896</a></span>
+<span class="normal"><a href="#__codelineno-0-897">897</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-852" name="__codelineno-0-852"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_channel</span><span class="p">(</span>
+<a id="__codelineno-0-853" name="__codelineno-0-853"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-854" name="__codelineno-0-854"></a>    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-855" name="__codelineno-0-855"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<a id="__codelineno-0-856" name="__codelineno-0-856"></a>    <span class="n">sample_frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-857" name="__codelineno-0-857"></a>    <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-858" name="__codelineno-0-858"></a>    <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-859" name="__codelineno-0-859"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-860" name="__codelineno-0-860"></a>    <span class="n">modality</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-861" name="__codelineno-0-861"></a>    <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"n/a"</span><span class="p">,</span>
+<a id="__codelineno-0-862" name="__codelineno-0-862"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-863" name="__codelineno-0-863"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-864" name="__codelineno-0-864"></a><span class="sd">    Add a new channel to the recording.</span>
+<a id="__codelineno-0-865" name="__codelineno-0-865"></a>
+<a id="__codelineno-0-866" name="__codelineno-0-866"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-867" name="__codelineno-0-867"></a><span class="sd">        label: Channel label or name (as per EDF specification)</span>
+<a id="__codelineno-0-868" name="__codelineno-0-868"></a><span class="sd">        data: Channel data</span>
+<a id="__codelineno-0-869" name="__codelineno-0-869"></a><span class="sd">        sample_frequency: Sampling frequency in Hz (as per EDF specification)</span>
+<a id="__codelineno-0-870" name="__codelineno-0-870"></a><span class="sd">        physical_dimension: Physical dimension/unit of measurement (as per EDF specification)</span>
+<a id="__codelineno-0-871" name="__codelineno-0-871"></a><span class="sd">        channel_type: BIDS channel type ('EEG', 'EMG', 'ECG', 'ACC', 'SEEG', ...).</span>
+<a id="__codelineno-0-872" name="__codelineno-0-872"></a><span class="sd">            Required; validated against the modality vocabulary. There is no</span>
+<a id="__codelineno-0-873" name="__codelineno-0-873"></a><span class="sd">            default (a missing type must be explicit, e.g. 'OTHER'/'MISC').</span>
+<a id="__codelineno-0-874" name="__codelineno-0-874"></a><span class="sd">        modality: Coarse modality ('EEG', 'EMG', 'IEEG', 'MEG', 'BEH', 'MISC').</span>
+<a id="__codelineno-0-875" name="__codelineno-0-875"></a><span class="sd">            If None, it is inferred from ``channel_type``.</span>
+<a id="__codelineno-0-876" name="__codelineno-0-876"></a><span class="sd">        prefilter: Pre-filtering applied to the channel (keyword-only).</span>
+<a id="__codelineno-0-877" name="__codelineno-0-877"></a><span class="sd">    """</span>
+<a id="__codelineno-0-878" name="__codelineno-0-878"></a>    <span class="n">canonical_type</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
+<a id="__codelineno-0-879" name="__codelineno-0-879"></a>    <span class="n">canonical_modality</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-0-880" name="__codelineno-0-880"></a>        <span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">canonical_type</span><span class="p">)</span>
+<a id="__codelineno-0-881" name="__codelineno-0-881"></a>        <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="kc">None</span>
+<a id="__codelineno-0-882" name="__codelineno-0-882"></a>        <span class="k">else</span> <span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
+<a id="__codelineno-0-883" name="__codelineno-0-883"></a>    <span class="p">)</span>
+<a id="__codelineno-0-884" name="__codelineno-0-884"></a>
+<a id="__codelineno-0-885" name="__codelineno-0-885"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-886" name="__codelineno-0-886"></a>        <span class="c1"># Create DataFrame with time index</span>
+<a id="__codelineno-0-887" name="__codelineno-0-887"></a>        <span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> <span class="o">/</span> <span class="n">sample_frequency</span>
+<a id="__codelineno-0-888" name="__codelineno-0-888"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">time</span><span class="p">)</span>
+<a id="__codelineno-0-889" name="__codelineno-0-889"></a>
+<a id="__codelineno-0-890" name="__codelineno-0-890"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+<a id="__codelineno-0-891" name="__codelineno-0-891"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-892" name="__codelineno-0-892"></a>        <span class="s2">"sample_frequency"</span><span class="p">:</span> <span class="n">sample_frequency</span><span class="p">,</span>
+<a id="__codelineno-0-893" name="__codelineno-0-893"></a>        <span class="s2">"physical_dimension"</span><span class="p">:</span> <span class="n">physical_dimension</span><span class="p">,</span>
+<a id="__codelineno-0-894" name="__codelineno-0-894"></a>        <span class="s2">"prefilter"</span><span class="p">:</span> <span class="n">prefilter</span><span class="p">,</span>
+<a id="__codelineno-0-895" name="__codelineno-0-895"></a>        <span class="s2">"channel_type"</span><span class="p">:</span> <span class="n">canonical_type</span><span class="p">,</span>
+<a id="__codelineno-0-896" name="__codelineno-0-896"></a>        <span class="s2">"modality"</span><span class="p">:</span> <span class="n">canonical_modality</span><span class="p">,</span>
+<a id="__codelineno-0-897" name="__codelineno-0-897"></a>    <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -7346,8 +7348,7 @@ imported from any supported format.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-937">937</a></span>
-<span class="normal"><a href="#__codelineno-0-938">938</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-938">938</a></span>
 <span class="normal"><a href="#__codelineno-0-939">939</a></span>
 <span class="normal"><a href="#__codelineno-0-940">940</a></span>
 <span class="normal"><a href="#__codelineno-0-941">941</a></span>
@@ -7366,27 +7367,28 @@ imported from any supported format.</p>
 <span class="normal"><a href="#__codelineno-0-954">954</a></span>
 <span class="normal"><a href="#__codelineno-0-955">955</a></span>
 <span class="normal"><a href="#__codelineno-0-956">956</a></span>
-<span class="normal"><a href="#__codelineno-0-957">957</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-937" name="__codelineno-0-937"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">onset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-938" name="__codelineno-0-938"></a><span class="w">    </span><span class="sd">"""</span>
-<a id="__codelineno-0-939" name="__codelineno-0-939"></a><span class="sd">    Add an event/annotation to the recording.</span>
-<a id="__codelineno-0-940" name="__codelineno-0-940"></a>
-<a id="__codelineno-0-941" name="__codelineno-0-941"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-942" name="__codelineno-0-942"></a><span class="sd">        onset: Event onset time in seconds.</span>
-<a id="__codelineno-0-943" name="__codelineno-0-943"></a><span class="sd">        duration: Event duration in seconds.</span>
-<a id="__codelineno-0-944" name="__codelineno-0-944"></a><span class="sd">        description: Event description string.</span>
-<a id="__codelineno-0-945" name="__codelineno-0-945"></a><span class="sd">    """</span>
-<a id="__codelineno-0-946" name="__codelineno-0-946"></a>    <span class="n">new_event</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<a id="__codelineno-0-947" name="__codelineno-0-947"></a>        <span class="p">[{</span><span class="s2">"onset"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">onset</span><span class="p">),</span> <span class="s2">"duration"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">),</span> <span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">}]</span>
-<a id="__codelineno-0-948" name="__codelineno-0-948"></a>    <span class="p">)</span>
-<a id="__codelineno-0-949" name="__codelineno-0-949"></a>    <span class="c1"># Avoid concatenating onto the empty, object-dtype events frame, which</span>
-<a id="__codelineno-0-950" name="__codelineno-0-950"></a>    <span class="c1"># would coerce the numeric columns to object. Start from the typed</span>
-<a id="__codelineno-0-951" name="__codelineno-0-951"></a>    <span class="c1"># new_event when there are no existing events.</span>
-<a id="__codelineno-0-952" name="__codelineno-0-952"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-<a id="__codelineno-0-953" name="__codelineno-0-953"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">new_event</span>
-<a id="__codelineno-0-954" name="__codelineno-0-954"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-955" name="__codelineno-0-955"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">new_event</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-956" name="__codelineno-0-956"></a>    <span class="c1"># Sort events by onset time for consistency</span>
-<a id="__codelineno-0-957" name="__codelineno-0-957"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">"onset"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-957">957</a></span>
+<span class="normal"><a href="#__codelineno-0-958">958</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-938" name="__codelineno-0-938"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">onset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-939" name="__codelineno-0-939"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-940" name="__codelineno-0-940"></a><span class="sd">    Add an event/annotation to the recording.</span>
+<a id="__codelineno-0-941" name="__codelineno-0-941"></a>
+<a id="__codelineno-0-942" name="__codelineno-0-942"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-943" name="__codelineno-0-943"></a><span class="sd">        onset: Event onset time in seconds.</span>
+<a id="__codelineno-0-944" name="__codelineno-0-944"></a><span class="sd">        duration: Event duration in seconds.</span>
+<a id="__codelineno-0-945" name="__codelineno-0-945"></a><span class="sd">        description: Event description string.</span>
+<a id="__codelineno-0-946" name="__codelineno-0-946"></a><span class="sd">    """</span>
+<a id="__codelineno-0-947" name="__codelineno-0-947"></a>    <span class="n">new_event</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+<a id="__codelineno-0-948" name="__codelineno-0-948"></a>        <span class="p">[{</span><span class="s2">"onset"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">onset</span><span class="p">),</span> <span class="s2">"duration"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">),</span> <span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">}]</span>
+<a id="__codelineno-0-949" name="__codelineno-0-949"></a>    <span class="p">)</span>
+<a id="__codelineno-0-950" name="__codelineno-0-950"></a>    <span class="c1"># Avoid concatenating onto the empty, object-dtype events frame, which</span>
+<a id="__codelineno-0-951" name="__codelineno-0-951"></a>    <span class="c1"># would coerce the numeric columns to object. Start from the typed</span>
+<a id="__codelineno-0-952" name="__codelineno-0-952"></a>    <span class="c1"># new_event when there are no existing events.</span>
+<a id="__codelineno-0-953" name="__codelineno-0-953"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+<a id="__codelineno-0-954" name="__codelineno-0-954"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">new_event</span>
+<a id="__codelineno-0-955" name="__codelineno-0-955"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-956" name="__codelineno-0-956"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="n">new_event</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-957" name="__codelineno-0-957"></a>    <span class="c1"># Sort events by onset time for consistency</span>
+<a id="__codelineno-0-958" name="__codelineno-0-958"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">"onset"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -7884,8 +7886,7 @@ sample period).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-837">837</a></span>
-<span class="normal"><a href="#__codelineno-0-838">838</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-838">838</a></span>
 <span class="normal"><a href="#__codelineno-0-839">839</a></span>
 <span class="normal"><a href="#__codelineno-0-840">840</a></span>
 <span class="normal"><a href="#__codelineno-0-841">841</a></span>
@@ -7896,19 +7897,20 @@ sample period).</p>
 <span class="normal"><a href="#__codelineno-0-846">846</a></span>
 <span class="normal"><a href="#__codelineno-0-847">847</a></span>
 <span class="normal"><a href="#__codelineno-0-848">848</a></span>
-<span class="normal"><a href="#__codelineno-0-849">849</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-837" name="__codelineno-0-837"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_duration</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="w">    </span><span class="sd">"""Total recording duration in seconds (n_samples / sampling_frequency).</span>
-<a id="__codelineno-0-839" name="__codelineno-0-839"></a>
-<a id="__codelineno-0-840" name="__codelineno-0-840"></a><span class="sd">    Computed from the time index spacing, so it is the full window length</span>
-<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">    (one sample period longer than the last sample's timestamp). Returns 0.0</span>
-<a id="__codelineno-0-842" name="__codelineno-0-842"></a><span class="sd">    when fewer than two samples are loaded (a single sample has no inferable</span>
-<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">    sample period).</span>
-<a id="__codelineno-0-844" name="__codelineno-0-844"></a><span class="sd">    """</span>
-<a id="__codelineno-0-845" name="__codelineno-0-845"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-<a id="__codelineno-0-846" name="__codelineno-0-846"></a>        <span class="k">return</span> <span class="mf">0.0</span>
-<a id="__codelineno-0-847" name="__codelineno-0-847"></a>    <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">index</span>
-<a id="__codelineno-0-848" name="__codelineno-0-848"></a>    <span class="n">sample_period</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-0-849" name="__codelineno-0-849"></a>    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">*</span> <span class="n">sample_period</span>
+<span class="normal"><a href="#__codelineno-0-849">849</a></span>
+<span class="normal"><a href="#__codelineno-0-850">850</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_duration</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-0-839" name="__codelineno-0-839"></a><span class="w">    </span><span class="sd">"""Total recording duration in seconds (n_samples / sampling_frequency).</span>
+<a id="__codelineno-0-840" name="__codelineno-0-840"></a>
+<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">    Computed from the time index spacing, so it is the full window length</span>
+<a id="__codelineno-0-842" name="__codelineno-0-842"></a><span class="sd">    (one sample period longer than the last sample's timestamp). Returns 0.0</span>
+<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">    when fewer than two samples are loaded (a single sample has no inferable</span>
+<a id="__codelineno-0-844" name="__codelineno-0-844"></a><span class="sd">    sample period).</span>
+<a id="__codelineno-0-845" name="__codelineno-0-845"></a><span class="sd">    """</span>
+<a id="__codelineno-0-846" name="__codelineno-0-846"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+<a id="__codelineno-0-847" name="__codelineno-0-847"></a>        <span class="k">return</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-848" name="__codelineno-0-848"></a>    <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="o">.</span><span class="n">index</span>
+<a id="__codelineno-0-849" name="__codelineno-0-849"></a>    <span class="n">sample_period</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-850" name="__codelineno-0-850"></a>    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">*</span> <span class="n">sample_period</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -7935,8 +7937,7 @@ sample period).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-795">795</a></span>
-<span class="normal"><a href="#__codelineno-0-796">796</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-796">796</a></span>
 <span class="normal"><a href="#__codelineno-0-797">797</a></span>
 <span class="normal"><a href="#__codelineno-0-798">798</a></span>
 <span class="normal"><a href="#__codelineno-0-799">799</a></span>
@@ -7945,17 +7946,18 @@ sample period).</p>
 <span class="normal"><a href="#__codelineno-0-802">802</a></span>
 <span class="normal"><a href="#__codelineno-0-803">803</a></span>
 <span class="normal"><a href="#__codelineno-0-804">804</a></span>
-<span class="normal"><a href="#__codelineno-0-805">805</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-795" name="__codelineno-0-795"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<a id="__codelineno-0-796" name="__codelineno-0-796"></a><span class="w">    </span><span class="sd">"""</span>
-<a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="sd">    Get metadata value.</span>
-<a id="__codelineno-0-798" name="__codelineno-0-798"></a>
-<a id="__codelineno-0-799" name="__codelineno-0-799"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">        key: Metadata key</span>
-<a id="__codelineno-0-801" name="__codelineno-0-801"></a>
-<a id="__codelineno-0-802" name="__codelineno-0-802"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">        Value associated with the key</span>
-<a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">    """</span>
-<a id="__codelineno-0-805" name="__codelineno-0-805"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-805">805</a></span>
+<span class="normal"><a href="#__codelineno-0-806">806</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-796" name="__codelineno-0-796"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="sd">    Get metadata value.</span>
+<a id="__codelineno-0-799" name="__codelineno-0-799"></a>
+<a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-801" name="__codelineno-0-801"></a><span class="sd">        key: Metadata key</span>
+<a id="__codelineno-0-802" name="__codelineno-0-802"></a>
+<a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">        Value associated with the key</span>
+<a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="sd">    """</span>
+<a id="__codelineno-0-806" name="__codelineno-0-806"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -8021,11 +8023,11 @@ sample period).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-811">811</a></span>
-<span class="normal"><a href="#__codelineno-0-812">812</a></span>
-<span class="normal"><a href="#__codelineno-0-813">813</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-811" name="__codelineno-0-811"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_n_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<a id="__codelineno-0-812" name="__codelineno-0-812"></a><span class="w">    </span><span class="sd">"""Number of channels in the recording."""</span>
-<a id="__codelineno-0-813" name="__codelineno-0-813"></a>    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-812">812</a></span>
+<span class="normal"><a href="#__codelineno-0-813">813</a></span>
+<span class="normal"><a href="#__codelineno-0-814">814</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-812" name="__codelineno-0-812"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_n_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<a id="__codelineno-0-813" name="__codelineno-0-813"></a><span class="w">    </span><span class="sd">"""Number of channels in the recording."""</span>
+<a id="__codelineno-0-814" name="__codelineno-0-814"></a>    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -8048,11 +8050,11 @@ sample period).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-815">815</a></span>
-<span class="normal"><a href="#__codelineno-0-816">816</a></span>
-<span class="normal"><a href="#__codelineno-0-817">817</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-815" name="__codelineno-0-815"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_n_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<a id="__codelineno-0-816" name="__codelineno-0-816"></a><span class="w">    </span><span class="sd">"""Number of time samples per channel (0 if no signals are loaded)."""</span>
-<a id="__codelineno-0-817" name="__codelineno-0-817"></a>    <span class="k">return</span> <span class="mi">0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-816">816</a></span>
+<span class="normal"><a href="#__codelineno-0-817">817</a></span>
+<span class="normal"><a href="#__codelineno-0-818">818</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-816" name="__codelineno-0-816"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_n_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<a id="__codelineno-0-817" name="__codelineno-0-817"></a><span class="w">    </span><span class="sd">"""Number of time samples per channel (0 if no signals are loaded)."""</span>
+<a id="__codelineno-0-818" name="__codelineno-0-818"></a>    <span class="k">return</span> <span class="mi">0</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">signals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signals</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -8079,8 +8081,7 @@ sample period).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-819">819</a></span>
-<span class="normal"><a href="#__codelineno-0-820">820</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-820">820</a></span>
 <span class="normal"><a href="#__codelineno-0-821">821</a></span>
 <span class="normal"><a href="#__codelineno-0-822">822</a></span>
 <span class="normal"><a href="#__codelineno-0-823">823</a></span>
@@ -8095,23 +8096,24 @@ sample period).</p>
 <span class="normal"><a href="#__codelineno-0-832">832</a></span>
 <span class="normal"><a href="#__codelineno-0-833">833</a></span>
 <span class="normal"><a href="#__codelineno-0-834">834</a></span>
-<span class="normal"><a href="#__codelineno-0-835">835</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-819" name="__codelineno-0-819"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_sampling_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-820" name="__codelineno-0-820"></a><span class="w">    </span><span class="sd">"""Sampling frequency in Hz, when all channels share a single rate.</span>
-<a id="__codelineno-0-821" name="__codelineno-0-821"></a>
-<a id="__codelineno-0-822" name="__codelineno-0-822"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">        ValueError: if no channels are loaded, or channels have differing</span>
-<a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="sd">            sampling frequencies; for a mixed-rate recording read</span>
-<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">            ``channels[ch]["sample_frequency"]`` per channel instead.</span>
-<a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">    """</span>
-<a id="__codelineno-0-827" name="__codelineno-0-827"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
-<a id="__codelineno-0-828" name="__codelineno-0-828"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No channels loaded"</span><span class="p">)</span>
-<a id="__codelineno-0-829" name="__codelineno-0-829"></a>    <span class="n">rates</span> <span class="o">=</span> <span class="p">{</span><span class="n">info</span><span class="p">[</span><span class="s2">"sample_frequency"</span><span class="p">]</span> <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
-<a id="__codelineno-0-830" name="__codelineno-0-830"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rates</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-<a id="__codelineno-0-831" name="__codelineno-0-831"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-832" name="__codelineno-0-832"></a>            <span class="s2">"Channels have differing sampling frequencies; read "</span>
-<a id="__codelineno-0-833" name="__codelineno-0-833"></a>            <span class="s2">"channels[ch]['sample_frequency'] per channel instead."</span>
-<a id="__codelineno-0-834" name="__codelineno-0-834"></a>        <span class="p">)</span>
-<a id="__codelineno-0-835" name="__codelineno-0-835"></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">rates</span><span class="p">)))</span>
+<span class="normal"><a href="#__codelineno-0-835">835</a></span>
+<span class="normal"><a href="#__codelineno-0-836">836</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-820" name="__codelineno-0-820"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_sampling_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-0-821" name="__codelineno-0-821"></a><span class="w">    </span><span class="sd">"""Sampling frequency in Hz, when all channels share a single rate.</span>
+<a id="__codelineno-0-822" name="__codelineno-0-822"></a>
+<a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="sd">        ValueError: if no channels are loaded, or channels have differing</span>
+<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">            sampling frequencies; for a mixed-rate recording read</span>
+<a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">            ``channels[ch]["sample_frequency"]`` per channel instead.</span>
+<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">    """</span>
+<a id="__codelineno-0-828" name="__codelineno-0-828"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
+<a id="__codelineno-0-829" name="__codelineno-0-829"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No channels loaded"</span><span class="p">)</span>
+<a id="__codelineno-0-830" name="__codelineno-0-830"></a>    <span class="n">rates</span> <span class="o">=</span> <span class="p">{</span><span class="n">info</span><span class="p">[</span><span class="s2">"sample_frequency"</span><span class="p">]</span> <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
+<a id="__codelineno-0-831" name="__codelineno-0-831"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rates</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+<a id="__codelineno-0-832" name="__codelineno-0-832"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-833" name="__codelineno-0-833"></a>            <span class="s2">"Channels have differing sampling frequencies; read "</span>
+<a id="__codelineno-0-834" name="__codelineno-0-834"></a>            <span class="s2">"channels[ch]['sample_frequency'] per channel instead."</span>
+<a id="__codelineno-0-835" name="__codelineno-0-835"></a>        <span class="p">)</span>
+<a id="__codelineno-0-836" name="__codelineno-0-836"></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">rates</span><span class="p">)))</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -8134,11 +8136,11 @@ sample period).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-807">807</a></span>
-<span class="normal"><a href="#__codelineno-0-808">808</a></span>
-<span class="normal"><a href="#__codelineno-0-809">809</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-807" name="__codelineno-0-807"></a><span class="k">def</span><span class="w"> </span><span class="nf">has_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="w">    </span><span class="sd">"""Return True if ``key`` is present in the recording metadata."""</span>
-<a id="__codelineno-0-809" name="__codelineno-0-809"></a>    <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-808">808</a></span>
+<span class="normal"><a href="#__codelineno-0-809">809</a></span>
+<span class="normal"><a href="#__codelineno-0-810">810</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="k">def</span><span class="w"> </span><span class="nf">has_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<a id="__codelineno-0-809" name="__codelineno-0-809"></a><span class="w">    </span><span class="sd">"""Return True if ``key`` is present in the recording metadata."""</span>
+<a id="__codelineno-0-810" name="__codelineno-0-810"></a>    <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -8778,8 +8780,7 @@ emg_subset = rec.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-898">898</a></span>
-<span class="normal"><a href="#__codelineno-0-899">899</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-899">899</a></span>
 <span class="normal"><a href="#__codelineno-0-900">900</a></span>
 <span class="normal"><a href="#__codelineno-0-901">901</a></span>
 <span class="normal"><a href="#__codelineno-0-902">902</a></span>
@@ -8815,44 +8816,45 @@ emg_subset = rec.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
 <span class="normal"><a href="#__codelineno-0-932">932</a></span>
 <span class="normal"><a href="#__codelineno-0-933">933</a></span>
 <span class="normal"><a href="#__codelineno-0-934">934</a></span>
-<span class="normal"><a href="#__codelineno-0-935">935</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-898" name="__codelineno-0-898"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_channel</span><span class="p">(</span>
-<a id="__codelineno-0-899" name="__codelineno-0-899"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-900" name="__codelineno-0-900"></a>    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-0-901" name="__codelineno-0-901"></a>    <span class="o">*</span><span class="p">,</span>
-<a id="__codelineno-0-902" name="__codelineno-0-902"></a>    <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-903" name="__codelineno-0-903"></a>    <span class="n">modality</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-904" name="__codelineno-0-904"></a>    <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-905" name="__codelineno-0-905"></a>    <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-906" name="__codelineno-0-906"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-907" name="__codelineno-0-907"></a><span class="w">    </span><span class="sd">"""</span>
-<a id="__codelineno-0-908" name="__codelineno-0-908"></a><span class="sd">    Update metadata of an existing channel (the supported relabel path).</span>
-<a id="__codelineno-0-909" name="__codelineno-0-909"></a>
-<a id="__codelineno-0-910" name="__codelineno-0-910"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-911" name="__codelineno-0-911"></a><span class="sd">        label: Existing channel label.</span>
-<a id="__codelineno-0-912" name="__codelineno-0-912"></a><span class="sd">        channel_type: New BIDS channel type (validated). When given without an</span>
-<a id="__codelineno-0-913" name="__codelineno-0-913"></a><span class="sd">            explicit ``modality``, the modality is re-derived from it.</span>
-<a id="__codelineno-0-914" name="__codelineno-0-914"></a><span class="sd">        modality: New coarse modality (validated).</span>
-<a id="__codelineno-0-915" name="__codelineno-0-915"></a><span class="sd">        physical_dimension: New physical unit.</span>
-<a id="__codelineno-0-916" name="__codelineno-0-916"></a><span class="sd">        prefilter: New prefilter string.</span>
-<a id="__codelineno-0-917" name="__codelineno-0-917"></a>
-<a id="__codelineno-0-918" name="__codelineno-0-918"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-919" name="__codelineno-0-919"></a><span class="sd">        KeyError: If ``label`` is not an existing channel.</span>
-<a id="__codelineno-0-920" name="__codelineno-0-920"></a><span class="sd">        ValueError: If ``channel_type`` or ``modality`` is not in the</span>
-<a id="__codelineno-0-921" name="__codelineno-0-921"></a><span class="sd">            modality vocabulary.</span>
-<a id="__codelineno-0-922" name="__codelineno-0-922"></a><span class="sd">    """</span>
-<a id="__codelineno-0-923" name="__codelineno-0-923"></a>    <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
-<a id="__codelineno-0-924" name="__codelineno-0-924"></a>        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Channel not found: </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<a id="__codelineno-0-925" name="__codelineno-0-925"></a>    <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
-<a id="__codelineno-0-926" name="__codelineno-0-926"></a>    <span class="k">if</span> <span class="n">channel_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-927" name="__codelineno-0-927"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">"channel_type"</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
-<a id="__codelineno-0-928" name="__codelineno-0-928"></a>        <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-929" name="__codelineno-0-929"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span> <span class="o">=</span> <span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">"channel_type"</span><span class="p">])</span>
-<a id="__codelineno-0-930" name="__codelineno-0-930"></a>    <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-931" name="__codelineno-0-931"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
-<a id="__codelineno-0-932" name="__codelineno-0-932"></a>    <span class="k">if</span> <span class="n">physical_dimension</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-933" name="__codelineno-0-933"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">"physical_dimension"</span><span class="p">]</span> <span class="o">=</span> <span class="n">physical_dimension</span>
-<a id="__codelineno-0-934" name="__codelineno-0-934"></a>    <span class="k">if</span> <span class="n">prefilter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-935" name="__codelineno-0-935"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">"prefilter"</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefilter</span>
+<span class="normal"><a href="#__codelineno-0-935">935</a></span>
+<span class="normal"><a href="#__codelineno-0-936">936</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-899" name="__codelineno-0-899"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_channel</span><span class="p">(</span>
+<a id="__codelineno-0-900" name="__codelineno-0-900"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-901" name="__codelineno-0-901"></a>    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<a id="__codelineno-0-902" name="__codelineno-0-902"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-903" name="__codelineno-0-903"></a>    <span class="n">channel_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-904" name="__codelineno-0-904"></a>    <span class="n">modality</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-905" name="__codelineno-0-905"></a>    <span class="n">physical_dimension</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-906" name="__codelineno-0-906"></a>    <span class="n">prefilter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-907" name="__codelineno-0-907"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-908" name="__codelineno-0-908"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-909" name="__codelineno-0-909"></a><span class="sd">    Update metadata of an existing channel (the supported relabel path).</span>
+<a id="__codelineno-0-910" name="__codelineno-0-910"></a>
+<a id="__codelineno-0-911" name="__codelineno-0-911"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-912" name="__codelineno-0-912"></a><span class="sd">        label: Existing channel label.</span>
+<a id="__codelineno-0-913" name="__codelineno-0-913"></a><span class="sd">        channel_type: New BIDS channel type (validated). When given without an</span>
+<a id="__codelineno-0-914" name="__codelineno-0-914"></a><span class="sd">            explicit ``modality``, the modality is re-derived from it.</span>
+<a id="__codelineno-0-915" name="__codelineno-0-915"></a><span class="sd">        modality: New coarse modality (validated).</span>
+<a id="__codelineno-0-916" name="__codelineno-0-916"></a><span class="sd">        physical_dimension: New physical unit.</span>
+<a id="__codelineno-0-917" name="__codelineno-0-917"></a><span class="sd">        prefilter: New prefilter string.</span>
+<a id="__codelineno-0-918" name="__codelineno-0-918"></a>
+<a id="__codelineno-0-919" name="__codelineno-0-919"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-920" name="__codelineno-0-920"></a><span class="sd">        KeyError: If ``label`` is not an existing channel.</span>
+<a id="__codelineno-0-921" name="__codelineno-0-921"></a><span class="sd">        ValueError: If ``channel_type`` or ``modality`` is not in the</span>
+<a id="__codelineno-0-922" name="__codelineno-0-922"></a><span class="sd">            modality vocabulary.</span>
+<a id="__codelineno-0-923" name="__codelineno-0-923"></a><span class="sd">    """</span>
+<a id="__codelineno-0-924" name="__codelineno-0-924"></a>    <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
+<a id="__codelineno-0-925" name="__codelineno-0-925"></a>        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Channel not found: </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-0-926" name="__codelineno-0-926"></a>    <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+<a id="__codelineno-0-927" name="__codelineno-0-927"></a>    <span class="k">if</span> <span class="n">channel_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-928" name="__codelineno-0-928"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">"channel_type"</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_channel_type</span><span class="p">(</span><span class="n">channel_type</span><span class="p">)</span>
+<a id="__codelineno-0-929" name="__codelineno-0-929"></a>        <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-930" name="__codelineno-0-930"></a>            <span class="n">info</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span> <span class="o">=</span> <span class="n">infer_modality_from_channel_type</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">"channel_type"</span><span class="p">])</span>
+<a id="__codelineno-0-931" name="__codelineno-0-931"></a>    <span class="k">if</span> <span class="n">modality</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-932" name="__codelineno-0-932"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">"modality"</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_modality</span><span class="p">(</span><span class="n">modality</span><span class="p">)</span>
+<a id="__codelineno-0-933" name="__codelineno-0-933"></a>    <span class="k">if</span> <span class="n">physical_dimension</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-934" name="__codelineno-0-934"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">"physical_dimension"</span><span class="p">]</span> <span class="o">=</span> <span class="n">physical_dimension</span>
+<a id="__codelineno-0-935" name="__codelineno-0-935"></a>    <span class="k">if</span> <span class="n">prefilter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-936" name="__codelineno-0-936"></a>        <span class="n">info</span><span class="p">[</span><span class="s2">"prefilter"</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefilter</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -8878,23 +8880,23 @@ emg_subset = rec.select_channels(['EMG1', 'ACC1'], channel_type='EMG')
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/core/emg.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-785">785</a></span>
-<span class="normal"><a href="#__codelineno-0-786">786</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-786">786</a></span>
 <span class="normal"><a href="#__codelineno-0-787">787</a></span>
 <span class="normal"><a href="#__codelineno-0-788">788</a></span>
 <span class="normal"><a href="#__codelineno-0-789">789</a></span>
 <span class="normal"><a href="#__codelineno-0-790">790</a></span>
 <span class="normal"><a href="#__codelineno-0-791">791</a></span>
 <span class="normal"><a href="#__codelineno-0-792">792</a></span>
-<span class="normal"><a href="#__codelineno-0-793">793</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-785" name="__codelineno-0-785"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-786" name="__codelineno-0-786"></a><span class="w">    </span><span class="sd">"""</span>
-<a id="__codelineno-0-787" name="__codelineno-0-787"></a><span class="sd">    Set metadata value.</span>
-<a id="__codelineno-0-788" name="__codelineno-0-788"></a>
-<a id="__codelineno-0-789" name="__codelineno-0-789"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-790" name="__codelineno-0-790"></a><span class="sd">        key: Metadata key</span>
-<a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">        value: Metadata value</span>
-<a id="__codelineno-0-792" name="__codelineno-0-792"></a><span class="sd">    """</span>
-<a id="__codelineno-0-793" name="__codelineno-0-793"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="normal"><a href="#__codelineno-0-793">793</a></span>
+<span class="normal"><a href="#__codelineno-0-794">794</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-786" name="__codelineno-0-786"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-787" name="__codelineno-0-787"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-788" name="__codelineno-0-788"></a><span class="sd">    Set metadata value.</span>
+<a id="__codelineno-0-789" name="__codelineno-0-789"></a>
+<a id="__codelineno-0-790" name="__codelineno-0-790"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">        key: Metadata key</span>
+<a id="__codelineno-0-792" name="__codelineno-0-792"></a><span class="sd">        value: Metadata value</span>
+<a id="__codelineno-0-793" name="__codelineno-0-793"></a><span class="sd">    """</span>
+<a id="__codelineno-0-794" name="__codelineno-0-794"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -9424,7 +9426,8 @@ the anti-aliased, per-modality-resampled inference signal, with a min/max
 render pyramid above it (flagged not-for-inference). A derived serving copy,
 not the archival source (BIDS/EDF stay authoritative). Requires the <code>zarr</code>
 extra (zarr v3). See :class:<code>~biosigio.exporters.zarr.ZarrExporter</code> for the
-tuning knobs (<code>modality_rates</code>, <code>dtype</code>, chunk/shard sizing, ...).</p>
+tuning knobs (<code>modality_rates</code>, <code>dtype</code>, level-0 chunk/shard sizing,
+<code>view_chunk_columns</code> for the view pyramid, ...).</p>
 <p>Args:
     filepath: Output store path (<code>.zarr</code> appended if missing).
     **kwargs: Forwarded to :meth:<code>ZarrExporter.export</code>.</p>
@@ -9456,7 +9459,8 @@ tuning knobs (<code>modality_rates</code>, <code>dtype</code>, chunk/shard sizin
 <span class="normal"><a href="#__codelineno-0-780">780</a></span>
 <span class="normal"><a href="#__codelineno-0-781">781</a></span>
 <span class="normal"><a href="#__codelineno-0-782">782</a></span>
-<span class="normal"><a href="#__codelineno-0-783">783</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_zarr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-783">783</a></span>
+<span class="normal"><a href="#__codelineno-0-784">784</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_zarr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="w">    </span><span class="sd">"""Export to a sharded Zarr v3 serving store with a min/max view pyramid.</span>
 <a id="__codelineno-0-763" name="__codelineno-0-763"></a>
 <a id="__codelineno-0-764" name="__codelineno-0-764"></a><span class="sd">    Writes one cloud-native store that serves viewing, inference, and training</span>
@@ -9465,20 +9469,21 @@ tuning knobs (<code>modality_rates</code>, <code>dtype</code>, chunk/shard sizin
 <a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="sd">    render pyramid above it (flagged not-for-inference). A derived serving copy,</span>
 <a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">    not the archival source (BIDS/EDF stay authoritative). Requires the ``zarr``</span>
 <a id="__codelineno-0-769" name="__codelineno-0-769"></a><span class="sd">    extra (zarr v3). See :class:`~biosigio.exporters.zarr.ZarrExporter` for the</span>
-<a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="sd">    tuning knobs (``modality_rates``, ``dtype``, chunk/shard sizing, ...).</span>
-<a id="__codelineno-0-771" name="__codelineno-0-771"></a>
-<a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">        filepath: Output store path (``.zarr`` appended if missing).</span>
-<a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">        **kwargs: Forwarded to :meth:`ZarrExporter.export`.</span>
-<a id="__codelineno-0-775" name="__codelineno-0-775"></a>
-<a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="sd">        str: The written store path.</span>
-<a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">    """</span>
-<a id="__codelineno-0-779" name="__codelineno-0-779"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.zarr</span><span class="w"> </span><span class="kn">import</span> <span class="n">ZarrExporter</span>
-<a id="__codelineno-0-780" name="__codelineno-0-780"></a>
-<a id="__codelineno-0-781" name="__codelineno-0-781"></a>    <span class="c1"># The empty-signal guard lives once, in ZarrExporter.export ("No signals</span>
-<a id="__codelineno-0-782" name="__codelineno-0-782"></a>    <span class="c1"># loaded"), matching the tabular path; no duplicate guard here.</span>
-<a id="__codelineno-0-783" name="__codelineno-0-783"></a>    <span class="k">return</span> <span class="n">ZarrExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="sd">    tuning knobs (``modality_rates``, ``dtype``, level-0 chunk/shard sizing,</span>
+<a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">    ``view_chunk_columns`` for the view pyramid, ...).</span>
+<a id="__codelineno-0-772" name="__codelineno-0-772"></a>
+<a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">        filepath: Output store path (``.zarr`` appended if missing).</span>
+<a id="__codelineno-0-775" name="__codelineno-0-775"></a><span class="sd">        **kwargs: Forwarded to :meth:`ZarrExporter.export`.</span>
+<a id="__codelineno-0-776" name="__codelineno-0-776"></a>
+<a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">        str: The written store path.</span>
+<a id="__codelineno-0-779" name="__codelineno-0-779"></a><span class="sd">    """</span>
+<a id="__codelineno-0-780" name="__codelineno-0-780"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..exporters.zarr</span><span class="w"> </span><span class="kn">import</span> <span class="n">ZarrExporter</span>
+<a id="__codelineno-0-781" name="__codelineno-0-781"></a>
+<a id="__codelineno-0-782" name="__codelineno-0-782"></a>    <span class="c1"># The empty-signal guard lives once, in ZarrExporter.export ("No signals</span>
+<a id="__codelineno-0-783" name="__codelineno-0-783"></a>    <span class="c1"># loaded"), matching the tabular path; no duplicate guard here.</span>
+<a id="__codelineno-0-784" name="__codelineno-0-784"></a>    <span class="k">return</span> <span class="n">ZarrExporter</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
