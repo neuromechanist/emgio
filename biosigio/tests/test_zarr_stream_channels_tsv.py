@@ -41,10 +41,14 @@ _REPO = pathlib.Path(__file__).resolve().parents[2]
 MEG_FIF = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
 MEG_CHANNELS_TSV = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_channels.tsv"
 
+CTF_DS = _REPO / "examples/ctf/catch-alp-good-f.ds"
+
 SFREQ = 250.0
 N_SAMPLES = 1000
 # The caps the NEMAR converter passes to every export (nemar-cli#1068).
 MODALITY_RATES = {"EEG": 250, "MEG": 250, "IEEG": 1000, "EMG": 1000}
+# What both export paths do unless told otherwise: resolve the sibling sidecar.
+DEFAULT_SIDECAR = "auto"
 
 
 def signal_microvolts(n_channels: int, n_samples: int = N_SAMPLES) -> np.ndarray:
@@ -153,24 +157,36 @@ def assert_stores_agree(streamed: str, in_memory: str) -> None:
 
 
 def export_both_ways(
-    recording: pathlib.Path, tmp_path: pathlib.Path, *, force_modality: str | None
+    recording: pathlib.Path | str,
+    tmp_path: pathlib.Path,
+    *,
+    force_modality: str | None,
+    bids_channels=DEFAULT_SIDECAR,
+    names: tuple[str, str] = ("streamed.zarr", "in_memory.zarr"),
 ) -> tuple[str, str]:
     """Export one recording through both paths; return ``(streamed, in_memory)``.
+
+    ``bids_channels`` goes to both, unchanged, which is the point: the two
+    functions take the same argument with the same meanings, so every mode of it
+    can be compared across the paths rather than only the default. Left at its
+    own default here so a caller that does not care exercises what production
+    uses.
 
     ``force_modality`` is the NEMAR driver's suffix-driven grouping, applied to
     the in-memory path the way the driver applies it (overwrite every channel's
     modality after import) so the two stores are genuinely comparable.
     """
-    streamed = str(tmp_path / "streamed.zarr")
-    in_memory = str(tmp_path / "in_memory.zarr")
+    streamed = str(tmp_path / names[0])
+    in_memory = str(tmp_path / names[1])
     stream_to_zarr(
         str(recording),
         streamed,
         force_modality=force_modality,
         modality_rates=MODALITY_RATES,
         dtype="int16",
+        bids_channels=bids_channels,
     )
-    rec = Recording.from_file(str(recording))
+    rec = Recording.from_file(str(recording), bids_channels=bids_channels)
     if force_modality is not None:
         for label in rec.channels:
             rec.channels[label]["modality"] = force_modality
@@ -409,12 +425,408 @@ def test_meg_femtotesla_sidecar_agrees_across_both_export_paths(tmp_path):
     assert report["converted"] == 303
     assert report["kept_importer_unit"] == 0
 
-    # A femtotesla reading of a MEG sensor is an order 1e2-1e4 number; the same
-    # channel in SI tesla is 1e-13. Without the conversion the store would carry
-    # the second under the label of the first.
-    magnitudes = [
-        float(np.std(values))
-        for label, values in dequantized(streamed).items()
-        if facts[label]["channel_type"].startswith("MEG")
+    # The magnitude, pinned exactly rather than as an order: every converted
+    # channel must equal the same import with the sidecar off, times 10^15, to
+    # within one quantization step. 100 Hz is under the 250 Hz MEG cap, so
+    # nothing is resampled and the samples line up one for one.
+    native = Recording.from_file(str(tmp_path / f"{stem}_meg.fif"), bids_channels="off")
+    assert {info["physical_dimension"] for info in native.channels.values()} == {"T", "V"}
+    checked = 0
+    for store in (streamed, in_memory):
+        store_facts = channel_facts(store)
+        for label, values in dequantized(store).items():
+            if not store_facts[label]["channel_type"].startswith("MEG"):
+                continue
+            expected = native.signals[label].to_numpy() * 1e15
+            assert np.max(np.abs(values - expected)) <= store_facts[label]["scale"], label
+            checked += 1
+    assert checked == 2 * 303
+
+
+# -- API parity: both paths take the same bids_channels argument ----------------
+
+
+def test_an_explicit_path_agrees_across_both_export_paths(ieeg_in_volts, tmp_path):
+    """The MaxShield shape: a recording whose sidecar is not next to it.
+
+    NEMAR converts a filtered copy written to scratch, where the recording's own
+    sidecar is not adjacent, so both paths have to accept one by path -- and
+    still agree.
+    """
+    vhdr, _ = ieeg_in_volts
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    named = write_channels_tsv(
+        elsewhere, "not_a_bids_stem", [("LMacro_01", "ECOG", "mV"), ("LMacro_02", "ECOG", "mV")]
+    )
+
+    streamed, in_memory = export_both_ways(
+        vhdr, tmp_path, force_modality="IEEG", bids_channels=str(named)
+    )
+    assert_stores_agree(streamed, in_memory)
+
+    facts = channel_facts(streamed)
+    assert {f["unit"] for f in facts.values()} == {"mV"}  # not the sibling's uV
+    assert {f["channel_type"] for f in facts.values()} == {"ECOG"}
+
+
+def test_a_dataframe_agrees_across_both_export_paths(ieeg_in_volts, tmp_path):
+    """An in-memory table is the same input to either path as the TSV on disk."""
+    vhdr, _ = ieeg_in_volts
+    frame = pd.DataFrame(
+        {
+            "name": ["LMacro_01", "LMacro_02"],
+            "type": ["SEEG", "SEEG"],
+            "units": ["mV", "mV"],
+        }
+    )
+
+    streamed, in_memory = export_both_ways(
+        vhdr, tmp_path, force_modality="IEEG", bids_channels=frame
+    )
+    assert_stores_agree(streamed, in_memory)
+    assert {f["unit"] for f in channel_facts(streamed).values()} == {"mV"}
+
+
+def test_from_file_auto_and_off_are_unchanged(ieeg_in_volts):
+    """The two modes that existed before the argument widened, and None as "off".
+
+    A widened parameter must not have moved its own defaults: "auto" still finds
+    the sibling sidecar and converts, "off" still leaves the importer's volts,
+    and None means "off" on this path exactly as it does on the streaming one.
+    """
+    vhdr, microvolts = ieeg_in_volts
+
+    applied = Recording.from_file(str(vhdr))
+    assert applied.channels["LMacro_01"]["physical_dimension"] == "uV"
+    assert applied.channels["LMacro_01"]["channel_type"] == "SEEG"
+    assert np.allclose(applied.signals["LMacro_01"].to_numpy(), microvolts[:, 0], rtol=1e-5)
+
+    ignored = Recording.from_file(str(vhdr), bids_channels="off")
+    assert ignored.channels["LMacro_01"]["physical_dimension"] == "V"
+    assert ignored.channels["LMacro_01"]["channel_type"] == "EEG"
+    assert "channels_tsv_units" not in ignored.metadata
+
+    disabled = Recording.from_file(str(vhdr), bids_channels=None)
+    assert disabled.channels == ignored.channels
+    assert np.array_equal(disabled.signals.to_numpy(), ignored.signals.to_numpy())
+
+
+# -- A bad sidecar must not leak the open source --------------------------------
+
+
+@pytest.fixture
+def opened_sources(monkeypatch):
+    """Collect the real sources ``stream_to_zarr`` opens, to inspect afterwards.
+
+    Wraps ``_open_stream_source`` rather than replacing it: the genuine
+    ``_EdfSource``/``_MneSource`` is still constructed, read from and returned,
+    and the list only lets a test ask the real object afterwards whether it was
+    closed. Nothing about the export's behaviour is substituted.
+    """
+    from biosigio.exporters import zarr_stream
+
+    opened: list = []
+    open_source = zarr_stream._open_stream_source
+
+    def remembering_open(*args, **kwargs):
+        source = open_source(*args, **kwargs)
+        opened.append(source)
+        return source
+
+    monkeypatch.setattr(zarr_stream, "_open_stream_source", remembering_open)
+    return opened
+
+
+# Three ways a caller-supplied sidecar is unusable. Deliberately not "a row with
+# more fields than the header": pandas 3 drops the surplus without complaint, so
+# that file parses and would make the test pass for the wrong reason.
+UNREADABLE_SIDECARS = {
+    # A path that resolves to a directory (a stale or mistyped argument).
+    "directory": None,
+    # A genuinely malformed TSV: the quote on row 1 is never closed.
+    "malformed": b'name\ttype\tunits\n"unterminated\tEEG\tuV\n"x\ty"z\t"\n',
+    # A path aimed at a binary file rather than the sidecar next to it.
+    "binary": b"name\ttype\tunits\n\xff\xfe\x00\x01\x02\n",
+}
+
+
+@pytest.fixture
+def unreadable_sidecar(request, tmp_path):
+    """One of :data:`UNREADABLE_SIDECARS`, written into ``tmp_path``."""
+    payload = UNREADABLE_SIDECARS[request.param]
+    target = tmp_path / f"{request.param}_channels.tsv"
+    if payload is None:
+        target.mkdir()
+    else:
+        target.write_bytes(payload)
+    return target
+
+
+@pytest.mark.parametrize("unreadable_sidecar", sorted(UNREADABLE_SIDECARS), indirect=True)
+def test_a_bad_sidecar_closes_the_streaming_source(
+    ieeg_in_volts, tmp_path, opened_sources, unreadable_sidecar
+):
+    """An unusable sidecar raises, and does not leave the recording open.
+
+    The source holds a pyedflib file handle or an MNE reader, and the sidecar is
+    the one step between opening it and the exporter's own ``with`` block that
+    can fail on caller-supplied input.
+    """
+    vhdr, _ = ieeg_in_volts
+    with pytest.raises(Exception) as streamed_error:  # noqa: B017 -- type compared below
+        stream_to_zarr(
+            str(vhdr),
+            str(tmp_path / "never_written.zarr"),
+            force_modality="IEEG",
+            bids_channels=str(unreadable_sidecar),
+        )
+
+    assert len(opened_sources) == 1
+    assert opened_sources[0].closed
+
+    # The in-memory path rejects the same input the same way, so a converter
+    # cannot see a sidecar fail on one path and be accepted on the other.
+    with pytest.raises(Exception) as in_memory_error:  # noqa: B017 -- type compared below
+        Recording.from_file(str(vhdr), bids_channels=str(unreadable_sidecar))
+    assert type(streamed_error.value) is type(in_memory_error.value)
+
+
+def test_a_successful_export_also_closes_the_source(ieeg_in_volts, tmp_path, opened_sources):
+    """The mutation guard for the test above: closed on success is not the same
+    observation as closed on failure, and a `closed` flag stuck at True would
+    make the failure assertion vacuous."""
+    vhdr, _ = ieeg_in_volts
+    assert not opened_sources
+    stream_to_zarr(str(vhdr), str(tmp_path / "ok.zarr"), force_modality="IEEG")
+    assert len(opened_sources) == 1
+    assert opened_sources[0].closed
+
+
+# -- A directory-valued recording (CTF .ds), with and without a trailing slash --
+
+
+@pytest.mark.skipif(not CTF_DS.exists(), reason="CTF .ds fixture missing")
+@pytest.mark.parametrize("trailing_slash", [False, True], ids=["plain", "trailing_slash"])
+def test_ctf_directory_sidecar_applies_on_both_paths(tmp_path, trailing_slash):
+    """A CTF ``.ds`` is a directory, and BOTH paths must still find its sidecar.
+
+    Two things converge here. A ``.ds`` names its internal files after the
+    directory stem, so it cannot be renamed to a BIDS stem and its sidecar takes
+    the directory's own name (``find_channels_tsv``'s full-stem candidate). And a
+    directory path may arrive with a trailing slash, which used to leave
+    ``os.path.split`` with an empty filename and no sidecar at all -- so a
+    converter passing ``.ds/`` silently got the importer's teslas.
+    """
+    ds = tmp_path / CTF_DS.name
+    try:
+        ds.symlink_to(CTF_DS)
+    except (OSError, NotImplementedError):
+        shutil.copytree(CTF_DS, ds)
+
+    native = Recording.from_file(str(ds), bids_channels="off")
+    magnetometers = [
+        label
+        for label, info in native.channels.items()
+        if info["channel_type"] in {"MEGMAG", "MEGREFMAG"}
     ]
-    assert min(magnitudes) > 1.0
+    triggers = [label for label, info in native.channels.items() if info["channel_type"] == "TRIG"]
+    assert magnetometers and triggers  # the fixture really covers both branches
+
+    rows = ["name\ttype\tunits"]
+    for label, info in native.channels.items():
+        declared = "fT" if label in magnetometers else ("mV" if label in triggers else "V")
+        rows.append(f"{label}\t{info['channel_type']}\t{declared}")
+    (tmp_path / f"{CTF_DS.stem}_channels.tsv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+    recording = f"{ds}/" if trailing_slash else str(ds)
+    streamed, in_memory = export_both_ways(recording, tmp_path, force_modality="MEG")
+    assert_stores_agree(streamed, in_memory)
+
+    facts = channel_facts(streamed)
+    assert {facts[label]["unit"] for label in magnetometers} == {"fT"}
+    for label in triggers:
+        # Codes, not a measured quantity: the declaration is recorded, not applied.
+        assert facts[label]["unit"] == "V"
+        assert facts[label]["bids_unit"] == "mV"
+
+    # 1250 Hz over the 250 Hz MEG cap, so compare distributions, not samples.
+    for label in magnetometers[:8]:
+        expected = float(np.std(native.signals[label].to_numpy())) * 1e15
+        assert float(np.std(dequantized(streamed)[label])) == pytest.approx(expected, rel=0.05)
+    for label in triggers:
+        native_codes = native.signals[label].to_numpy()
+        assert float(np.max(np.abs(dequantized(streamed)[label]))) == pytest.approx(
+            float(np.max(np.abs(native_codes))), rel=0.05
+        )
+
+
+# -- The edge branches, mirrored from the in-memory tests -----------------------
+
+
+def sidecar_reports(streamed: str, in_memory: str) -> tuple[dict | None, dict | None]:
+    """``channels_tsv_units`` from both stores' root attrs (None when absent)."""
+    return (
+        dict(zarr.open_group(streamed, mode="r").attrs).get("channels_tsv_units"),
+        dict(zarr.open_group(in_memory, mode="r").attrs).get("channels_tsv_units"),
+    )
+
+
+def test_a_sidecar_with_no_name_column_applies_nothing(ieeg_in_volts, tmp_path, caplog):
+    """Without ``name`` there is nothing to match rows to; both paths warn and stop."""
+    vhdr, _ = ieeg_in_volts
+    (tmp_path / "sub-000_task-clips_run-001_channels.tsv").write_text(
+        "channel\ttype\tunits\nLMacro_01\tSEEG\tuV\n", encoding="utf-8"
+    )
+
+    with caplog.at_level("WARNING"):
+        streamed, in_memory = export_both_ways(vhdr, tmp_path, force_modality="IEEG")
+
+    assert sum("no 'name' column" in r.getMessage() for r in caplog.records) == 2  # once per path
+    assert_stores_agree(streamed, in_memory)
+    # No report at all, on either exporter: "nothing could be applied" is not the
+    # same state as "a sidecar applied and changed nothing".
+    assert sidecar_reports(streamed, in_memory) == (None, None)
+    assert {f["unit"] for f in channel_facts(streamed).values()} == {"V"}
+
+
+def test_a_sidecar_with_no_units_column_still_applies_types(ieeg_in_volts, tmp_path, caplog):
+    """A types-only sidecar is valid; the report says the column was absent."""
+    vhdr, _ = ieeg_in_volts
+    (tmp_path / "sub-000_task-clips_run-001_channels.tsv").write_text(
+        "name\ttype\nLMacro_01\tSEEG\nLMacro_02\tSEEG\n", encoding="utf-8"
+    )
+
+    with caplog.at_level("WARNING"):
+        streamed, in_memory = export_both_ways(vhdr, tmp_path, force_modality="IEEG")
+
+    assert sum("no 'units' column" in r.getMessage() for r in caplog.records) == 2
+    assert_stores_agree(streamed, in_memory)
+    expected = {
+        "converted": 0,
+        "relabelled": 0,
+        "kept_importer_unit": 0,
+        "units_column_present": False,
+    }
+    assert sidecar_reports(streamed, in_memory) == (expected, expected)
+
+    facts = channel_facts(streamed)
+    assert {f["channel_type"] for f in facts.values()} == {"SEEG"}  # type still adopted
+    assert {f["unit"] for f in facts.values()} == {"V"}  # unit untouched
+
+
+def test_a_channel_the_sidecar_does_not_name_is_left_alone(ieeg_in_volts, tmp_path, caplog):
+    """A partial sidecar converts what it names and reports the rest at debug."""
+    vhdr, microvolts = ieeg_in_volts
+    write_channels_tsv(tmp_path, "sub-000_task-clips_run-001", [("LMacro_01", "SEEG", "uV")])
+
+    with caplog.at_level("DEBUG"):
+        streamed, in_memory = export_both_ways(vhdr, tmp_path, force_modality="IEEG")
+
+    assert sum("names no row for 1 of" in r.getMessage() for r in caplog.records) == 2
+    assert any("'LMacro_02'" in r.getMessage() for r in caplog.records)
+    assert_stores_agree(streamed, in_memory)
+
+    facts = channel_facts(streamed)
+    assert (facts["LMacro_01"]["unit"], facts["LMacro_01"]["channel_type"]) == ("uV", "SEEG")
+    assert (facts["LMacro_02"]["unit"], facts["LMacro_02"]["channel_type"]) == ("V", "EEG")
+
+    values = dequantized(streamed)
+    step = float(microvolts[:, 1].max() - microvolts[:, 1].min()) / 65535
+    assert np.max(np.abs(values["LMacro_02"] - microvolts[:, 1] * 1e-6)) <= 6 * step * 1e-6
+
+    expected = {
+        "converted": 1,
+        "relabelled": 0,
+        "kept_importer_unit": 0,
+        "units_column_present": True,
+    }
+    assert sidecar_reports(streamed, in_memory) == (expected, expected)
+
+
+def test_an_unrecognised_type_does_not_cost_the_row_its_unit(ieeg_in_volts, tmp_path, caplog):
+    """Type and units are independent on the streaming path too (issue #122)."""
+    vhdr, _ = ieeg_in_volts
+    write_channels_tsv(
+        tmp_path,
+        "sub-000_task-clips_run-001",
+        [("LMacro_01", "NOT_A_BIDS_TYPE", "uV"), ("LMacro_02", "NOT_A_BIDS_TYPE", "uV")],
+    )
+
+    with caplog.at_level("WARNING"):
+        streamed, in_memory = export_both_ways(vhdr, tmp_path, force_modality="IEEG")
+
+    assert sum("not a known channel type" in r.getMessage() for r in caplog.records) == 4
+    assert_stores_agree(streamed, in_memory)
+
+    facts = channel_facts(streamed)
+    assert {f["channel_type"] for f in facts.values()} == {"EEG"}  # importer's guess kept
+    assert {f["unit"] for f in facts.values()} == {"uV"}  # unit still corrected
+
+    expected = {
+        "converted": 2,
+        "relabelled": 0,
+        "kept_importer_unit": 0,
+        "units_column_present": True,
+    }
+    assert sidecar_reports(streamed, in_memory) == (expected, expected)
+
+
+def test_a_duplicated_edf_label_is_converted_on_every_entry(tmp_path):
+    """Two channels under one name must not end up in different units.
+
+    EDF permits a repeated label, and a streaming source lists both entries
+    while a Recording (whose channels are a dict) keeps one -- so this is the one
+    case the two paths cannot be compared store to store, and the guarantee is
+    internal to the store instead: every entry sharing a label gets the same
+    decision, so no store can serve two units for one name.
+    """
+    import pyedflib
+
+    stem = "sub-01_task-rest_eeg"
+    path = tmp_path / f"{stem}.edf"
+    n = 500
+    data = np.vstack(
+        [np.sin(np.arange(n) / 10.0) * 30, np.sin(np.arange(n) / 7.0) * 20]
+    )  # µV-scale
+    headers = [
+        {
+            "label": "EEG1",
+            "dimension": "uV",
+            "sample_frequency": 100.0,
+            "physical_max": 40.0,
+            "physical_min": -40.0,
+            "digital_max": 32767,
+            "digital_min": -32768,
+            "prefilter": "n/a",
+            "transducer": "n/a",
+        }
+        for _ in range(2)
+    ]
+    writer = pyedflib.EdfWriter(str(path), 2)
+    try:
+        writer.setSignalHeaders(headers)
+        writer.writeSamples(list(data))
+    finally:
+        writer.close()
+
+    write_channels_tsv(tmp_path, "sub-01_task-rest", [("EEG1", "SEEG", "mV")])
+
+    store = stream_to_zarr(
+        str(path), str(tmp_path / "dup.zarr"), force_modality="IEEG", dtype="int16"
+    )
+    channels = zarr.open_group(store, mode="r")["ieeg_100hz"].attrs["channels"]
+
+    assert [c["label"] for c in channels] == ["EEG1", "EEG1"]
+    assert {c["unit"] for c in channels} == {"mV"}
+    assert {c["channel_type"] for c in channels} == {"SEEG"}
+    # uV -> mV is 1e-3, applied to each row independently. Read by row rather
+    # than through `dequantized`, whose label-keyed dict cannot hold both.
+    level0 = np.asarray(zarr.open_group(store, mode="r")["ieeg_100hz"]["0"][:])
+    for i, channel in enumerate(channels):
+        physical = level0[i] * channel["scale"] + channel["offset"]
+        assert np.max(np.abs(physical - data[i] * 1e-3)) <= 6 * channel["scale"]
+
+    # One row per entry, so the report counts the sidecar's row twice.
+    report = dict(zarr.open_group(store, mode="r").attrs)["channels_tsv_units"]
+    assert report["converted"] == 2
