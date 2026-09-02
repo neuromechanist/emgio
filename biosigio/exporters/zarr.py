@@ -364,6 +364,13 @@ class ZarrExporter:
                 }
                 if n_nonfinite:
                     meta["nonfinite_samples"] = n_nonfinite
+                # A unit the BIDS sidecar declared but the values contradict is
+                # kept as metadata rather than asserted (see
+                # biosigio.bids._decide_unit); the streaming exporter carries it
+                # the same way, so the two stores stay comparable channel for
+                # channel.
+                if info.get("bids_unit"):
+                    meta["bids_unit"] = info["bids_unit"]
                 chan_meta.append(meta)
 
             gname = f"{modality.lower()}_{int(round(target_rate))}hz"
@@ -478,6 +485,10 @@ class ZarrExporter:
             eg.attrs["label_map"] = {}
             eg.attrs["n_events"] = 0
 
+        # What applying the BIDS channels.tsv did to this recording's units, at
+        # the root rather than buried in recording_metadata -- and written by the
+        # streaming exporter too, which has no Recording to carry it.
+        units_report = rec.metadata.get("channels_tsv_units")
         root.attrs.update(
             {
                 "biosigio_version": _BIOSIGIO_VERSION,
@@ -494,6 +505,7 @@ class ZarrExporter:
                 # with the tabular schema, so a browser/zarrita reader can consume
                 # it directly without a second parse and without a lossy str() dump.
                 "recording_metadata": metadata_to_mapping(rec.metadata),
+                **({} if units_report is None else {"channels_tsv_units": units_report}),
                 "created_utc": _dt.datetime.now(_dt.UTC).isoformat(),
                 "note": (
                     "Derived serving copy. level 0 of each group is the anti-aliased "
