@@ -193,7 +193,22 @@ def expected_minmax_level1(base: np.ndarray, factor: int = 4) -> np.ndarray:
     return np.stack([windows.min(axis=2), windows.max(axis=2)])
 
 
-def test_zarr_view_values_read_back_across_chunk_boundary(tmp_path):
+def assert_view1_matches_level0(grp, factor: int = 4) -> np.ndarray:
+    """`view/1` of one group must be the envelope of THAT group's own level 0.
+
+    The geometry attrs can all be right while a multi-group store still writes
+    one group's envelope into another's array, so the content is checked per
+    group, against the level-0 array sitting next to it. Returns the expected
+    envelope so a caller can slice it.
+    """
+    expected = expected_minmax_level1(np.asarray(grp["0"][:]), factor)
+    np.testing.assert_array_equal(np.asarray(grp["view"]["1"][:]), expected)
+    assert np.any(expected[0] < expected[1])  # a real envelope, not a constant
+    return expected
+
+
+@pytest.mark.parametrize("dtype", ["int16", "float32"])
+def test_zarr_view_values_read_back_across_chunk_boundary(tmp_path, dtype):
     """Chunking the view tier by columns must not disturb the VALUES: a slice that
     straddles a chunk boundary has to come back as the same envelope a whole-level
     read gives, and both must equal the envelope recomputed from level 0.
@@ -201,6 +216,10 @@ def test_zarr_view_values_read_back_across_chunk_boundary(tmp_path):
     The chunk width is forced down to 64 columns so level 1 (5000 columns) spans
     79 chunks and the 60:70 slice crosses the first boundary; at the 1024 default
     a slice that small could never leave chunk 0.
+
+    Run for both storage dtypes: int16 builds the pyramid from quantized digital
+    codes, float32 from the float samples themselves, and the min/max reduction
+    is exact in either, so the comparison is equality, not a tolerance.
     """
     rng = np.random.default_rng(0)
     n = 20000
@@ -209,17 +228,16 @@ def test_zarr_view_values_read_back_across_chunk_boundary(tmp_path):
         signal = np.sin(np.arange(n) / (3.0 + c)) * (10.0 + c) + rng.standard_normal(n)
         rec.add_channel(f"C{c}", signal, 250, "uV", "EEG")
 
-    grp = _open(rec.to_zarr(str(tmp_path / "r"), view_chunk_columns=64))["eeg_250hz"]
+    store = rec.to_zarr(str(tmp_path / f"r-{dtype}"), dtype=dtype, view_chunk_columns=64)
+    grp = _open(store)["eeg_250hz"]
     v1 = grp["view"]["1"]
+    assert v1.dtype == np.dtype(dtype)
     assert v1.shape == (2, 4, 5000)
     assert v1.chunks == (2, 4, 64)
     assert v1.nchunks == 79  # ceil(5000 / 64): the 60:70 slice really crosses one
 
-    expected = expected_minmax_level1(np.asarray(grp["0"][:]))
+    expected = assert_view1_matches_level0(grp)
     np.testing.assert_array_equal(np.asarray(v1[:, :, 60:70]), expected[:, :, 60:70])
-    np.testing.assert_array_equal(np.asarray(v1[:]), expected)
-    # The envelope is a real envelope, not a constant: min < max somewhere.
-    assert np.any(expected[0] < expected[1])
 
 
 @pytest.mark.parametrize(
@@ -327,6 +345,43 @@ def test_zarr_two_group_store_carries_per_group_geometry(tmp_path):
     assert dict(emg["0"].attrs)["shard_samples"] == 20000
     assert [emg["view"][str(i)].shape[2] for i in (1, 2, 3)] == [5000, 1250, 312]
     assert [emg["view"][str(i)].chunks[2] for i in (1, 2, 3)] == [1024, 1024, 312]
+
+    # Content, not just geometry: each group's view/1 is its OWN level 0's
+    # envelope. The two groups differ in length, so a swap cannot even broadcast.
+    assert_view1_matches_level0(eeg)
+    assert_view1_matches_level0(emg)
+
+
+def test_zarr_two_group_store_narrow_chunks_keep_content_per_group(tmp_path):
+    """Per-group isolation and boundary-crossing content, proven together.
+
+    The same two-group store as above but at 64 columns, so every view level in
+    both groups spans many chunks and the read path has to reassemble each one.
+    The groups keep different grids (40 vs 79 chunks on view/1) and each still
+    reproduces exactly its own level 0's envelope, including across a boundary.
+    """
+    n = 20000
+    rec = Recording()
+    for c in range(2):
+        rec.add_channel(f"E{c}", np.sin(np.arange(n) / (3.0 + c)), 500, "uV", "EEG")
+        rec.add_channel(f"M{c}", np.cos(np.arange(n) / (5.0 + c)), 1000, "uV", "EMG")
+
+    root = _open(rec.to_zarr(str(tmp_path / "narrow"), view_chunk_columns=64))
+    eeg, emg = root["eeg_250hz"], root["emg_1000hz"]
+
+    assert dict(eeg.attrs)["view_chunk_columns"] == dict(emg.attrs)["view_chunk_columns"] == 64
+    # Same column budget, different level lengths -> different grids per group.
+    assert [eeg["view"][str(i)].chunks[2] for i in (1, 2, 3)] == [64, 64, 64]
+    assert [emg["view"][str(i)].chunks[2] for i in (1, 2, 3)] == [64, 64, 64]
+    assert eeg["view"]["1"].nchunks == 40  # ceil(2500 / 64)
+    assert emg["view"]["1"].nchunks == 79  # ceil(5000 / 64)
+
+    for grp in (eeg, emg):
+        expected = assert_view1_matches_level0(grp)
+        # A slice straddling the first chunk boundary, per group.
+        np.testing.assert_array_equal(
+            np.asarray(grp["view"]["1"][:, :, 60:70]), expected[:, :, 60:70]
+        )
 
 
 # The 40-minute, 129-channel, 250 Hz EEG store the transfer-efficiency audit

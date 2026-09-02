@@ -26,7 +26,7 @@ from biosigio import stream_to_zarr  # noqa: E402
 from biosigio.exporters.zarr import _DISCRETE_TYPES, _resample_channel  # noqa: E402
 from biosigio.importers._mne_common import _MNE_TYPE_TO_biosigIO  # noqa: E402
 
-from .test_zarr import expected_minmax_level1  # noqa: E402
+from .test_zarr import assert_view1_matches_level0  # noqa: E402
 
 # Real committed MEG fixtures (see test_meg_importer.py): a FIF file (305 ch,
 # 100 Hz, 30 s) and a CTF .ds directory (244 ch, 1250 Hz, 4 s).
@@ -346,7 +346,8 @@ def test_stream_rejects_bad_dtype():
                 stream_to_zarr(path, os.path.join(d, "x.zarr"), dtype="int8")
 
 
-def test_stream_view_values_read_back_across_chunk_boundary():
+@pytest.mark.parametrize("dtype", ["int16", "float32"])
+def test_stream_view_values_read_back_across_chunk_boundary(dtype):
     """The streaming exporter fills the view tier one CHANNEL row at a time, so a
     wider chunk means each write is a read-modify-write of a chunk several other
     channels already touched. This pins that the values survive it: a slice
@@ -354,21 +355,21 @@ def test_stream_view_values_read_back_across_chunk_boundary():
     both equal the envelope recomputed from level 0.
 
     64-column chunks so level 1 (5000 columns) spans 79 of them and the 60:70
-    slice really crosses the first boundary."""
+    slice really crosses the first boundary. Both storage dtypes, because the
+    quantized and the float32 write paths differ before the pyramid is built."""
     with _TmpEDF(rate=250.0, duration_s=80.0, n_ch=4) as path:
         with tempfile.TemporaryDirectory() as d:
             store = os.path.join(d, "rec.zarr")
-            stream_to_zarr(path, store, force_modality="EEG", view_chunk_columns=64)
+            stream_to_zarr(path, store, force_modality="EEG", dtype=dtype, view_chunk_columns=64)
             g = zarr.open_group(store, mode="r")["eeg_250hz"]
             v1 = g["view"]["1"]
+            assert v1.dtype == np.dtype(dtype)
             assert v1.shape == (2, 4, 5000)
             assert v1.chunks == (2, 4, 64)
             assert v1.nchunks == 79
 
-            expected = expected_minmax_level1(np.asarray(g["0"][:]))
+            expected = assert_view1_matches_level0(g)
             np.testing.assert_array_equal(np.asarray(v1[:, :, 60:70]), expected[:, :, 60:70])
-            np.testing.assert_array_equal(np.asarray(v1[:]), expected)
-            assert np.any(expected[0] < expected[1])  # a real envelope, not a constant
 
 
 def test_stream_two_group_store_carries_per_group_geometry():
@@ -417,6 +418,12 @@ def test_stream_two_group_store_carries_per_group_geometry():
             assert dict(emg["0"].attrs)["shard_samples"] == 20000
             assert [emg["view"][str(i)].shape[2] for i in (1, 2, 3)] == [5000, 1250, 312]
             assert [emg["view"][str(i)].chunks[2] for i in (1, 2, 3)] == [1024, 1024, 312]
+
+            # Content, not just geometry: each group's view/1 is its OWN level 0's
+            # envelope. Pass 2 writes both groups row by row, so a crossed index
+            # would land one group's channel in the other's array.
+            assert_view1_matches_level0(eeg)
+            assert_view1_matches_level0(emg)
 
 
 # -- Real recording: the view geometry on an actual store, both exporters -------
