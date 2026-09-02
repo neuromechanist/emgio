@@ -8,6 +8,14 @@ by `Recording.from_file` (unless `bids_channels="off"`); `apply_events_tsv` is
 called explicitly when the sidecar events should override the data file's own
 markers.
 
+`apply_channels_tsv_to_stream` is the same thing for a recording that is never
+loaded into a `Recording` at all: the streaming Zarr exporter
+(`stream_to_zarr`, also `bids_channels="auto"` by default) has only a channel
+table and reads the samples window by window afterwards, so it takes a
+per-channel conversion factor to apply later instead of rescaling a column now.
+Both functions decide every per-channel question with the same internal table,
+so the two export paths cannot disagree about what a sidecar means.
+
 ## Units are converted, not relabelled
 
 The `units` column describes the numbers, so adopting it **rescales the
