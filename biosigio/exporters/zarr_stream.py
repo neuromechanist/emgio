@@ -52,7 +52,7 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
-from ..bids import apply_channels_tsv_to_stream, find_channels_tsv
+from ..bids import apply_channels_tsv_to_stream, resolve_channels_tsv
 from ..core.modality import infer_modality_from_channel_type
 from ..importers._mne_common import _FIFF_UNIT_TO_DIM, _MNE_TYPE_TO_biosigIO, require_mne
 from ..tabular_schema import metadata_to_mapping
@@ -325,33 +325,6 @@ def _open_stream_source(filepath: str, force_modality: str | None):
     return _MneSource(filepath, force_modality)
 
 
-def _resolve_channels_tsv(
-    filepath: str, bids_channels: str | os.PathLike | pd.DataFrame | None
-) -> str | os.PathLike | pd.DataFrame | None:
-    """Turn ``stream_to_zarr``'s ``bids_channels`` argument into a sidecar to apply.
-
-    ``"auto"`` resolves the sibling ``_channels.tsv`` through the same
-    :func:`~biosigio.bids.find_channels_tsv`
-    :meth:`~biosigio.core.emg.Recording.from_file` uses, so both export paths pick
-    the same file for the same recording; ``"off"`` (and None) disable the lookup;
-    anything else is a path or a DataFrame the caller chose explicitly.
-
-    The string cases are tested before anything else because a DataFrame compared
-    against ``"auto"`` compares elementwise and has no truth value.
-
-    Returns:
-        A path, a DataFrame, or **None** when no sidecar should be applied
-        (disabled, or ``"auto"`` found none next to the recording).
-    """
-    if isinstance(bids_channels, str):
-        if bids_channels == "auto":
-            # rstrip for the directory-valued recordings (CTF .ds, 4D/BTi), so a
-            # trailing slash does not leave os.path.split with an empty filename.
-            return find_channels_tsv(filepath.rstrip("/\\"))
-        return None if bids_channels == "off" else bids_channels
-    return bids_channels
-
-
 def stream_to_zarr(
     filepath: str,
     store_path: str,
@@ -440,7 +413,7 @@ def stream_to_zarr(
     # BEFORE the grouping below, because adopting a type can change a channel's
     # modality and therefore which group it belongs to. Each channel's declared
     # unit becomes a `unit_factor` that pass 2 multiplies in once.
-    channels_tsv = _resolve_channels_tsv(filepath, bids_channels)
+    channels_tsv = resolve_channels_tsv(filepath, bids_channels)
     units_report = (
         None
         if channels_tsv is None

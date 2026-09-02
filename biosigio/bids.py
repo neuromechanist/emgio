@@ -119,7 +119,7 @@ def _keep_importer_unit(
     current: str,
     declared: str,
     reason: str,
-    channels_tsv_path: str,
+    origin: str,
     recorded_bids_unit: str | None,
 ) -> _UnitDecision:
     """Record the sidecar's unit without asserting it over contradicting values.
@@ -133,7 +133,7 @@ def _keep_importer_unit(
         current: The unit the samples are actually in.
         declared: The sidecar's ``units`` value.
         reason: Why the sidecar's unit was not adopted, for the warning.
-        channels_tsv_path: The sidecar's path, for the warning.
+        origin: The sidecar's path, or ``<DataFrame>``, for the warning.
         recorded_bids_unit: The channel's existing ``bids_unit``, if any.
 
     Returns:
@@ -151,7 +151,7 @@ def _keep_importer_unit(
         label,
         current,
         reason,
-        channels_tsv_path,
+        origin,
     )
     return _UnitDecision(_KEPT, current, 1.0, declared)
 
@@ -183,7 +183,7 @@ def _decide_unit(
     declared: str,
     channel_type: str,
     has_samples: bool,
-    channels_tsv_path: str,
+    origin: str,
     recorded_bids_unit: str | None = None,
 ) -> _UnitDecision:
     """Decide what moving one channel onto the sidecar's unit means.
@@ -238,7 +238,7 @@ def _decide_unit(
             and not ``n/a``.
         channel_type: The channel's type, for the discrete-code exemption.
         has_samples: Whether there are samples this decision can apply to.
-        channels_tsv_path: The sidecar's path (or origin), for warnings.
+        origin: The sidecar's path, or ``<DataFrame>``, for warnings.
         recorded_bids_unit: The channel's existing ``bids_unit``, if any.
 
     Returns:
@@ -253,7 +253,7 @@ def _decide_unit(
             current,
             declared,
             "holds discrete codes rather than a measured quantity",
-            channels_tsv_path,
+            origin,
             recorded_bids_unit,
         )
 
@@ -263,7 +263,7 @@ def _decide_unit(
             current,
             declared,
             "has no samples to rescale",
-            channels_tsv_path,
+            origin,
             recorded_bids_unit,
         )
 
@@ -274,14 +274,14 @@ def _decide_unit(
             current,
             declared,
             f"is not convertible to {declared!r}",
-            channels_tsv_path,
+            origin,
             recorded_bids_unit,
         )
 
     return _UnitDecision(_CONVERTED if factor != 1.0 else _RELABELLED, declared, factor, None)
 
 
-def _adopt_units(rec: Recording, label: str, declared: str, channels_tsv_path: str) -> str:
+def _adopt_units(rec: Recording, label: str, declared: str, origin: str) -> str:
     """Apply :func:`_decide_unit` to one in-memory channel, rescaling its column.
 
     Args:
@@ -289,7 +289,7 @@ def _adopt_units(rec: Recording, label: str, declared: str, channels_tsv_path: s
         label: Channel name, already known to exist in ``rec.channels``.
         declared: The sidecar's ``units`` value, already known to be non-empty
             and not ``n/a``.
-        channels_tsv_path: The sidecar's path, for warnings.
+        origin: The sidecar's path, or ``<DataFrame>``, for warnings.
 
     Returns:
         One of ``_UNCHANGED``, ``_CONVERTED``, ``_RELABELLED`` or ``_KEPT``.
@@ -302,7 +302,7 @@ def _adopt_units(rec: Recording, label: str, declared: str, channels_tsv_path: s
         declared=declared,
         channel_type=str(info.get("channel_type") or ""),
         has_samples=signals is not None and label in signals,
-        channels_tsv_path=channels_tsv_path,
+        origin=origin,
         recorded_bids_unit=info.get("bids_unit"),
     )
     if decision.outcome in (_CONVERTED, _RELABELLED):
@@ -332,7 +332,54 @@ def _read_channels_tsv(channels_tsv: str | os.PathLike | pd.DataFrame) -> pd.Dat
     return pd.read_csv(channels_tsv, sep="\t", dtype=str, keep_default_na=False)
 
 
-def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
+def _sidecar_origin(channels_tsv: str | os.PathLike | pd.DataFrame) -> str:
+    """What to call the sidecar in a log message: its path, or that it was a frame.
+
+    A DataFrame has no path, and interpolating one into a warning would dump the
+    whole table into the log.
+    """
+    return "<DataFrame>" if isinstance(channels_tsv, pd.DataFrame) else str(channels_tsv)
+
+
+def resolve_channels_tsv(
+    filepath: str, bids_channels: str | os.PathLike | pd.DataFrame | None
+) -> str | os.PathLike | pd.DataFrame | None:
+    """Turn a ``bids_channels`` argument into the sidecar to apply, or None.
+
+    The one place the ``bids_channels`` vocabulary is interpreted, shared by
+    :meth:`~biosigio.core.emg.Recording.from_file` and
+    :func:`~biosigio.exporters.zarr_stream.stream_to_zarr` so the two export
+    paths cannot come to differ about what an argument means -- which is the
+    same reason :func:`_decide_unit` is shared (issue #127).
+
+    - ``"auto"`` (the default both callers use) resolves the sibling
+      ``_channels.tsv`` through :func:`find_channels_tsv`, and yields None when
+      the recording has none.
+    - ``"off"``, and None as its synonym, disable the lookup.
+    - Anything else is a path or a DataFrame the caller chose explicitly. NEMAR's
+      MaxShield path needs this: it converts a filtered copy written to scratch,
+      where the recording's real sidecar is not adjacent.
+
+    The string cases are tested first because a DataFrame compared against
+    ``"auto"`` compares elementwise and has no truth value.
+
+    Args:
+        filepath: The recording, used only to resolve ``"auto"``.
+        bids_channels: ``"auto"``, ``"off"``, None, a path, or a DataFrame.
+
+    Returns:
+        A path, a DataFrame, or **None** when no sidecar should be applied.
+    """
+    if isinstance(bids_channels, str):
+        if bids_channels == "auto":
+            # rstrip for the directory-valued recordings (CTF .ds, 4D/BTi), so a
+            # trailing slash does not leave os.path.split with an empty filename.
+            return find_channels_tsv(filepath.rstrip("/\\"))
+        return None if bids_channels == "off" else bids_channels
+    return bids_channels
+
+
+def apply_channels_tsv(rec: Recording, channels_tsv: str | os.PathLike | pd.DataFrame) -> int:
     """Override per-channel ``type``/``units`` in ``rec`` from a ``_channels.tsv``.
 
     Rows are matched to channels by the ``name`` column; ``n/a`` and empty
@@ -353,7 +400,9 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
 
     Args:
         rec: The Recording object to update in place.
-        channels_tsv_path: Path to the BIDS ``_channels.tsv``.
+        channels_tsv: Path to the BIDS ``_channels.tsv``, or an already-loaded
+            DataFrame of it (the two are equivalent; see
+            :func:`_read_channels_tsv`).
 
     Returns:
         The number of **distinct channels** whose record changed -- type adopted,
@@ -361,14 +410,15 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
         by a sidecar applied twice, counts once; a row naming a channel the
         recording does not have counts not at all.
     """
-    df = _read_channels_tsv(channels_tsv_path)
+    df = _read_channels_tsv(channels_tsv)
+    origin = _sidecar_origin(channels_tsv)
     if "name" not in df.columns:
-        logging.warning("channels.tsv has no 'name' column: %s", channels_tsv_path)
+        logging.warning("channels.tsv has no 'name' column: %s", origin)
         return 0
 
     units_present = "units" in df.columns
     if not units_present:
-        logging.warning("channels.tsv has no 'units' column: %s", channels_tsv_path)
+        logging.warning("channels.tsv has no 'units' column: %s", origin)
 
     report = {_CONVERTED: 0, _RELABELLED: 0, _KEPT: 0, "units_column_present": units_present}
     changed: set[str] = set()
@@ -389,20 +439,17 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
                     "keeping the importer-inferred type: %s",
                     ctype,
                     name,
-                    channels_tsv_path,
+                    origin,
                 )
         units = str(row.get("units", "")).strip()
         if units and units.lower() != "n/a":
-            outcome = _adopt_units(rec, name, units, channels_tsv_path)
+            outcome = _adopt_units(rec, name, units, origin)
             if outcome != _UNCHANGED:
                 report[outcome] += 1
                 changed.add(name)
         elif units_present:
             logging.debug(
-                "channels.tsv declares no unit (%r) for channel %r: %s",
-                units,
-                name,
-                channels_tsv_path,
+                "channels.tsv declares no unit (%r) for channel %r: %s", units, name, origin
             )
 
     uncovered = [label for label in rec.channels if label not in matched]
@@ -411,7 +458,7 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
             "channels.tsv names no row for %d of the recording's channels (e.g. %s): %s",
             len(uncovered),
             ", ".join(repr(label) for label in uncovered[:5]),
-            channels_tsv_path,
+            origin,
         )
 
     rec.set_metadata("channels_tsv_units", report)
@@ -464,7 +511,7 @@ def apply_channels_tsv_to_stream(
         exporter records an attr exactly when the in-memory path would.
     """
     df = _read_channels_tsv(channels_tsv)
-    origin = "<DataFrame>" if isinstance(channels_tsv, pd.DataFrame) else str(channels_tsv)
+    origin = _sidecar_origin(channels_tsv)
     if "name" not in df.columns:
         logging.warning("channels.tsv has no 'name' column: %s", origin)
         return None
@@ -517,7 +564,7 @@ def apply_channels_tsv_to_stream(
                     # which exists for a Recording carrying channel metadata
                     # without a column -- cannot apply here.
                     has_samples=True,
-                    channels_tsv_path=origin,
+                    origin=origin,
                     recorded_bids_unit=entry.get("bids_unit"),
                 )
                 if decision.outcome != _UNCHANGED:
