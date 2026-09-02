@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from .core.channel_types import DISCRETE_CHANNEL_TYPES
 from .units import conversion_factor
 
 if TYPE_CHECKING:
@@ -65,7 +66,17 @@ def find_events_tsv(data_filepath: str) -> str | None:
     return _find_sidecar(data_filepath, "events")
 
 
-def _keep_importer_unit(info: dict, label: str, current: str, declared: str, reason: str) -> bool:
+# Per-channel outcomes of adopting a sidecar unit, and the keys of the report
+# left in ``rec.metadata["channels_tsv_units"]``.
+_UNCHANGED = "unchanged"
+_CONVERTED = "converted"
+_RELABELLED = "relabelled"
+_KEPT = "kept_importer_unit"
+
+
+def _keep_importer_unit(
+    info: dict, label: str, current: str, declared: str, reason: str, channels_tsv_path: str
+) -> str:
     """Record the sidecar's unit without asserting it over contradicting values.
 
     The BIDS metadata is real and worth keeping, so it lands under ``bids_unit``
@@ -78,24 +89,50 @@ def _keep_importer_unit(info: dict, label: str, current: str, declared: str, rea
         current: The unit the samples are actually in.
         declared: The sidecar's ``units`` value.
         reason: Why the sidecar's unit was not adopted, for the warning.
+        channels_tsv_path: The sidecar's path, for the warning.
 
     Returns:
-        True, always: the channel record changed.
+        ``_KEPT`` when the record changed, or ``_UNCHANGED`` when this exact
+        ``bids_unit`` was already recorded -- so re-applying a sidecar neither
+        re-warns nor re-counts.
     """
+    if info.get("bids_unit") == declared:
+        return _UNCHANGED
     info["bids_unit"] = declared
     logging.warning(
         "channels.tsv declares units %r for channel %r, whose values are in %r and %s; "
         "keeping the importer's values and unit, and recording the declared unit "
-        "as 'bids_unit'.",
+        "as 'bids_unit': %s",
         declared,
         label,
         current,
         reason,
+        channels_tsv_path,
     )
-    return True
+    return _KEPT
 
 
-def _adopt_units(rec: Recording, label: str, declared: str) -> bool:
+def _rescale(column: pd.Series, factor: float) -> pd.Series:
+    """Multiply a signal column, preserving a float column's own precision.
+
+    A float column keeps its own dtype: an EEGLAB recording loads at float32
+    deliberately, to halve memory, and applying a sidecar must not double it
+    back. The cast is defensive rather than currently load-bearing -- pandas
+    treats a scalar operand as weak under NEP 50, so ``float32 * factor`` is
+    already float32 today -- but raw numpy promotes the same expression to
+    float64, so the guarantee is stated in the code rather than inherited from a
+    promotion rule that may change.
+
+    An integer column has no precision to preserve and becomes float64, which is
+    the only correct result for a non-integral factor.
+    """
+    scaled = column * factor
+    if pd.api.types.is_float_dtype(column.dtype):
+        return scaled.astype(column.dtype)
+    return scaled
+
+
+def _adopt_units(rec: Recording, label: str, declared: str, channels_tsv_path: str) -> str:
     """Move one channel onto the sidecar's unit, rescaling its samples to match.
 
     A unit label is a claim about the numbers next to it, so the two move
@@ -106,48 +143,83 @@ def _adopt_units(rec: Recording, label: str, declared: str) -> bool:
     file's own µV). Adopting the label without the conversion is what issue #122
     reports: volts relabelled as microvolts, wrong by 10^6.
 
-    Three outcomes, and only the first one touches the samples:
+    The checks run in this order, and the order is load-bearing:
 
-    - **Convertible** (same quantity, e.g. ``V`` -> ``uV``): multiply the samples
-      by the ratio and set the label. A ratio of exactly 1 (``uV`` -> ``µV``, a
-      spelling difference) sets the label alone, which is not a semantic relabel.
-    - **Already there** (labels equal): nothing at all, which is what makes
-      repeated application idempotent -- the second pass finds the units already
-      adopted and cannot double-convert.
-    - **Not convertible** (unparsable on either side, different quantities, or no
-      samples to scale): keep the importer's values *and* its label, and record
-      the sidecar's claim under ``bids_unit`` so the BIDS metadata is preserved
-      without being asserted over numbers that would contradict it.
+    1. **Already there** (labels equal): nothing at all. This is what makes
+       repeated application idempotent, and it comes first so a discrete or
+       sample-less channel whose unit already matches is not flagged as a
+       conflict with itself.
+    2. **Discrete channel type** (``TRIG`` and friends, see
+       :data:`~biosigio.core.channel_types.DISCRETE_CHANNEL_TYPES`): never
+       rescaled. MNE labels stim channels with the FIFF volts code while they
+       hold integer event codes, so a sidecar declaring ``mV`` would turn codes
+       5/3/7 into 5000/3000/7000. The declared unit is recorded, not applied.
+    3. **No samples**: a channel with metadata but no column cannot be rescaled,
+       so it is not relabelled either -- checked before the conversion so even a
+       same-magnitude spelling change cannot slip through on a channel whose
+       numbers are not there to agree with it.
+    4. **Convertible** (same quantity, e.g. ``V`` -> ``uV``): multiply the samples
+       by the ratio and set the label. A ratio of exactly 1 (``uV`` -> ``µV``, a
+       spelling difference) sets the label alone, which is not a semantic relabel.
+    5. **Not convertible** (unparsable on either side, or different quantities):
+       keep the importer's values *and* its label, and record the sidecar's claim
+       under ``bids_unit`` so the BIDS metadata is preserved without being
+       asserted over numbers that would contradict it.
+
+    Whenever the sidecar's unit *is* adopted, any ``bids_unit`` left by an
+    earlier disagreement is dropped, so the two never both describe the channel.
 
     Args:
         rec: The Recording object to update in place.
         label: Channel name, already known to exist in ``rec.channels``.
         declared: The sidecar's ``units`` value, already known to be non-empty
             and not ``n/a``.
+        channels_tsv_path: The sidecar's path, for warnings.
 
     Returns:
-        True if the channel record changed (unit adopted, or ``bids_unit``
-        recorded), False if it was already in the sidecar's unit.
+        One of ``_UNCHANGED``, ``_CONVERTED``, ``_RELABELLED`` or ``_KEPT``.
     """
     info = rec.channels[label]
     current = str(info.get("physical_dimension") or "").strip()
     if current == declared:
-        return False
+        info.pop("bids_unit", None)
+        return _UNCHANGED
+
+    if str(info.get("channel_type") or "").upper() in DISCRETE_CHANNEL_TYPES:
+        return _keep_importer_unit(
+            info,
+            label,
+            current,
+            declared,
+            "holds discrete codes rather than a measured quantity",
+            channels_tsv_path,
+        )
+
+    signals = rec.signals
+    if signals is None or label not in signals:
+        return _keep_importer_unit(
+            info, label, current, declared, "has no samples to rescale", channels_tsv_path
+        )
 
     factor = conversion_factor(current, declared)
     if factor is None:
         return _keep_importer_unit(
-            info, label, current, declared, f"is not convertible to {declared!r}"
+            info,
+            label,
+            current,
+            declared,
+            f"is not convertible to {declared!r}",
+            channels_tsv_path,
         )
 
+    outcome = _RELABELLED
     if factor != 1.0:
-        signals = rec.signals
-        if signals is None or label not in signals:
-            return _keep_importer_unit(info, label, current, declared, "has no samples to rescale")
-        signals[label] = signals[label] * factor
+        signals[label] = _rescale(signals[label], factor)
+        outcome = _CONVERTED
 
     info["physical_dimension"] = declared
-    return True
+    info.pop("bids_unit", None)
+    return outcome
 
 
 def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
@@ -159,46 +231,81 @@ def apply_channels_tsv(rec: Recording, channels_tsv_path: str) -> int:
 
     Adopting the sidecar's ``units`` **converts the channel's samples** into that
     unit rather than merely relabelling them (issue #122); see
-    :func:`_adopt_units` for the per-channel rule and for what happens when the
-    two units are not convertible. Type and units are applied independently, so
+    :func:`_adopt_units` for the per-channel rule, including the channel types
+    and situations that are exempt. Type and units are applied independently, so
     an unrecognized ``type`` no longer costs the row its unit correction.
+
+    A summary of what the ``units`` column did lands in
+    ``rec.metadata["channels_tsv_units"]`` as
+    ``{"converted", "relabelled", "kept_importer_unit", "units_column_present"}``,
+    so a caller can tell "the sidecar declared no units" from "the units were
+    already correct" without re-scanning every channel.
 
     Args:
         rec: The Recording object to update in place.
         channels_tsv_path: Path to the BIDS ``_channels.tsv``.
 
     Returns:
-        The number of channels whose record changed.
+        The number of **distinct channels** whose record changed -- type adopted,
+        unit adopted, or ``bids_unit`` recorded. A channel named by two rows, or
+        by a sidecar applied twice, counts once; a row naming a channel the
+        recording does not have counts not at all.
     """
     df = pd.read_csv(channels_tsv_path, sep="\t", dtype=str, keep_default_na=False)
     if "name" not in df.columns:
         logging.warning("channels.tsv has no 'name' column: %s", channels_tsv_path)
         return 0
 
-    updated = 0
+    units_present = "units" in df.columns
+    if not units_present:
+        logging.warning("channels.tsv has no 'units' column: %s", channels_tsv_path)
+
+    report = {_CONVERTED: 0, _RELABELLED: 0, _KEPT: 0, "units_column_present": units_present}
+    changed: set[str] = set()
+    matched: set[str] = set()
     for _, row in df.iterrows():
         name = str(row["name"]).strip()
         if name not in rec.channels:
             continue
-        changed = False
+        matched.add(name)
         ctype = str(row.get("type", "")).strip()
         if ctype and ctype.lower() != "n/a":
             try:
                 rec.set_channel(name, channel_type=ctype)
-                changed = True
+                changed.add(name)
             except ValueError:
                 logging.warning(
                     "channels.tsv type %r for channel %r is not a known channel type; "
-                    "keeping the importer-inferred type.",
+                    "keeping the importer-inferred type: %s",
                     ctype,
                     name,
+                    channels_tsv_path,
                 )
         units = str(row.get("units", "")).strip()
         if units and units.lower() != "n/a":
-            changed = _adopt_units(rec, name, units) or changed
-        if changed:
-            updated += 1
-    return updated
+            outcome = _adopt_units(rec, name, units, channels_tsv_path)
+            if outcome != _UNCHANGED:
+                report[outcome] += 1
+                changed.add(name)
+        elif units_present:
+            logging.debug(
+                "channels.tsv declares no unit (%r) for channel %r: %s",
+                units,
+                name,
+                channels_tsv_path,
+            )
+
+    uncovered = [label for label in rec.channels if label not in matched]
+    if uncovered:
+        logging.debug(
+            "channels.tsv names no row for %d of the recording's channels (e.g. %s): %s",
+            len(uncovered),
+            ", ".join(repr(label) for label in uncovered[:5]),
+            channels_tsv_path,
+        )
+
+    rec.set_metadata("channels_tsv_units", report)
+    return len(changed)
 
 
 def read_events_tsv(
