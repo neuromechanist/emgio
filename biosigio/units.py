@@ -59,7 +59,12 @@ _BASE_UNITS: dict[str, tuple[str, int]] = {
     "S": ("S", 0),  # conductance: GSR/EDA (typically uS)
     "Ohm": ("Ohm", 0),  # impedance / respiration belts
     "ohm": ("Ohm", 0),
-    "Ω": ("Ohm", 0),  # GREEK CAPITAL LETTER OMEGA
+    # Two codepoints render as an identical glyph and both appear in real files:
+    # U+03A9 GREEK CAPITAL LETTER OMEGA is what most keyboards and locales emit,
+    # U+2126 OHM SIGN is the one Unicode designates for the unit. Spelled as
+    # escapes because the source characters are indistinguishable by eye.
+    "\u03a9": ("Ohm", 0),
+    "\u2126": ("Ohm", 0),
     "N": ("N", 0),  # force: EMG force/dynamometer channels
     "g": ("g", 0),  # accelerometers (units of gravity)
     "m": ("m", 0),  # displacement

@@ -37,6 +37,13 @@ from biosigio.units import conversion_factor, parse_unit
         ("g", ("g", 0)),
         ("mg", ("g", -3)),
         ("kOhm", ("Ohm", 3)),
+        # Both codepoints that render as the ohm glyph: U+03A9 GREEK CAPITAL
+        # LETTER OMEGA (what keyboards emit) and U+2126 OHM SIGN (what Unicode
+        # designates for the unit). Real files carry each.
+        ("\u03a9", ("Ohm", 0)),
+        ("\u2126", ("Ohm", 0)),
+        ("k\u03a9", ("Ohm", 3)),
+        ("M\u2126", ("Ohm", 6)),
         # Whitespace and the pyedflib micro-sign mojibake are normalized.
         ("  uV  ", ("V", -6)),
         ("\x83\xcaV", ("V", -6)),
@@ -81,6 +88,10 @@ def test_parse_unit_rejects_non_units_and_unknown_spellings(text):
         ("T", "fT", 1e15),
         ("T/m", "fT/cm", 1e13),
         ("kOhm", "Ohm", 1e3),
+        # The two ohm glyphs are the same quantity, so they interconvert at 1.
+        ("\u03a9", "\u2126", 1.0),
+        ("k\u2126", "\u03a9", 1e3),
+        ("\u2126", "kOhm", 1e-3),
     ],
 )
 def test_conversion_factor_table(source, target, expected):
