@@ -22,6 +22,8 @@ share one classifier rather than each re-inventing string matching.
 
 from __future__ import annotations
 
+import errno
+
 
 class BiosigIOError(ValueError):
     """Base for all biosigIO errors. ``code`` is a stable machine-readable tag.
@@ -100,6 +102,40 @@ REASONS: dict[str, str] = {
 }
 
 
+# Thread/resource-exhaustion messages that surface as OSError/RuntimeError rather
+# than MemoryError. Reader-agnostic substrings (CPython's own `_thread` module and
+# libc's ENOMEM/EAGAIN strerror text), matched case-insensitively.
+_THREAD_OR_RESOURCE_EXHAUSTION_SUBSTRINGS = (
+    "can't start new thread",
+    "cannot allocate memory",  # ENOMEM strerror text (not every OSError carries .errno)
+)
+_RESOURCE_EXHAUSTION_ERRNOS = (errno.ENOMEM, errno.EAGAIN)
+
+
+def is_resource_exhaustion(exc: Exception) -> bool:
+    """True when ``exc`` reflects the host running out of memory or threads,
+    not a problem with the file being read.
+
+    Resource exhaustion is never a property of the file: a ``MemoryError`` (or
+    numpy's ``_ArrayMemoryError``, a ``MemoryError`` subclass) raised mid-read
+    typically means the host was saturated (e.g. many parallel conversions),
+    not that the recording is corrupt. Importers must let it -- and the
+    thread/allocation-exhaustion ``OSError``/``RuntimeError`` variants below --
+    propagate unchanged instead of reclassifying it as a permanent read
+    failure, so a caller (e.g. NEMAR's converter) can retry instead of
+    recording a deterministic failure. See :func:`classify_read_error`.
+    """
+    if isinstance(exc, MemoryError):
+        return True
+    if isinstance(exc, (OSError, RuntimeError)):
+        if getattr(exc, "errno", None) in _RESOURCE_EXHAUSTION_ERRNOS:
+            return True
+        low = str(exc).lower()
+        if any(s in low for s in _THREAD_OR_RESOURCE_EXHAUSTION_SUBSTRINGS):
+            return True
+    return False
+
+
 def classify_read_error(exc: Exception, filepath: str = "") -> BiosigIOError:
     """Map a low-level read failure to a typed biosigIO error with a stable code.
 
@@ -107,12 +143,20 @@ def classify_read_error(exc: Exception, filepath: str = "") -> BiosigIOError:
     so the *why* is decided once, where the format context lives. An exception
     that is already a :class:`BiosigIOError` is returned unchanged.
 
+    Resource exhaustion (:func:`is_resource_exhaustion`) is never classified as a
+    read error either: this function re-raises it as-is (defence in depth for a
+    caller that calls this directly, without its own pre-check guard -- see the
+    importers, which all guard *before* calling this so the common path never
+    even reaches here for a MemoryError).
+
     The matching is deliberately reader-agnostic (MNE and pyedflib phrase the same
     condition differently); unmatched failures fall through to :class:`FileReadError`
     so a caller always gets a typed error, never a bare ``Exception``.
     """
     if isinstance(exc, BiosigIOError):
         return exc
+    if is_resource_exhaustion(exc):
+        raise exc
     msg = str(exc)
     low = msg.lower()
     where = f" ({filepath})" if filepath else ""
