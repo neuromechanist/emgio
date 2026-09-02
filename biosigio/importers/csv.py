@@ -1,7 +1,10 @@
+import logging
+
 import numpy as np
 import pandas as pd
 
 from ..core.emg import Recording
+from ..exceptions import is_resource_exhaustion
 from .base import BaseImporter
 
 
@@ -38,10 +41,18 @@ class CSVImporter(BaseImporter):
                 # if 'OTB' in header_text or 'Sessantaquattro' in header_text:
                 #     return 'otb'
 
-        except Exception:
+        except Exception as e:
+            # Resource exhaustion must not fall through to the hard-coded parse
+            # defaults below (generic delimiter/header guesses that can yield a
+            # silently mis-parsed Recording): it needs to reach the guarded
+            # pd.read_csv() catch in load() (or the caller), not be absorbed
+            # here as "couldn't sniff the format, guess instead" (see
+            # biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             # If we can't read the file or encounter an error,
             # don't try to guess the format
-            pass
+            logging.debug("CSV specialized-format sniff failed for %s: %s", filepath, e)
 
         return None
 
@@ -128,6 +139,11 @@ class CSVImporter(BaseImporter):
             # Pass through file not found errors
             raise
         except Exception as e:
+            # Resource exhaustion is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             raise ValueError(f"Failed to read CSV file: {str(e)}") from e
 
         # If no header, generate column names
@@ -340,9 +356,15 @@ class CSVImporter(BaseImporter):
                             self._is_numeric(val) for val in header_values if val.strip()
                         )
 
-        except Exception:
+        except Exception as e:
+            # Resource exhaustion must not fall through to the hard-coded parse
+            # defaults below -- same reasoning as the guard in
+            # _detect_specialized_format above (see
+            # biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             # If analysis fails, return defaults
-            pass
+            logging.debug("CSV structure analysis failed for %s: %s", filepath, e)
 
         return results
 

@@ -26,6 +26,11 @@ wheels/
 htmlcov/
 coverage.xml
 
+# Real-data test cache (biosigio/tests/real_data.py), only if pointed inside
+# the repo via BIOSIGIO_REAL_DATA_CACHE -- the default lives outside the repo
+# in ~/.cache/biosigio/real_data and is never tracked either way.
+.real_data_cache/
+
 # OS
 .DS_Store
 .DS_Store?

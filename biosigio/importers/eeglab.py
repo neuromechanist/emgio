@@ -27,7 +27,7 @@ from scipy.io import loadmat
 
 from ..core.emg import Recording
 from ..core.modality import infer_modality_from_channel_type
-from ..exceptions import NotContinuousRecordingError, classify_read_error
+from ..exceptions import NotContinuousRecordingError, classify_read_error, is_resource_exhaustion
 from .base import BaseImporter
 
 # MATLAB .mat files (any version) open with a 128-byte descriptive text header.
@@ -704,6 +704,12 @@ class EEGLABImporter(BaseImporter):
                 return rec
 
         except Exception as e:
+            # Resource exhaustion (MemoryError, thread/allocation-exhaustion
+            # OSError/RuntimeError) is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             raise classify_read_error(e, filepath) from e
 
     def _load(self, filepath: str) -> Recording:
@@ -854,4 +860,10 @@ class EEGLABImporter(BaseImporter):
             return rec
 
         except Exception as e:
+            # Resource exhaustion (MemoryError, thread/allocation-exhaustion
+            # OSError/RuntimeError) is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             raise classify_read_error(e, filepath) from e

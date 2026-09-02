@@ -1,3 +1,4 @@
+import logging
 from typing import cast
 
 import numpy as np
@@ -5,7 +6,7 @@ import pandas as pd
 import pyedflib
 
 from ..core.emg import Recording
-from ..exceptions import MixedSamplingRateError, classify_read_error
+from ..exceptions import MixedSamplingRateError, classify_read_error, is_resource_exhaustion
 from ._edf_tolerant import classify_pyedflib_error, read_edf_tolerant
 from .base import BaseImporter
 
@@ -386,6 +387,16 @@ class EDFImporter(BaseImporter):
             return rec
 
         except Exception as e:
+            # Resource exhaustion (MemoryError -- incl. numpy's _ArrayMemoryError
+            # from the per-channel readSignal loop above -- or a thread/allocation
+            # -exhaustion OSError/RuntimeError) is a host condition, not a file
+            # problem: propagate it unchanged rather than reclassifying it as a
+            # permanent read failure (issue #123; see
+            # biosigio.exceptions.is_resource_exhaustion). This also covers an
+            # EdfReader-open failure above that classify_pyedflib_error found no
+            # recoverable cause for, which reaches here via a bare re-raise.
+            if is_resource_exhaustion(e):
+                raise
             # Typed classification: a truncated/non-compliant EDF (pyedflib's
             # "Filesize" check) becomes CorruptFileError so callers can surface a
             # specific reason. A BiosigIOError (e.g. the mixed_rate policy error)
@@ -393,5 +404,17 @@ class EDFImporter(BaseImporter):
             raise classify_read_error(e, filepath) from e
 
         finally:
+            # An exception from the try body (e.g. a MemoryError from the
+            # readSignal loop) can be propagating through this finally right
+            # now. pyedflib's close() is a C-extension call that can itself
+            # fail on a saturated host; unguarded, that failure would REPLACE
+            # the propagating exception outright. is_resource_exhaustion's
+            # __cause__/__context__ walk (biosigio.exceptions) can recover a
+            # masked exception when the replacement is a NEW raised exception,
+            # but that is strictly worse than not masking it at all -- so
+            # cleanup here never raises, only logs.
             if edf_reader is not None:
-                edf_reader.close()
+                try:
+                    edf_reader.close()
+                except Exception as close_exc:
+                    logging.warning("EDF reader close() failed for %s: %s", filepath, close_exc)

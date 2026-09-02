@@ -56,7 +56,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.emg import Recording
-from ..exceptions import UnsupportedFormatError, classify_read_error
+from ..exceptions import UnsupportedFormatError, classify_read_error, is_resource_exhaustion
 from ._mne_common import raw_to_recording, require_mne
 from .base import BaseImporter
 
@@ -251,6 +251,13 @@ class MEGImporter(BaseImporter):
         try:
             events = mne.find_events(raw, verbose="ERROR")
         except (ValueError, RuntimeError) as exc:
+            # Resource exhaustion (e.g. a saturated host's "can't start new
+            # thread" RuntimeError) is a host condition, not "no stim channels":
+            # absorbing it into empty events would return a "successful"
+            # Recording and hide the real cause (see
+            # biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(exc):
+                raise
             # "No stim channels found" is the common, benign case (many MEG
             # recordings carry no triggers, or events come from a BIDS events.tsv
             # applied separately) -- stay quiet for that. Any OTHER failure
@@ -288,6 +295,12 @@ class MEGImporter(BaseImporter):
         try:
             raw, extra_metadata = self._read_raw(mne, filepath)
         except Exception as e:
+            # Resource exhaustion (MemoryError, thread/allocation-exhaustion
+            # OSError/RuntimeError) is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             # Classify into a typed biosigIO error (not_continuous for an
             # evoked/epoched derivative, corrupt_or_truncated for a bad/incomplete
             # file, ...) so callers can surface a specific reason. The Pyright

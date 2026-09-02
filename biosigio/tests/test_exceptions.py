@@ -13,6 +13,7 @@ The string-matching unit tests cover the reader phrasings we map without needing
 each format on hand.
 """
 
+import errno
 import importlib.util
 import os
 import pathlib
@@ -33,6 +34,7 @@ from biosigio.exceptions import (
     NotContinuousRecordingError,
     UnsupportedFormatError,
     classify_read_error,
+    is_resource_exhaustion,
 )
 
 _HAS_MNE = importlib.util.find_spec("mne") is not None
@@ -89,6 +91,194 @@ def test_classify_passes_through_existing_typed_error():
 def test_classify_includes_filepath_when_given():
     err = classify_read_error(ValueError("No raw data"), "/data/sub-01_task-a-ave.fif")
     assert "sub-01_task-a-ave.fif" in str(err)
+
+
+# -- is_resource_exhaustion: resource exhaustion is never a property of the file
+# (issue #123) ------------------------------------------------------------------
+
+
+def test_is_resource_exhaustion_memory_error():
+    assert is_resource_exhaustion(MemoryError("out of memory")) is True
+
+
+def test_is_resource_exhaustion_numpy_array_memory_error():
+    """numpy's ``_ArrayMemoryError`` (a MemoryError subclass) is the exact shape
+    the on008083 failures logged: "Unable to allocate 24.8 MiB for an array
+    with shape (3248000,) and data type float64", raised inside a per-channel
+    readSignal loop when the host is saturated. Provoked for real (not
+    hand-constructed) so the assertion is about the actual numpy type -- numpy
+    decorates it ``@_display_as_base`` so ``str()``/``type().__name__`` both
+    read "MemoryError" (by design, for a friendlier traceback), so the type
+    is confirmed via its module instead of its display name."""
+    with pytest.raises(MemoryError) as exc_info:
+        np.zeros(int(1e18), dtype=np.float64)
+    exc = exc_info.value
+    assert type(exc) is not MemoryError  # genuinely numpy's subclass, not the builtin
+    assert type(exc).__module__.startswith("numpy")
+    assert is_resource_exhaustion(exc) is True
+
+
+def test_is_resource_exhaustion_thread_start_failure():
+    assert is_resource_exhaustion(RuntimeError("can't start new thread")) is True
+
+
+def test_is_resource_exhaustion_enomem_oserror():
+    assert is_resource_exhaustion(OSError(errno.ENOMEM, "Cannot allocate memory")) is True
+
+
+def test_is_resource_exhaustion_eagain_oserror():
+    """EAGAIN is kept for fork()-under-RLIMIT_NPROC (thread/process exhaustion),
+    not because this codebase does nonblocking I/O -- it does not, so a real
+    EAGAIN here always means the exhaustion reading. See the docstring on
+    _RESOURCE_EXHAUSTION_ERRNOS."""
+    assert is_resource_exhaustion(OSError(errno.EAGAIN, "Resource temporarily unavailable")) is True
+
+
+def test_is_resource_exhaustion_emfile_oserror():
+    """Per-process file-descriptor exhaustion (e.g. many parallel EDF/HDF5/Zarr
+    readers open at once) is the same "host is saturated" condition as
+    MemoryError, just a different resource."""
+    assert is_resource_exhaustion(OSError(errno.EMFILE, "Too many open files")) is True
+
+
+def test_is_resource_exhaustion_enfile_oserror():
+    """System-wide (not just per-process) file-descriptor exhaustion."""
+    assert is_resource_exhaustion(OSError(errno.ENFILE, "Too many open files in system")) is True
+
+
+def test_is_resource_exhaustion_cannot_allocate_memory_message_only():
+    """No errno set (e.g. re-raised across a process boundary, or constructed
+    by a library from a bare message) -- the substring match must still fire."""
+    assert is_resource_exhaustion(OSError("cannot allocate memory")) is True
+
+
+def test_is_resource_exhaustion_too_many_open_files_message_only():
+    assert is_resource_exhaustion(OSError("Too many open files")) is True
+
+
+def test_is_resource_exhaustion_negative_case_genuine_missing_file():
+    """A real ENOENT is a file problem, not resource exhaustion -- it must still
+    classify as a read error (not be treated as retryable)."""
+    assert is_resource_exhaustion(OSError(errno.ENOENT, "No such file or directory")) is False
+
+
+def test_is_resource_exhaustion_negative_case_different_errno_not_matched():
+    """A real, unrelated errno (permission denied) on an OSError whose message
+    happens to say nothing exhaustion-flavored must not be matched -- proves
+    the errno check is a specific allowlist, not "any OSError with an errno"."""
+    assert is_resource_exhaustion(OSError(errno.EACCES, "Permission denied")) is False
+
+
+def test_is_resource_exhaustion_negative_case_unrelated_error():
+    assert is_resource_exhaustion(ValueError("not EDF(+) or BDF(+) compliant (Filesize)")) is False
+
+
+# -- is_resource_exhaustion walks __cause__/__context__ so cleanup can't mask ---
+# resource exhaustion (a finally/__exit__/close() that itself raises while a
+# MemoryError is propagating would otherwise hide it from a caller's `except`).
+
+
+def test_is_resource_exhaustion_walks_explicit_cause_chain():
+    inner = MemoryError("Unable to allocate 24.8 MiB for an array")
+    outer = RuntimeError("cleanup failed")
+    outer.__cause__ = inner  # explicit `raise outer from inner` shape
+    assert is_resource_exhaustion(outer) is True
+
+
+def test_is_resource_exhaustion_walks_implicit_context_chain():
+    """The shape Python itself produces when a `finally`/`__exit__` raises while
+    another exception is already propagating (no `from` needed -- this is
+    automatic, see test_eeglab_v73_masked_memory_error_via_h5py_exit for the
+    real h5py-context-manager version of this)."""
+    try:
+        try:
+            raise MemoryError("Unable to allocate 24.8 MiB for an array")
+        finally:
+            raise OSError("unable to synchronously close file, id_type: 0x1")
+    except OSError as outer:
+        assert outer.__cause__ is None
+        assert isinstance(outer.__context__, MemoryError)
+        assert is_resource_exhaustion(outer) is True
+
+
+def test_is_resource_exhaustion_chain_walk_stops_at_unrelated_root():
+    """A chain that never bottoms out in resource exhaustion is correctly False,
+    even several links deep -- the walk does not just always return True once
+    it starts walking."""
+    root = ValueError("not EDF(+) or BDF(+) compliant (Filesize)")
+    mid = RuntimeError("re-raised during cleanup")
+    mid.__cause__ = root
+    outer = OSError("outermost wrapper")
+    outer.__cause__ = mid
+    assert is_resource_exhaustion(outer) is False
+
+
+def test_is_resource_exhaustion_chain_depth_is_bounded():
+    """A MemoryError buried past _MAX_CHAIN_DEPTH links is NOT found -- the walk
+    is bounded, not an unbounded chain traversal (guards against a pathological
+    or cyclic __context__ chain hanging the check)."""
+    from biosigio.exceptions import _MAX_CHAIN_DEPTH
+
+    memory_error = MemoryError("buried too deep")
+    exc: BaseException = memory_error
+    # One link past the bound: depth 0 is `outer` itself, so placing the
+    # MemoryError at exactly _MAX_CHAIN_DEPTH links away is one step too far.
+    for _ in range(_MAX_CHAIN_DEPTH):
+        wrapper = RuntimeError("wrapper")
+        wrapper.__cause__ = exc
+        exc = wrapper
+    assert is_resource_exhaustion(exc) is False
+
+    # One link closer (within the bound) IS found.
+    exc2: BaseException = memory_error
+    for _ in range(_MAX_CHAIN_DEPTH - 1):
+        wrapper = RuntimeError("wrapper")
+        wrapper.__cause__ = exc2
+        exc2 = wrapper
+    assert is_resource_exhaustion(exc2) is True
+
+
+# -- classify_read_error re-raises resource exhaustion, never FileReadError -----
+
+
+def test_classify_read_error_reraises_memory_error():
+    exc = MemoryError("Unable to allocate 24.8 MiB for an array")
+    with pytest.raises(MemoryError) as exc_info:
+        classify_read_error(exc, "/data/sub-001_ses-01_task-HierPrior_eeg.edf")
+    assert exc_info.value is exc
+
+
+def test_classify_read_error_reraises_numpy_array_memory_error():
+    try:
+        np.zeros(int(1e18), dtype=np.float64)
+    except MemoryError as exc:
+        with pytest.raises(MemoryError) as exc_info:
+            classify_read_error(exc, "/data/sub-001.edf")
+        assert exc_info.value is exc
+    else:
+        pytest.fail("expected numpy to raise MemoryError for an absurd allocation")
+
+
+def test_classify_read_error_reraises_thread_exhaustion_runtime_error():
+    exc = RuntimeError("can't start new thread")
+    with pytest.raises(RuntimeError) as exc_info:
+        classify_read_error(exc)
+    assert exc_info.value is exc
+
+
+def test_classify_read_error_reraises_enomem_oserror():
+    exc = OSError(errno.ENOMEM, "Cannot allocate memory")
+    with pytest.raises(OSError) as exc_info:
+        classify_read_error(exc)
+    assert exc_info.value is exc
+
+
+def test_classify_read_error_negative_case_enoent_still_classifies_as_read_error():
+    """A genuine "file not found"-flavored OSError is a real read problem, not
+    resource exhaustion, and must still fall through to FileReadError."""
+    err = classify_read_error(OSError(errno.ENOENT, "No such file or directory"), "/x/missing.edf")
+    assert type(err) is FileReadError
+    assert err.code == "file_read_error"
 
 
 # -- typed errors are ValueErrors (back-compat) + have stable codes ------------

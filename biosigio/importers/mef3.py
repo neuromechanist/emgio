@@ -28,7 +28,7 @@ import re
 import pandas as pd
 
 from ..core.emg import Recording
-from ..exceptions import classify_read_error
+from ..exceptions import classify_read_error, is_resource_exhaustion
 from ._mne_common import raw_to_recording, require_mne
 from .base import BaseImporter
 
@@ -123,6 +123,11 @@ class MEF3Importer(BaseImporter):
         try:
             raw = mne.io.read_raw_mef(filepath, password=password, preload=True, verbose="ERROR")
         except Exception as e:
+            # Resource exhaustion is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             raise classify_read_error(e, filepath) from e
 
         rec = raw_to_recording(raw)

@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -6,6 +7,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 from ..core.emg import Recording
+from ..exceptions import is_resource_exhaustion
 from .base import BaseImporter
 
 
@@ -23,17 +25,16 @@ class OTBImporter(BaseImporter):
             Path to the temporary directory containing extracted files
         """
         temp_dir = tempfile.mkdtemp(prefix="otb_")
-
-        # Check if file exists
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(f"OTB file not found: {filepath}")
-
-        print(f"Processing file: {filepath}")
-        print(f"File exists: {os.path.exists(filepath)}")
-        print(f"File size: {os.path.getsize(filepath)} bytes")
-        print(f"Temp directory: {temp_dir}")
-
         try:
+            # Check if file exists
+            if not os.path.exists(filepath):
+                raise FileNotFoundError(f"OTB file not found: {filepath}")
+
+            print(f"Processing file: {filepath}")
+            print(f"File exists: {os.path.exists(filepath)}")
+            print(f"File size: {os.path.getsize(filepath)} bytes")
+            print(f"Temp directory: {temp_dir}")
+
             # Use system tar command
             print(f"Extracting {filepath} to {temp_dir}")
             result = subprocess.run(
@@ -50,6 +51,19 @@ class OTBImporter(BaseImporter):
             return temp_dir
 
         except Exception as e:
+            # temp_dir is created before anything above can fail, and on any
+            # failure path this method never returns it to load(), so load()'s
+            # own cleanup (which only runs for a temp_dir it actually got back)
+            # never sees it either -- clean up here instead of leaking a
+            # directory under the system temp root on every failure.
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            if isinstance(e, FileNotFoundError):
+                raise
+            # Resource exhaustion is a host condition, not a file problem --
+            # propagate unchanged rather than reclassifying it as a permanent
+            # read failure (see biosigio.exceptions.is_resource_exhaustion).
+            if is_resource_exhaustion(e):
+                raise
             print(f"Error during extraction: {str(e)}")
             raise ValueError(f"Could not extract OTB file: {str(e)}") from e
 
@@ -298,8 +312,6 @@ class OTBImporter(BaseImporter):
         finally:
             # Clean up temporary directory
             if temp_dir and os.path.exists(temp_dir):
-                import shutil
-
                 try:
                     shutil.rmtree(temp_dir)
                 except Exception as e:

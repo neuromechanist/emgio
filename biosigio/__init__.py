@@ -14,6 +14,7 @@ from .exceptions import (
     NotContinuousRecordingError,
     UnsupportedFormatError,
     classify_read_error,
+    is_resource_exhaustion,
 )
 from .exporters.edf import EDFExporter
 from .exporters.zarr_stream import stream_to_zarr
@@ -33,6 +34,7 @@ __all__ = [
     "EmptyRecordingError",
     "MixedSamplingRateError",
     "classify_read_error",
+    "is_resource_exhaustion",
     "REASONS",
     "__version__",
     "__version_info__",
