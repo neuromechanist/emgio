@@ -137,8 +137,10 @@ rec.to_zarr('recording.zarr', dtype='float32')
 
 When the recording sits in a BIDS layout, the sibling `_channels.tsv` is authoritative for each channel's `type` and `units`, and adopting a declared unit **converts the samples** into it rather than relabelling them (see [BIDS Helpers](../api/bids.md)). Both export paths apply it and by the same rules, so which path built a store is not something a consumer has to know:
 
-- `Recording.from_file` applies the sidecar on import (unless `bids_channels="off"`), and `to_zarr` then exports the converted values.
-- `stream_to_zarr`, the bounded-memory path for recordings too large to load, takes the same `bids_channels` argument (`"auto"` by default, `"off"` to disable, or an explicit path or DataFrame) and folds each channel's conversion into its single streaming pass.
+- `Recording.from_file` applies the sidecar on import, and `to_zarr` then exports the converted values.
+- `stream_to_zarr`, the bounded-memory path for recordings too large to load, folds each channel's conversion into its single streaming pass.
+
+Both take the same `bids_channels` argument, with the same values and the same resolution: `"auto"` (default), `"off"` or `None`, an explicit path, or a DataFrame. See [`bids_channels`](../api/bids.md#choosing-the-sidecar-bids_channels) for what each means and when a converter has to pass a sidecar explicitly.
 
 That parity is the contract: one recording and one sidecar produce the same `unit`, `channel_type`, `scale`, `offset` and values whichever path ran, so a dataset whose recordings straddle a size threshold cannot serve microvolts for its small runs and volts for its large ones.
 
