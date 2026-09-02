@@ -44,6 +44,12 @@ _ON008083_SUB001_URL = (
     "sub-001_ses-01_task-HierPrior_eeg.edf"
 )
 _ON008083_SUB001_MIN_BYTES = 190_000_000  # sanity floor; real file is ~192.3 MiB
+# sha256 of the exact bytes at the URL above, per its dataset manifest
+# (https://data.nemar.org/on008083/v1.0.0/manifest.json) and independently
+# confirmed via `shasum -a 256` on the downloaded file. Guards the cache
+# against a truncated/substituted/corrupted entry (see
+# biosigio.tests.real_data.fetch_real_recording's sha256 parameter).
+_ON008083_SUB001_SHA256 = "545bb6afeea54b987c62f47382ecd0ca9738667177cebfb727e0c83cfde36efc"
 
 
 def _write_minimal_edf(path: str, n_channels: int = 2, n_samples: int = 1000) -> None:
@@ -128,7 +134,9 @@ def test_real_on008083_edf_reads_normally():
     """The real on008083 sub-001 recording reads cleanly end-to-end (no
     provocation) -- the baseline this bug's false-positive rejections
     contradicted (every file reads cleanly standalone per the issue)."""
-    path = fetch_real_recording(_ON008083_SUB001_URL, min_bytes=_ON008083_SUB001_MIN_BYTES)
+    path = fetch_real_recording(
+        _ON008083_SUB001_URL, min_bytes=_ON008083_SUB001_MIN_BYTES, sha256=_ON008083_SUB001_SHA256
+    )
     rec = Recording.from_file(str(path), mixed_rate="resample")
     assert rec.signals is not None
     assert len(rec.channels) > 0
@@ -139,7 +147,9 @@ def test_real_on008083_edf_memory_error_propagates_unchanged(monkeypatch):
     """Same real file, with the exact provocation from the issue: readSignal
     raises MemoryError partway through the channel loop. Must surface as
     MemoryError, not FileReadError."""
-    path = fetch_real_recording(_ON008083_SUB001_URL, min_bytes=_ON008083_SUB001_MIN_BYTES)
+    path = fetch_real_recording(
+        _ON008083_SUB001_URL, min_bytes=_ON008083_SUB001_MIN_BYTES, sha256=_ON008083_SUB001_SHA256
+    )
 
     real_read_signal = pyedflib.EdfReader.readSignal
     calls = {"n": 0}
