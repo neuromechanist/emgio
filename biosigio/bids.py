@@ -480,7 +480,12 @@ def apply_channels_tsv_to_stream(
 
     uncovered: list[str] = []
     for entry in channels:
-        label = str(entry["label"]).strip()
+        # The label is NOT stripped, and must not be: apply_channels_tsv matches a
+        # stripped row name against the Recording's channel keys as they are, so
+        # stripping here would match rows on this path that the in-memory path
+        # leaves unmatched -- a difference between the two exports, which is the
+        # one thing this function exists to prevent.
+        label = str(entry["label"])
         rows = rows_by_name.get(label)
         if not rows:
             uncovered.append(label)
