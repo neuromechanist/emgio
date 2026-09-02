@@ -180,6 +180,155 @@ def test_zarr_rejects_non_positive_view_chunk_columns(tmp_path):
         rec.to_zarr(str(tmp_path / "r"), view_chunk_columns=0)
 
 
+def expected_minmax_level1(base: np.ndarray, factor: int = 4) -> np.ndarray:
+    """Level 1 of the min/max pyramid, recomputed from a store's level-0 array.
+
+    Deliberately independent of `_build_minmax_pyramid`: a plain reshape-and-reduce
+    over each `factor`-wide window of the DIGITAL samples the store actually holds,
+    with the same trailing-remainder trim the exporter applies. Shared with
+    test_zarr_stream.py so both exporters are checked against one reference.
+    """
+    n_out = base.shape[1] // factor
+    windows = base[:, : n_out * factor].reshape(base.shape[0], n_out, factor)
+    return np.stack([windows.min(axis=2), windows.max(axis=2)])
+
+
+def test_zarr_view_values_read_back_across_chunk_boundary(tmp_path):
+    """Chunking the view tier by columns must not disturb the VALUES: a slice that
+    straddles a chunk boundary has to come back as the same envelope a whole-level
+    read gives, and both must equal the envelope recomputed from level 0.
+
+    The chunk width is forced down to 64 columns so level 1 (5000 columns) spans
+    79 chunks and the 60:70 slice crosses the first boundary; at the 1024 default
+    a slice that small could never leave chunk 0.
+    """
+    rng = np.random.default_rng(0)
+    n = 20000
+    rec = Recording()
+    for c in range(4):
+        signal = np.sin(np.arange(n) / (3.0 + c)) * (10.0 + c) + rng.standard_normal(n)
+        rec.add_channel(f"C{c}", signal, 250, "uV", "EEG")
+
+    grp = _open(rec.to_zarr(str(tmp_path / "r"), view_chunk_columns=64))["eeg_250hz"]
+    v1 = grp["view"]["1"]
+    assert v1.shape == (2, 4, 5000)
+    assert v1.chunks == (2, 4, 64)
+    assert v1.nchunks == 79  # ceil(5000 / 64): the 60:70 slice really crosses one
+
+    expected = expected_minmax_level1(np.asarray(grp["0"][:]))
+    np.testing.assert_array_equal(np.asarray(v1[:, :, 60:70]), expected[:, :, 60:70])
+    np.testing.assert_array_equal(np.asarray(v1[:]), expected)
+    # The envelope is a real envelope, not a constant: min < max somewhere.
+    assert np.any(expected[0] < expected[1])
+
+
+@pytest.mark.parametrize(
+    ("n_time", "level1_len", "level1_chunks"),
+    [(4096, 1024, 1), (4100, 1025, 2)],
+    ids=["exactly-1024", "one-column-over"],
+)
+def test_zarr_view_chunk_grid_at_the_1024_boundary(tmp_path, n_time, level1_len, level1_chunks):
+    """The off-by-one that matters: a level of exactly `view_chunk_columns` must be
+    ONE chunk, and one column more must be two. Asserted on the array's chunk grid,
+    not just its chunk shape, because a chunk shape of 1024 is correct in both
+    cases and only the grid distinguishes them."""
+    rec = Recording()
+    rec.add_channel("C1", np.sin(np.arange(n_time) / 5.0), 200, "uV", "EEG")
+
+    grp = _open(rec.to_zarr(str(tmp_path / f"r{n_time}")))["eeg_200hz"]
+    v1 = grp["view"]["1"]
+    assert v1.shape == (2, 1, level1_len)
+    assert v1.chunks == (2, 1, 1024)
+    assert dict(v1.attrs)["chunk_columns"] == 1024
+    assert v1.cdata_shape == (1, 1, level1_chunks)
+    assert v1.nchunks == level1_chunks
+
+
+def test_zarr_chunk_width_does_not_change_stored_values(tmp_path):
+    """Geometry is geometry: re-exporting the same recording with the OLD level-1
+    width (`round(chunk_seconds * rate / view_downsample)` = 200 columns at 200 Hz)
+    must give byte-identical level-0 samples and byte-identical view levels, only
+    a different chunk grid. Guards against the chunking change quietly altering
+    what is stored -- a trim, an off-by-one at a boundary, a shifted window."""
+    n = 20000
+    rec = Recording()
+    for c in range(3):
+        rec.add_channel(f"C{c}", np.sin(np.arange(n) / (4.0 + c)) * (5.0 + c), 200, "uV", "EEG")
+
+    old_geometry = _open(rec.to_zarr(str(tmp_path / "old"), view_chunk_columns=200))["eeg_200hz"]
+    new_geometry = _open(rec.to_zarr(str(tmp_path / "new")))["eeg_200hz"]
+
+    # Different geometry ...
+    assert old_geometry["view"]["1"].chunks == (2, 3, 200)
+    assert new_geometry["view"]["1"].chunks == (2, 3, 1024)
+
+    # ... identical content, level 0 dequantized and every view level raw.
+    def dequant(g):
+        a0 = g["0"]
+        scale = np.asarray(dict(a0.attrs)["scale"])[:, None]
+        offset = np.asarray(dict(a0.attrs)["offset"])[:, None]
+        return np.asarray(a0[:]) * scale + offset
+
+    np.testing.assert_array_equal(dequant(old_geometry), dequant(new_geometry))
+    levels = dict(old_geometry.attrs)["view_levels"]
+    assert levels == dict(new_geometry.attrs)["view_levels"] == [1, 2, 3]
+    for level in levels:
+        np.testing.assert_array_equal(
+            np.asarray(old_geometry["view"][str(level)][:]),
+            np.asarray(new_geometry["view"][str(level)][:]),
+        )
+
+
+def test_zarr_two_group_store_carries_per_group_geometry(tmp_path):
+    """Every geometry attr is per-group, and a two-group store must not leak one
+    group's numbers into the other's attrs.
+
+    EEG at 500 Hz (capped to 250) and EMG at 1000 Hz in one call: the groups end
+    up with different level-0 lengths, different time-based chunk/shard sizes and
+    different per-level column widths, so a value copied from the wrong group
+    cannot pass by coincidence.
+    """
+    n = 20000
+    rec = Recording()
+    for c in range(2):
+        rec.add_channel(f"E{c}", np.sin(np.arange(n) / (3.0 + c)), 500, "uV", "EEG")
+        rec.add_channel(f"M{c}", np.cos(np.arange(n) / (5.0 + c)), 1000, "uV", "EMG")
+
+    root = _open(rec.to_zarr(str(tmp_path / "r")))
+    assert {k for k in root.keys() if k != "events"} == {"eeg_250hz", "emg_1000hz"}
+    assert dict(root.attrs)["view_chunk_columns"] == 1024
+
+    # EEG: 500 Hz halved to the 250 Hz cap -> 10000 samples.
+    eeg = root["eeg_250hz"]
+    eeg_attrs = dict(eeg.attrs)
+    assert (eeg_attrs["rate"], eeg_attrs["original_rate"]) == (250.0, 500.0)
+    assert eeg_attrs["n_samples"] == 10000
+    assert eeg_attrs["n_view_levels"] == 3
+    assert eeg_attrs["view_levels"] == [1, 2, 3]
+    assert eeg_attrs["view_chunk_columns"] == 1024
+    assert eeg_attrs["view_downsample"] == 4
+    assert (eeg_attrs["chunk_seconds"], eeg_attrs["shard_seconds"]) == (4.0, 300.0)
+    assert dict(eeg["0"].attrs)["source_rate_hz"] == 500.0
+    assert dict(eeg["0"].attrs)["chunk_samples"] == 1000  # 4 s at 250 Hz
+    assert dict(eeg["0"].attrs)["shard_samples"] == 10000  # only 10 chunks, not 75
+    assert [eeg["view"][str(i)].shape[2] for i in (1, 2, 3)] == [2500, 625, 156]
+    assert [eeg["view"][str(i)].chunks[2] for i in (1, 2, 3)] == [1024, 625, 156]
+
+    # EMG: 1000 Hz is the EMG cap, so level 0 keeps all 20000 samples.
+    emg = root["emg_1000hz"]
+    emg_attrs = dict(emg.attrs)
+    assert (emg_attrs["rate"], emg_attrs["original_rate"]) == (1000.0, 1000.0)
+    assert emg_attrs["n_samples"] == 20000
+    assert emg_attrs["n_view_levels"] == 3
+    assert emg_attrs["view_levels"] == [1, 2, 3]
+    assert emg_attrs["view_chunk_columns"] == 1024
+    assert dict(emg["0"].attrs)["source_rate_hz"] == 1000.0
+    assert dict(emg["0"].attrs)["chunk_samples"] == 4000  # 4 s at 1000 Hz
+    assert dict(emg["0"].attrs)["shard_samples"] == 20000
+    assert [emg["view"][str(i)].shape[2] for i in (1, 2, 3)] == [5000, 1250, 312]
+    assert [emg["view"][str(i)].chunks[2] for i in (1, 2, 3)] == [1024, 1024, 312]
+
+
 # The 40-minute, 129-channel, 250 Hz EEG store the transfer-efficiency audit
 # measured (nemarOrg/nemar-cli#1178): level 0 is 607586 samples.
 _REFERENCE_N_TIME = 607586
@@ -188,12 +337,15 @@ _REFERENCE_LEVEL_LENGTHS = [151896, 37974, 9493, 2373, 593, 148]
 
 def test_reference_store_view_chunk_counts():
     """Pure geometry over the audited reference store: the column rule turns a
-    whole-recording read of level 4 from 594 requests into 3, and the level-6
+    whole-recording read of LEVEL 4 from 594 requests into 3, and the LEVEL 6
     minimap from 148 into 1.
 
     Pins the two helpers the exporters share (`_pyramid_level_lengths` for the
     level lengths, `_view_chunk_columns` for the chunk width) against the numbers
     in the audit, so a change to either rule has to restate the acceptance case.
+    Chunk counts only: the audit's byte figures (1.16 MB across level 4, 77 KB
+    across level 6) come from nemarOrg/nemar-cli#1178 and are not re-measured
+    here, since they depend on that store's channel count and compression.
     """
     lengths = _pyramid_level_lengths(_REFERENCE_N_TIME, 4, 512, 12)
     assert lengths == _REFERENCE_LEVEL_LENGTHS

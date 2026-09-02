@@ -26,6 +26,8 @@ from biosigio import stream_to_zarr  # noqa: E402
 from biosigio.exporters.zarr import _DISCRETE_TYPES, _resample_channel  # noqa: E402
 from biosigio.importers._mne_common import _MNE_TYPE_TO_biosigIO  # noqa: E402
 
+from .test_zarr import expected_minmax_level1  # noqa: E402
+
 # Real committed MEG fixtures (see test_meg_importer.py): a FIF file (305 ch,
 # 100 Hz, 30 s) and a CTF .ds directory (244 ch, 1250 Hz, 4 s).
 _REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -37,17 +39,26 @@ BTI_DIR = _REPO / "examples/bti/sub-01_task-test_meg"
 EMG_EDF = _REPO / "examples/bids/emg/sub-01/emg/sub-01_task-isometric10percentmvc_run-01_emg.edf"
 
 
-def _write_edf(path: str, rate: float, duration_s: float, n_ch: int) -> np.ndarray:
-    """Write a real n-channel EDF at one rate; return the (n_ch, n_samples) data."""
+def _write_edf(
+    path: str, rate: float, duration_s: float, n_ch: int, labels: list[str] | None = None
+) -> np.ndarray:
+    """Write a real n-channel EDF at one rate; return the (n_ch, n_samples) data.
+
+    ``labels`` overrides the default ``EEG0``, ``EEG1``, ... names. The EDF
+    importer types channels from their label, so passing a mix (``["EEG0",
+    "EMG0"]``) produces a genuinely multi-modality single-rate recording.
+    """
     n = int(rate * duration_s)
     t = np.arange(n) / rate
     data = np.vstack([(30.0 + 5 * c) * np.sin(2 * np.pi * (3 + c) * t) for c in range(n_ch)])
+    names = labels if labels is not None else [f"EEG{c}" for c in range(n_ch)]
+    assert len(names) == n_ch
     headers = []
     for c in range(n_ch):
         row = data[c]
         headers.append(
             {
-                "label": f"EEG{c}",
+                "label": names[c],
                 "dimension": "uV",
                 "sample_frequency": rate,
                 "physical_max": float(np.max(row)),
@@ -68,13 +79,14 @@ def _write_edf(path: str, rate: float, duration_s: float, n_ch: int) -> np.ndarr
 
 
 class _TmpEDF:
-    def __init__(self, rate, duration_s, n_ch):
+    def __init__(self, rate, duration_s, n_ch, labels=None):
         self.rate, self.duration_s, self.n_ch = rate, duration_s, n_ch
+        self.labels = labels
 
     def __enter__(self):
         fd, self.path = tempfile.mkstemp(suffix=".edf")
         os.close(fd)
-        self.data = _write_edf(self.path, self.rate, self.duration_s, self.n_ch)
+        self.data = _write_edf(self.path, self.rate, self.duration_s, self.n_ch, self.labels)
         return self.path
 
     def __exit__(self, *_exc):
@@ -246,8 +258,11 @@ def test_stream_store_structure_and_pyramid():
             # Level 0 keeps its time-based chunk/shard and reports both in samples.
             a0 = g["0"]
             assert a0.chunks == (3, 800)  # 4 s at 200 Hz
+            # 300 s would be 75 chunks but the recording is only 10, so the shard
+            # is the whole 8000-sample signal.
+            assert a0.shards == (3, 8000)
             assert dict(a0.attrs)["chunk_samples"] == 800
-            assert dict(a0.attrs)["shard_samples"] == a0.shards[1]
+            assert dict(a0.attrs)["shard_samples"] == 8000
             assert dict(a0.attrs)["source_rate_hz"] == 200.0
 
 
@@ -329,6 +344,79 @@ def test_stream_rejects_bad_dtype():
         with tempfile.TemporaryDirectory() as d:
             with pytest.raises(ValueError, match="dtype must be"):
                 stream_to_zarr(path, os.path.join(d, "x.zarr"), dtype="int8")
+
+
+def test_stream_view_values_read_back_across_chunk_boundary():
+    """The streaming exporter fills the view tier one CHANNEL row at a time, so a
+    wider chunk means each write is a read-modify-write of a chunk several other
+    channels already touched. This pins that the values survive it: a slice
+    straddling a chunk boundary equals the same slice of a whole-level read, and
+    both equal the envelope recomputed from level 0.
+
+    64-column chunks so level 1 (5000 columns) spans 79 of them and the 60:70
+    slice really crosses the first boundary."""
+    with _TmpEDF(rate=250.0, duration_s=80.0, n_ch=4) as path:
+        with tempfile.TemporaryDirectory() as d:
+            store = os.path.join(d, "rec.zarr")
+            stream_to_zarr(path, store, force_modality="EEG", view_chunk_columns=64)
+            g = zarr.open_group(store, mode="r")["eeg_250hz"]
+            v1 = g["view"]["1"]
+            assert v1.shape == (2, 4, 5000)
+            assert v1.chunks == (2, 4, 64)
+            assert v1.nchunks == 79
+
+            expected = expected_minmax_level1(np.asarray(g["0"][:]))
+            np.testing.assert_array_equal(np.asarray(v1[:, :, 60:70]), expected[:, :, 60:70])
+            np.testing.assert_array_equal(np.asarray(v1[:]), expected)
+            assert np.any(expected[0] < expected[1])  # a real envelope, not a constant
+
+
+def test_stream_two_group_store_carries_per_group_geometry():
+    """Every geometry attr is per-group on the streaming path too, and one group's
+    numbers must not leak into the other's attrs.
+
+    The streaming source has to be single-rate (a mixed-rate EDF is rejected in
+    `_EdfSource`), so the two groups are made by MODALITY instead: a 1000 Hz EDF
+    with two EEG-labelled and two EMG-labelled channels splits into eeg_250hz
+    (capped, 5000 samples, 2 view levels) and emg_1000hz (uncapped, 20000
+    samples, 3 view levels). Different lengths, different pyramid depths and
+    different chunk sizes, so a value copied from the wrong group cannot pass."""
+    labels = ["EEG0", "EEG1", "EMG0", "EMG1"]
+    with _TmpEDF(rate=1000.0, duration_s=20.0, n_ch=4, labels=labels) as path:
+        with tempfile.TemporaryDirectory() as d:
+            store = os.path.join(d, "rec.zarr")
+            stream_to_zarr(path, store)  # no force_modality: type per channel label
+            root = zarr.open_group(store, mode="r")
+            assert sorted(dict(root.attrs)["channel_groups"]) == ["eeg_250hz", "emg_1000hz"]
+            assert dict(root.attrs)["view_chunk_columns"] == 1024
+
+            eeg = root["eeg_250hz"]
+            ea = dict(eeg.attrs)
+            assert (ea["rate"], ea["original_rate"], ea["n_channels"]) == (250.0, 1000.0, 2)
+            assert ea["n_samples"] == 5000  # 20000 @ 1000 Hz -> 5000 @ the 250 Hz cap
+            assert ea["n_view_levels"] == 2
+            assert ea["view_levels"] == [1, 2]
+            assert ea["view_chunk_columns"] == 1024
+            assert ea["view_downsample"] == 4
+            assert (ea["chunk_seconds"], ea["shard_seconds"]) == (4.0, 300.0)
+            assert dict(eeg["0"].attrs)["source_rate_hz"] == 1000.0
+            assert dict(eeg["0"].attrs)["chunk_samples"] == 1000  # 4 s at 250 Hz
+            assert dict(eeg["0"].attrs)["shard_samples"] == 5000  # only 5 chunks, not 75
+            assert [eeg["view"][str(i)].shape[2] for i in (1, 2)] == [1250, 312]
+            assert [eeg["view"][str(i)].chunks[2] for i in (1, 2)] == [1024, 312]
+
+            emg = root["emg_1000hz"]
+            ma = dict(emg.attrs)
+            assert (ma["rate"], ma["original_rate"], ma["n_channels"]) == (1000.0, 1000.0, 2)
+            assert ma["n_samples"] == 20000  # 1000 Hz is the EMG cap: nothing dropped
+            assert ma["n_view_levels"] == 3
+            assert ma["view_levels"] == [1, 2, 3]
+            assert ma["view_chunk_columns"] == 1024
+            assert dict(emg["0"].attrs)["source_rate_hz"] == 1000.0
+            assert dict(emg["0"].attrs)["chunk_samples"] == 4000  # 4 s at 1000 Hz
+            assert dict(emg["0"].attrs)["shard_samples"] == 20000
+            assert [emg["view"][str(i)].shape[2] for i in (1, 2, 3)] == [5000, 1250, 312]
+            assert [emg["view"][str(i)].chunks[2] for i in (1, 2, 3)] == [1024, 1024, 312]
 
 
 # -- Real recording: the view geometry on an actual store, both exporters -------
