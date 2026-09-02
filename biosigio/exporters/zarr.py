@@ -26,10 +26,26 @@ dependency (the ``zarr`` extra), imported lazily.
 Layout (one root group per recording)::
 
     /                         root attrs: provenance, modality_rates, metadata
-      <modality>_<rate>hz/    one group per (modality, native rate)
-        0                     (n_ch, n_time) base signal, anti-aliased, sharded
-        view/1, view/2, ...   (2, n_ch, n_time_L) min/max envelopes
+      <modality>_<rate>hz/    one group per (modality, native rate); attrs declare
+                              the pyramid and the chunk geometry
+        0                     (n_ch, n_time) base signal, anti-aliased. Chunked and
+                              sharded on TIME (``chunk_seconds`` / ``shard_seconds``),
+                              the granularity inference and training reads want.
+        view/1, view/2, ...   (2, n_ch, n_time_L) min/max envelopes. Chunked on a
+                              constant COLUMN count (``view_chunk_columns``), NOT on
+                              time: a viewport needs ~1-2k columns at whatever level
+                              it picks, so a time-based chunk would shrink fourfold
+                              per level and turn one screen into hundreds of tiny
+                              requests (a whole-recording view of a 40-minute store
+                              was 594 requests for 1.16 MB; at 1024 columns it is 3).
       events/                 onset, duration, code arrays + label_map attr
+
+Every channel group declares its pyramid and geometry in attrs -- ``n_view_levels``,
+``view_levels``, ``view_downsample``, ``view_chunk_columns``, ``chunk_seconds``,
+``shard_seconds`` -- so a reader plans its reads instead of probing ``view/1``,
+``view/2``, ... until a 404. ``format_version`` stays at 2 for these: they are
+additive attrs plus a chunk-shape change, and every Zarr v3 reader takes chunk
+shapes from the array metadata it must already parse.
 """
 
 from __future__ import annotations
@@ -200,6 +216,20 @@ def _chunk_shard_time(
     return chunk_t, shard_t
 
 
+def _view_chunk_columns(n_time_level: int, view_chunk_columns: int) -> int:
+    """Time-chunk width (columns) for one view-pyramid level.
+
+    A constant column count, capped by the level's own length so a short level is
+    a single chunk. Deliberately NOT time-based: view levels are read by column
+    budget (a viewport wants ~1-2k columns at whatever level it picks), so a
+    seconds-based rule would shrink the chunk fourfold per level and shatter one
+    screenful into hundreds of ~2 KB requests. Shared by both exporters (the
+    in-memory one here and :mod:`biosigio.exporters.zarr_stream`) so their
+    geometry cannot drift.
+    """
+    return max(1, min(int(n_time_level), int(view_chunk_columns)))
+
+
 class ZarrExporter:
     """Exporter to a sharded Zarr v3 store with a min/max view pyramid."""
 
@@ -215,6 +245,7 @@ class ZarrExporter:
         max_view_levels: int = 12,
         chunk_seconds: float = 4.0,
         shard_seconds: float = 300.0,
+        view_chunk_columns: int = 1024,
         compressor_level: int = 5,
         events_df=None,
     ) -> str:
@@ -231,9 +262,15 @@ class ZarrExporter:
             view_downsample: Time decimation factor between pyramid levels.
             min_view_samples: Stop building levels at this length.
             max_view_levels: Hard cap on pyramid depth.
-            chunk_seconds: Time span per chunk (random-access granularity).
-            shard_seconds: Time span per shard (sequential-read granularity for
-                training); rounded to a whole number of chunks.
+            chunk_seconds: Time span per chunk of ``level 0`` (random-access
+                granularity). View levels are chunked by column count instead;
+                see ``view_chunk_columns``.
+            shard_seconds: Time span per shard of ``level 0`` (sequential-read
+                granularity for training); rounded to a whole number of chunks.
+            view_chunk_columns: Columns per chunk of every ``view/*`` level
+                (capped by the level's length). Must be >= 1. The default 1024
+                is about one viewport, so a whole-recording render at any level
+                is a handful of requests rather than hundreds.
             compressor_level: zstd level for the Blosc codec.
             events_df: Optional events table; falls back to ``rec.events``.
 
@@ -247,6 +284,8 @@ class ZarrExporter:
             raise ValueError("No signals loaded")
         if dtype not in ("int16", "float32"):
             raise ValueError("dtype must be 'int16' or 'float32'")
+        if int(view_chunk_columns) < 1:
+            raise ValueError("view_chunk_columns must be >= 1")
 
         rates = dict(DEFAULT_MODALITY_RATES if modality_rates is None else modality_rates)
         if not filepath.endswith(".zarr"):
@@ -328,6 +367,15 @@ class ZarrExporter:
                 gname = candidate
             written_groups.append(gname)
             grp = root.create_group(gname)
+
+            # Min/max view pyramid (rendering only), built in digital space so it
+            # shares the base scale/offset; never inference-usable. Built before the
+            # group attrs so the group can DECLARE its depth (n_view_levels /
+            # view_levels) and a reader never has to probe view/1..n until a 404.
+            pyramid = _build_minmax_pyramid(
+                base, view_downsample, min_view_samples, max_view_levels
+            )
+            chunk_t, shard_t = _chunk_shard_time(n_time, target_rate, chunk_seconds, shard_seconds)
             grp.attrs.update(
                 {
                     "modality": modality,
@@ -336,10 +384,15 @@ class ZarrExporter:
                     "n_channels": int(n_ch),
                     "n_samples": int(n_time),
                     "channels": chan_meta,
+                    "n_view_levels": len(pyramid),
+                    "view_levels": list(range(1, len(pyramid) + 1)),
+                    "view_downsample": int(view_downsample),
+                    "view_chunk_columns": int(view_chunk_columns),
+                    "chunk_seconds": float(chunk_seconds),
+                    "shard_seconds": float(shard_seconds),
                 }
             )
 
-            chunk_t, shard_t = _chunk_shard_time(n_time, target_rate, chunk_seconds, shard_seconds)
             a0 = grp.create_array(
                 "0",
                 shape=(n_ch, n_time),
@@ -353,8 +406,14 @@ class ZarrExporter:
                 {
                     "level": 0,
                     "rate": float(target_rate),
+                    # The native acquisition rate this group came from, so a reader
+                    # can tell the effective (capped) rate from the source rate
+                    # without re-deriving it from the per-channel metadata.
+                    "source_rate_hz": float(native_rate),
                     "downsample_factor": 1,
                     "kind": "signal",
+                    "chunk_samples": int(chunk_t),
+                    "shard_samples": int(shard_t),
                     "anti_aliased": any(m["anti_aliased"] for m in chan_meta),
                     # A group of only discrete channels is not inference-usable.
                     "usable_for_inference": any(m["usable_for_inference"] for m in chan_meta),
@@ -364,15 +423,10 @@ class ZarrExporter:
                 }
             )
 
-            # Min/max view pyramid (rendering only). Built in digital space so it
-            # shares the base scale/offset; never inference-usable.
             view = grp.create_group("view")
-            pyramid = _build_minmax_pyramid(
-                base, view_downsample, min_view_samples, max_view_levels
-            )
             for li, lvl in enumerate(pyramid, start=1):
                 eff_factor = view_downsample**li
-                ct = max(1, min(lvl.shape[2], int(round(chunk_seconds * target_rate / eff_factor))))
+                ct = _view_chunk_columns(lvl.shape[2], view_chunk_columns)
                 av = view.create_array(
                     str(li),
                     shape=lvl.shape,
@@ -388,6 +442,7 @@ class ZarrExporter:
                         "rate_effective": float(target_rate) / eff_factor,
                         "kind": "minmax_envelope",
                         "axis0": ["min", "max"],
+                        "chunk_columns": int(ct),
                         "usable_for_inference": False,
                     }
                 )
@@ -420,6 +475,7 @@ class ZarrExporter:
                 "modality_rates": rates,
                 "dtype": dtype,
                 "view_downsample": view_downsample,
+                "view_chunk_columns": int(view_chunk_columns),
                 "anti_alias_filter": "scipy.signal.resample_poly (polyphase FIR)",
                 "channel_groups": written_groups,
                 # Native JSON object (datetimes/numpy as typed envelopes), shared

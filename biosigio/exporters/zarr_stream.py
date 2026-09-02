@@ -23,9 +23,15 @@ This path keeps peak RAM bounded by ~one channel, independent of recording size:
    each min/max pyramid level). RAM = one channel.
 
 The resulting store is structurally identical to :meth:`ZarrExporter.export` and
-numerically equal within int16 quantization. The downsampling parameters and
-provenance are recorded in attrs, same as the in-memory path. Requires both the
-``zarr`` and ``meg`` (MNE) extras.
+numerically equal within int16 quantization: same layout, same attrs, same chunk
+geometry -- ``level 0`` chunked and sharded on time (``chunk_seconds`` /
+``shard_seconds``), every ``view/*`` level chunked on a constant column count
+(``view_chunk_columns``, shared with the in-memory path through
+:func:`~biosigio.exporters.zarr._view_chunk_columns` so the two cannot drift), and
+each channel group declaring its pyramid via ``n_view_levels`` / ``view_levels``.
+See :mod:`biosigio.exporters.zarr` for the layout block and the rationale. The
+downsampling parameters and provenance are recorded in attrs, same as the
+in-memory path. Requires both the ``zarr`` and ``meg`` (MNE) extras.
 """
 
 from __future__ import annotations
@@ -51,6 +57,7 @@ from .zarr import (
     _quantize_int16_channel,
     _resample_channel,
     _target_rate,
+    _view_chunk_columns,
     require_zarr,
 )
 
@@ -308,6 +315,7 @@ def stream_to_zarr(
     max_view_levels: int = 12,
     chunk_seconds: float = 4.0,
     shard_seconds: float = 300.0,
+    view_chunk_columns: int = 1024,
     compressor_level: int = 5,
     read_chunk_seconds: float = 30.0,
     scratch_dir: str | None = None,
@@ -327,6 +335,9 @@ def stream_to_zarr(
         dtype: ``"int16"`` (scaled) or ``"float32"`` (lossless).
         events_df: Optional events table (onset/duration/description).
         recording_metadata: Optional metadata dict stored in the store root attrs.
+        view_chunk_columns: Columns per chunk of every ``view/*`` level (capped by
+            the level's length). Must be >= 1; see
+            :meth:`~biosigio.exporters.zarr.ZarrExporter.export`.
         read_chunk_seconds: Time-window size for the streaming transpose pass.
         scratch_dir: Directory for the temporary channel-major memmap (defaults to
             the system temp dir). Point this at fast local scratch.
@@ -336,6 +347,8 @@ def stream_to_zarr(
     """
     if dtype not in ("int16", "float32"):
         raise ValueError("dtype must be 'int16' or 'float32'")
+    if int(view_chunk_columns) < 1:
+        raise ValueError("view_chunk_columns must be >= 1")
     zarr = require_zarr()
     from zarr.codecs import BloscCodec
 
@@ -403,7 +416,12 @@ def stream_to_zarr(
             view_arrays = []
             for li, length in enumerate(level_lengths, start=1):
                 eff = view_downsample**li
-                ct = max(1, min(length, int(round(chunk_seconds * target_rate / eff))))
+                # Constant column count, not a constant time span: same rule as the
+                # in-memory exporter (see _view_chunk_columns). A wider chunk here
+                # means FEWER, larger read-modify-write cycles in pass 2 for the same
+                # total bytes (each channel still writes its own row of every level),
+                # so it does not cost the bounded-memory guarantee.
+                ct = _view_chunk_columns(length, view_chunk_columns)
                 av = view.create_array(
                     str(li),
                     shape=(2, n_ch, length),
@@ -411,7 +429,7 @@ def stream_to_zarr(
                     dtype=out_np,
                     compressors=compressors,
                 )
-                view_arrays.append((li, eff, av))
+                view_arrays.append((li, eff, ct, av))
 
             # Pass 2: one channel at a time -- resample, quantize, write the base row
             # and each pyramid level's row. Peak RAM is a single channel.
@@ -433,7 +451,7 @@ def stream_to_zarr(
                     pyramid = _build_minmax_pyramid(
                         q[np.newaxis, :], view_downsample, min_view_samples, max_view_levels
                     )
-                    for (_li, _eff, av), lvl in zip(view_arrays, pyramid, strict=False):
+                    for (_li, _eff, _ct, av), lvl in zip(view_arrays, pyramid, strict=False):
                         av[:, i, :] = lvl[:, 0, :]
                 meta = {
                     "label": ci["label"],
@@ -464,14 +482,23 @@ def stream_to_zarr(
                     "n_channels": int(n_ch),
                     "n_samples": int(n_time),
                     "channels": chan_meta,
+                    "n_view_levels": len(level_lengths),
+                    "view_levels": list(range(1, len(level_lengths) + 1)),
+                    "view_downsample": int(view_downsample),
+                    "view_chunk_columns": int(view_chunk_columns),
+                    "chunk_seconds": float(chunk_seconds),
+                    "shard_seconds": float(shard_seconds),
                 }
             )
             a0.attrs.update(
                 {
                     "level": 0,
                     "rate": float(target_rate),
+                    "source_rate_hz": float(native_rate),
                     "downsample_factor": 1,
                     "kind": "signal",
+                    "chunk_samples": int(chunk_t),
+                    "shard_samples": int(shard_t),
                     "anti_aliased": any(m["anti_aliased"] for m in chan_meta),
                     "usable_for_inference": any(m["usable_for_inference"] for m in chan_meta),
                     "scale": scale.tolist(),
@@ -479,7 +506,7 @@ def stream_to_zarr(
                     "physical_formula": "physical = digital * scale + offset",
                 }
             )
-            for li, eff, av in view_arrays:
+            for li, eff, ct, av in view_arrays:
                 av.attrs.update(
                     {
                         "level": li,
@@ -487,6 +514,7 @@ def stream_to_zarr(
                         "rate_effective": float(target_rate) / eff,
                         "kind": "minmax_envelope",
                         "axis0": ["min", "max"],
+                        "chunk_columns": int(ct),
                         "usable_for_inference": False,
                     }
                 )
@@ -526,6 +554,7 @@ def stream_to_zarr(
                 "modality_rates": rates,
                 "dtype": dtype,
                 "view_downsample": view_downsample,
+                "view_chunk_columns": int(view_chunk_columns),
                 "anti_alias_filter": "scipy.signal.resample_poly (polyphase FIR)",
                 "channel_groups": written_groups,
                 "recording_metadata": metadata_to_mapping(meta),

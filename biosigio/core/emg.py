@@ -767,7 +767,8 @@ class Recording:
         render pyramid above it (flagged not-for-inference). A derived serving copy,
         not the archival source (BIDS/EDF stay authoritative). Requires the ``zarr``
         extra (zarr v3). See :class:`~biosigio.exporters.zarr.ZarrExporter` for the
-        tuning knobs (``modality_rates``, ``dtype``, chunk/shard sizing, ...).
+        tuning knobs (``modality_rates``, ``dtype``, level-0 chunk/shard sizing,
+        ``view_chunk_columns`` for the view pyramid, ...).
 
         Args:
             filepath: Output store path (``.zarr`` appended if missing).
