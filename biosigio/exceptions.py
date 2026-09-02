@@ -23,6 +23,7 @@ share one classifier rather than each re-inventing string matching.
 from __future__ import annotations
 
 import errno
+from typing import NoReturn
 
 
 class BiosigIOError(ValueError):
@@ -104,50 +105,83 @@ REASONS: dict[str, str] = {
 
 # Thread/resource-exhaustion messages that surface as OSError/RuntimeError rather
 # than MemoryError. Reader-agnostic substrings (CPython's own `_thread` module and
-# libc's ENOMEM/EAGAIN strerror text), matched case-insensitively.
+# libc's ENOMEM/EMFILE/ENFILE/EAGAIN strerror text), matched case-insensitively.
 _THREAD_OR_RESOURCE_EXHAUSTION_SUBSTRINGS = (
     "can't start new thread",
     "cannot allocate memory",  # ENOMEM strerror text (not every OSError carries .errno)
+    "too many open files",  # EMFILE/ENFILE strerror text (fd exhaustion, e.g. many parallel readers)
 )
-_RESOURCE_EXHAUSTION_ERRNOS = (errno.ENOMEM, errno.EAGAIN)
+# ENOMEM: out of memory. EMFILE/ENFILE: per-process/system-wide file-descriptor
+# exhaustion -- the same "host is saturated" condition as MemoryError, just a
+# different resource, and just as likely under many parallel conversions opening
+# EDF/HDF5/Zarr stores at once. EAGAIN is kept even though it is normally "call
+# again later" for a nonblocking read: on Linux it is also what fork() returns
+# when RLIMIT_NPROC is hit (the process table is full), which is thread/process
+# exhaustion in the same sense as "can't start new thread" above, not a file
+# problem -- and this codebase never uses nonblocking I/O, so a real EAGAIN here
+# always means the resource-exhaustion reading, never the "retry the syscall" one.
+_RESOURCE_EXHAUSTION_ERRNOS = (errno.ENOMEM, errno.EMFILE, errno.ENFILE, errno.EAGAIN)
+# How many links of __cause__/__context__ to follow when the outermost exception
+# itself doesn't match (see the docstring below).
+_MAX_CHAIN_DEPTH = 5
 
 
-def is_resource_exhaustion(exc: Exception) -> bool:
-    """True when ``exc`` reflects the host running out of memory or threads,
-    not a problem with the file being read.
+def is_resource_exhaustion(exc: BaseException) -> bool:
+    """Re-raises for resource exhaustion; used by ``classify_read_error`` (below)
+    and by importers directly, before it, as their first check.
+
+    True when ``exc`` -- or something it masks -- reflects the host running out
+    of memory, threads, or file descriptors, not a problem with the file being
+    read.
 
     Resource exhaustion is never a property of the file: a ``MemoryError`` (or
     numpy's ``_ArrayMemoryError``, a ``MemoryError`` subclass) raised mid-read
     typically means the host was saturated (e.g. many parallel conversions),
     not that the recording is corrupt. Importers must let it -- and the
-    thread/allocation-exhaustion ``OSError``/``RuntimeError`` variants below --
-    propagate unchanged instead of reclassifying it as a permanent read
+    thread/allocation/fd-exhaustion ``OSError``/``RuntimeError`` variants below
+    -- propagate unchanged instead of reclassifying it as a permanent read
     failure, so a caller (e.g. NEMAR's converter) can retry instead of
     recording a deterministic failure. See :func:`classify_read_error`.
+
+    Resource exhaustion can also be MASKED by cleanup: if a ``MemoryError`` is
+    propagating and a ``finally``/context-manager ``__exit__``/``close()``
+    during unwinding raises its OWN exception, that second exception -- not the
+    ``MemoryError`` -- is what a caller's ``except`` actually binds, with the
+    ``MemoryError`` attached as ``__context__`` (implicit chaining) or
+    ``__cause__`` (an explicit ``raise ... from``). So this walks the chain --
+    the exception itself, then ``__cause__`` or ``__context__``, up to
+    :data:`_MAX_CHAIN_DEPTH` links -- rather than only checking the outermost
+    exception.
     """
-    if isinstance(exc, MemoryError):
-        return True
-    if isinstance(exc, (OSError, RuntimeError)):
-        if getattr(exc, "errno", None) in _RESOURCE_EXHAUSTION_ERRNOS:
+    seen: BaseException | None = exc
+    for _ in range(_MAX_CHAIN_DEPTH):
+        if seen is None:
+            return False
+        if isinstance(seen, MemoryError):
             return True
-        low = str(exc).lower()
-        if any(s in low for s in _THREAD_OR_RESOURCE_EXHAUSTION_SUBSTRINGS):
-            return True
+        if isinstance(seen, (OSError, RuntimeError)):
+            if getattr(seen, "errno", None) in _RESOURCE_EXHAUSTION_ERRNOS:
+                return True
+            low = str(seen).lower()
+            if any(s in low for s in _THREAD_OR_RESOURCE_EXHAUSTION_SUBSTRINGS):
+                return True
+        seen = seen.__cause__ or seen.__context__
     return False
 
 
-def classify_read_error(exc: Exception, filepath: str = "") -> BiosigIOError:
-    """Map a low-level read failure to a typed biosigIO error with a stable code.
+def classify_read_error(exc: Exception, filepath: str = "") -> BiosigIOError | NoReturn:
+    """Re-raises ``exc`` as-is when it is resource exhaustion (see
+    :func:`is_resource_exhaustion`); otherwise maps a low-level read failure to
+    a typed biosigIO error with a stable code.
 
     Importers call this in their ``except`` and ``raise ... from exc`` the result,
     so the *why* is decided once, where the format context lives. An exception
     that is already a :class:`BiosigIOError` is returned unchanged.
 
-    Resource exhaustion (:func:`is_resource_exhaustion`) is never classified as a
-    read error either: this function re-raises it as-is (defence in depth for a
-    caller that calls this directly, without its own pre-check guard -- see the
-    importers, which all guard *before* calling this so the common path never
-    even reaches here for a MemoryError).
+    The resource-exhaustion re-raise is defence in depth: a caller that calls
+    this directly, without its own pre-check guard, is still safe -- see the
+    importers, which all guard *before* calling this, so the common path never
+    even reaches here for a MemoryError.
 
     The matching is deliberately reader-agnostic (MNE and pyedflib phrase the same
     condition differently); unmatched failures fall through to :class:`FileReadError`
