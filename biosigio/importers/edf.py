@@ -1,3 +1,4 @@
+import logging
 from typing import cast
 
 import numpy as np
@@ -403,5 +404,17 @@ class EDFImporter(BaseImporter):
             raise classify_read_error(e, filepath) from e
 
         finally:
+            # An exception from the try body (e.g. a MemoryError from the
+            # readSignal loop) can be propagating through this finally right
+            # now. pyedflib's close() is a C-extension call that can itself
+            # fail on a saturated host; unguarded, that failure would REPLACE
+            # the propagating exception outright. is_resource_exhaustion's
+            # __cause__/__context__ walk (biosigio.exceptions) can recover a
+            # masked exception when the replacement is a NEW raised exception,
+            # but that is strictly worse than not masking it at all -- so
+            # cleanup here never raises, only logs.
             if edf_reader is not None:
-                edf_reader.close()
+                try:
+                    edf_reader.close()
+                except Exception as close_exc:
+                    logging.warning("EDF reader close() failed for %s: %s", filepath, close_exc)
