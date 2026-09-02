@@ -123,6 +123,11 @@ uv run mkdocs serve                                # Build docs
 - Verify round-trip conversions (import → export → import)
 - Check metadata preservation
 - Validate signal integrity
+- A test needing a recording too large to commit fetches it through
+  `biosigio/tests/real_data.py`; it skips unless `BIOSIGIO_REAL_DATA=1` is set and caches
+  outside the repo (`~/.cache/biosigio/real_data`, overridable with
+  `BIOSIGIO_REAL_DATA_CACHE`). Add a `fetch_real_recording` call there, never a second
+  download/cache helper, and pass the file's `sha256` so a corrupted cache fails loudly
 
 ### Documentation Site
 - https://neuromechanist.github.io/biosigio/

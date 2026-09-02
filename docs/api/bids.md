@@ -8,6 +8,47 @@ by `Recording.from_file` (unless `bids_channels="off"`); `apply_events_tsv` is
 called explicitly when the sidecar events should override the data file's own
 markers.
 
+## Units are converted, not relabelled
+
+The `units` column describes the numbers, so adopting it **rescales the
+samples** (see [Physical Units](units.md)). An MNE-backed importer returns SI
+volts; a sidecar declaring `uV` therefore multiplies that channel by 10^6 and
+then sets the label, leaving values and unit in agreement. It is a no-op
+wherever the importer already reports the sidecar's unit (EDF via pyedflib).
+
+What "idempotent" guarantees precisely: applying the *same* sidecar any number
+of times converts at most once and warns at most once. The second pass finds
+each channel's `physical_dimension` already equal to the declared unit (or its
+`bids_unit` already recorded) and does nothing. It is not a claim about applying
+two *different* sidecars in sequence -- those compose, so a channel read as `V`
+and then given a `mV` sidecar followed by a `uV` one ends up in `uV`, scaled by
+10^6 overall.
+
+Some channels are never rescaled, whatever the sidecar declares:
+
+- **discrete types** (`TRIG`, `SYSCLOCK`, `CTRL`) hold codes rather than a
+  measured quantity. MNE labels stim channels with the FIFF volts code while
+  they carry integer event codes, so a sidecar declaring `mV` would turn codes
+  5/3/7 into 5000/3000/7000;
+- **channels with no samples**: metadata without a data column has no numbers
+  for a new label to agree with, so the label does not move either;
+- **units that are not convertible** -- different quantities, or a spelling
+  neither side can parse (`n/a`, `a.u.`).
+
+In each case the importer's values *and* its label are kept and the sidecar's
+claim is recorded as `channels[label]["bids_unit"]` with a warning, so nothing
+is relabelled without being converted. Adopting a unit later clears any
+`bids_unit` left by an earlier disagreement.
+
+A per-file summary lands in `rec.metadata["channels_tsv_units"]`:
+
+```python
+{"converted": 2, "relabelled": 0, "kept_importer_unit": 1, "units_column_present": True}
+```
+
+`units_column_present` separates "the sidecar declared no units at all" from
+"the units were already correct", which the counters alone cannot.
+
 ## Module Documentation
 
 ::: biosigio.bids

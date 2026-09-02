@@ -96,6 +96,7 @@ nav:
     - Command-Line Interface: api/cli.md
     - Modality Vocabulary: api/core/modality.md
     - BIDS Helpers: api/bids.md
+    - Physical Units: api/units.md
     - Serialization Schema: api/tabular_schema.md
     - Importers:
       - Base Importer: api/importers/base.md
