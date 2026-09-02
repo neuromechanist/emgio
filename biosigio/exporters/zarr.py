@@ -61,6 +61,7 @@ from fractions import Fraction
 import numpy as np
 from scipy.signal import resample_poly
 
+from ..core.channel_types import DISCRETE_CHANNEL_TYPES
 from ..core.emg import Recording
 from ..tabular_schema import metadata_to_mapping
 from ..version import __version__ as _BIOSIGIO_VERSION
@@ -82,8 +83,10 @@ DEFAULT_MODALITY_RATES: dict[str, int] = {
 
 # Channel types that are discrete/event-like rather than continuous signals. They
 # are resampled by nearest sample (no anti-alias low-pass) so step edges survive,
-# and they are never marked inference-usable.
-_DISCRETE_TYPES: frozenset[str] = frozenset({"TRIG", "SYSCLOCK", "CTRL"})
+# and they are never marked inference-usable. Defined in core.channel_types
+# because the BIDS sidecar path must exempt exactly the same set from unit
+# rescaling (issue #122); re-exported under the historical name.
+_DISCRETE_TYPES = DISCRETE_CHANNEL_TYPES
 
 _INT16_MIN, _INT16_MAX = -32768, 32767
 
