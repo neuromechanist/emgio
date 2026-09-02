@@ -70,6 +70,15 @@ def _pyramid_level_lengths(
     Mirrors the level-stopping rule in :func:`_build_minmax_pyramid` so the view
     Zarr arrays can be created up front (before any channel is written) and then
     filled one channel-row at a time.
+
+    **The stopping rule, stated once for the whole module.** A level is built, and
+    then the loop stops once the level just built is at or below ``min_samples``.
+    So ``min_samples`` bounds the level a further one would have been built *from*,
+    not the shortest level in the store: the final level can itself be shorter than
+    the floor. At the defaults (factor 4, floor 512), ``n_time=30000`` gives
+    ``[7500, 1875, 468]`` -- the 468 is written because 1875 was still above the
+    floor, and nothing follows it because 468 is not. ``max_levels`` caps the depth
+    independently.
     """
     lengths: list[int] = []
     n = n_time
@@ -335,6 +344,9 @@ def stream_to_zarr(
         dtype: ``"int16"`` (scaled) or ``"float32"`` (lossless).
         events_df: Optional events table (onset/duration/description).
         recording_metadata: Optional metadata dict stored in the store root attrs.
+        min_view_samples: Pyramid floor. For the exact stopping rule -- and why the
+            last level written can be shorter than this -- see
+            :func:`_pyramid_level_lengths`.
         view_chunk_columns: Columns per chunk of every ``view/*`` level (capped by
             the level's length). Must be >= 1; see
             :meth:`~biosigio.exporters.zarr.ZarrExporter.export`.

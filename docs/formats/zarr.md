@@ -36,7 +36,7 @@ One Zarr v3 root group holds the whole recording. Both the writer and the reader
   attrs: biosigio_version, format="biosigio-zarr", format_version,
          source_format, modality_rates, dtype, view_downsample,
          view_chunk_columns, anti_alias_filter, channel_groups,
-         recording_metadata, created_utc
+         recording_metadata, created_utc, note
 
   <modality>_<rate>hz/         one group per (modality, native rate)
     attrs: modality, rate, original_rate, n_channels, n_samples, channels[],
@@ -44,7 +44,7 @@ One Zarr v3 root group holds the whole recording. Both the writer and the reader
            chunk_seconds, shard_seconds
     0                          (n_ch, n_time) level-0 signal, sharded
       attrs: level=0, rate, source_rate_hz, downsample_factor=1, kind="signal",
-             chunk_samples, shard_samples, usable_for_inference,
+             chunk_samples, shard_samples, anti_aliased, usable_for_inference,
              scale[], offset[],
              physical_formula="physical = digital * scale + offset"
     view/                      min/max render pyramid (not sharded)
@@ -89,13 +89,15 @@ The two downsampling philosophies coexist on purpose: anti-aliased polyphase res
 The two tiers are also chunked by different rules, for the same reason they are downsampled by different rules.
 
 - **Level 0 is chunked on time.** Its inner chunk spans `chunk_seconds` (4 s by default) and its shard spans `shard_seconds` (300 s), rounded to a whole number of chunks. Inference and training read a time span, so a time-based grain is the right unit. The array attributes record the resolved lengths in samples as `chunk_samples` and `shard_samples`, and `source_rate_hz` alongside `rate` so the native acquisition rate is explicit next to the served (capped) one.
-- **view/\* levels are chunked on a constant column count**, `view_chunk_columns` (1024 by default), capped by the level's own length so a short level is a single chunk. Each level's resolved width is in its `chunk_columns` attribute. A viewport needs roughly 1000 to 2500 columns whatever level it picks, so columns, not seconds, are the unit a render request is measured in. A time-based rule would shrink the chunk by the pyramid factor at every level and shatter one screenful into hundreds of tiny requests: on a 40-minute, 129-channel, 250 Hz store, a whole-recording render at level 4 was 594 requests for 1.16 MB (about 2 KB each) and the level-6 minimap was 148 requests for 77 KB. At 1024 columns the same reads are 3 requests and 1 request.
+- **view/\* levels are chunked on a constant column count**, `view_chunk_columns` (1024 by default), capped by the level's own length so a short level is a single chunk. Each level's resolved width is in its `chunk_columns` attribute. A viewport needs roughly 1000 to 2500 columns whatever level it picks, so columns, not seconds, are the unit a render request is measured in. A time-based rule would shrink the chunk by the pyramid factor at every level and shatter one screenful into hundreds of tiny requests: on the 40-minute, 129-channel, 250 Hz store the `nemarOrg/nemar-cli#1178` transfer-efficiency audit measured, a whole-recording render at level 4 was 594 requests for 1.16 MB (about 2 KB each) and the level-6 minimap was 148 requests for 77 KB. At 1024 columns the same reads are 3 requests and 1 request. The chunk counts are pinned by a test; the byte figures are the audit's.
 
-Each channel group also **declares its pyramid** so a reader never has to probe `view/1`, `view/2`, ... until a 404:
+Each channel group also **declares its pyramid**, so a reader learns which `view/*` paths exist without probing for a 404:
 
 - `n_view_levels` is the number of `view/*` arrays actually written for that group.
 - `view_levels` lists them, always contiguous from 1, for example `[1, 2, 3]`.
-- `view_downsample`, `view_chunk_columns`, `chunk_seconds`, and `shard_seconds` repeat the geometry per group, so a client can plan every read from the group attributes alone without opening an array.
+- `view_downsample`, `view_chunk_columns`, `chunk_seconds`, and `shard_seconds` describe the geometry to expect, so a client knows the shape of the store before it fetches anything.
+
+The declaration replaces existence probing, not array opening: a client still opens each level's array to read its exact shape and its resolved `chunk_columns`, which is `view_chunk_columns` capped by that level's length.
 
 These are additive attributes plus a change of chunk shape, and every Zarr v3 reader takes chunk shapes from the array metadata it must already parse, so `format_version` stays at 2.
 
@@ -178,7 +180,7 @@ The viewing, inference, training, and batch-conversion layers live outside biosi
 
 **Reader contracts** for the three consumers:
 
-- **Viewer:** read the root and group attributes, take the pyramid depth from the group's `n_view_levels` or `view_levels` rather than probing for a 404, pick the level whose `rate_effective` puts roughly one sample per screen pixel, fetch the chunks covering the viewport, and render the min/max band using each channel's `scale` and `offset`. At maximum zoom, read level 0 directly. Group the display by modality and overlay events from the `events` group.
+- **Viewer:** read the root and group attributes, take the list of `view/*` levels from the group's `view_levels` or `n_view_levels` rather than probing for a 404, then open those levels and pick the one whose `rate_effective` puts roughly one sample per screen pixel. Fetch the chunks covering the viewport and render the min/max band using each channel's `scale` and `offset`. At maximum zoom, read level 0 directly. Group the display by modality and overlay events from the `events` group.
 - **Inference:** read level 0 of the relevant group, apply scale and offset, and window the signal. Never read view/*. For a lower analysis rate, derive it on read from level 0 with an anti-aliased resample rather than persisting a third tier.
 - **Training:** iterate shards of level 0 sequentially, one object per shard and many windows per object, shuffling at the shard level plus a within-shard buffer.
 
@@ -191,11 +193,14 @@ The exporter defaults follow the store specification. Override any of them as ke
 | `modality_rates` | EEG 250, MEG 250, iEEG 1000, EMG 1000 | Per-modality canonical rate cap |
 | `dtype` | `int16` | Storage type; `float32` for lossless (keeps NaN) |
 | `view_downsample` | 4 | Time decimation factor between pyramid levels |
-| `min_view_samples` | 512 | Stop building pyramid levels at this length |
+| `min_view_samples` | 512 | Pyramid floor; see the stopping rule below |
+| `max_view_levels` | 12 | Hard cap on pyramid depth |
 | `chunk_seconds` | 4 | Level-0 random-access grain |
 | `shard_seconds` | 300 | Level-0 sequential-read grain, rounded to whole chunks |
 | `view_chunk_columns` | 1024 | Columns per `view/*` chunk, capped by the level's length |
 | `compressor_level` | 5 | zstd compression level (Blosc codec) |
+
+**The pyramid stopping rule.** A level is built, and then the loop stops once the level just built is at or below `min_view_samples`. So the floor bounds the level a further one would have been built *from*, not the shortest level in the store: the final level can itself be shorter than `min_view_samples`. A 30000-sample level 0 at the defaults gives 7500, 1875, and 468; the 468 is written because 1875 was still above the floor, and no level 4 follows because 468 is not.
 
 ```python
 # A lossless store with a shorter sequential-read grain

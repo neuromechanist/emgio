@@ -36,8 +36,13 @@ Layout (one root group per recording)::
                               time: a viewport needs ~1-2k columns at whatever level
                               it picks, so a time-based chunk would shrink fourfold
                               per level and turn one screen into hundreds of tiny
-                              requests (a whole-recording view of a 40-minute store
-                              was 594 requests for 1.16 MB; at 1024 columns it is 3).
+                              requests. On the 40-minute 129-channel 250 Hz store
+                              the nemarOrg/nemar-cli#1178 audit measured, a
+                              whole-recording view at LEVEL 4 was 594 requests for
+                              1.16 MB and the LEVEL 6 minimap 148 for 77 KB; at 1024
+                              columns those are 3 requests and 1. The chunk counts
+                              are pinned by a test here, the byte figures are the
+                              audit's and are not re-measured.
       events/                 onset, duration, code arrays + label_map attr
 
 Every channel group declares its pyramid and geometry in attrs -- ``n_view_levels``,
@@ -223,7 +228,8 @@ def _view_chunk_columns(n_time_level: int, view_chunk_columns: int) -> int:
     a single chunk. Deliberately NOT time-based: view levels are read by column
     budget (a viewport wants ~1-2k columns at whatever level it picks), so a
     seconds-based rule would shrink the chunk fourfold per level and shatter one
-    screenful into hundreds of ~2 KB requests. Shared by both exporters (the
+    screenful into hundreds of tiny requests (about 2 KB each on the store the
+    nemarOrg/nemar-cli#1178 audit measured). Shared by both exporters (the
     in-memory one here and :mod:`biosigio.exporters.zarr_stream`) so their
     geometry cannot drift.
     """
@@ -260,7 +266,9 @@ class ZarrExporter:
             dtype: ``"int16"`` (default, scaled, half the bytes) or ``"float32"``
                 (lossless).
             view_downsample: Time decimation factor between pyramid levels.
-            min_view_samples: Stop building levels at this length.
+            min_view_samples: Pyramid floor. For the exact stopping rule -- and
+                why the last level written can be shorter than this -- see
+                :func:`~biosigio.exporters.zarr_stream._pyramid_level_lengths`.
             max_view_levels: Hard cap on pyramid depth.
             chunk_seconds: Time span per chunk of ``level 0`` (random-access
                 granularity). View levels are chunked by column count instead;
@@ -269,8 +277,9 @@ class ZarrExporter:
                 granularity for training); rounded to a whole number of chunks.
             view_chunk_columns: Columns per chunk of every ``view/*`` level
                 (capped by the level's length). Must be >= 1. The default 1024
-                is about one viewport, so a whole-recording render at any level
-                is a handful of requests rather than hundreds.
+                is about one viewport, so the columns a viewport needs, at
+                whichever level it picks, are a handful of requests rather than
+                hundreds.
             compressor_level: zstd level for the Blosc codec.
             events_df: Optional events table; falls back to ``rec.events``.
 
