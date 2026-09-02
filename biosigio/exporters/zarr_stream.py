@@ -151,6 +151,7 @@ class _MneSource:
             mne = require_mne()
             raw = mne.io.read_raw(filepath, preload=False, verbose="ERROR")
         self._raw = raw
+        self._closed = False
         self.extra_metadata = dict(extra_metadata or {})
         self.sfreq = float(self._raw.info["sfreq"])
         self.n_samples = int(self._raw.n_times)
@@ -172,7 +173,16 @@ class _MneSource:
         return self._raw.get_data(picks=picks, start=start, stop=stop)
 
     def close(self) -> None:
-        pass
+        # MNE's lazy Raw owns no handle to release, but the flag is still set:
+        # `closed` is the interface both sources share, and a caller (or a test)
+        # asking whether a source was released must get the same answer whichever
+        # one it holds.
+        self._closed = True
+
+    @property
+    def closed(self) -> bool:
+        """Whether :meth:`close` has run."""
+        return self._closed
 
 
 class _EdfSource:
@@ -202,6 +212,7 @@ class _EdfSource:
 
         self.extra_metadata: dict = {}
         self._reader = None
+        self._closed = False
         self._fallback_data: np.ndarray | None = None
         typer = EDFImporter()._determine_channel_type
 
@@ -285,6 +296,12 @@ class _EdfSource:
     def close(self) -> None:
         if self._reader is not None:
             self._reader.close()
+        self._closed = True
+
+    @property
+    def closed(self) -> bool:
+        """Whether :meth:`close` has run (and with it pyedflib's file handle)."""
+        return self._closed
 
 
 def _open_stream_source(filepath: str, force_modality: str | None):
@@ -413,12 +430,24 @@ def stream_to_zarr(
     # BEFORE the grouping below, because adopting a type can change a channel's
     # modality and therefore which group it belongs to. Each channel's declared
     # unit becomes a `unit_factor` that pass 2 multiplies in once.
-    channels_tsv = resolve_channels_tsv(filepath, bids_channels)
-    units_report = (
-        None
-        if channels_tsv is None
-        else apply_channels_tsv_to_stream(src.channels, channels_tsv, force_modality=force_modality)
-    )
+    #
+    # A sidecar is caller-supplied input and can be absent, a directory, or
+    # unparsable, so this is the one step between opening the source and the
+    # `with` block below that can raise. The source holds an OS file handle
+    # (pyedflib) or an MNE reader, so it is closed on the way out rather than
+    # left to the garbage collector.
+    try:
+        channels_tsv = resolve_channels_tsv(filepath, bids_channels)
+        units_report = (
+            None
+            if channels_tsv is None
+            else apply_channels_tsv_to_stream(
+                src.channels, channels_tsv, force_modality=force_modality
+            )
+        )
+    except BaseException:
+        src.close()
+        raise
 
     # Per-channel metadata; group by (modality, native rate). The source is
     # single-rate (a mixed-rate EDF is rejected in _EdfSource), so every channel
