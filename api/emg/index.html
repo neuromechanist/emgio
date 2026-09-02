@@ -3416,10 +3416,16 @@ imported from any supported format.</p>
         Automatic import is supported for CSV/TXT files.
     force_csv: If True and importer is 'csv', forces using the generic CSV
               importer even if the file appears to match a specialized format.
-    bids_channels: When 'auto' (default), look for a sibling BIDS
-              _channels.tsv next to the file and apply its per-channel
-              type/units over the importer's inferred values. Pass 'off'
-              to disable.
+    bids_channels: Which BIDS <code>_channels.tsv</code> to apply over the
+              importer's inferred per-channel type/units. 'auto'
+              (default) looks for the sibling sidecar next to the file;
+              'off' (or None) disables the lookup; a path or a pandas
+              DataFrame is used as given, for a recording whose sidecar
+              is not adjacent to it (a filtered copy on scratch, say).
+              Adopting a declared unit converts the samples into it, not
+              just the label. <code>stream_to_zarr</code> takes the same argument
+              with the same meanings, so the in-memory and streaming
+              export paths agree on a recording (issue #127).
     mixed_rate: Policy for an EDF/BDF file whose signals carry differing
               per-channel sampling rates (ignored for every other format,
               which is single-rate). 'error' (default) raises -- biosigIO

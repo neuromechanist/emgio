@@ -1141,6 +1141,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bids-units-in-a-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BIDS units in a store
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reading-a-store" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2706,6 +2717,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bids-units-in-a-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BIDS units in a store
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reading-a-store" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2810,25 +2832,26 @@
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  attrs: biosigio_version, format="biosigio-zarr", format_version,
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>         source_format, modality_rates, dtype, view_downsample,
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>         view_chunk_columns, anti_alias_filter, channel_groups,
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>         recording_metadata, created_utc, note
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  &lt;modality&gt;_&lt;rate&gt;hz/         one group per (modality, native rate)
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    attrs: modality, rate, original_rate, n_channels, n_samples, channels[],
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>           n_view_levels, view_levels[], view_downsample, view_chunk_columns,
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>           chunk_seconds, shard_seconds
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    0                          (n_ch, n_time) level-0 signal, sharded
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>      attrs: level=0, rate, source_rate_hz, downsample_factor=1, kind="signal",
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>             chunk_samples, shard_samples, anti_aliased, usable_for_inference,
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>             scale[], offset[],
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>             physical_formula="physical = digital * scale + offset"
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    view/                      min/max render pyramid (not sharded)
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>      1, 2, ...                (2, n_ch, n_time_L), axis0 = [min, max]
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>        attrs: level, downsample_factor, rate_effective, chunk_columns,
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>               kind="minmax_envelope", usable_for_inference=false
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>  events/
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>    onset (f64), duration (f64), code (i32)
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>    attrs: label_map {code: description}, n_events
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>         recording_metadata, channels_tsv_units (only when a BIDS
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>         channels.tsv was applied), created_utc, note
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  &lt;modality&gt;_&lt;rate&gt;hz/         one group per (modality, native rate)
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    attrs: modality, rate, original_rate, n_channels, n_samples, channels[],
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>           n_view_levels, view_levels[], view_downsample, view_chunk_columns,
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>           chunk_seconds, shard_seconds
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    0                          (n_ch, n_time) level-0 signal, sharded
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>      attrs: level=0, rate, source_rate_hz, downsample_factor=1, kind="signal",
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>             chunk_samples, shard_samples, anti_aliased, usable_for_inference,
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>             scale[], offset[],
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>             physical_formula="physical = digital * scale + offset"
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>    view/                      min/max render pyramid (not sharded)
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>      1, 2, ...                (2, n_ch, n_time_L), axis0 = [min, max]
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>        attrs: level, downsample_factor, rate_effective, chunk_columns,
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>               kind="minmax_envelope", usable_for_inference=false
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>  events/
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>    onset (f64), duration (f64), code (i32)
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>    attrs: label_map {code: description}, n_events
 </code></pre></div>
 <p>The group name encodes the served (target) rate, not the source rate, for example <code>eeg_250hz</code> even when the source was recorded at 500 Hz. The two rates are both kept in the group attributes:</p>
 <ul>
@@ -2842,6 +2865,7 @@
 <p>Per-channel metadata lives in each group's <code>channels</code> attribute, one object per channel with these keys:</p>
 <p><code>label</code>, <code>channel_type</code>, <code>modality</code>, <code>unit</code>, <code>prefilter</code>, <code>original_rate</code>, <code>target_rate</code>, <code>anti_aliased</code>, <code>usable_for_inference</code>, <code>scale</code>, <code>offset</code>, <code>row_index</code>.</p>
 <p>The <code>row_index</code> maps a channel to its row in the <code>(n_ch, n_time)</code> level-0 array.</p>
+<p>Two keys are present only when they apply: <code>nonfinite_samples</code>, the count of NaN or inf samples that were zero-filled, and <code>bids_unit</code>, a unit a BIDS <code>channels.tsv</code> declared that the exporter recorded rather than adopted (see <a href="#bids-units-in-a-store">BIDS units in a store</a>).</p>
 <h2 id="level-0-vs-view">Level 0 vs view/*<a class="headerlink" href="#level-0-vs-view" title="Permanent link">&para;</a></h2>
 <p>The two array tiers exist for different jobs and are downsampled by deliberately different rules:</p>
 <ul>
@@ -2904,6 +2928,21 @@
 </code></pre></div>
 <p><strong>Discrete channels.</strong> Trigger and clock channel types (<code>TRIG</code>, <code>SYSCLOCK</code>, <code>CTRL</code>) are resampled by nearest sample with no anti-alias filter so step edges survive, and they are flagged <code>usable_for_inference=false</code>.</p>
 <p><strong>Heterogeneous channels.</strong> Channels are grouped by (modality, native rate), so each array stays length-consistent. A common single-rate recording yields one group per modality; a genuinely mixed-rate source yields one group per rate, which is faithful rather than silently resampled together.</p>
+<h2 id="bids-units-in-a-store">BIDS units in a store<a class="headerlink" href="#bids-units-in-a-store" title="Permanent link">&para;</a></h2>
+<p>When the recording sits in a BIDS layout, the sibling <code>_channels.tsv</code> is authoritative for each channel's <code>type</code> and <code>units</code>, and adopting a declared unit <strong>converts the samples</strong> into it rather than relabelling them (see <a href="../../api/bids/">BIDS Helpers</a>). Both export paths apply it and by the same rules, so which path built a store is not something a consumer has to know:</p>
+<ul>
+<li><code>Recording.from_file</code> applies the sidecar on import, and <code>to_zarr</code> then exports the converted values.</li>
+<li><code>stream_to_zarr</code>, the bounded-memory path for recordings too large to load, folds each channel's conversion into its single streaming pass.</li>
+</ul>
+<p>Both take the same <code>bids_channels</code> argument, with the same values and the same resolution: <code>"auto"</code> (default), <code>"off"</code> or <code>None</code>, an explicit path, or a DataFrame. See <a href="../../api/bids/#choosing-the-sidecar-bids_channels"><code>bids_channels</code></a> for what each means and when a converter has to pass a sidecar explicitly.</p>
+<p>That parity is the contract: one recording and one sidecar produce the same <code>unit</code>, <code>channel_type</code>, <code>scale</code>, <code>offset</code> and values whichever path ran, so a dataset whose recordings straddle a size threshold cannot serve microvolts for its small runs and volts for its large ones.</p>
+<p>Two attributes record what the sidecar did:</p>
+<ul>
+<li><code>channels[].bids_unit</code> on a channel whose declared unit was recorded rather than adopted (a discrete trigger channel, or a unit that is not convertible from the importer's), so the BIDS claim survives without being asserted over values that contradict it.</li>
+<li><code>channels_tsv_units</code> on the root group, the per-file summary (<code>converted</code>, <code>relabelled</code>, <code>kept_importer_unit</code>, <code>units_column_present</code>). It is absent when no sidecar was applied.</li>
+</ul>
+<p>Both are additive, so <code>format_version</code> stays at 2.</p>
+<p><code>force_modality</code> (streaming only) still wins over the sidecar for <strong>grouping</strong>: it pins every channel to one modality, matching the BIDS datatype suffix a converter is working from, while the sidecar's <code>type</code> still sets each channel's <code>channel_type</code>.</p>
 <h2 id="reading-a-store">Reading a store<a class="headerlink" href="#reading-a-store" title="Permanent link">&para;</a></h2>
 <p>Read a store back into a <code>Recording</code> with <code>Recording.from_file</code>. The <code>.zarr</code> extension is auto-detected, or pass <code>importer='zarr'</code> explicitly:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">biosigio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
