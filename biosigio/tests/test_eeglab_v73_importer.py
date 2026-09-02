@@ -37,7 +37,12 @@ h5py = pytest.importorskip(
     "h5py", reason="v7.3 .set reading requires the optional 'hdf5' extra (h5py)"
 )
 
-from ..exceptions import CorruptFileError, NotContinuousRecordingError  # noqa: E402
+from ..exceptions import (  # noqa: E402
+    CorruptFileError,
+    FileReadError,
+    NotContinuousRecordingError,
+    is_resource_exhaustion,
+)
 from ..importers.eeglab import EEGLABImporter, _is_matlab_v73  # noqa: E402
 
 _HEADER_SIZE = 512  # MAT header text + padding; see module docstring
@@ -665,3 +670,49 @@ def test_deref_h5_value_null_empty_bytes_and_bare_value(tmp_path):
         assert importer._deref_h5_value(h5py, f, b"raw") == "raw"
         # Bare non-reference, non-bytes value passes through unchanged.
         assert importer._deref_h5_value(h5py, f, 3.5) == 3.5
+
+
+def test_v73_masked_memory_error_via_h5py_exit_is_still_recognized(tmp_path, monkeypatch):
+    """A MemoryError raised inside `with h5py.File(...) as f:` can be MASKED:
+    if h5py's own `__exit__` raises a SECOND, unrelated exception while the
+    MemoryError is propagating out of the `with` body, Python replaces the
+    propagating exception with that second one -- `_load_v73`'s
+    `except Exception as e:` binds the OSError from `__exit__`, not the
+    MemoryError, with the MemoryError attached as `e.__context__` via
+    Python's own automatic implicit chaining (nothing here constructs that
+    chain by hand).
+
+    The masking OSError's own message is deliberately NOT exhaustion-flavored
+    ("unable to synchronously close file"), so the only way
+    `is_resource_exhaustion` can recognize the final exception is by walking
+    to `__context__` (see biosigio.exceptions) -- proving the walk does real
+    work for this real h5py-context-manager shape, not that a MemoryError
+    happened to reach the guard directly (that path is exercised by the
+    synthetic/real-data EDF tests in test_edf_memory_error.py).
+    """
+    path = str(tmp_path / "v73.set")
+    _write_v73_set(path, nbchan=2, pnts=4, srate=100.0, data=np.zeros((2, 4)))
+
+    def raise_memory_error(*args, **kwargs):
+        raise MemoryError("Unable to allocate 24.8 MiB for an array")
+
+    # _h5_scalar is a @staticmethod; patching it at the class level covers the
+    # `self._h5_scalar(...)` call inside the `with` block regardless of which
+    # field is read first.
+    monkeypatch.setattr(EEGLABImporter, "_h5_scalar", staticmethod(raise_memory_error))
+
+    real_exit = h5py.File.__exit__
+
+    def flaky_exit(self, exc_type, exc_val, exc_tb):
+        real_exit(self, exc_type, exc_val, exc_tb)  # real cleanup still runs
+        raise OSError("unable to synchronously close file, id_type: 0x1")
+
+    monkeypatch.setattr(h5py.File, "__exit__", flaky_exit)
+
+    with pytest.raises(OSError) as exc_info:
+        EEGLABImporter().load(path)
+
+    raised = exc_info.value
+    assert not isinstance(raised, FileReadError)
+    assert isinstance(raised.__context__, MemoryError)
+    assert is_resource_exhaustion(raised) is True
