@@ -137,6 +137,13 @@ class WFDBImporter(BaseImporter):
                 # This specific FileNotFoundError means the .atr file is missing, which is okay.
                 rec.set_metadata("annotation_status", "Annotation file (.atr) not found.")
             except Exception as ann_e:
+                # Resource exhaustion here (wfdb.rdann OOMs on a huge annotation
+                # file, or a saturated host can't start a thread) is a host
+                # condition, not an annotation problem -- swallowing it into a
+                # metadata note would return a "successful" Recording and hide
+                # the real cause (see biosigio.exceptions.is_resource_exhaustion).
+                if is_resource_exhaustion(ann_e):
+                    raise
                 # Other errors during annotation reading are warnings/metadata entries
                 rec.set_metadata("annotation_error", f"Error reading annotations: {str(ann_e)}")
 
