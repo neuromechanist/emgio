@@ -39,6 +39,8 @@ the suite shares one cache directory and one opt-in policy.
 
 from __future__ import annotations
 
+import hashlib
+import http.client
 import os
 import urllib.error
 import urllib.request
@@ -65,10 +67,57 @@ def cache_dir() -> Path:
     return Path(os.environ.get(CACHE_ENV_VAR) or _DEFAULT_CACHE_DIR)
 
 
-def fetch_real_recording(url: str, *, filename: str | None = None, min_bytes: int = 1) -> Path:
+def _sidecar_path(dest: Path) -> Path:
+    """Where a cached file's known-good sha256 digest lives, once computed."""
+    return dest.with_name(dest.name + ".sha256")
+
+
+def _sha256_of(path: Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(_CHUNK_BYTES), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _integrity_error(dest: Path, expected_sha256: str | None) -> str | None:
+    """``None`` if ``dest`` passes the integrity check (or none was requested),
+    otherwise a message describing the mismatch.
+
+    The digest is computed at most once per file, not once per test run: a
+    sidecar ``<file>.sha256`` next to the cached file remembers it (written the
+    first time this file is verified, whether that is a fresh download or an
+    older cached file from before this check existed), so a warm-cache rerun
+    compares two short hex strings instead of re-hashing a ~192 MiB file.
+    """
+    if expected_sha256 is None:
+        return None
+    sidecar = _sidecar_path(dest)
+    actual = sidecar.read_text().strip() if sidecar.exists() else None
+    if actual is None:
+        actual = _sha256_of(dest)
+        sidecar.write_text(actual + "\n")
+    if actual.lower() != expected_sha256.lower():
+        return f"sha256 mismatch: cached file is {actual}, expected {expected_sha256}"
+    return None
+
+
+def _discard(dest: Path) -> None:
+    dest.unlink(missing_ok=True)
+    _sidecar_path(dest).unlink(missing_ok=True)
+
+
+def fetch_real_recording(
+    url: str,
+    *,
+    filename: str | None = None,
+    min_bytes: int = 1,
+    sha256: str | None = None,
+) -> Path:
     """Return a local path to ``url``, downloading it into the shared cache on
     first use. Calls ``pytest.skip`` (never raises) when real-data tests are
-    not opted into, or the URL cannot be fetched.
+    not opted into, the URL cannot be fetched, or the file fails its integrity
+    check.
 
     Args:
         url: Direct HTTPS URL to the file.
@@ -76,10 +125,15 @@ def fetch_real_recording(url: str, *, filename: str | None = None, min_bytes: in
         min_bytes: Sanity floor on the cached file's size, so a previous
             partial/failed download (or an HTML error page saved under the
             expected name) is not silently reused.
+        sha256: Expected sha256 hex digest of the file, when known. Verified
+            on every call (cheaply -- see :func:`_integrity_error`), so a
+            corrupted or substituted cache entry is caught rather than fed
+            silently into a test.
 
     Returns:
-        Path: local path to the cached file. Guaranteed to exist and be at
-        least ``min_bytes`` when this returns (otherwise the test was skipped).
+        Path: local path to the cached file. Guaranteed to exist, be at least
+        ``min_bytes``, and match ``sha256`` (when given) when this returns
+        (otherwise the test was skipped).
     """
     if not os.environ.get(ENV_VAR):
         pytest.skip(
@@ -92,24 +146,47 @@ def fetch_real_recording(url: str, *, filename: str | None = None, min_bytes: in
     dest = dest_dir / (filename or url.rsplit("/", 1)[-1])
 
     if dest.exists() and dest.stat().st_size >= min_bytes:
-        return dest
+        mismatch = _integrity_error(dest, sha256)
+        if mismatch is None:
+            return dest
+        _discard(dest)
+        pytest.skip(
+            f"real-data test skipped: cached file for {url} failed integrity check ({mismatch})"
+        )
 
     tmp = dest.with_name(dest.name + ".part")
     request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     try:
-        with urllib.request.urlopen(request, timeout=_TIMEOUT_S) as resp, open(tmp, "wb") as fh:
-            while True:
-                chunk = resp.read(_CHUNK_BYTES)
-                if not chunk:
-                    break
-                fh.write(chunk)
-        tmp.replace(dest)
-    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        try:
+            with urllib.request.urlopen(request, timeout=_TIMEOUT_S) as resp, open(tmp, "wb") as fh:
+                while True:
+                    chunk = resp.read(_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    fh.write(chunk)
+            tmp.replace(dest)
+        except (urllib.error.URLError, http.client.HTTPException, OSError, TimeoutError) as e:
+            # http.client.HTTPException covers a mid-transfer IncompleteRead
+            # (and other low-level protocol errors) that urllib does not wrap
+            # into URLError -- those raise directly out of resp.read().
+            pytest.skip(f"real-data test skipped: could not fetch {url} ({e})")
+    finally:
+        # Removes the partial download on every failure path, including one
+        # not listed above (e.g. a disk-full OSError while writing tmp is
+        # already covered, but this also catches anything future code adds
+        # here without needing a matching except clause). A no-op on success:
+        # tmp.replace(dest) above already moved the file out from under it.
         tmp.unlink(missing_ok=True)
-        pytest.skip(f"real-data test skipped: could not fetch {url} ({e})")
 
     if dest.stat().st_size < min_bytes:
-        dest.unlink(missing_ok=True)
+        _discard(dest)
         pytest.skip(f"real-data test skipped: download of {url} looked truncated or invalid")
+
+    mismatch = _integrity_error(dest, sha256)
+    if mismatch is not None:
+        _discard(dest)
+        pytest.skip(
+            f"real-data test skipped: download of {url} failed integrity check ({mismatch})"
+        )
 
     return dest
