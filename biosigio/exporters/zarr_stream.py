@@ -558,9 +558,9 @@ def stream_to_zarr(
             attribute ``subject_info_excluded`` to true. The caller's dict is not
             changed. Default False writes the metadata as earlier releases did.
 
-        allow_partial_frame: BrainVision ``.vhdr`` only, ignored for every other
-            source. A binary data file whose size is not a whole number of frames
-            raises ``CorruptFileError`` by default. True reads the whole frames of a
+        allow_partial_frame: BrainVision ``.vhdr`` and ``.ahdr`` headers only, ignored
+            for every other source. A binary data file whose size is not a whole number
+            of frames raises ``CorruptFileError`` by default. True reads the whole frames of a
             MULTIPLEXED file that ends in a partial frame (and declares no positive
             ``DataPoints=``), with a ``UserWarning`` naming the file and the dropped
             byte count, and writes the count into the store's ``recording_metadata`` as

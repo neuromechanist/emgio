@@ -38,7 +38,7 @@ Read errors are typed the same way on both paths: the importer and the streaming
 
 A binary data file whose size shows that it was cut short is refused by default with `CorruptFileError` (code `corrupt_or_truncated`), by the importer and by the streaming Zarr export alike.
 A frame is one sample of every channel: the channel count times the bytes per sample of `BinaryFormat=`.
-Without a positive `DataPoints=` in the header's `[Common Infos]` section, the file size must be a whole number of frames.
+Without a positive `DataPoints=` in the header's `[Common Infos]` section, the file size must be a whole number of frames, and at least one: a zero-byte file is refused too.
 A trailing partial frame is refused by default, because MNE-Python would otherwise drop it, and any marker that falls in it, without a word.
 This is a known refusal, and it also applies to a file with extra trailing bytes that are not a frame.
 The opt-in for it is described under [Reading a File with a Partial Trailing Frame](#reading-a-file-with-a-partial-trailing-frame).
@@ -46,6 +46,8 @@ With a positive `DataPoints=`, the file must hold at least that many frames: a s
 Vectorized data (each channel stored whole, one after another) always has a size of channels times points times bytes per sample, so a vectorized file that does not hold whole frames is refused whatever `DataPoints=` says, even if it is longer than `DataPoints=` declares.
 A `DataPoints=` that is absent, empty, `0` or not an integer counts as not declared.
 For `.ahdr` headers, MNE-Python counts one channel more than the header names, and so does the frame.
+The streaming export reads an `.ahdr` header through the same checks as a `.vhdr`.
+In memory, pass `importer="brainvision"` for an `.ahdr` header, since `Recording.from_file` does not infer it from the extension.
 The error message names the data file by its file name, never its directory.
 Some cut files cannot be detected.
 With no `DataPoints=`, a file cut exactly at a frame boundary has no count to be compared against and still reads: multiplexed data reads as a shorter recording, while in vectorized data (each channel stored whole, one after another) the channel boundaries move, so every channel after the first is corrupted.
@@ -63,7 +65,8 @@ rec = Recording.from_file('path/to/subject01.vhdr', allow_partial_frame=True)
 
 In `Recording.from_file` it is a keyword-only argument: it cannot be passed by position.
 `stream_to_zarr` takes the same keyword, and so does `BrainVisionImporter.load`.
-The refusal of such a file names this keyword.
+The refusal of a multiplexed file with a partial trailing frame names this keyword.
+The refusal of vectorized data does not, because the option does not apply to it.
 The command-line interface does not offer the option, so read such a file through the Python API.
 `Recording.from_file` and `stream_to_zarr` ignore it for every format other than BrainVision, as `mixed_rate` is ignored outside EDF and BDF.
 Calling another format's importer class directly is different: the EDF importer's `load` raises `TypeError` for it (`EDFImporter.load(path, allow_partial_frame=True)`).
