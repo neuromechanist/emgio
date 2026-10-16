@@ -61,7 +61,7 @@ import numpy as np
 
 from ..bids import apply_channels_tsv_to_stream, resolve_channels_tsv
 from ..core.modality import infer_modality_from_channel_type
-from ..exceptions import is_resource_exhaustion
+from ..exceptions import classify_read_error, is_resource_exhaustion
 from ..importers._mne_common import _FIFF_UNIT_TO_DIM, _MNE_TYPE_TO_biosigIO, require_mne
 from ..version import __version__ as _BIOSIGIO_VERSION
 from .subject_info import SUBJECT_INFO_EXCLUDED_ATTR
@@ -264,7 +264,9 @@ class _EdfSource:
             raise_host_open_error(filepath, open_exc)
             reason = classify_pyedflib_error(open_exc)
             if reason is None:
-                raise
+                # A refusal this module cannot recover is a typed file failure,
+                # as the in-memory importer raises it (see issue #149).
+                raise classify_read_error(open_exc, filepath) from open_exc
             # ImportError (MNE/`meg` extra missing) is deliberately NOT caught
             # here: it propagates with its own clear install hint, same as the
             # in-memory importer degrading only when it also can't recover.
