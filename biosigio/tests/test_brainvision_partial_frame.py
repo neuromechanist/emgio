@@ -19,7 +19,7 @@ mne = pytest.importorskip(
 )
 
 from biosigio import Recording  # noqa: E402
-from biosigio.exceptions import CorruptFileError  # noqa: E402
+from biosigio.exceptions import CorruptFileError, FileReadError  # noqa: E402
 from biosigio.exporters.zarr_stream import _open_stream_source  # noqa: E402
 
 _REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -30,7 +30,8 @@ pytestmark = pytest.mark.skipif(
     not (FIXTURE_DIR / f"{STEM}.vhdr").exists(), reason="BrainVision fixture missing"
 )
 
-# The fixture header declares 8 channels of IEEE_FLOAT_32, so a frame is 32 bytes.
+# The fixture header declares 8 channels of IEEE_FLOAT_32, so the frame size derived
+# from it is 32 bytes. That is a frame size, not a file size.
 N_CHANNELS = 8
 FRAME_BYTES = N_CHANNELS * 4
 DATA_NAME = f"{STEM}.eeg"
@@ -134,8 +135,12 @@ def test_partial_frame_of_a_header_recovered_from_a_sibling_names_the_dataset_fi
 
 
 def test_frame_size_follows_the_declared_binary_format(tmp_path):
-    """With 16-bit samples a frame is 16 bytes: half a frame (8 bytes) is refused,
-    while 16 bytes off is a whole number of 16-bit frames and is left alone."""
+    """With 16-bit samples the derived frame size is 16 bytes (8 channels of 2 bytes).
+
+    A cut of 16 bytes removes one whole 16-bit frame, which cannot be detected and is
+    read; a further cut of 8 bytes (half the derived frame size) leaves a partial
+    frame and is refused. These are cut lengths and frame sizes, not file sizes.
+    """
     vhdr = _copy_triplet(tmp_path)
     data_file = tmp_path / DATA_NAME
     floats = np.frombuffer(data_file.read_bytes(), dtype="<f4")
@@ -269,3 +274,196 @@ def test_ahdr_frame_counts_the_extra_channel_mne_adds(tmp_path):
     with pytest.raises(CorruptFileError) as excinfo:
         Recording.from_file(str(ahdr), importer="brainvision")
     _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def test_int32_frame_follows_the_declared_binary_format(tmp_path):
+    """INT_32 samples are 4 bytes, so the derived frame size is 32 bytes (a frame size,
+    not a file size): half of it, 16 bytes, is a partial frame and is refused."""
+    vhdr = _copy_triplet(tmp_path)
+    data_file = tmp_path / DATA_NAME
+    floats = np.frombuffer(data_file.read_bytes(), dtype="<f4")
+    ints = np.clip(np.rint(floats.astype("<f8")), -(2**31), 2**31 - 1).astype("<i4")
+    data_file.write_bytes(ints.tobytes())
+    text = vhdr.read_text(encoding="utf-8")
+    assert "BinaryFormat=IEEE_FLOAT_32" in text
+    vhdr.write_text(text.replace("IEEE_FLOAT_32", "INT_32"), encoding="utf-8")
+
+    assert Recording.from_file(str(vhdr)).signals.shape == (floats.size // N_CHANNELS, N_CHANNELS)
+
+    _cut(data_file, FRAME_BYTES // 2)
+    with pytest.raises(CorruptFileError) as excinfo:
+        Recording.from_file(str(vhdr))
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def _make_vectorized(vhdr: pathlib.Path) -> None:
+    """Rewrite the copy as VECTORIZED data: each channel stored whole, one after another."""
+    data_file = vhdr.with_name(DATA_NAME)
+    samples = np.frombuffer(data_file.read_bytes(), dtype="<f4").reshape(-1, N_CHANNELS)
+    data_file.write_bytes(np.ascontiguousarray(samples.T).tobytes())
+    text = vhdr.read_text(encoding="utf-8")
+    assert "DataOrientation=MULTIPLEXED" in text
+    vhdr.write_text(text.replace("MULTIPLEXED", "VECTORIZED"), encoding="utf-8")
+
+
+def test_vectorized_copy_reads_the_samples_of_the_multiplexed_fixture(tmp_path):
+    expected = Recording.from_file(str(FIXTURE_DIR / f"{STEM}.vhdr")).signals.to_numpy()
+    vhdr = _copy_triplet(tmp_path)
+    _make_vectorized(vhdr)
+
+    np.testing.assert_array_equal(Recording.from_file(str(vhdr)).signals.to_numpy(), expected)
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+@pytest.mark.parametrize(
+    "cut",
+    [pytest.param(1, id="one-byte-short"), pytest.param(FRAME_BYTES // 2, id="half-a-frame-short")],
+)
+def test_vectorized_partial_frame_is_refused(tmp_path, opener, cut):
+    vhdr = _copy_triplet(tmp_path)
+    _make_vectorized(vhdr)
+    _cut(tmp_path / DATA_NAME, cut)
+
+    with pytest.raises(CorruptFileError) as excinfo:
+        _read_with(opener, vhdr)
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def test_vectorized_whole_frame_cut_without_data_points_is_not_detected(tmp_path):
+    """The undetected case: with no DataPoints there is nothing to compare the size to.
+
+    The cut file still reads, and because vectorized data stores each channel whole,
+    the channel boundaries move: the first channel is intact and the rest are corrupted.
+    A declared DataPoints makes the same cut detectable.
+    """
+    vhdr = _copy_triplet(tmp_path)
+    _make_vectorized(vhdr)
+    intact = Recording.from_file(str(vhdr)).signals.to_numpy()
+    _cut(tmp_path / DATA_NAME, FRAME_BYTES)
+
+    cut = Recording.from_file(str(vhdr)).signals.to_numpy()
+
+    assert cut.shape == (intact.shape[0] - 1, N_CHANNELS)
+    np.testing.assert_array_equal(cut[:, 0], intact[:-1, 0])
+    assert not np.array_equal(cut[:, 1], intact[:-1, 1])
+
+    _declare_data_points(vhdr, intact.shape[0])
+    with pytest.raises(CorruptFileError) as excinfo:
+        Recording.from_file(str(vhdr))
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def test_header_with_windows_line_endings_is_checked(tmp_path):
+    vhdr = _copy_triplet(tmp_path)
+    original = vhdr.read_bytes()
+    assert b"\r\n" not in original
+    vhdr.write_bytes(original.replace(b"\n", b"\r\n"))
+    size = (tmp_path / DATA_NAME).stat().st_size
+
+    assert Recording.from_file(str(vhdr)).signals.shape == (size // FRAME_BYTES, N_CHANNELS)
+
+    _cut(tmp_path / DATA_NAME, 1)
+    with pytest.raises(CorruptFileError) as excinfo:
+        Recording.from_file(str(vhdr))
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def test_free_text_in_the_comment_section_does_not_hide_the_check(tmp_path):
+    """Comment text has no ``key=value`` shape; it must stay out of the parsed header."""
+    vhdr = _copy_triplet(tmp_path)
+    text = vhdr.read_text(encoding="utf-8")
+    assert text.rstrip().endswith("[Comment]")
+    vhdr.write_text(
+        text.rstrip() + "\nRecorded during a pilot session.\nNo delimiter on these lines\n",
+        encoding="utf-8",
+    )
+    size = (tmp_path / DATA_NAME).stat().st_size
+    assert Recording.from_file(str(vhdr)).signals.shape == (size // FRAME_BYTES, N_CHANNELS)
+
+    _cut(tmp_path / DATA_NAME, 1)
+    with pytest.raises(CorruptFileError) as excinfo:
+        Recording.from_file(str(vhdr))
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def test_lowercase_common_infos_section_is_checked(tmp_path):
+    """Some exporters write ``[Common infos]``; MNE reads it, so the check must too."""
+    vhdr = _copy_triplet(tmp_path)
+    text = vhdr.read_text(encoding="utf-8")
+    assert "[Common Infos]" in text
+    vhdr.write_text(text.replace("[Common Infos]", "[Common infos]"), encoding="utf-8")
+    size = (tmp_path / DATA_NAME).stat().st_size
+    assert Recording.from_file(str(vhdr)).signals.shape == (size // FRAME_BYTES, N_CHANNELS)
+
+    _cut(tmp_path / DATA_NAME, 1)
+    with pytest.raises(CorruptFileError) as excinfo:
+        Recording.from_file(str(vhdr))
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def test_percent_sign_in_the_data_file_name_is_not_interpolated(tmp_path):
+    """A ``%`` in ``DataFile=`` must reach the check as written, as it reaches MNE."""
+    vhdr = _copy_triplet(tmp_path)
+    name = f"{STEM}_50%.eeg"
+    (tmp_path / DATA_NAME).rename(tmp_path / name)
+    text = vhdr.read_text(encoding="utf-8")
+    vhdr.write_text(text.replace(f"DataFile={DATA_NAME}", f"DataFile={name}"), encoding="utf-8")
+    size = (tmp_path / name).stat().st_size
+    assert Recording.from_file(str(vhdr)).signals.shape == (size // FRAME_BYTES, N_CHANNELS)
+
+    _cut(tmp_path / name, 1)
+    with pytest.raises(CorruptFileError) as excinfo:
+        Recording.from_file(str(vhdr))
+    _assert_refusal_names_file_only(excinfo, tmp_path, name=name)
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+def test_ascii_data_has_no_fixed_frame_and_is_not_refused(tmp_path, opener):
+    """ASCII data is text, so its size is no multiple of a frame. The header keeps a
+    ``BinaryFormat=`` line, as converted headers do, so only the ``DataFormat=`` gate
+    keeps the frame check off it."""
+    vhdr = _copy_triplet(tmp_path)
+    data_file = tmp_path / DATA_NAME
+    samples = np.frombuffer(data_file.read_bytes(), dtype="<f4").reshape(-1, N_CHANNELS)
+    data_file.write_text(
+        "".join(" ".join(f"{v:.6g}" for v in row) + "\n" for row in samples), encoding="ascii"
+    )
+    text = vhdr.read_text(encoding="utf-8")
+    assert "DataFormat=BINARY" in text and "[Binary Infos]\nBinaryFormat=IEEE_FLOAT_32\n" in text
+    ascii_infos = "[ASCII Infos]\nDecimalSymbol=.\nSkipLines=0\nSkipColumns=0\n"
+    vhdr.write_text(
+        text.replace("DataFormat=BINARY", "DataFormat=ASCII").replace(
+            "BinaryFormat=IEEE_FLOAT_32\n", f"BinaryFormat=IEEE_FLOAT_32\n\n{ascii_infos}"
+        ),
+        encoding="utf-8",
+    )
+    assert data_file.stat().st_size % FRAME_BYTES != 0  # a binary frame check would refuse it
+
+    result = _read_with(opener, vhdr)
+    if opener == "importer":
+        assert result.signals.shape == (samples.shape[0], N_CHANNELS)
+    else:
+        assert result.n_samples == samples.shape[0]
+
+
+def test_header_naming_no_channels_is_left_to_mne(tmp_path):
+    """A frame of zero bytes cannot be checked; MNE raises its own typed error."""
+    vhdr = _copy_triplet(tmp_path)
+    text = vhdr.read_text(encoding="utf-8")
+    vhdr.write_text(text.replace("NumberOfChannels=8", "NumberOfChannels=0"), encoding="utf-8")
+
+    with pytest.raises(FileReadError) as excinfo:
+        Recording.from_file(str(vhdr))
+    assert not isinstance(excinfo.value, CorruptFileError)
+
+
+def test_unreadable_header_and_missing_data_file_are_left_to_mne(tmp_path):
+    with pytest.raises(FileReadError) as missing_header:
+        Recording.from_file(str(tmp_path / f"{STEM}.vhdr"), importer="brainvision")
+    assert not isinstance(missing_header.value, CorruptFileError)
+
+    vhdr = _copy_triplet(tmp_path)
+    (tmp_path / DATA_NAME).unlink()
+    with pytest.raises(FileReadError) as missing_data:
+        Recording.from_file(str(vhdr))
+    assert not isinstance(missing_data.value, CorruptFileError)
