@@ -41,11 +41,13 @@ A frame is one sample of every channel: the channel count times the bytes per sa
 Without a positive `DataPoints=` in the header's `[Common Infos]` section, the file size must be a whole number of frames.
 A trailing partial frame is refused, because MNE-Python would otherwise drop it, and any marker that falls in it, without a word; this is a known refusal, and it also applies to a file with extra trailing bytes that are not a frame.
 With a positive `DataPoints=`, the file must hold at least that many frames: a shorter file is refused, and a longer one is read as MNE-Python reads it, since MNE-Python sizes the recording from the file and ignores `DataPoints=` for binary data.
+Vectorized data (each channel stored whole, one after another) always has a size of channels times points times bytes per sample, so a vectorized file that does not hold whole frames is refused whatever `DataPoints=` says, even if it is longer than `DataPoints=` declares.
 A `DataPoints=` that is absent, empty, `0` or not an integer counts as not declared.
 For `.ahdr` headers, MNE-Python counts one channel more than the header names, and so does the frame.
 The error message names the data file by its file name, never its directory.
 Some cut files cannot be detected.
 With no `DataPoints=`, a file cut exactly at a frame boundary has no count to be compared against and still reads: multiplexed data reads as a shorter recording, while in vectorized data (each channel stored whole, one after another) the channel boundaries move, so every channel after the first is corrupted.
+A vectorized file with whole extra frames beyond its `DataPoints=` is not detected either, since it cannot be told from a stale count, and the channels after the first are corrupted.
 ASCII data has no fixed frame and is not checked, and a header that cannot be parsed or a data file that cannot be opened is left to MNE-Python, which raises its own error.
 
 ## Loading Data

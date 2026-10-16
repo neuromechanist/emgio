@@ -467,3 +467,77 @@ def test_unreadable_header_and_missing_data_file_are_left_to_mne(tmp_path):
     with pytest.raises(FileReadError) as missing_data:
         Recording.from_file(str(vhdr))
     assert not isinstance(missing_data.value, CorruptFileError)
+
+
+def _append(path: pathlib.Path, n_bytes: int) -> None:
+    """Append ``n_bytes`` zero bytes to ``path``."""
+    path.write_bytes(path.read_bytes() + b"\x00" * n_bytes)
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+def test_vectorized_file_with_a_partial_frame_is_refused_even_when_longer_than_data_points(
+    tmp_path, opener
+):
+    """A vectorized file is channels x points x bytes long whatever DataPoints says, so
+    a size that is not a whole number of frames is refused when it exceeds the count."""
+    vhdr = _copy_triplet(tmp_path)
+    _make_vectorized(vhdr)
+    true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
+    _declare_data_points(vhdr, true_points)
+    _append(tmp_path / DATA_NAME, 1)
+
+    with pytest.raises(CorruptFileError) as excinfo:
+        _read_with(opener, vhdr)
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+def test_vectorized_file_of_whole_frames_with_matching_data_points_reads(tmp_path, opener):
+    expected = Recording.from_file(str(FIXTURE_DIR / f"{STEM}.vhdr")).signals.to_numpy()
+    vhdr = _copy_triplet(tmp_path)
+    _make_vectorized(vhdr)
+    _declare_data_points(vhdr, expected.shape[0])
+
+    result = _read_with(opener, vhdr)
+    if opener == "importer":
+        np.testing.assert_array_equal(result.signals.to_numpy(), expected)
+    else:
+        assert result.n_samples == expected.shape[0]
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+def test_multiplexed_file_with_a_partial_frame_beyond_data_points_reads_as_mne_reads_it(
+    tmp_path, opener
+):
+    """MNE drops the trailing partial bytes of multiplexed data without moving any sample."""
+    vhdr = _copy_triplet(tmp_path)
+    true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
+    _declare_data_points(vhdr, true_points)
+    _append(tmp_path / DATA_NAME, 1)
+
+    result = _read_with(opener, vhdr)
+    if opener == "importer":
+        raw = mne.io.read_raw_brainvision(str(vhdr), preload=True, verbose="ERROR")
+        np.testing.assert_array_equal(result.signals.to_numpy().T, raw.get_data())
+        assert result.signals.shape == (true_points, N_CHANNELS)
+    else:
+        assert result.n_samples == true_points
+
+
+def test_vectorized_whole_extra_frame_beyond_data_points_is_not_detected(tmp_path):
+    """The undetected case: whole extra frames cannot be told from a stale DataPoints.
+
+    MNE sizes the channel blocks from the file, so the first channel is intact and the
+    channels after it are corrupted.
+    """
+    vhdr = _copy_triplet(tmp_path)
+    _make_vectorized(vhdr)
+    intact = Recording.from_file(str(vhdr)).signals.to_numpy()
+    _declare_data_points(vhdr, intact.shape[0])
+    _append(tmp_path / DATA_NAME, FRAME_BYTES)
+
+    longer = Recording.from_file(str(vhdr)).signals.to_numpy()
+
+    assert longer.shape == (intact.shape[0] + 1, N_CHANNELS)
+    np.testing.assert_array_equal(longer[:-1, 0], intact[:, 0])
+    assert not np.array_equal(longer[:-1, 1], intact[:, 1])

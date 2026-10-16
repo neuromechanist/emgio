@@ -335,6 +335,7 @@ class _DeclaredFrame(NamedTuple):
     channels: int
     bytes_per_sample: int
     data_points: int | None  # the positive ``DataPoints=`` count, else None
+    vectorized: bool  # ``DataOrientation=VECTORIZED``, else multiplexed
 
     @property
     def frame_bytes(self) -> int:
@@ -365,6 +366,7 @@ def _declared_frame(vhdr: str) -> _DeclaredFrame | None:
         bytes_per_sample = _BYTES_PER_SAMPLE[cfg.get("Binary Infos", "BinaryFormat")]
         channels = cfg.getint(common, "NumberOfChannels")
         data_file = cfg.get(common, "DataFile")
+        vectorized = cfg.get(common, "DataOrientation", fallback="") == "VECTORIZED"
     except (configparser.Error, KeyError, ValueError):
         return None
     if channels < 1:
@@ -381,6 +383,7 @@ def _declared_frame(vhdr: str) -> _DeclaredFrame | None:
         channels,
         bytes_per_sample,
         data_points if data_points is not None and data_points > 0 else None,
+        vectorized,
     )
 
 
@@ -390,14 +393,18 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
     A frame is one sample of every channel (channels times bytes per sample), in
     multiplexed and vectorized data alike. MNE drops a partial trailing frame
     without a word, and with it any marker that falls in the dropped span, so a
-    file cut mid-frame would read as a shorter recording. Two rules apply:
+    file cut mid-frame would read as a shorter recording. Three rules apply:
 
     - The header declares no positive ``DataPoints=``: the size must be a whole
       number of frames. A trailing partial frame is refused.
     - The header declares a positive ``DataPoints=``: the size must be at least
-      that many frames. A shorter file is refused. A longer one is read as MNE reads
-      it, since MNE sizes the recording from the file and ignores ``DataPoints=`` for
-      binary data.
+      that many frames. A shorter file is refused. A longer multiplexed file is read
+      as MNE reads it, since MNE sizes the recording from the file and ignores
+      ``DataPoints=`` for binary data.
+    - Vectorized data (each channel stored whole, one after another) always has a size
+      of channels times points times bytes per sample, so it must be a whole number of
+      frames whatever ``DataPoints=`` says: a vectorized file with a partial frame is
+      refused even when it is longer than ``DataPoints=`` declares.
 
     The check runs before MNE opens the data file; a header or file it cannot read is
     left to MNE. For ``.ahdr`` headers MNE counts one channel more than the header
@@ -405,8 +412,11 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
 
     Without a ``DataPoints=`` count, a file cut exactly at a frame boundary is not
     detected and still reads. In multiplexed data it reads as a shorter recording; in
-    vectorized data (each channel stored whole, one after another) the channel
-    boundaries move, so every channel after the first is corrupted.
+    vectorized data the channel boundaries move, so every channel after the first is
+    corrupted. A vectorized file that holds whole extra frames beyond its
+    ``DataPoints=`` is not detected either: it cannot be told from a stale count, and
+    MNE sizes the channel blocks from the file, so the channels after the first are
+    corrupted.
 
     Args:
         vhdr: The header path handed to MNE (the patched copy when
@@ -415,8 +425,9 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
             dataset's data file rather than its staged name in a temporary directory.
 
     Raises:
-        CorruptFileError: The data file is not a whole number of frames, or is
-            smaller than the declared ``DataPoints=`` times the frame size.
+        CorruptFileError: The data file is smaller than the declared ``DataPoints=``
+            times the frame size, or is not a whole number of frames (when no
+            ``DataPoints=`` is declared, or the data is vectorized).
             The message names the file, never its directory.
     """
     declared = _declared_frame(vhdr)
@@ -428,21 +439,18 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
         return  # MNE opens the file next and raises the real error
     frame = declared.frame_bytes
     layout = f"{declared.channels} channels of {declared.bytes_per_sample} bytes"
-    if declared.data_points is None:
-        if size % frame == 0:
-            return
+    if declared.data_points is not None and size < declared.data_points * frame:
+        problem = (
+            f"is smaller than the {declared.data_points * frame} bytes its header declares "
+            f"({declared.data_points} data points of {layout})."
+        )
+    elif size % frame != 0 and (declared.data_points is None or declared.vectorized):
         problem = (
             f"is not a whole number of frames ({layout} make a frame of {frame} bytes), "
             "so reading it would silently drop the last partial frame and any marker in it."
         )
     else:
-        expected = declared.data_points * frame
-        if size >= expected:
-            return
-        problem = (
-            f"is smaller than the {expected} bytes its header declares "
-            f"({declared.data_points} data points of {layout})."
-        )
+        return
     name = os.path.basename((staged_files or {}).get(declared.data_path, declared.data_path))
     raise CorruptFileError(
         f"BrainVision data file {name} is truncated or corrupt: its size ({size} bytes) " + problem
