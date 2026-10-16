@@ -43,6 +43,7 @@ _HAS_MNE = importlib.util.find_spec("mne") is not None
 _REPO = pathlib.Path(__file__).resolve().parents[2]
 _MEG_FIF = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
 _CTF_DS = _REPO / "examples/ctf/catch-alp-good-f.ds"
+_KIT_SQD = _REPO / "examples/kit/sub-01_task-test_meg.sqd"
 
 
 # -- classify_read_error: reader-phrasing -> typed error -----------------------
@@ -543,14 +544,14 @@ def test_truncated_ctf_meg4_is_corrupt():
             Recording.from_file(ds)
 
 
-def _fif_copy(tmp_path, *, cut_bytes=0, keep_fraction=1.0):
-    """Copy the FIF fixture into ``tmp_path`` and return the copy's path.
+def _cut_copy(src, tmp_path, *, cut_bytes=0, keep_fraction=1.0):
+    """Copy the fixture ``src`` into ``tmp_path`` and return the copy's path.
 
     The copy keeps ``keep_fraction`` of the file, less ``cut_bytes`` taken from
     the end of what remains. With the defaults it is intact.
     """
-    dest = tmp_path / _MEG_FIF.name
-    shutil.copyfile(_MEG_FIF, dest)
+    dest = tmp_path / src.name
+    shutil.copyfile(src, dest)
     keep = int(dest.stat().st_size * keep_fraction) - cut_bytes
     with open(dest, "r+b") as fh:
         fh.truncate(keep)
@@ -564,7 +565,7 @@ def test_intact_fif_still_reads_as_mne_reads_it(tmp_path):
     import mne
 
     raw = mne.io.read_raw_fif(str(_MEG_FIF), preload=True, verbose="ERROR")
-    rec = Recording.from_file(str(_fif_copy(tmp_path)))
+    rec = Recording.from_file(str(_cut_copy(_MEG_FIF, tmp_path)))
 
     assert len(rec.channels) == len(raw.ch_names)
     assert {info["sample_frequency"] for info in rec.channels.values()} == {raw.info["sfreq"]}
@@ -594,7 +595,7 @@ def test_truncated_fif_data_is_corrupt(tmp_path, cut, numpy_text):
     not the generic FileReadError, through the real MEG importer. The message
     names the file and not the directory it sits in; the numpy error MNE raised
     stays attached as the cause."""
-    path = _fif_copy(tmp_path, **cut)
+    path = _cut_copy(_MEG_FIF, tmp_path, **cut)
     with pytest.raises(CorruptFileError) as caught:
         Recording.from_file(str(path))
 
@@ -605,3 +606,20 @@ def test_truncated_fif_data_is_corrupt(tmp_path, cut, numpy_text):
     assert isinstance(err.__cause__, ValueError)
     if numpy_text is not None:
         assert numpy_text in str(err.__cause__)
+
+
+@pytest.mark.skipif(not _HAS_MNE or not _KIT_SQD.exists(), reason="needs mne + the KIT fixture")
+@pytest.mark.parametrize("keep_fraction", [0.7, 0.9])
+def test_truncated_kit_data_is_corrupt(tmp_path, keep_fraction):
+    """The truncation match is on numpy's message, so it applies to any reader:
+    a KIT/Yokogawa file cut inside its data also raises CorruptFileError, and the
+    message names the file and not its directory."""
+    path = _cut_copy(_KIT_SQD, tmp_path, keep_fraction=keep_fraction)
+    with pytest.raises(CorruptFileError) as caught:
+        Recording.from_file(str(path))
+
+    err = caught.value
+    assert err.code == "corrupt_or_truncated"
+    assert path.name in str(err)
+    assert str(tmp_path) not in str(err) and tmp_path.name not in str(err)
+    assert "cannot reshape array of size" in str(err.__cause__)
