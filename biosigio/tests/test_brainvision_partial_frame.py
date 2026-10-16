@@ -154,3 +154,77 @@ def test_frame_size_follows_the_declared_binary_format(tmp_path):
     with pytest.raises(CorruptFileError) as excinfo:
         Recording.from_file(str(vhdr))
     _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def _declare_data_points(vhdr: pathlib.Path, value) -> None:
+    """Write ``DataPoints=<value>`` into the copied header's [Common Infos]."""
+    text = vhdr.read_text(encoding="utf-8")
+    anchor = f"NumberOfChannels={N_CHANNELS}\n"
+    assert text.count(anchor) == 1 and "DataPoints" not in text
+    vhdr.write_text(text.replace(anchor, f"{anchor}DataPoints={value}\n"), encoding="utf-8")
+
+
+def _read_with(opener: str, vhdr: pathlib.Path):
+    """Read ``vhdr`` through the in-memory importer or the streaming source."""
+    if opener == "importer":
+        return Recording.from_file(str(vhdr))
+    src = _open_stream_source(str(vhdr), None)
+    src.close()
+    return src
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+def test_data_points_equal_to_the_true_count_reads(tmp_path, opener):
+    vhdr = _copy_triplet(tmp_path)
+    true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
+    _declare_data_points(vhdr, true_points)
+
+    result = _read_with(opener, vhdr)
+    if opener == "importer":
+        assert result.signals.shape == (true_points, N_CHANNELS)
+    else:
+        assert result.n_samples == true_points
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+@pytest.mark.parametrize(
+    ("declared_offset", "cut"),
+    [
+        pytest.param(1, 0, id="declares-one-sample-more-than-the-data"),
+        pytest.param(-1, 0, id="declares-one-sample-fewer-than-the-data"),
+        pytest.param(0, FRAME_BYTES, id="data-cut-by-one-whole-frame"),
+    ],
+)
+def test_data_points_that_disagree_with_the_data_are_refused(
+    tmp_path, opener, declared_offset, cut
+):
+    vhdr = _copy_triplet(tmp_path)
+    true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
+    _declare_data_points(vhdr, true_points + declared_offset)
+    _cut(tmp_path / DATA_NAME, cut)
+
+    with pytest.raises(CorruptFileError) as excinfo:
+        _read_with(opener, vhdr)
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+@pytest.mark.parametrize("value", ["0", ""], ids=["zero", "empty"])
+def test_data_points_zero_or_empty_keeps_the_frame_check_only(tmp_path, opener, value):
+    vhdr = _copy_triplet(tmp_path)
+    true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
+    _declare_data_points(vhdr, value)
+
+    result = _read_with(opener, vhdr)
+    if opener == "importer":
+        assert result.signals.shape == (true_points, N_CHANNELS)
+    else:
+        assert result.n_samples == true_points
+
+    # A declared zero is no count: a file cut by a whole frame still reads, as before.
+    _cut(tmp_path / DATA_NAME, FRAME_BYTES)
+    result = _read_with(opener, vhdr)
+    if opener == "importer":
+        assert result.signals.shape == (true_points - 1, N_CHANNELS)
+    else:
+        assert result.n_samples == true_points - 1

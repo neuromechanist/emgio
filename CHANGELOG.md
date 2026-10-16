@@ -17,7 +17,7 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
 - A BrainVision data file whose size is not a whole number of frames raises `CorruptFileError` instead of reading silently.
   A frame is one sample of every channel (channels times bytes per sample).
   MNE dropped the partial trailing frame, and any marker in it, without a word; the in-memory importer and the streaming Zarr export now refuse the file, naming it by file name.
-  A file cut exactly at a frame boundary still reads as a shorter recording, because the header states no sample count to compare against.
+  A header that declares a positive `DataPoints` count is also checked against the file size; without one, a file cut exactly at a frame boundary still reads as a shorter recording.
 
 ## [1.2.12] - 2026-10-16
 

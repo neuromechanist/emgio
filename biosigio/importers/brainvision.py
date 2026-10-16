@@ -17,6 +17,7 @@ import shutil
 import tempfile
 import unicodedata
 from collections.abc import Generator
+from typing import NamedTuple
 
 import pandas as pd
 
@@ -327,14 +328,27 @@ def brainvision_read_error(
     return type(typed)(message)
 
 
-def _declared_frame(vhdr: str) -> tuple[str, int, int, int] | None:
-    """The binary data file and frame size a header declares, or None if it declares none.
+class _DeclaredFrame(NamedTuple):
+    """What a binary header says about its data file's layout."""
 
-    Returns ``(data file path, bytes per frame, channels, bytes per sample)`` for a
-    ``DataFormat=BINARY`` header, parsed the way MNE parses it (``configparser`` on
-    the text before ``[Comment]``). None when the header cannot be read, parsed or
-    is not fixed-width binary (ASCII data has no fixed frame); MNE then reads the
-    file and raises its own error, typed by the caller exactly as before.
+    data_path: str
+    channels: int
+    bytes_per_sample: int
+    data_points: int | None  # the positive ``DataPoints=`` count, else None
+
+    @property
+    def frame_bytes(self) -> int:
+        return self.channels * self.bytes_per_sample
+
+
+def _declared_frame(vhdr: str) -> _DeclaredFrame | None:
+    """The data file and layout a binary header declares, or None if it declares none.
+
+    Parsed the way MNE parses it (``configparser`` on the text before ``[Comment]``).
+    None when the header cannot be read or parsed, or is not fixed-width binary
+    (ASCII data has no fixed frame); MNE then reads the file and raises its own
+    error, typed by the caller exactly as before. ``DataPoints=`` counts only when it
+    is a positive integer: absent, empty, ``0`` or not an integer means no count.
     """
     try:
         with open(vhdr, "rb") as f:
@@ -355,21 +369,32 @@ def _declared_frame(vhdr: str) -> tuple[str, int, int, int] | None:
         return None
     if channels < 1:
         return None
+    try:
+        data_points = cfg.getint(common, "DataPoints", fallback=None)
+    except ValueError:
+        data_points = None
     data_path = os.path.join(os.path.dirname(os.path.abspath(vhdr)), data_file)
-    return data_path, channels * bytes_per_sample, channels, bytes_per_sample
+    return _DeclaredFrame(
+        data_path,
+        channels,
+        bytes_per_sample,
+        data_points if data_points is not None and data_points > 0 else None,
+    )
 
 
 def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
-    """Refuse a binary data file whose size is not a whole number of frames.
+    """Refuse a binary data file whose size disagrees with its header.
 
     A frame is one sample of every channel (channels times bytes per sample), in
     multiplexed and vectorized data alike. MNE drops a partial trailing frame
     without a word, and with it any marker that falls in the dropped span, so a
-    file cut mid-frame would read as a shorter recording. The check runs before
-    MNE opens the data file; a header or file it cannot read is left to MNE.
+    file cut mid-frame would read as a shorter recording. The size must therefore be
+    a whole number of frames, and, when the header declares a positive ``DataPoints=``,
+    exactly that many frames. The check runs before MNE opens the data file; a header
+    or file it cannot read is left to MNE.
 
-    No sample count is compared, so a file cut exactly at a frame boundary cannot be
-    detected here and still reads as a shorter recording.
+    Without a ``DataPoints=`` count to compare, a file cut exactly at a frame boundary
+    cannot be detected here and still reads as a shorter recording.
 
     Args:
         vhdr: The header path handed to MNE (the patched copy when
@@ -378,25 +403,34 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
             dataset's data file rather than its staged name in a temporary directory.
 
     Raises:
-        CorruptFileError: The data file's size is not a multiple of the frame size.
+        CorruptFileError: The data file's size is not a multiple of the frame size,
+            or differs from the declared ``DataPoints=`` times the frame size.
             The message names the file, never its directory.
     """
     declared = _declared_frame(vhdr)
     if declared is None:
         return
-    data_path, frame_bytes, channels, bytes_per_sample = declared
     try:
-        size = os.path.getsize(data_path)
+        size = os.path.getsize(declared.data_path)
     except OSError:
         return  # MNE opens the file next and raises the real error
-    if size % frame_bytes == 0:
+    frame = declared.frame_bytes
+    layout = f"{declared.channels} channels of {declared.bytes_per_sample} bytes"
+    if size % frame != 0:
+        problem = (
+            f"is not a whole number of frames ({layout} make a frame of {frame} bytes), "
+            "so reading it would silently drop the last partial frame and any marker in it."
+        )
+    elif declared.data_points is not None and size != declared.data_points * frame:
+        problem = (
+            f"differs from the {declared.data_points * frame} bytes its header declares "
+            f"({declared.data_points} data points of {layout})."
+        )
+    else:
         return
-    name = os.path.basename((staged_files or {}).get(data_path, data_path))
+    name = os.path.basename((staged_files or {}).get(declared.data_path, declared.data_path))
     raise CorruptFileError(
-        f"BrainVision data file {name} is truncated or corrupt: its size ({size} bytes) "
-        f"is not a whole number of frames ({channels} channels of {bytes_per_sample} "
-        f"bytes make a frame of {frame_bytes} bytes), so reading it would silently drop "
-        "the last partial frame and any marker in it."
+        f"BrainVision data file {name} is truncated or corrupt: its size ({size} bytes) " + problem
     )
 
 
