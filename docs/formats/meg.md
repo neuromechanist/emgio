@@ -68,6 +68,21 @@ rec = Recording.from_file('sample.fif', importer='meg')
 rec = Recording.from_file('sub-01_task-rest_meg', importer='meg')
 ```
 
+## Read errors
+
+A MEG file that cannot be read raises a `FileReadError`, or one of its subclasses, with a stable `code`.
+A host condition, such as running out of memory or a refused permission, propagates unchanged instead.
+A FIF file cut inside its data raises `CorruptFileError` (code `corrupt_or_truncated`), and so does a KIT/Yokogawa file whose data ends early.
+`CorruptFileError` is a `FileReadError`, so existing handlers still catch it.
+Four limits apply to FIF files:
+
+- Some cuts inside the header section at the start of the file (the measurement info) give the generic `FileReadError` (code `file_read_error`) rather than `CorruptFileError` ([#162](https://github.com/neuromechanist/biosigio/issues/162)).
+- `stream_to_zarr` does not type FIF read errors yet; a truncated file raises the bare `ValueError` that MNE raised ([#161](https://github.com/neuromechanist/biosigio/issues/161)).
+- Cuts of a few dozen bytes from the end remove only closing tags, so no data is lost and the file reads without error.
+- A cut exactly where a data buffer ends, or within the 15 bytes after it (an incomplete tag header, which MNE drops), leaves a well-formed file with fewer buffers.
+  It reads without error, as a shorter recording, because no reader can tell it from one.
+  Only a cut inside a data buffer is detected.
+
 ## Channel Types
 
 MEG files contain many channel kinds in a single recording. The importer keeps each MNE channel type distinct rather than collapsing everything into one generic "MEG" type, so magnetometers, gradiometers, and reference sensors remain separable downstream. The mapping from MNE channel types to biosigIO channel types is:

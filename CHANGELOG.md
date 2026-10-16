@@ -23,6 +23,7 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   Without a `DataPoints` count, a file cut exactly at a frame boundary is not detected: multiplexed data reads as a shorter recording, and vectorized data is corrupted from the second channel on, because each channel is stored whole.
   A vectorized file with whole extra frames beyond its `DataPoints` count is not detected either.
 - A FIF file whose data is truncated raises `CorruptFileError` (code `corrupt_or_truncated`) instead of a generic `FileReadError`.
+  `CorruptFileError` is a `FileReadError`, so existing handlers still catch it.
   The two numpy messages a cut inside the data produces, "buffer size must be a multiple of element size" and "cannot reshape array of size", are now typed as corrupt.
   The match is on the message, so it applies to any reader, not only the FIF reader.
   Of the other formats, only KIT/Yokogawa (`.sqd`, `.con`, `.kdf`) changed: a file of that kind whose data ends early now raises `CorruptFileError` too.
