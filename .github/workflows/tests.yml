@@ -111,12 +111,14 @@ jobs:
     - name: Fail if a test skipped for a missing dependency
       run: |
         uv run python - <<'PY'
-        import sys, xml.etree.ElementTree as ET
+        import re, sys, xml.etree.ElementTree as ET
         bad = []
         for case in ET.parse("/tmp/mne-floor.xml").getroot().iter("testcase"):
             for skip in case.findall("skipped"):
                 msg = skip.get("message", "")
-                if msg.startswith("could not import"):
+                # importorskip says "could not import" only without a reason; the reasons
+                # here name the optional extra they need, so match that too.
+                if re.search(r"could not import|'[a-z0-9]+' extra", msg):
                     bad.append(f"{case.get('classname')}::{case.get('name')}: {msg}")
         if bad:
             print("::error::tests skipped for a missing dependency:\n" + "\n".join(bad))
