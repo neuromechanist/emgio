@@ -1,7 +1,7 @@
 """FIF reader tests on a real one-minute exemplar and a split chain made from it.
 
-``tests/data/fif/one_minute_raw.fif`` is a 60 s, 15-channel cut of a public CC0
-Neuromag MEG recording (see ``tests/data/fif/NOTICE.md`` for the source, the
+``examples/one_minute/fif/one_minute_raw.fif`` is a 60 s, 15-channel cut of a public CC0
+Neuromag MEG recording (see ``examples/one_minute/fif/NOTICE.md`` for the source, the
 DOIs, the license and exactly what was cut). The split chain is NOT committed:
 the tests write it into ``tmp_path`` from the exemplar with MNE-Python's own
 ``Raw.save(..., split_size=...)``, so the parts are what MNE writes and the
@@ -26,7 +26,8 @@ from biosigio.exceptions import CorruptFileError, FileReadError
 
 mne = pytest.importorskip("mne", reason="FIF import requires the optional 'meg' extra (mne)")
 
-EXEMPLAR = pathlib.Path(__file__).resolve().parent / "data" / "fif" / "one_minute_raw.fif"
+_REPO = pathlib.Path(__file__).resolve().parents[2]
+EXEMPLAR = _REPO / "examples/one_minute/fif/one_minute_raw.fif"
 
 pytestmark = pytest.mark.skipif(not EXEMPLAR.exists(), reason="FIF exemplar missing")
 
