@@ -22,7 +22,7 @@ import numpy as np
 import pytest
 
 from biosigio import Recording
-from biosigio.exceptions import CorruptFileError, FileReadError
+from biosigio.exceptions import CorruptFileError
 
 mne = pytest.importorskip("mne", reason="FIF import requires the optional 'meg' extra (mne)")
 
@@ -148,16 +148,13 @@ def test_missing_split_part_raises_corrupt_file_error(chain_dir, tmp_path):
 
 
 @pytest.mark.parametrize("truncated_part", [CHAIN_STEM, CHAIN_PART_2])
-def test_truncated_part_raises_file_read_error(chain_dir, tmp_path, truncated_part):
-    """Half of either part is a typed read error, but the generic one, not CorruptFileError.
+def test_truncated_part_raises_corrupt_file_error(chain_dir, tmp_path, truncated_part):
+    """Half of either part is a typed corrupt-file error, not the generic read error.
 
-    Pins the behavior observed today. ``classify_read_error`` maps a truncated FIF
-    to ``CorruptFileError`` only for phrasings it knows; the one numpy raises when
-    the file ends inside a data tag ("buffer size must be a multiple of element
-    size") is not among them, so it falls through to the generic ``FileReadError``
-    with code ``file_read_error``. If the classifier learns this phrasing, the type
-    becomes ``CorruptFileError`` (a subclass of ``FileReadError``) and this
-    assertion is the one to update.
+    ``classify_read_error`` maps the numpy message raised when the file ends inside a
+    data tag ("buffer size must be a multiple of element size") to ``CorruptFileError``
+    with code ``corrupt_or_truncated``. That class is a ``FileReadError``, so handlers
+    for the base class still catch it.
     """
     part_1 = _copy_chain(chain_dir, tmp_path)
     # Control: the intact copy reads, so the failure below is the truncation alone.
@@ -167,10 +164,10 @@ def test_truncated_part_raises_file_read_error(chain_dir, tmp_path, truncated_pa
     data = victim.read_bytes()
     victim.write_bytes(data[: len(data) // 2])
 
-    with pytest.raises(FileReadError) as excinfo:
+    with pytest.raises(CorruptFileError) as excinfo:
         Recording.from_file(str(part_1))
-    assert type(excinfo.value) is FileReadError
-    assert excinfo.value.code == FileReadError.code
+    assert type(excinfo.value) is CorruptFileError
+    assert excinfo.value.code == CorruptFileError.code
     # The error names the file that was opened (part 1), whichever part is cut.
     assert CHAIN_STEM in str(excinfo.value)
 
