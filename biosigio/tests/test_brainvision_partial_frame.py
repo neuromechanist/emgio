@@ -5,6 +5,10 @@ any marker in the dropped span. biosigIO refuses such a file with ``CorruptFileE
 (code ``corrupt_or_truncated``) on both read paths: the in-memory importer and the
 streaming Zarr source. Every case copies the committed fixture triplet
 (``examples/brainvision``) into ``tmp_path`` and cuts the copy. NO MOCKS.
+
+The last section covers the opt-in ``allow_partial_frame=True``, which reads the whole
+frames of a multiplexed file that ends in a partial frame, with a warning and a recorded
+byte count, on the same two read paths.
 """
 
 import os
@@ -22,6 +26,7 @@ mne = pytest.importorskip(
 from biosigio import Recording  # noqa: E402
 from biosigio.exceptions import CorruptFileError, FileReadError  # noqa: E402
 from biosigio.exporters.zarr_stream import _open_stream_source  # noqa: E402
+from biosigio.importers.brainvision import BrainVisionImporter  # noqa: E402
 
 _REPO = pathlib.Path(__file__).resolve().parents[2]
 FIXTURE_DIR = _REPO / "examples/brainvision"
@@ -719,6 +724,15 @@ def test_flag_is_ignored_by_other_importers():
     assert rec.signals.shape[0] > 0
 
 
+def test_other_importer_classes_do_not_accept_the_keyword():
+    """Only ``from_file`` and ``stream_to_zarr`` ignore it for other formats; the importer
+    classes of other formats reject it at the call."""
+    from biosigio.importers.edf import EDFImporter
+
+    with pytest.raises(TypeError, match="allow_partial_frame"):
+        EDFImporter().load("not-opened.edf", allow_partial_frame=True)
+
+
 @pytest.mark.parametrize(("extra", "cut", "frames", "dropped"), PARTIAL_CASES)
 def test_streaming_source_honors_the_flag(tmp_path, extra, cut, frames, dropped):
     vhdr = _partial_copy(tmp_path, extra, cut)
@@ -751,3 +765,87 @@ def test_stream_to_zarr_honors_the_flag_and_stores_the_dropped_count(tmp_path):
 
     root = zarr.open_group(store, mode="r")
     assert root.attrs["recording_metadata"][DROPPED_BYTES_KEY] == 31
+
+
+def test_importer_refuses_a_partial_frame_by_default(tmp_path):
+    """Pins the default on the class itself, not only through ``Recording.from_file``."""
+    vhdr = _partial_copy(tmp_path, 0, 1)
+
+    with pytest.raises(CorruptFileError) as excinfo:
+        BrainVisionImporter().load(str(vhdr))
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def _partial_frame_warning_filenames(record) -> list[pathlib.Path]:
+    return [
+        pathlib.Path(w.filename).resolve()
+        for w in record
+        if issubclass(w.category, UserWarning) and "partial frame" in str(w.message)
+    ]
+
+
+def _call_entry_point(entry_point: str, vhdr: pathlib.Path, tmp_path: pathlib.Path) -> None:
+    """Call one public (or direct) entry point with the flag on, from this module."""
+    if entry_point == "from_file":
+        Recording.from_file(str(vhdr), allow_partial_frame=True)
+    elif entry_point == "importer_load":
+        BrainVisionImporter().load(str(vhdr), allow_partial_frame=True)
+    elif entry_point == "open_stream_source":
+        _open_stream_source(str(vhdr), None, allow_partial_frame=True).close()
+    else:
+        pytest.importorskip("zarr", reason="the Zarr serving format requires the 'zarr' extra")
+        from biosigio import stream_to_zarr
+
+        stream_to_zarr(str(vhdr), str(tmp_path / "out.zarr"), allow_partial_frame=True)
+
+
+ENTRY_POINTS = ["from_file", "importer_load", "open_stream_source", "stream_to_zarr"]
+
+
+@pytest.mark.parametrize("entry_point", ENTRY_POINTS)
+def test_warning_names_the_callers_file_not_biosigios(tmp_path, entry_point):
+    vhdr = _partial_copy(tmp_path, 0, 1)
+
+    with pytest.warns(UserWarning) as record:
+        _call_entry_point(entry_point, vhdr, tmp_path)
+
+    assert _partial_frame_warning_filenames(record) == [pathlib.Path(__file__).resolve()]
+
+
+@pytest.mark.parametrize("entry_point", ENTRY_POINTS)
+def test_flag_on_still_refuses_a_file_with_no_whole_frame(tmp_path, entry_point):
+    """Fewer bytes than one frame leave nothing to read: refused, and without a warning."""
+    vhdr = _copy_triplet(tmp_path)
+    (tmp_path / DATA_NAME).write_bytes(b"\x00" * 10)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(CorruptFileError) as excinfo:
+            _call_entry_point(entry_point, vhdr, tmp_path)
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+    assert "no whole frame" in str(excinfo.value)
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+def test_flag_on_changes_nothing_for_a_partial_tail_beyond_a_positive_data_points(tmp_path, opener):
+    """The scope limit: with the flag on or off, a multiplexed file with a positive
+    DataPoints that ends in a partial frame reads as MNE reads it, with no warning and
+    no dropped-bytes key."""
+    vhdr = _copy_triplet(tmp_path)
+    true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
+    _declare_data_points(vhdr, true_points)
+    _append(tmp_path / DATA_NAME, 5)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        if opener == "importer":
+            rec = Recording.from_file(str(vhdr), allow_partial_frame=True)
+            assert DROPPED_BYTES_KEY not in rec.metadata
+            np.testing.assert_array_equal(rec.signals.to_numpy().T, _mne_whole_frames(true_points))
+        else:
+            src = _open_stream_source(str(vhdr), None, allow_partial_frame=True)
+            try:
+                assert DROPPED_BYTES_KEY not in src.extra_metadata
+                assert src.n_samples == true_points
+            finally:
+                src.close()
