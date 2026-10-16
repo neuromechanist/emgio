@@ -951,6 +951,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reading-a-file-with-a-partial-trailing-frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading a File with a Partial Trailing Frame
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#loading-data" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2668,6 +2679,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reading-a-file-with-a-partial-trailing-frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading a File with a Partial Trailing Frame
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#loading-data" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2765,10 +2787,12 @@
 <p>A header whose references all exist is passed to MNE unchanged, and so is one where neither the named file nor a same-stem sibling exists, so that MNE reports the missing file.</p>
 <p>Read errors are typed the same way on both paths: the importer and the streaming export classify an MNE failure with <code>classify_read_error</code>, so a corrupt header raises a <code>FileReadError</code> (or a subclass) from either path, and a message that quoted the temporary header copy or a staged file names the real <code>.vhdr</code>, or the dataset file the staged one stood for, instead. An error the operating system raises for this host rather than for the file (permission denied, an I/O error, a full disk, a stale network handle) is not typed: it propagates as the raw <code>OSError</code>, as it does from every importer (see <code>biosigio.is_host_condition</code>).</p>
 <h2 id="truncated-data-files">Truncated Data Files<a class="headerlink" href="#truncated-data-files" title="Permanent link">&para;</a></h2>
-<p>A binary data file whose size shows that it was cut short is refused with <code>CorruptFileError</code> (code <code>corrupt_or_truncated</code>), by the importer and by the streaming Zarr export alike.
+<p>A binary data file whose size shows that it was cut short is refused by default with <code>CorruptFileError</code> (code <code>corrupt_or_truncated</code>), by the importer and by the streaming Zarr export alike.
 A frame is one sample of every channel: the channel count times the bytes per sample of <code>BinaryFormat=</code>.
 Without a positive <code>DataPoints=</code> in the header's <code>[Common Infos]</code> section, the file size must be a whole number of frames.
-A trailing partial frame is refused, because MNE-Python would otherwise drop it, and any marker that falls in it, without a word; this is a known refusal, and it also applies to a file with extra trailing bytes that are not a frame.
+A trailing partial frame is refused by default, because MNE-Python would otherwise drop it, and any marker that falls in it, without a word.
+This is a known refusal, and it also applies to a file with extra trailing bytes that are not a frame.
+The opt-in for it is described under <a href="#reading-a-file-with-a-partial-trailing-frame">Reading a File with a Partial Trailing Frame</a>.
 With a positive <code>DataPoints=</code>, the file must hold at least that many frames: a shorter file is refused, and a longer one is read as MNE-Python reads it, since MNE-Python sizes the recording from the file and ignores <code>DataPoints=</code> for binary data.
 Vectorized data (each channel stored whole, one after another) always has a size of channels times points times bytes per sample, so a vectorized file that does not hold whole frames is refused whatever <code>DataPoints=</code> says, even if it is longer than <code>DataPoints=</code> declares.
 A <code>DataPoints=</code> that is absent, empty, <code>0</code> or not an integer counts as not declared.
@@ -2778,15 +2802,33 @@ Some cut files cannot be detected.
 With no <code>DataPoints=</code>, a file cut exactly at a frame boundary has no count to be compared against and still reads: multiplexed data reads as a shorter recording, while in vectorized data (each channel stored whole, one after another) the channel boundaries move, so every channel after the first is corrupted.
 A vectorized file with whole extra frames beyond its <code>DataPoints=</code> is not detected either, because it cannot be told from a stale count: if the count is right, MNE-Python sizes the channel blocks from the file and the channels after the first are corrupted, and if the count is stale, the read is correct.
 ASCII data has no fixed frame and is not checked, and a header that cannot be parsed or a data file that cannot be opened is left to MNE-Python, which raises its own error.</p>
+<h2 id="reading-a-file-with-a-partial-trailing-frame">Reading a File with a Partial Trailing Frame<a class="headerlink" href="#reading-a-file-with-a-partial-trailing-frame" title="Permanent link">&para;</a></h2>
+<p>A data file that ends in a partial frame is refused by default.
+When the whole frames before the partial one are what you want, pass <code>allow_partial_frame=True</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'path/to/subject01.vhdr'</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<p>In <code>Recording.from_file</code> it is a keyword-only argument: it cannot be passed by position.
+<code>stream_to_zarr</code> takes the same keyword, and so does <code>BrainVisionImporter.load</code>.
+<code>Recording.from_file</code> and <code>stream_to_zarr</code> ignore it for every format other than BrainVision, as <code>mixed_rate</code> is ignored outside EDF and BDF.
+Calling another format's importer class directly is different: the EDF importer's <code>load</code> raises <code>TypeError</code> for it (<code>EDFImporter.load(path, allow_partial_frame=True)</code>).</p>
+<p>The option covers one case only: multiplexed data with a trailing partial frame and no positive <code>DataPoints=</code>.
+There, biosigIO reads the whole frames as MNE-Python does, which drops the partial bytes and any marker that falls in them, and says so.
+It emits a <code>UserWarning</code> that names the data file by its file name and gives the number of dropped bytes.
+It also records that number in the recording's metadata as <code>brainvision_dropped_bytes</code>, so it survives the read; the streaming export writes the same key into the store's <code>recording_metadata</code>.</p>
+<p>The option does not change any other refusal.
+A vectorized file is still refused, with a message saying that <code>allow_partial_frame</code> does not apply to vectorized data, because a cut there misaligns the channels after the first.
+A file smaller than a positive <code>DataPoints=</code> is still refused, and so is a file that holds no whole frame, a zero-byte file included.
+With the flag on or off, a multiplexed file with a positive <code>DataPoints=</code> that ends in a partial frame is read as MNE-Python reads it, with no warning and no key.
+Without the option, nothing changes.</p>
 <h2 id="loading-data">Loading Data<a class="headerlink" href="#loading-data" title="Permanent link">&para;</a></h2>
 <p>Provide the path to the <code>.vhdr</code> header file to <code>Recording.from_file</code>. The <code>.vhdr</code> extension is recognized automatically, so the importer is inferred:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">biosigio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Load a BrainVision recording (pass the .vhdr header)</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'path/to/subject01.vhdr'</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">biosigio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Recording</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Load a BrainVision recording (pass the .vhdr header)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'path/to/subject01.vhdr'</span><span class="p">)</span>
 </code></pre></div>
 <p>You can also select the importer explicitly with the <code>importer</code> argument:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'path/to/subject01.vhdr'</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">'brainvision'</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'path/to/subject01.vhdr'</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">'brainvision'</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="channel-types-and-units">Channel Types and Units<a class="headerlink" href="#channel-types-and-units" title="Permanent link">&para;</a></h2>
 <p>Channels are read through the channel-type and unit mapping shared by all MNE-backed importers (MEG and BrainVision). Each MNE channel type maps to a distinct biosigIO channel type, so different sensor streams are preserved rather than collapsed together. The mapping includes, among others:</p>
@@ -2849,10 +2891,10 @@ ASCII data has no fixed frame and is not checked, and a header that cannot be pa
 <li><code>duration</code>: The duration of the marker in seconds (0 for instantaneous markers).</li>
 <li><code>description</code>: A string describing the marker, taken from the BrainVision marker label.</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'subject01.vhdr'</span><span class="p">)</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Inspect the markers read from the .vmrk file</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'subject01.vhdr'</span><span class="p">)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Inspect the markers read from the .vmrk file</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
 </code></pre></div>
 <p>If the recording contains no markers, <code>rec.events</code> is left at its default empty value.</p>
 <p>See the <a href="../../user-guide/metadata/#annotations-events">Metadata Handling</a> guide for more details on accessing and working with the <code>events</code> DataFrame.</p>
@@ -2862,10 +2904,11 @@ ASCII data has no fixed frame and is not checked, and a header that cannot be pa
 <li><code>source_file</code>: Path to the <code>.vhdr</code> header file passed to <code>from_file</code>.</li>
 <li><code>number_of_signals</code>: The number of channels read from the recording.</li>
 <li><code>brainvision_header_recovered</code>: Present only when the header named missing files and same-stem siblings were read instead (see <a href="#renamed-files-and-stale-header-references">Renamed files and stale header references</a>).</li>
+<li><code>brainvision_dropped_bytes</code>: Present only when <code>allow_partial_frame=True</code> read a multiplexed file that ends in a partial frame; the number of trailing bytes that were dropped (see <a href="#reading-a-file-with-a-partial-trailing-frame">Reading a File with a Partial Trailing Frame</a>).</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'subject01.vhdr'</span><span class="p">)</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">'source_file'</span><span class="p">))</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">'number_of_signals'</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'subject01.vhdr'</span><span class="p">)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">'source_file'</span><span class="p">))</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="s1">'number_of_signals'</span><span class="p">))</span>
 </code></pre></div>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <p>The BrainVision importer requires MNE-Python, installed through the <code>meg</code> extra (<code>uv sync --extra meg</code>). This extra is shared with the MEG importer, so installing it enables both. No additional package is needed to read the BrainVision triplet; MNE reads it natively.</p>
