@@ -285,11 +285,8 @@ def classify_read_error(exc: Exception, filepath: str = "") -> BiosigIOError | N
     # reader raised them, not only the FIF reader. MNE's FIF reader raises the
     # first when a tag is cut mid-sample (the buffer is no longer a whole number
     # of elements) and the second when a data buffer is cut at a sample boundary
-    # (it holds fewer samples than its header declares); MNE's KIT reader raises
-    # the second when its data block is cut short. Measured on one fixture per
-    # reader, truncated CTF, 4D/BTi, BrainVision, EDF, BDF, EEGLAB and WFDB
-    # files classify as before. The message names the file, not the directory
-    # it sits in.
+    # (it holds fewer samples than its header declares). The message names the
+    # file, not the directory it sits in.
     if (
         "buffer size must be a multiple of element size" in low
         or "cannot reshape array of size" in low

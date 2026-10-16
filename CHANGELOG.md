@@ -26,8 +26,8 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   `CorruptFileError` is a `FileReadError`, so existing handlers still catch it.
   The two numpy messages a cut inside the data produces, "buffer size must be a multiple of element size" and "cannot reshape array of size", are now typed as corrupt.
   The match is on the message, so it applies to any reader, not only the FIF reader.
-  Of the other formats, only KIT/Yokogawa (`.sqd`, `.con`, `.kdf`) changed: a file of that kind whose data ends early now raises `CorruptFileError` too.
-  Truncated CTF, 4D/BTi, BrainVision, EDF, BDF, EEGLAB and WFDB files are classified as before.
+  Beyond FIF, the change applies to the KIT/Yokogawa data (`.sqd`, `.con`, `.kdf`) and to the 4D/BTi metadata files (`config`, `hs_file`): a truncated one now raises `CorruptFileError`.
+  The other committed fixtures classify exactly as before: the 4D/BTi data file, all CTF files, the BrainVision files, three EDF, one BDF, two EEGLAB and three WFDB files.
   Host conditions (memory, permissions, I/O) still propagate unchanged.
   The message of a truncation matched this way names the file by its file name, without its directory.
 

@@ -91,6 +91,21 @@ def test_classify_numpy_partial_element_buffer_is_corrupt():
     assert err.code == "corrupt_or_truncated"
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["buffer size must be a multiple of element size", "cannot reshape array of size 3"],
+    ids=["buffer", "reshape"],
+)
+def test_classify_host_condition_wins_over_a_truncation_match(text):
+    """The host check runs before the message match: an EIO whose text happens to
+    be a truncation message stays the OSError, so a caller retries the host
+    instead of recording a corrupt file."""
+    exc = OSError(errno.EIO, text)
+    with pytest.raises(OSError) as caught:
+        classify_read_error(exc)
+    assert caught.value is exc
+
+
 def test_classify_numpy_reshape_size_mismatch_is_corrupt():
     """The text numpy raises when a FIF data buffer holds fewer samples than its
     header declares: the whole samples that remain no longer fill the block."""
@@ -688,6 +703,7 @@ def _fif_cut_after_buffer(tmp_path, extra_bytes):
 # is an expected failure until it is fixed.
 @pytest.mark.xfail(
     strict=True,
+    raises=pytest.fail.Exception,  # "DID NOT RAISE"; any other error is a real failure
     reason="biosigio #163: a FIF cut exactly at a data-buffer boundary reads silently shorter",
 )
 @pytest.mark.skipif(not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture")
