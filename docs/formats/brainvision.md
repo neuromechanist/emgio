@@ -61,9 +61,10 @@ When the whole frames before the partial one are what you want, pass `allow_part
 rec = Recording.from_file('path/to/subject01.vhdr', allow_partial_frame=True)
 ```
 
+In `Recording.from_file` it is a keyword-only argument: it cannot be passed by position.
 `stream_to_zarr` takes the same keyword, and so does `BrainVisionImporter.load`.
 `Recording.from_file` and `stream_to_zarr` ignore it for every format other than BrainVision, as `mixed_rate` is ignored outside EDF and BDF.
-The other importer classes accept it for BrainVision only: `EDFImporter.load(path, allow_partial_frame=True)` raises `TypeError`.
+Calling another format's importer class directly is different: the EDF importer's `load` raises `TypeError` for it (`EDFImporter.load(path, allow_partial_frame=True)`).
 
 The option covers one case only: multiplexed data with a trailing partial frame and no positive `DataPoints=`.
 There, biosigIO reads the whole frames as MNE-Python does, which drops the partial bytes and any marker that falls in them, and says so.
@@ -72,7 +73,7 @@ It also records that number in the recording's metadata as `brainvision_dropped_
 
 The option does not change any other refusal.
 A vectorized file is still refused, with a message saying that `allow_partial_frame` does not apply to vectorized data, because a cut there misaligns the channels after the first.
-A file smaller than a positive `DataPoints=` is still refused, and so is a file that holds no whole frame.
+A file smaller than a positive `DataPoints=` is still refused, and so is a file that holds no whole frame, a zero-byte file included.
 With the flag on or off, a multiplexed file with a positive `DataPoints=` that ends in a partial frame is read as MNE-Python reads it, with no warning and no key.
 Without the option, nothing changes.
 
