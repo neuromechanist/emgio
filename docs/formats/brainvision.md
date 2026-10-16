@@ -47,7 +47,7 @@ For `.ahdr` headers, MNE-Python counts one channel more than the header names, a
 The error message names the data file by its file name, never its directory.
 Some cut files cannot be detected.
 With no `DataPoints=`, a file cut exactly at a frame boundary has no count to be compared against and still reads: multiplexed data reads as a shorter recording, while in vectorized data (each channel stored whole, one after another) the channel boundaries move, so every channel after the first is corrupted.
-A vectorized file with whole extra frames beyond its `DataPoints=` is not detected either, since it cannot be told from a stale count, and the channels after the first are corrupted.
+A vectorized file with whole extra frames beyond its `DataPoints=` is not detected either, because it cannot be told from a stale count: if the count is right, MNE-Python sizes the channel blocks from the file and the channels after the first are corrupted, and if the count is stale, the read is correct.
 ASCII data has no fixed frame and is not checked, and a header that cannot be parsed or a data file that cannot be opened is left to MNE-Python, which raises its own error.
 
 ## Loading Data

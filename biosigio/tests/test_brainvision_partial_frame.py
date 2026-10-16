@@ -225,8 +225,20 @@ def test_file_longer_than_data_points_is_read_as_mne_reads_it(tmp_path, opener):
 
 
 @pytest.mark.parametrize("opener", ["importer", "stream"])
-@pytest.mark.parametrize("value", ["0", ""], ids=["zero", "empty"])
-def test_data_points_zero_or_empty_keeps_the_frame_check_only(tmp_path, opener, value):
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param("0", id="zero"),
+        pytest.param("", id="empty"),
+        pytest.param("-5", id="negative"),
+        pytest.param("1250.5", id="decimal"),
+        pytest.param("1e3", id="exponent"),
+        pytest.param("abc", id="text"),
+    ],
+)
+def test_data_points_that_is_not_a_positive_integer_keeps_the_frame_check_only(
+    tmp_path, opener, value
+):
     vhdr = _copy_triplet(tmp_path)
     true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
     _declare_data_points(vhdr, value)
@@ -237,7 +249,7 @@ def test_data_points_zero_or_empty_keeps_the_frame_check_only(tmp_path, opener, 
     else:
         assert result.n_samples == true_points
 
-    # A declared zero is no count: a file cut by a whole frame still reads, as before.
+    # Such a value is no count: a file cut by a whole frame still reads, as before.
     _cut(tmp_path / DATA_NAME, FRAME_BYTES)
     result = _read_with(opener, vhdr)
     if opener == "importer":
@@ -475,8 +487,12 @@ def _append(path: pathlib.Path, n_bytes: int) -> None:
 
 
 @pytest.mark.parametrize("opener", ["importer", "stream"])
+@pytest.mark.parametrize(
+    "extra",
+    [pytest.param(1, id="one-extra-byte"), pytest.param(FRAME_BYTES - 1, id="frame-minus-one")],
+)
 def test_vectorized_file_with_a_partial_frame_is_refused_even_when_longer_than_data_points(
-    tmp_path, opener
+    tmp_path, opener, extra
 ):
     """A vectorized file is channels x points x bytes long whatever DataPoints says, so
     a size that is not a whole number of frames is refused when it exceeds the count."""
@@ -484,7 +500,7 @@ def test_vectorized_file_with_a_partial_frame_is_refused_even_when_longer_than_d
     _make_vectorized(vhdr)
     true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
     _declare_data_points(vhdr, true_points)
-    _append(tmp_path / DATA_NAME, 1)
+    _append(tmp_path / DATA_NAME, extra)
 
     with pytest.raises(CorruptFileError) as excinfo:
         _read_with(opener, vhdr)
@@ -524,20 +540,36 @@ def test_multiplexed_file_with_a_partial_frame_beyond_data_points_reads_as_mne_r
         assert result.n_samples == true_points
 
 
-def test_vectorized_whole_extra_frame_beyond_data_points_is_not_detected(tmp_path):
-    """The undetected case: whole extra frames cannot be told from a stale DataPoints.
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+def test_vectorized_whole_extra_frame_beyond_data_points_is_a_known_undetected_gap(
+    tmp_path, opener
+):
+    """KNOWN GAP, not desired behavior. If DataPoints is right, this read is silently
+    misaligned. The test pins current behavior; closing the gap means changing it to
+    expect CorruptFileError.
 
-    MNE sizes the channel blocks from the file, so the first channel is intact and the
-    channels after it are corrupted.
+    Whole extra frames cannot be told from a stale DataPoints. MNE sizes the channel
+    blocks from the file, so the first channel is intact and channels 1 to 7 differ.
     """
     vhdr = _copy_triplet(tmp_path)
     _make_vectorized(vhdr)
     intact = Recording.from_file(str(vhdr)).signals.to_numpy()
-    _declare_data_points(vhdr, intact.shape[0])
+    n_points = intact.shape[0]
+    _declare_data_points(vhdr, n_points)
     _append(tmp_path / DATA_NAME, FRAME_BYTES)
 
-    longer = Recording.from_file(str(vhdr)).signals.to_numpy()
+    if opener == "importer":
+        longer = Recording.from_file(str(vhdr)).signals.to_numpy()
+        assert longer.shape == (n_points + 1, N_CHANNELS)
+        first_samples = longer[:n_points].T
+    else:
+        src = _open_stream_source(str(vhdr), None)
+        try:
+            assert src.n_samples == n_points + 1
+            first_samples = src.read(list(range(N_CHANNELS)), 0, n_points)
+        finally:
+            src.close()
 
-    assert longer.shape == (intact.shape[0] + 1, N_CHANNELS)
-    np.testing.assert_array_equal(longer[:-1, 0], intact[:, 0])
-    assert not np.array_equal(longer[:-1, 1], intact[:, 1])
+    np.testing.assert_array_equal(first_samples[0], intact[:, 0])
+    for channel in range(1, N_CHANNELS):
+        assert not np.array_equal(first_samples[channel], intact[:, channel]), channel

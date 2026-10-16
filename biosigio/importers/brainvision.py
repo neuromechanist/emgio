@@ -414,9 +414,9 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
     detected and still reads. In multiplexed data it reads as a shorter recording; in
     vectorized data the channel boundaries move, so every channel after the first is
     corrupted. A vectorized file that holds whole extra frames beyond its
-    ``DataPoints=`` is not detected either: it cannot be told from a stale count, and
-    MNE sizes the channel blocks from the file, so the channels after the first are
-    corrupted.
+    ``DataPoints=`` is not detected either, because it cannot be told from a stale
+    count. MNE sizes the channel blocks from the file: if the count is right, every
+    channel after the first is misaligned; if the count is stale, the read is correct.
 
     Args:
         vhdr: The header path handed to MNE (the patched copy when
@@ -447,7 +447,7 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
     elif size % frame != 0 and (declared.data_points is None or declared.vectorized):
         problem = (
             f"is not a whole number of frames ({layout} make a frame of {frame} bytes), "
-            "so reading it would silently drop the last partial frame and any marker in it."
+            "so it is truncated or has trailing bytes that are not a frame."
         )
     else:
         return
