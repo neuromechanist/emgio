@@ -150,6 +150,9 @@ def _pyramid_level_lengths(
 # open the file (issue #109 and friends -- see ``..importers._edf_tolerant``),
 # ``_EdfSource`` falls back to the SAME tolerant MNE-backed, unit-rescaled read the
 # in-memory importer uses, so the two paths keep agreeing even on a recovered file.
+# The exception is a late first time-keeping onset (issue #145): pyedflib refuses
+# only that file's annotation walk, so it is still read by pyedflib with the walk
+# switched off and keeps the bounded windowed path below, with no MNE.
 #
 # .mefd and 4D/BTi need their OWN reader call rather than MNE's generic
 # ``read_raw()`` dispatch: .mefd additionally needs the MEF3 version/pymef gate
@@ -236,14 +239,24 @@ class _EdfSource:
     windowed pyedflib reader for a file pyedflib itself refuses to open), so it
     trades this module's bounded-memory guarantee for correctness on these rare,
     already-exceptional files; ``read()`` still serves windows from the
-    preloaded array so callers see the same interface either way."""
+    preloaded array so callers see the same interface either way.
+
+    A fourth condition, a late first time-keeping onset (issue #145), is the
+    exception: pyedflib refuses only the annotation walk, so once
+    ``probe_timekeeping_onset`` proves that is the sole defect the file is opened
+    by pyedflib with annotations off and served through the same bounded windowed
+    path as a compliant file, with no MNE. ``extra_metadata`` then carries
+    ``edf_tolerant_read``, ``edf_tolerant_read_reason`` and
+    ``edf_first_record_onset``, the keys the importer sets on its ``Recording``."""
 
     def __init__(self, filepath: str, force_modality: str | None):
         import pyedflib
 
         from ..exceptions import MixedSamplingRateError
         from ..importers._edf_tolerant import (
+            LATE_TIMEKEEPING_ONSET,
             classify_pyedflib_error,
+            probe_timekeeping_onset,
             raise_host_open_error,
             read_edf_tolerant,
         )
@@ -264,57 +277,71 @@ class _EdfSource:
             raise_host_open_error(filepath, open_exc)
             reason = classify_pyedflib_error(open_exc)
             if reason is None:
-                # A refusal this module cannot recover is a typed file failure,
-                # as the in-memory importer raises it (see issue #149).
-                raise classify_read_error(open_exc, filepath) from open_exc
-            try:
-                fallback = read_edf_tolerant(filepath, reason)
-            except ImportError:
-                # MNE/`meg` extra missing: an environment problem, never typed as
-                # a file failure. It propagates with its own clear install hint,
-                # same as the in-memory importer degrading only when it also
-                # can't recover.
-                raise
-            except Exception as fallback_exc:
-                # The fallback can still find the file unrecoverable (a truncation
-                # its safety net catches, a unit-gain mismatch): type that as the
-                # in-memory importer's outer handler does. Host conditions
-                # (resource exhaustion, EACCES, EIO, ...) re-raise unchanged
-                # inside classify_read_error, and a BiosigIOError passes through.
-                raise classify_read_error(fallback_exc, filepath) from fallback_exc
-            self.extra_metadata["edf_tolerant_read"] = True
-            self.extra_metadata["edf_tolerant_read_reason"] = reason
-            if fallback.renamed_labels:
-                self.extra_metadata[DEDUPLICATED_LABELS_KEY] = dict(fallback.renamed_labels)
-
-            rates = {ch.sample_frequency for ch in fallback.channels}
-            if len(rates) > 1:
-                raise MixedSamplingRateError(
-                    "EDF/BDF recording has mixed per-channel sampling rates "
-                    f"({sorted(rates)} Hz); the streaming path needs a uniform "
-                    'grid. The in-memory path handles this with mixed_rate="resample".'
-                ) from None
-
-            self.sfreq = float(fallback.channels[0].sample_frequency) if fallback.channels else 0.0
-            self.n_samples = len(fallback.channels[0].data) if fallback.channels else 0
-            self._fallback_data = (
-                np.stack([ch.data for ch in fallback.channels])
-                if fallback.channels
-                else np.empty((0, 0))
-            )
-            self.channels = []
-            for i, ch in enumerate(fallback.channels):
-                ctype = typer(ch.label, ch.transducer)
-                self.channels.append(
-                    {
-                        "idx": i,
-                        "label": ch.label,
-                        "channel_type": ctype,
-                        "modality": force_modality or infer_modality_from_channel_type(ctype),
-                        "unit": ch.physical_dimension or "n/a",
-                    }
+                late = probe_timekeeping_onset(filepath, open_exc)
+                if late is None:
+                    # A refusal this module cannot recover is a typed file failure,
+                    # as the in-memory importer raises it (see issue #149).
+                    raise classify_read_error(open_exc, filepath) from open_exc
+                # Only the annotation walk refused the file: read its samples with
+                # the walk switched off, windowed like any compliant file's.
+                reader = pyedflib.EdfReader(
+                    filepath, annotations_mode=pyedflib.DO_NOT_READ_ANNOTATIONS
                 )
-            return
+                self.extra_metadata["edf_tolerant_read"] = True
+                self.extra_metadata["edf_tolerant_read_reason"] = LATE_TIMEKEEPING_ONSET
+                self.extra_metadata["edf_first_record_onset"] = late.first_onset
+            else:
+                try:
+                    fallback = read_edf_tolerant(filepath, reason)
+                except ImportError:
+                    # MNE/`meg` extra missing: an environment problem, never typed
+                    # as a file failure. It propagates with its own clear install
+                    # hint, same as the in-memory importer degrading only when it
+                    # also can't recover.
+                    raise
+                except Exception as fallback_exc:
+                    # The fallback can still find the file unrecoverable (a
+                    # truncation its safety net catches, a unit-gain mismatch):
+                    # type that as the in-memory importer's outer handler does.
+                    # Host conditions (resource exhaustion, EACCES, EIO, ...)
+                    # re-raise unchanged inside classify_read_error, and a
+                    # BiosigIOError passes through.
+                    raise classify_read_error(fallback_exc, filepath) from fallback_exc
+                self.extra_metadata["edf_tolerant_read"] = True
+                self.extra_metadata["edf_tolerant_read_reason"] = reason
+                if fallback.renamed_labels:
+                    self.extra_metadata[DEDUPLICATED_LABELS_KEY] = dict(fallback.renamed_labels)
+
+                rates = {ch.sample_frequency for ch in fallback.channels}
+                if len(rates) > 1:
+                    raise MixedSamplingRateError(
+                        "EDF/BDF recording has mixed per-channel sampling rates "
+                        f"({sorted(rates)} Hz); the streaming path needs a uniform "
+                        'grid. The in-memory path handles this with mixed_rate="resample".'
+                    ) from None
+
+                self.sfreq = (
+                    float(fallback.channels[0].sample_frequency) if fallback.channels else 0.0
+                )
+                self.n_samples = len(fallback.channels[0].data) if fallback.channels else 0
+                self._fallback_data = (
+                    np.stack([ch.data for ch in fallback.channels])
+                    if fallback.channels
+                    else np.empty((0, 0))
+                )
+                self.channels = []
+                for i, ch in enumerate(fallback.channels):
+                    ctype = typer(ch.label, ch.transducer)
+                    self.channels.append(
+                        {
+                            "idx": i,
+                            "label": ch.label,
+                            "channel_type": ctype,
+                            "modality": force_modality or infer_modality_from_channel_type(ctype),
+                            "unit": ch.physical_dimension or "n/a",
+                        }
+                    )
+                return
 
         self._reader = reader
         headers = self._reader.getSignalHeaders()
