@@ -428,6 +428,7 @@ def _open_stream_source(filepath: str, force_modality: str | None):
         from ..importers.brainvision import (
             HEADER_RECOVERED_KEY,
             brainvision_read_error,
+            require_whole_frames,
             resolved_vhdr,
         )
 
@@ -438,6 +439,9 @@ def _open_stream_source(filepath: str, force_modality: str | None):
             vhdr = stack.enter_context(
                 resolved_vhdr(filepath, substitutions=recovered, staged_files=staged)
             )
+            # Same refusal as the in-memory importer: a lazy read would drop the
+            # partial trailing frame just as silently.
+            require_whole_frames(vhdr, staged)
             try:
                 raw = mne.io.read_raw_brainvision(vhdr, preload=False, verbose="ERROR")
             except Exception as e:

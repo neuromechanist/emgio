@@ -7,6 +7,7 @@ units come from the shared :mod:`_mne_common` mapping; ``.vmrk`` markers (which
 MNE exposes as annotations) are read into ``Recording.events``.
 """
 
+import configparser
 import contextlib
 import errno
 import logging
@@ -22,6 +23,7 @@ import pandas as pd
 from ..core.emg import Recording
 from ..exceptions import (
     BiosigIOError,
+    CorruptFileError,
     classify_read_error,
     is_host_condition,
     is_resource_exhaustion,
@@ -44,6 +46,8 @@ _LINE_BREAK = re.compile(r"(?<=\n)|(?<=\r)(?!\n)")
 # FileNotFoundError). On MNE >= 1.13 the marker-only test row therefore passes with
 # or without this patch; it proves the patch only on MNE 1.12.
 _SIBLING_EXTS = {"datafile": (".eeg", ".dat"), "markerfile": (".vmrk",)}
+# Bytes per sample for each ``BinaryFormat=`` value MNE reads (its ``_fmt_byte_dict``).
+_BYTES_PER_SAMPLE = {"INT_16": 2, "INT_32": 4, "IEEE_FLOAT_32": 4}
 
 
 def _header_encoding(settings: bytes) -> str:
@@ -323,6 +327,79 @@ def brainvision_read_error(
     return type(typed)(message)
 
 
+def _declared_frame(vhdr: str) -> tuple[str, int, int, int] | None:
+    """The binary data file and frame size a header declares, or None if it declares none.
+
+    Returns ``(data file path, bytes per frame, channels, bytes per sample)`` for a
+    ``DataFormat=BINARY`` header, parsed the way MNE parses it (``configparser`` on
+    the text before ``[Comment]``). None when the header cannot be read, parsed or
+    is not fixed-width binary (ASCII data has no fixed frame); MNE then reads the
+    file and raises its own error, typed by the caller exactly as before.
+    """
+    try:
+        with open(vhdr, "rb") as f:
+            _, _, settings = f.read().partition(b"\n")  # the first line is the version tag
+    except OSError:
+        return None
+    text = settings.decode(_header_encoding(settings)).partition("[Comment]")[0]
+    cfg = configparser.ConfigParser(interpolation=None)
+    try:
+        cfg.read_string(text)
+        common = "Common Infos" if cfg.has_section("Common Infos") else "Common infos"
+        if cfg.get(common, "DataFormat") != "BINARY":
+            return None
+        bytes_per_sample = _BYTES_PER_SAMPLE[cfg.get("Binary Infos", "BinaryFormat")]
+        channels = cfg.getint(common, "NumberOfChannels")
+        data_file = cfg.get(common, "DataFile")
+    except (configparser.Error, KeyError, ValueError):
+        return None
+    if channels < 1:
+        return None
+    data_path = os.path.join(os.path.dirname(os.path.abspath(vhdr)), data_file)
+    return data_path, channels * bytes_per_sample, channels, bytes_per_sample
+
+
+def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
+    """Refuse a binary data file whose size is not a whole number of frames.
+
+    A frame is one sample of every channel (channels times bytes per sample), in
+    multiplexed and vectorized data alike. MNE drops a partial trailing frame
+    without a word, and with it any marker that falls in the dropped span, so a
+    file cut mid-frame would read as a shorter recording. The check runs before
+    MNE opens the data file; a header or file it cannot read is left to MNE.
+
+    No sample count is compared, so a file cut exactly at a frame boundary cannot be
+    detected here and still reads as a shorter recording.
+
+    Args:
+        vhdr: The header path handed to MNE (the patched copy when
+            :func:`resolved_vhdr` made one).
+        staged_files: The dict :func:`resolved_vhdr` fills, so the error names the
+            dataset's data file rather than its staged name in a temporary directory.
+
+    Raises:
+        CorruptFileError: The data file's size is not a multiple of the frame size.
+            The message names the file, never its directory.
+    """
+    declared = _declared_frame(vhdr)
+    if declared is None:
+        return
+    data_path, frame_bytes, channels, bytes_per_sample = declared
+    try:
+        size = os.path.getsize(data_path)
+    except OSError:
+        return  # MNE opens the file next and raises the real error
+    if size % frame_bytes == 0:
+        return
+    name = os.path.basename((staged_files or {}).get(data_path, data_path))
+    raise CorruptFileError(
+        f"BrainVision data file {name} is truncated or corrupt: its size ({size} bytes) "
+        f"is not a whole number of frames ({channels} channels of {bytes_per_sample} "
+        f"bytes make a frame of {frame_bytes} bytes), so reading it would silently drop "
+        "the last partial frame and any marker in it."
+    )
+
+
 class BrainVisionImporter(BaseImporter):
     """Importer for BrainVision recordings via MNE-Python (.vhdr)."""
 
@@ -368,6 +445,8 @@ class BrainVisionImporter(BaseImporter):
         recovered: dict = {}
         staged: dict = {}
         with resolved_vhdr(filepath, substitutions=recovered, staged_files=staged) as vhdr:
+            # Outside the try: a refusal is already typed, not an MNE failure to classify.
+            require_whole_frames(vhdr, staged)
             try:
                 raw = mne.io.read_raw_brainvision(vhdr, preload=True, verbose="ERROR")
             except Exception as e:

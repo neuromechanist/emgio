@@ -10,6 +10,15 @@ Entries before 1.2.9 are condensed from the
 [GitHub Releases](https://github.com/neuromechanist/biosigio/releases),
 which keep the full notes; releases older than 1.1.0 are listed there only.
 
+## [Unreleased]
+
+### Fixed
+
+- A BrainVision data file whose size is not a whole number of frames raises `CorruptFileError` instead of reading silently.
+  A frame is one sample of every channel (channels times bytes per sample).
+  MNE dropped the partial trailing frame, and any marker in it, without a word; the in-memory importer and the streaming Zarr export now refuse the file, naming it by file name.
+  A file cut exactly at a frame boundary still reads as a shorter recording, because the header states no sample count to compare against.
+
 ## [1.2.12] - 2026-10-16
 
 This patch release reads one more kind of valid EDF file and types the errors of the streaming Zarr export.
@@ -455,6 +464,7 @@ First release since 1.1.3; the internal 1.1.4 and 1.1.5 bumps are folded in.
 - EEGLAB `.set` files with the signal matrix in a sibling `.fdt` file (#94).
 - `bids.apply_events_tsv` to load a BIDS `_events.tsv` into `rec.events`.
 
+[Unreleased]: https://github.com/neuromechanist/biosigio/compare/v1.2.12...HEAD
 [1.2.12]: https://github.com/neuromechanist/biosigio/compare/v1.2.11...v1.2.12
 [1.2.11]: https://github.com/neuromechanist/biosigio/compare/v1.2.10...v1.2.11
 [1.2.10]: https://github.com/neuromechanist/biosigio/compare/v1.2.9...v1.2.10
