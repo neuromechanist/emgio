@@ -369,6 +369,8 @@ def _declared_frame(vhdr: str) -> _DeclaredFrame | None:
         return None
     if channels < 1:
         return None
+    if os.path.splitext(vhdr)[1] == ".ahdr":
+        channels += 1  # MNE counts one channel more than the header names for .ahdr
     try:
         data_points = cfg.getint(common, "DataPoints", fallback=None)
     except ValueError:
@@ -383,18 +385,28 @@ def _declared_frame(vhdr: str) -> _DeclaredFrame | None:
 
 
 def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
-    """Refuse a binary data file whose size disagrees with its header.
+    """Refuse a binary data file that is cut short, as far as its header shows.
 
     A frame is one sample of every channel (channels times bytes per sample), in
     multiplexed and vectorized data alike. MNE drops a partial trailing frame
     without a word, and with it any marker that falls in the dropped span, so a
-    file cut mid-frame would read as a shorter recording. The size must therefore be
-    a whole number of frames, and, when the header declares a positive ``DataPoints=``,
-    exactly that many frames. The check runs before MNE opens the data file; a header
-    or file it cannot read is left to MNE.
+    file cut mid-frame would read as a shorter recording. Two rules apply:
 
-    Without a ``DataPoints=`` count to compare, a file cut exactly at a frame boundary
-    cannot be detected here and still reads as a shorter recording.
+    - The header declares no positive ``DataPoints=``: the size must be a whole
+      number of frames. A trailing partial frame is refused.
+    - The header declares a positive ``DataPoints=``: the size must be at least
+      that many frames. A shorter file is refused. A longer one is read as MNE reads
+      it, since MNE sizes the recording from the file and ignores ``DataPoints=`` for
+      binary data.
+
+    The check runs before MNE opens the data file; a header or file it cannot read is
+    left to MNE. For ``.ahdr`` headers MNE counts one channel more than the header
+    names, and so does the frame.
+
+    Without a ``DataPoints=`` count, a file cut exactly at a frame boundary is not
+    detected and still reads. In multiplexed data it reads as a shorter recording; in
+    vectorized data (each channel stored whole, one after another) the channel
+    boundaries move, so every channel after the first is corrupted.
 
     Args:
         vhdr: The header path handed to MNE (the patched copy when
@@ -403,8 +415,8 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
             dataset's data file rather than its staged name in a temporary directory.
 
     Raises:
-        CorruptFileError: The data file's size is not a multiple of the frame size,
-            or differs from the declared ``DataPoints=`` times the frame size.
+        CorruptFileError: The data file is not a whole number of frames, or is
+            smaller than the declared ``DataPoints=`` times the frame size.
             The message names the file, never its directory.
     """
     declared = _declared_frame(vhdr)
@@ -416,18 +428,21 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
         return  # MNE opens the file next and raises the real error
     frame = declared.frame_bytes
     layout = f"{declared.channels} channels of {declared.bytes_per_sample} bytes"
-    if size % frame != 0:
+    if declared.data_points is None:
+        if size % frame == 0:
+            return
         problem = (
             f"is not a whole number of frames ({layout} make a frame of {frame} bytes), "
             "so reading it would silently drop the last partial frame and any marker in it."
         )
-    elif declared.data_points is not None and size != declared.data_points * frame:
+    else:
+        expected = declared.data_points * frame
+        if size >= expected:
+            return
         problem = (
-            f"differs from the {declared.data_points * frame} bytes its header declares "
+            f"is smaller than the {expected} bytes its header declares "
             f"({declared.data_points} data points of {layout})."
         )
-    else:
-        return
     name = os.path.basename((staged_files or {}).get(declared.data_path, declared.data_path))
     raise CorruptFileError(
         f"BrainVision data file {name} is truncated or corrupt: its size ({size} bytes) " + problem

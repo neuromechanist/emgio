@@ -191,13 +191,10 @@ def test_data_points_equal_to_the_true_count_reads(tmp_path, opener):
     ("declared_offset", "cut"),
     [
         pytest.param(1, 0, id="declares-one-sample-more-than-the-data"),
-        pytest.param(-1, 0, id="declares-one-sample-fewer-than-the-data"),
         pytest.param(0, FRAME_BYTES, id="data-cut-by-one-whole-frame"),
     ],
 )
-def test_data_points_that_disagree_with_the_data_are_refused(
-    tmp_path, opener, declared_offset, cut
-):
+def test_file_smaller_than_data_points_is_refused(tmp_path, opener, declared_offset, cut):
     vhdr = _copy_triplet(tmp_path)
     true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
     _declare_data_points(vhdr, true_points + declared_offset)
@@ -206,6 +203,20 @@ def test_data_points_that_disagree_with_the_data_are_refused(
     with pytest.raises(CorruptFileError) as excinfo:
         _read_with(opener, vhdr)
     _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+@pytest.mark.parametrize("opener", ["importer", "stream"])
+def test_file_longer_than_data_points_is_read_as_mne_reads_it(tmp_path, opener):
+    """MNE sizes the recording from the file and ignores DataPoints for binary data."""
+    vhdr = _copy_triplet(tmp_path)
+    true_points = (tmp_path / DATA_NAME).stat().st_size // FRAME_BYTES
+    _declare_data_points(vhdr, true_points - 1)
+
+    result = _read_with(opener, vhdr)
+    if opener == "importer":
+        assert result.signals.shape == (true_points, N_CHANNELS)
+    else:
+        assert result.n_samples == true_points
 
 
 @pytest.mark.parametrize("opener", ["importer", "stream"])
@@ -228,3 +239,33 @@ def test_data_points_zero_or_empty_keeps_the_frame_check_only(tmp_path, opener, 
         assert result.signals.shape == (true_points - 1, N_CHANNELS)
     else:
         assert result.n_samples == true_points - 1
+
+
+def test_ahdr_frame_counts_the_extra_channel_mne_adds(tmp_path):
+    """MNE counts one channel more than an .ahdr header names, and so does the frame.
+
+    The derived header names 7 of the fixture's 8 channels. Its data file is a whole
+    number of 8-channel frames (a derived frame size of 32 bytes, not a file size) but
+    not of 7-channel frames, so it must read, and a partial cut must still be refused.
+    """
+    vhdr = _copy_triplet(tmp_path)
+    text = vhdr.read_text(encoding="utf-8")
+    assert "NumberOfChannels=8" in text and "Ch8=F5,,0.1,\u00b5V\n" in text
+    ahdr = tmp_path / f"{STEM}.ahdr"
+    ahdr.write_text(
+        text.replace("NumberOfChannels=8", "NumberOfChannels=7").replace(
+            "Ch8=F5,,0.1,\u00b5V\n", ""
+        ),
+        encoding="utf-8",
+    )
+    data_file = tmp_path / DATA_NAME
+    size = data_file.stat().st_size
+    assert size % (7 * 4) != 0
+
+    rec = Recording.from_file(str(ahdr), importer="brainvision")
+    assert rec.signals.shape == (size // FRAME_BYTES, 7)
+
+    _cut(data_file, 1)
+    with pytest.raises(CorruptFileError) as excinfo:
+        Recording.from_file(str(ahdr), importer="brainvision")
+    _assert_refusal_names_file_only(excinfo, tmp_path)
