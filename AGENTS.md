@@ -97,7 +97,7 @@ The committed example recordings live in `examples/` at the repository root. Tes
 
 **Owner decisions**
 - DOIs are included for attribution. A NEMAR DOI carries the dataset identifier, so identifiers appear only inside DOIs.
-- Documentation never records subject information, checksums, or byte counts of recordings.
+- Documentation never records subject information. It records no checksums or byte counts for NEMAR-hosted recordings; the checksum tables and sizes already in the MNE-vendored READMEs predate this rule and stay.
 - The MNE-vendored examples (`examples/kit/`, `examples/bti/`, `examples/ctf/`) come from MNE-Python and are kept in place by owner decision (2026-10-16).
 
 **Adding an example**
@@ -109,29 +109,29 @@ The committed example recordings live in `examples/` at the repository root. Tes
 
 **Real data that cannot be committed**
 - A recording too large to commit, or under a license that conflicts with this BSD-3-Clause repository, is fetched on demand through `biosigio/tests/real_data.py` (see Testing Requirements).
-- The anonymous late-onset EDF+C recording behind biosigio #145 (CC BY-SA 4.0) is never committed. Its test is opt-in through `BIOSIGIO_EDF_TIMEKEEPING_FILE`.
+- The anonymous late-onset BDF+ recording behind biosigio #145 (its NEMAR catalog license is CC BY-SA 4.0) is never committed. Its test is opt-in through `BIOSIGIO_EDF_TIMEKEEPING_FILE`.
 
 **Inventory (verified 2026-10-16)**
 
 | Path | Format | Facts | Source and license | DOI |
 |---|---|---|---|---|
-| `examples/bids/eeg/` | EEGLAB `.set` with BIDS sidecars | 60 s at 250 Hz (RecordingDuration 60.0) | OpenNeuro ds006921, CC0 | 10.18112/openneuro.ds006921.v1.1.1; NEMAR 10.82901/nemar.on006921 |
-| `examples/bids/meg/` | FIF `sub-01_task-mouse_meg.fif` | 30 s excerpt (per the dataset description) | OpenNeuro ds002908, CC0 | 10.18112/openneuro.ds002908.v1.0.0; NEMAR 10.82901/nemar.on002908 |
-| `examples/bids/ieeg/` | EDF+C `sub-01_ses-postimp_task-stim_run-08_ieeg.edf` | 1 s (one record), 65 signals; a truncated fixture | OpenNeuro ds004819, CC0 | 10.18112/openneuro.ds004819.v1.0.0; NEMAR 10.82901/nemar.on004819 |
-| `examples/bids/emg/` | EDF (plain, no annotations) | 30 s, 7 signals; MUniverse conversion of NEMAR nm000165 | nm000165; license recorded as "CC0 BY 4.0" in the dataset description and "CC0" in the README | 10.1113/JP287913 (paper); 10.7910/DVN/ID1WNQ (dataset); NEMAR 10.82901/nemar.nm000165 |
+| `examples/bids/eeg/` | EEGLAB `.set` with BIDS sidecars | 60 s at 250 Hz (RecordingDuration 60.0) | OpenNeuro (see DOI), CC0 | 10.18112/openneuro.ds006921.v1.1.1; NEMAR 10.82901/nemar.on006921 |
+| `examples/bids/meg/` | FIF `sub-01_task-mouse_meg.fif` | 30 s excerpt (per the dataset description) | OpenNeuro (see DOI), CC0 | 10.18112/openneuro.ds002908.v1.0.0; NEMAR 10.82901/nemar.on002908 |
+| `examples/bids/ieeg/` | EDF+C `sub-01_ses-postimp_task-stim_run-08_ieeg.edf` | 1 s (one record), 65 signals (64 SEEG channels plus the EDF Annotations signal); a truncated fixture | OpenNeuro (see DOI), CC0 | 10.18112/openneuro.ds004819.v1.0.0; NEMAR 10.82901/nemar.on004819 |
+| `examples/bids/emg/` | EDF (plain, no annotations) | 30 s, 7 signals; MUniverse conversion of a NEMAR copy | NEMAR copy (see DOI); license recorded as "CC0 BY 4.0" in the dataset description and "CC0" in the README | 10.1113/JP287913 (paper); 10.7910/DVN/ID1WNQ (dataset); 10.82901/nemar.nm000165 (NEMAR) |
 | `examples/brainvision/` | BrainVision `.vhdr`, `.vmrk`, `.eeg` | 5 s, 8 channels, 250 Hz, IEEE_FLOAT_32; three synthetic markers (labeled in the README) | derived from `examples/bids/eeg/` (CC0) | as for `examples/bids/eeg/` |
-| `examples/verification_output.edf`, `examples/verification_output.bdf` | EDF+C, BDF+C | 20 s, 3 signals; written by `examples/verification_example.py` from `one_sessantaquattro_truncated.otb+` | not recorded | not recorded |
+| `examples/verification_output.edf`, `examples/verification_output.bdf`, `examples/verification_output_channels.tsv` | EDF+C, BDF+C, TSV | 20 s; 2 channels plus the EDF Annotations signal (3 signals); written by `examples/verification_example.py` from `one_sessantaquattro_truncated.otb+` | not recorded | not recorded |
 | `examples/kit/` | KIT `.sqd` | 193 channels, 1000 Hz, 0.1 s; bytes unmodified | MNE-Python test suite, BSD-3-Clause | MNE-Python software 10.5281/zenodo.592483 |
 | `examples/bti/` | BTi (`c,rfDC`, `config`, `hs_file`) | bytes unmodified | MNE-Python test suite, BSD-3-Clause | MNE-Python software 10.5281/zenodo.592483 |
 | `examples/ctf/` | CTF `.ds` (`catch-alp-good-f.ds`) | bytes unmodified; from `CTF/` in the MNE testing data, shared courtesy of François Tadel (per `CTF/README.txt`) | no license stated upstream; kept in place by owner decision | MNE-Python software 10.5281/zenodo.592483; no dataset DOI (the upstream README links a publication instead) |
 
 **Known gaps** (close these before any new use of the affected files)
 - The BrainVision example (5 s) and the FIF example (30 s) are shorter than the one-minute target.
-- Source and license are not recorded for `examples/100.dat` (with `100.hea` and `100.atr`), `one_sessantaquattro_truncated.otb+`, `two_mouvi_truncated.otb+`, `multi_stream_test.xdf`, `test.xdf`, `truncated_emg_sample_zenodo7668251.txt`, `truncated_trigno_sample.csv`, and `wristbandEMG_truncated.set`. The verification outputs depend on the `.otb+` file, so they inherit this gap.
+- No provenance file in `examples/` for `examples/100.dat` (with `100.hea` and `100.atr`; `docs/examples/wfdb.md` describes the source, but the license is not stated), `one_sessantaquattro_truncated.otb+`, `two_mouvi_truncated.otb+`, `test.xdf`, `truncated_emg_sample_zenodo7668251.txt`, `truncated_trigno_sample.csv`, and `wristbandEMG_truncated.set`. `multi_stream_test.xdf` is generated by `scripts/create_multistream_test_xdf.py`. The verification outputs depend on the `.otb+` file, so they inherit this gap.
 - The verification outputs have no provenance file of their own.
 - The MNE-vendored examples (KIT, BTi, CTF) cite the MNE-Python software DOI, since the test data have no DOI of their own. The CTF files have no license stated upstream; the owner has decided to keep them in place.
 - The EMG example's license is recorded two ways (CC0 and CC0 BY 4.0). Reconcile it before citing.
-- No committed real late-onset EDF+C recording exists. Late-onset coverage uses derived cuts and the opt-in test.
+- No committed real late-onset EDF+/BDF+ recording exists. Late-onset coverage uses derived cuts and the opt-in test.
 
 ## Testing Requirements
 - Test each importer with real recordings.
@@ -141,10 +141,10 @@ The committed example recordings live in `examples/` at the repository root. Tes
 - A test that needs a recording too large to commit fetches it through `biosigio/tests/real_data.py`. It skips unless `BIOSIGIO_REAL_DATA=1` is set, and it caches outside the repo (`~/.cache/biosigio/real_data`, overridable with `BIOSIGIO_REAL_DATA_CACHE`). Add a `fetch_real_recording` call there, never a second download or cache helper, and pass the file's `sha256` so a corrupted cache fails loudly.
 
 ## Release and Landing
-- **Version bump:** every behavior change carries a patch version bump, committed in the PR or as the release commit. Tests-only and docs-only PRs do not bump.
+- **Version bump:** every behavior change carries a patch version bump. Commit it in the feature PR (as #152 did) or as its own bump commit before the release. Tests-only and docs-only PRs do not bump.
 - **Bump commit** (subject `chore: bump version to X.Y.Z`, the repository's convention): `biosigio/version.py` (both `__version__` and `__version_info__`), `pyproject.toml`, and `CITATION.cff` (`version` and `date-released`).
-- **Changelog:** [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. The release commit (subject `Release X.Y.Z in the changelog`) renames `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD`, adds a short release note, and replaces the `[Unreleased]` footer link with `[X.Y.Z]`. The date is the UTC day the GitHub Release is published.
-- **Landing:** merge with a merge commit, as #150 and #152 were. Do not delete a branch that another open PR is stacked on; retarget that PR first.
+- **Changelog:** [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. The release commit (subject `Release X.Y.Z in the changelog`) renames `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD`, adds a short release note, and replaces the `[Unreleased]` footer link with `[X.Y.Z]`. The date is the UTC day the GitHub Release is published. After a release the file has no `[Unreleased]` heading or footer link; the next feature PR creates both before adding its entry.
+- **Landing:** both methods appear in the history: #150 and #152 were merged with merge commits, and 1.2.10 and 1.2.11 landed as linear commits. Confirm the method with the owner before merging. Do not delete a branch that another open PR is stacked on; retarget that PR first.
 - **Publishing:** `gh release create vX.Y.Z --target <full 40-character merge SHA>`; a short SHA is rejected. The release event publishes to PyPI. The tag push publishes to TestPyPI with `skip-existing`. The workflow fails when the tag does not match `biosigio/version.py`. A TestPyPI 503 during the trusted-publishing exchange is not a release failure; rerun the failed job.
 - **Verify:** `uv pip install --refresh "biosigio==X.Y.Z"` in a clean environment. Right after publishing, uv's index can lag for minutes, so an early "no version" error is not a failed publish.
 
