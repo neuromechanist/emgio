@@ -17,7 +17,7 @@ The fixture is a derivative of this public dataset:
 License: CC0 1.0 (public domain dedication).
 The authors are credited here as a courtesy; CC0 does not require it.
 
-The fixture itself is one 60 second excerpt of an eyes-open resting-state run, anti-alias downsampled from 2400 Hz to 250 Hz, with three synthetic event markers added (see its `dataset_description.json`).
+The fixture itself is one 60 second excerpt of an eyes-open resting-state run, anti-alias downsampled from 2400 Hz to 250 Hz, with three synthetic event markers added (see `emgioFixtureNote` in its `sub-01_task-eyesopen_eeg.json`).
 
 ## Derivation from the fixture
 
@@ -26,7 +26,8 @@ The fixture itself is one 60 second excerpt of an eyes-open resting-state run, a
 - Sampling rate: 250 Hz (`SamplingInterval=4000` microseconds), unchanged.
 - Samples: the fixture's 32-bit floats in microvolts, copied bit for bit and written as multiplexed (interleaved) little-endian `IEEE_FLOAT_32` with a resolution of 1 microvolt.
   Nothing is quantized, resampled, filtered or rescaled.
-- Markers: three `Stimulus` markers at the fixture's three event times (0.5, 20 and 40 seconds), named by the fixture's trial types.
+- Markers: three synthetic `Stimulus` markers, the fixture's three synthetic events (0.5, 20 and 40 seconds) named by its trial types.
+  They do not mark real stimuli.
 
 ## What was removed
 

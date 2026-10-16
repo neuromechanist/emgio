@@ -17,7 +17,7 @@ The fixture is a derivative of this public dataset:
 License: CC0 1.0 (public domain dedication).
 The authors are credited here as a courtesy; CC0 does not require it.
 
-The fixture itself is one 60 second excerpt of an eyes-open resting-state run, anti-alias downsampled from 2400 Hz to 250 Hz, with three synthetic event markers added (see its `dataset_description.json`).
+The fixture itself is one 60 second excerpt of an eyes-open resting-state run, anti-alias downsampled from 2400 Hz to 250 Hz, with three synthetic event markers added (see `emgioFixtureNote` in its `sub-01_task-eyesopen_eeg.json`).
 
 ## Derivation from the fixture
 
@@ -28,7 +28,8 @@ The fixture itself is one 60 second excerpt of an eyes-open resting-state run, a
 - Quantization: BDF stores 24-bit integers.
   Each channel's physical range is its own minimum and maximum, widened to whole microvolts and one microvolt beyond, mapped onto the digital range -8388608 to 8388607.
   A sample therefore differs from the fixture's value by less than one digital step, which is under 0.001 microvolts.
-- Annotations: the fixture's three events at 0.5, 20 and 40 seconds, with zero duration.
+- Annotations: the fixture's three synthetic events at 0.5, 20 and 40 seconds, with zero duration.
+  They do not mark real stimuli.
 - Header: the start date is 1985-01-01 00:00:00, the date EDF and BDF use for anonymized files, because the fixture has no recording date; the patient and recording fields are left unspecified.
 - Written with pyedflib.
 

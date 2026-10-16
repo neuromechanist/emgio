@@ -13,9 +13,10 @@ What is pinned here is what the reader does today, verified by running it:
 * a stale ``DataFile=`` is recovered from a same-stem sibling (issue #132), and a different
   stem is never guessed;
 * a missing marker file reads the data without events on MNE >= 1.13 and is a typed error
-  below that;
+  below that (issue #158);
 * a data file cut mid-frame is refused with ``CorruptFileError`` (code ``corrupt_or_truncated``)
-  on both read paths, the in-memory importer and the streaming source, naming the file;
+  on both read paths, the in-memory importer and the streaming source, naming the file,
+  while a cut exactly on a frame boundary is a documented, undetected limit;
 * an extension that differs from the header only in case is resolved by the OS on a
   case-insensitive filesystem and by biosigio's sibling lookup on a case-sensitive one.
 
@@ -37,7 +38,9 @@ from biosigio.exceptions import CorruptFileError, FileReadError  # noqa: E402
 from biosigio.exporters.zarr_stream import _open_stream_source  # noqa: E402
 from biosigio.importers.brainvision import HEADER_RECOVERED_KEY  # noqa: E402
 
-EXEMPLAR_DIR = pathlib.Path(__file__).resolve().parents[2] / "examples/one_minute/brainvision"
+REPO = pathlib.Path(__file__).resolve().parents[2]
+EXEMPLAR_DIR = REPO / "examples/one_minute/brainvision"
+FIXTURE = REPO / "examples/bids/eeg/sub-01/eeg/sub-01_task-eyesopen_eeg.set"
 VHDR = EXEMPLAR_DIR / "one_minute.vhdr"
 TRIPLET = ("one_minute.vhdr", "one_minute.vmrk", "one_minute.eeg")
 
@@ -51,8 +54,9 @@ MARKERS = [
     (40.0, "Stimulus/rest_marker"),
 ]
 
-# MNE >= 1.13 reads a recording whose marker file is absent; 1.12.x raises FileNotFoundError.
-_MNE_TOLERATES_MISSING_MARKER = tuple(int(p) for p in mne.__version__.split(".")[:2]) >= (1, 13)
+# MNE >= 1.13 reads a recording whose marker file is absent (issue #158) and words an empty
+# data file as a ValueError; 1.12.x raises FileNotFoundError and an IndexError.
+_MNE_1_13_OR_LATER = tuple(int(p) for p in mne.__version__.split(".")[:2]) >= (1, 13)
 
 
 @pytest.fixture(scope="module")
@@ -141,6 +145,15 @@ def test_exemplar_samples_are_the_interleaved_floats_in_the_data_file(exemplar):
     np.testing.assert_allclose(exemplar.signals.to_numpy(), frames * 1e-6, rtol=1e-12, atol=0)
 
 
+def test_exemplar_is_the_fixtures_first_eight_channels_bit_for_bit():
+    """The data file holds the fixture's float32 samples unchanged, as NOTICE.md says."""
+    fixture = Recording.from_file(str(FIXTURE), importer="eeglab", bids_channels="off")
+    assert list(fixture.signals.columns)[: len(CHANNELS)] == CHANNELS
+    expected = fixture.signals[CHANNELS].to_numpy(dtype="<f4")
+    written = np.fromfile(EXEMPLAR_DIR / "one_minute.eeg", dtype="<f4")
+    np.testing.assert_array_equal(written.reshape(N_SAMPLES, len(CHANNELS)), expected)
+
+
 def test_missing_data_file_is_a_typed_error_naming_the_file(triplet):
     (triplet / "one_minute.eeg").unlink()
     with pytest.raises(FileReadError) as info:
@@ -191,8 +204,12 @@ def test_differently_named_eeg_alone_is_not_guessed(triplet):
 
 
 @pytest.mark.skipif(
-    not _MNE_TOLERATES_MISSING_MARKER,
-    reason=f"MNE {mne.__version__} raises on a missing marker file; see the test below",
+    not _MNE_1_13_OR_LATER,
+    reason=(
+        "pins the MNE >= 1.13 behavior (a missing marker file reads without events), and "
+        f"MNE {mne.__version__} is < 1.13, where it raises instead (issue #158); "
+        "test_missing_marker_file_is_a_typed_error_on_old_mne covers this version"
+    ),
 )
 def test_missing_marker_file_reads_the_data_without_events(triplet, exemplar):
     """MNE >= 1.13 reads the data without the markers; the three events are gone."""
@@ -203,8 +220,12 @@ def test_missing_marker_file_reads_the_data_without_events(triplet, exemplar):
 
 
 @pytest.mark.skipif(
-    _MNE_TOLERATES_MISSING_MARKER,
-    reason=f"MNE {mne.__version__} reads a missing marker file; see the test above",
+    _MNE_1_13_OR_LATER,
+    reason=(
+        "pins the MNE < 1.13 behavior (a missing marker file raises), and "
+        f"MNE {mne.__version__} is >= 1.13, where it reads without events (issue #158); "
+        "test_missing_marker_file_reads_the_data_without_events covers this version"
+    ),
 )
 def test_missing_marker_file_is_a_typed_error_on_old_mne(triplet):
     (triplet / "one_minute.vmrk").unlink()
@@ -221,8 +242,7 @@ def test_truncated_data_file_is_refused_on_both_read_paths(triplet, offset):
     A frame is 32 bytes here (8 channels of 4 bytes), and the header declares no sample count,
     so the size alone shows a partial trailing frame. Both the in-memory importer and the
     streaming source refuse it, and the message names the file, not its directory. A cut
-    exactly on a frame boundary cannot be seen from this header and is not detected
-    (see docs/formats/brainvision.md).
+    exactly on a frame boundary is the documented limit pinned by the next test.
     """
     eeg = triplet / "one_minute.eeg"
     eeg.write_bytes(eeg.read_bytes()[: (N_SAMPLES // 2) * BYTES_PER_FRAME + offset])
@@ -236,11 +256,32 @@ def test_truncated_data_file_is_refused_on_both_read_paths(triplet, offset):
         assert str(triplet) not in str(err)
 
 
+def test_frame_boundary_cut_is_a_documented_undetected_limit(triplet, exemplar):
+    """A cut exactly on a frame boundary is not refused, because nothing in this header shows it.
+
+    The header declares no ``DataPoints``, and every cut length that is a whole number of
+    frames looks like a complete, shorter file. docs/formats/brainvision.md ("Truncated Data
+    Files") states this limit; this test pins it, so closing it is a deliberate change.
+    """
+    half = N_SAMPLES // 2
+    eeg = triplet / "one_minute.eeg"
+    eeg.write_bytes(eeg.read_bytes()[: half * BYTES_PER_FRAME])
+    rec = _read(triplet)
+    assert rec.signals.shape == (half, len(CHANNELS))
+    np.testing.assert_array_equal(rec.signals.to_numpy(), exemplar.signals.to_numpy()[:half])
+
+
 def test_empty_data_file_is_a_typed_error(triplet):
     (triplet / "one_minute.eeg").write_bytes(b"")
     with pytest.raises(FileReadError) as info:
         _read(triplet)
     assert type(info.value) is FileReadError
+    # MNE's own error is kept as the cause, and its type and words depend on the MNE version.
+    cause = info.value.__cause__
+    if _MNE_1_13_OR_LATER:
+        assert isinstance(cause, ValueError) and "No data in this range" in str(cause)
+    else:
+        assert isinstance(cause, IndexError) and "out of bounds" in str(cause)
 
 
 @pytest.mark.parametrize("case", ["header-upper", "file-upper"])
