@@ -98,6 +98,7 @@ The committed example recordings live in `examples/` at the repository root. Tes
 **Owner decisions**
 - DOIs are included for attribution. A NEMAR DOI carries the dataset identifier, so identifiers appear only inside DOIs.
 - Documentation never records subject information, checksums, or byte counts of recordings.
+- The MNE-vendored examples (`examples/kit/`, `examples/bti/`, `examples/ctf/`) come from MNE-Python and are kept in place by owner decision (2026-10-16).
 
 **Adding an example**
 - Look first. An existing example usually covers the scenario; add a new one only when none does.
@@ -120,15 +121,15 @@ The committed example recordings live in `examples/` at the repository root. Tes
 | `examples/bids/emg/` | EDF (plain, no annotations) | 30 s, 7 signals; MUniverse conversion of NEMAR nm000165 | nm000165; license recorded as "CC0 BY 4.0" in the dataset description and "CC0" in the README | 10.1113/JP287913 (paper); 10.7910/DVN/ID1WNQ (dataset); NEMAR 10.82901/nemar.nm000165 |
 | `examples/brainvision/` | BrainVision `.vhdr`, `.vmrk`, `.eeg` | 5 s, 8 channels, 250 Hz, IEEE_FLOAT_32; three synthetic markers (labeled in the README) | derived from `examples/bids/eeg/` (CC0) | as for `examples/bids/eeg/` |
 | `examples/verification_output.edf`, `examples/verification_output.bdf` | EDF+C, BDF+C | 20 s, 3 signals; written by `examples/verification_example.py` from `one_sessantaquattro_truncated.otb+` | not recorded | not recorded |
-| `examples/kit/` | KIT `.sqd` | 193 channels, 1000 Hz, 0.1 s; bytes unmodified | MNE-Python test suite, BSD-3-Clause | not recorded |
-| `examples/bti/` | BTi (`c,rfDC`, `config`, `hs_file`) | bytes unmodified | MNE-Python test suite, BSD-3-Clause | not recorded |
-| `examples/ctf/` | CTF `.ds` | bytes unmodified | MNE testing data; no explicit upstream license | not recorded |
+| `examples/kit/` | KIT `.sqd` | 193 channels, 1000 Hz, 0.1 s; bytes unmodified | MNE-Python test suite, BSD-3-Clause | MNE-Python software 10.5281/zenodo.592483 |
+| `examples/bti/` | BTi (`c,rfDC`, `config`, `hs_file`) | bytes unmodified | MNE-Python test suite, BSD-3-Clause | MNE-Python software 10.5281/zenodo.592483 |
+| `examples/ctf/` | CTF `.ds` (`catch-alp-good-f.ds`) | bytes unmodified; from `CTF/` in the MNE testing data, shared courtesy of François Tadel (per `CTF/README.txt`) | no license stated upstream; kept in place by owner decision | MNE-Python software 10.5281/zenodo.592483; no dataset DOI (the upstream README links a publication instead) |
 
 **Known gaps** (close these before any new use of the affected files)
 - The BrainVision example (5 s) and the FIF example (30 s) are shorter than the one-minute target.
 - Source and license are not recorded for `examples/100.dat` (with `100.hea` and `100.atr`), `one_sessantaquattro_truncated.otb+`, `two_mouvi_truncated.otb+`, `multi_stream_test.xdf`, `test.xdf`, `truncated_emg_sample_zenodo7668251.txt`, `truncated_trigno_sample.csv`, and `wristbandEMG_truncated.set`. The verification outputs depend on the `.otb+` file, so they inherit this gap.
 - The verification outputs have no provenance file of their own.
-- The MNE-vendored (KIT, BTi) and CTF examples have no DOI recorded. The CTF files have no explicit upstream license, which is an owner decision.
+- The MNE-vendored examples (KIT, BTi, CTF) cite the MNE-Python software DOI, since the test data have no DOI of their own. The CTF files have no license stated upstream; the owner has decided to keep them in place.
 - The EMG example's license is recorded two ways (CC0 and CC0 BY 4.0). Reconcile it before citing.
 - No committed real late-onset EDF+C recording exists. Late-onset coverage uses derived cuts and the opt-in test.
 
