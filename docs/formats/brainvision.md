@@ -34,6 +34,22 @@ A header whose references all exist is passed to MNE unchanged, and so is one wh
 
 Read errors are typed the same way on both paths: the importer and the streaming export classify an MNE failure with `classify_read_error`, so a corrupt header raises a `FileReadError` (or a subclass) from either path, and a message that quoted the temporary header copy or a staged file names the real `.vhdr`, or the dataset file the staged one stood for, instead. An error the operating system raises for this host rather than for the file (permission denied, an I/O error, a full disk, a stale network handle) is not typed: it propagates as the raw `OSError`, as it does from every importer (see `biosigio.is_host_condition`).
 
+## Truncated Data Files
+
+A binary data file whose size shows that it was cut short is refused with `CorruptFileError` (code `corrupt_or_truncated`), by the importer and by the streaming Zarr export alike.
+A frame is one sample of every channel: the channel count times the bytes per sample of `BinaryFormat=`.
+Without a positive `DataPoints=` in the header's `[Common Infos]` section, the file size must be a whole number of frames.
+A trailing partial frame is refused, because MNE-Python would otherwise drop it, and any marker that falls in it, without a word; this is a known refusal, and it also applies to a file with extra trailing bytes that are not a frame.
+With a positive `DataPoints=`, the file must hold at least that many frames: a shorter file is refused, and a longer one is read as MNE-Python reads it, since MNE-Python sizes the recording from the file and ignores `DataPoints=` for binary data.
+Vectorized data (each channel stored whole, one after another) always has a size of channels times points times bytes per sample, so a vectorized file that does not hold whole frames is refused whatever `DataPoints=` says, even if it is longer than `DataPoints=` declares.
+A `DataPoints=` that is absent, empty, `0` or not an integer counts as not declared.
+For `.ahdr` headers, MNE-Python counts one channel more than the header names, and so does the frame.
+The error message names the data file by its file name, never its directory.
+Some cut files cannot be detected.
+With no `DataPoints=`, a file cut exactly at a frame boundary has no count to be compared against and still reads: multiplexed data reads as a shorter recording, while in vectorized data (each channel stored whole, one after another) the channel boundaries move, so every channel after the first is corrupted.
+A vectorized file with whole extra frames beyond its `DataPoints=` is not detected either, because it cannot be told from a stale count: if the count is right, MNE-Python sizes the channel blocks from the file and the channels after the first are corrupted, and if the count is stale, the read is correct.
+ASCII data has no fixed frame and is not checked, and a header that cannot be parsed or a data file that cannot be opened is left to MNE-Python, which raises its own error.
+
 ## Loading Data
 
 Provide the path to the `.vhdr` header file to `Recording.from_file`. The `.vhdr` extension is recognized automatically, so the importer is inferred:

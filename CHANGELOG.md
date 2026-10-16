@@ -10,6 +10,23 @@ Entries before 1.2.9 are condensed from the
 [GitHub Releases](https://github.com/neuromechanist/biosigio/releases),
 which keep the full notes; releases older than 1.1.0 are listed there only.
 
+## [Unreleased]
+
+### Fixed
+
+- A BrainVision data file that its header shows to be cut short raises `CorruptFileError` instead of reading silently.
+  A frame is one sample of every channel (channels times bytes per sample).
+  Without a positive `DataPoints` count in the header, a size that is not a whole number of frames is refused: MNE dropped the partial trailing frame, and any marker in it, without a word.
+  With a positive `DataPoints` count, a file smaller than that many frames is refused, and a longer file is read as MNE reads it, except that vectorized data must still hold whole frames.
+  The in-memory importer and the streaming Zarr export both refuse the file, naming it by file name.
+  An `.ahdr` header counts the extra channel MNE adds.
+  Without a `DataPoints` count, a file cut exactly at a frame boundary is not detected: multiplexed data reads as a shorter recording, and vectorized data is corrupted from the second channel on, because each channel is stored whole.
+  A vectorized file with whole extra frames beyond its `DataPoints` count is not detected either.
+
+### Changed
+
+- A BrainVision file whose data is cut short now fails to load with `CorruptFileError`, where it used to read with the tail dropped, and so does a vectorized file that does not hold whole frames even if it is longer than its `DataPoints` declares; callers that catch `FileReadError` still catch it.
+
 ## [1.2.12] - 2026-10-16
 
 This patch release reads one more kind of valid EDF file and types the errors of the streaming Zarr export.
@@ -455,6 +472,7 @@ First release since 1.1.3; the internal 1.1.4 and 1.1.5 bumps are folded in.
 - EEGLAB `.set` files with the signal matrix in a sibling `.fdt` file (#94).
 - `bids.apply_events_tsv` to load a BIDS `_events.tsv` into `rec.events`.
 
+[Unreleased]: https://github.com/neuromechanist/biosigio/compare/v1.2.12...HEAD
 [1.2.12]: https://github.com/neuromechanist/biosigio/compare/v1.2.11...v1.2.12
 [1.2.11]: https://github.com/neuromechanist/biosigio/compare/v1.2.10...v1.2.11
 [1.2.10]: https://github.com/neuromechanist/biosigio/compare/v1.2.9...v1.2.10

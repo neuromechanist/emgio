@@ -7,6 +7,7 @@ units come from the shared :mod:`_mne_common` mapping; ``.vmrk`` markers (which
 MNE exposes as annotations) are read into ``Recording.events``.
 """
 
+import configparser
 import contextlib
 import errno
 import logging
@@ -16,12 +17,14 @@ import shutil
 import tempfile
 import unicodedata
 from collections.abc import Generator
+from typing import NamedTuple
 
 import pandas as pd
 
 from ..core.emg import Recording
 from ..exceptions import (
     BiosigIOError,
+    CorruptFileError,
     classify_read_error,
     is_host_condition,
     is_resource_exhaustion,
@@ -44,6 +47,8 @@ _LINE_BREAK = re.compile(r"(?<=\n)|(?<=\r)(?!\n)")
 # FileNotFoundError). On MNE >= 1.13 the marker-only test row therefore passes with
 # or without this patch; it proves the patch only on MNE 1.12.
 _SIBLING_EXTS = {"datafile": (".eeg", ".dat"), "markerfile": (".vmrk",)}
+# Bytes per sample for each ``BinaryFormat=`` value MNE reads (its ``_fmt_byte_dict``).
+_BYTES_PER_SAMPLE = {"INT_16": 2, "INT_32": 4, "IEEE_FLOAT_32": 4}
 
 
 def _header_encoding(settings: bytes) -> str:
@@ -323,6 +328,135 @@ def brainvision_read_error(
     return type(typed)(message)
 
 
+class _DeclaredFrame(NamedTuple):
+    """What a binary header says about its data file's layout."""
+
+    data_path: str
+    channels: int
+    bytes_per_sample: int
+    data_points: int | None  # the positive ``DataPoints=`` count, else None
+    vectorized: bool  # ``DataOrientation=VECTORIZED``, else multiplexed
+
+    @property
+    def frame_bytes(self) -> int:
+        return self.channels * self.bytes_per_sample
+
+
+def _declared_frame(vhdr: str) -> _DeclaredFrame | None:
+    """The data file and layout a binary header declares, or None if it declares none.
+
+    Parsed the way MNE parses it (``configparser`` on the text before ``[Comment]``).
+    None when the header cannot be read or parsed, or is not fixed-width binary
+    (ASCII data has no fixed frame); MNE then reads the file and raises its own
+    error, typed by the caller exactly as before. ``DataPoints=`` counts only when it
+    is a positive integer: absent, empty, ``0`` or not an integer means no count.
+    """
+    try:
+        with open(vhdr, "rb") as f:
+            _, _, settings = f.read().partition(b"\n")  # the first line is the version tag
+    except OSError:
+        return None
+    text = settings.decode(_header_encoding(settings)).partition("[Comment]")[0]
+    cfg = configparser.ConfigParser(interpolation=None)
+    try:
+        cfg.read_string(text)
+        common = "Common Infos" if cfg.has_section("Common Infos") else "Common infos"
+        if cfg.get(common, "DataFormat") != "BINARY":
+            return None
+        bytes_per_sample = _BYTES_PER_SAMPLE[cfg.get("Binary Infos", "BinaryFormat")]
+        channels = cfg.getint(common, "NumberOfChannels")
+        data_file = cfg.get(common, "DataFile")
+        vectorized = cfg.get(common, "DataOrientation", fallback="") == "VECTORIZED"
+    except (configparser.Error, KeyError, ValueError):
+        return None
+    if channels < 1:
+        return None
+    if os.path.splitext(vhdr)[1] == ".ahdr":
+        channels += 1  # MNE counts one channel more than the header names for .ahdr
+    try:
+        data_points = cfg.getint(common, "DataPoints", fallback=None)
+    except ValueError:
+        data_points = None
+    data_path = os.path.join(os.path.dirname(os.path.abspath(vhdr)), data_file)
+    return _DeclaredFrame(
+        data_path,
+        channels,
+        bytes_per_sample,
+        data_points if data_points is not None and data_points > 0 else None,
+        vectorized,
+    )
+
+
+def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
+    """Refuse a binary data file that is cut short, as far as its header shows.
+
+    A frame is one sample of every channel (channels times bytes per sample), in
+    multiplexed and vectorized data alike. MNE drops a partial trailing frame
+    without a word, and with it any marker that falls in the dropped span, so a
+    file cut mid-frame would read as a shorter recording. Three rules apply:
+
+    - The header declares no positive ``DataPoints=``: the size must be a whole
+      number of frames. A trailing partial frame is refused.
+    - The header declares a positive ``DataPoints=``: the size must be at least
+      that many frames. A shorter file is refused. A longer multiplexed file is read
+      as MNE reads it, since MNE sizes the recording from the file and ignores
+      ``DataPoints=`` for binary data.
+    - Vectorized data (each channel stored whole, one after another) always has a size
+      of channels times points times bytes per sample, so it must be a whole number of
+      frames whatever ``DataPoints=`` says: a vectorized file with a partial frame is
+      refused even when it is longer than ``DataPoints=`` declares.
+
+    The check runs before MNE opens the data file; a header or file it cannot read is
+    left to MNE. For ``.ahdr`` headers MNE counts one channel more than the header
+    names, and so does the frame.
+
+    Without a ``DataPoints=`` count, a file cut exactly at a frame boundary is not
+    detected and still reads. In multiplexed data it reads as a shorter recording; in
+    vectorized data the channel boundaries move, so every channel after the first is
+    corrupted. A vectorized file that holds whole extra frames beyond its
+    ``DataPoints=`` is not detected either, because it cannot be told from a stale
+    count. MNE sizes the channel blocks from the file: if the count is right, every
+    channel after the first is misaligned; if the count is stale, the read is correct.
+
+    Args:
+        vhdr: The header path handed to MNE (the patched copy when
+            :func:`resolved_vhdr` made one).
+        staged_files: The dict :func:`resolved_vhdr` fills, so the error names the
+            dataset's data file rather than its staged name in a temporary directory.
+
+    Raises:
+        CorruptFileError: The data file is smaller than the declared ``DataPoints=``
+            times the frame size, or is not a whole number of frames (when no
+            ``DataPoints=`` is declared, or the data is vectorized).
+            The message names the file, never its directory.
+    """
+    declared = _declared_frame(vhdr)
+    if declared is None:
+        return
+    try:
+        size = os.path.getsize(declared.data_path)
+    except OSError:
+        return  # MNE opens the file next and raises the real error
+    frame = declared.frame_bytes
+    layout = f"{declared.channels} channels of {declared.bytes_per_sample} bytes"
+    if declared.data_points is not None and size < declared.data_points * frame:
+        problem = (
+            f"is smaller than the {declared.data_points * frame} bytes its header declares "
+            f"({declared.data_points} data points of {layout})."
+        )
+    elif size % frame != 0 and (declared.data_points is None or declared.vectorized):
+        problem = (
+            f"is not a whole number of frames ({layout} make a frame of {frame} bytes), "
+            "so it is truncated or has trailing bytes that are not a frame."
+        )
+    else:
+        return
+    name = os.path.basename((staged_files or {}).get(declared.data_path, declared.data_path))
+    raise CorruptFileError(
+        f"BrainVision data file {name} is truncated or corrupt: its size ({size} bytes) " + problem
+    )
+
+
 class BrainVisionImporter(BaseImporter):
     """Importer for BrainVision recordings via MNE-Python (.vhdr)."""
 
@@ -368,6 +502,8 @@ class BrainVisionImporter(BaseImporter):
         recovered: dict = {}
         staged: dict = {}
         with resolved_vhdr(filepath, substitutions=recovered, staged_files=staged) as vhdr:
+            # Outside the try: a refusal is already typed, not an MNE failure to classify.
+            require_whole_frames(vhdr, staged)
             try:
                 raw = mne.io.read_raw_brainvision(vhdr, preload=True, verbose="ERROR")
             except Exception as e:
