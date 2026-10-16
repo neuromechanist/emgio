@@ -7,7 +7,13 @@ import pyedflib
 
 from ..core.emg import Recording
 from ..exceptions import MixedSamplingRateError, classify_read_error, is_resource_exhaustion
-from ._edf_tolerant import classify_pyedflib_error, raise_host_open_error, read_edf_tolerant
+from ._edf_tolerant import (
+    LATE_TIMEKEEPING_ONSET,
+    classify_pyedflib_error,
+    probe_timekeeping_onset,
+    raise_host_open_error,
+    read_edf_tolerant,
+)
 from ._labels import DEDUPLICATED_LABELS_KEY, unique_channel_labels
 from .base import BaseImporter
 
@@ -158,20 +164,22 @@ class EDFImporter(BaseImporter):
 
         return signal_data, signal_info
 
-    def _read_annotations(self, edf_reader: pyedflib.EdfReader) -> pd.DataFrame:
-        """Read EDF+/BDF+ annotations (events) into an events DataFrame.
+    def _events_from_annotations(
+        self, onsets: np.ndarray, durations: np.ndarray, descriptions: np.ndarray
+    ) -> pd.DataFrame:
+        """Turn EDF+/BDF+ annotations (events) into an events DataFrame.
 
-        pyedflib parses the dedicated annotations channel and returns parallel
-        arrays of onsets (seconds), durations (seconds), and descriptions.
-        Plain EDF (no annotations) yields empty arrays. Descriptions may be
-        bytes or str depending on the pyedflib version; both are handled, and
-        empty placeholder annotations are skipped.
+        ``pyedflib.EdfReader.readAnnotations`` parses the dedicated annotations
+        channel and returns parallel arrays of onsets (seconds), durations
+        (seconds), and descriptions, which is what this takes. Plain EDF (no
+        annotations) yields empty arrays. Descriptions may be bytes or str
+        depending on the pyedflib version; both are handled, and empty
+        placeholder annotations are skipped.
 
         Returns:
             pd.DataFrame: events with float64 ``onset``/``duration`` and string
             ``description``, sorted by onset (matching :meth:`Recording.add_event`).
         """
-        onsets, durations, descriptions = edf_reader.readAnnotations()
         rows = []
         for onset, duration, description in zip(onsets, durations, descriptions, strict=False):
             text = (
@@ -189,6 +197,30 @@ class EDFImporter(BaseImporter):
             events["onset"] = events["onset"].astype("float64")
             events["duration"] = events["duration"].astype("float64")
         return events
+
+    def _collect_via_pyedflib(
+        self,
+        edf_reader: pyedflib.EdfReader,
+        annotations: tuple[np.ndarray, np.ndarray, np.ndarray],
+    ) -> tuple[list[tuple[dict, np.ndarray]], pd.DataFrame, dict, dict]:
+        """Read every signal and header field from an open pyedflib reader.
+
+        ``annotations`` is what ``edf_reader.readAnnotations()`` returns: the
+        normal path asks the reader for it, while a file whose annotation walk
+        pyedflib refuses (see ``_edf_tolerant.probe_timekeeping_onset``) is opened
+        without annotations and passes the arrays the probe validated.
+
+        Returns ``(signal_info, signal_data)`` pairs, events, and the
+        ``recording_info`` and ``file_info`` dicts, in the shape :meth:`load` uses
+        whichever path produced them.
+        """
+        metadata = self._extract_metadata(edf_reader)
+        pairs = []
+        for i in range(edf_reader.signals_in_file):
+            signal_data, signal_info = self._read_signal_data(edf_reader, i)
+            pairs.append((signal_info, signal_data))
+        events = self._events_from_annotations(*annotations)
+        return pairs, events, metadata["recording_info"], metadata["file_info"]
 
     def _collect_via_fallback(
         self, filepath: str, reason: str
@@ -239,12 +271,19 @@ class EDFImporter(BaseImporter):
         rationale and the unit-parity proof): a channel with
         ``physical_min == physical_max`` (issue #109), a numeric header field
         padded with NUL bytes instead of spaces, and a file correctly marked
-        EDF+D (discontinuous). A recovered read is flagged in metadata via
+        EDF+D (discontinuous). A fourth, an EDF+C/BDF+C recording cut out of a
+        longer session whose first time-keeping onset is 1 s or more (issue
+        #145), is read by pyedflib itself with its annotation walk switched off,
+        after a TAL-only copy proves that is the file's only defect: no MNE, and
+        the samples are exactly a compliant file's. Its ``startdate`` is the
+        header's plus that onset, and ``edf_first_record_onset`` records the
+        onset in seconds. A recovered read is flagged in metadata via
         ``edf_tolerant_read`` / ``edf_tolerant_read_reason``. Anything else --
         including a genuinely truncated/corrupt file -- still raises
         :class:`~biosigio.exceptions.CorruptFileError` as before. When one of the
-        three needs the fallback and MNE is not installed, an ``ImportError``
-        naming the ``meg`` extra is raised, its ``__cause__`` the pyedflib error.
+        three MNE-backed conditions needs the fallback and MNE is not installed,
+        an ``ImportError`` naming the ``meg`` extra is raised, its ``__cause__``
+        the pyedflib error.
 
         Args:
             filepath: Path to the EDF file
@@ -261,8 +300,14 @@ class EDFImporter(BaseImporter):
         if mixed_rate not in MIXED_RATE_POLICIES:
             raise ValueError(f"mixed_rate must be one of {MIXED_RATE_POLICIES}, got {mixed_rate!r}")
         edf_reader: pyedflib.EdfReader | None = None
+        # An OSError the late-onset probe raises is the host's (the scratch copy it
+        # could not create or write, whatever the errno), never the file's: the
+        # handler below lets that exact exception out untyped.
+        probe_failure: OSError | None = None
         try:
             fallback_reason: str | None
+            first_onset: float | None = None
+            recording_info: dict
             try:
                 edf_reader = pyedflib.EdfReader(filepath)
             except Exception as open_exc:
@@ -272,39 +317,57 @@ class EDFImporter(BaseImporter):
                 raise_host_open_error(filepath, open_exc)
                 fallback_reason = classify_pyedflib_error(open_exc)
                 if fallback_reason is None:
-                    raise
-                try:
-                    pairs, events, file_info, fallback_renames = self._collect_via_fallback(
-                        filepath, fallback_reason
+                    # EDFlib words a late first time-keeping onset like any other
+                    # bad annotation list. When that is provably the only defect,
+                    # pyedflib itself reads the file with its annotation walk
+                    # switched off: no MNE, and the samples are a normal read's.
+                    try:
+                        late = probe_timekeeping_onset(filepath, open_exc)
+                    except OSError as host_error:
+                        probe_failure = host_error
+                        raise
+                    if late is None:
+                        raise
+                    fallback_reason = LATE_TIMEKEEPING_ONSET
+                    first_onset = late.first_onset
+                    edf_reader = pyedflib.EdfReader(
+                        filepath, annotations_mode=pyedflib.DO_NOT_READ_ANNOTATIONS
                     )
-                except ImportError as import_err:
-                    # MNE (the `meg` extra) isn't installed. That is this
-                    # environment, not the file, so it stays an ImportError
-                    # (untyped, as the streaming source raises it) rather than
-                    # becoming a permanent read failure; the pyedflib error it
-                    # would have recovered from is its __cause__.
-                    logger.warning(
-                        "EDF/BDF file %s is recoverable by the tolerant reader, but that "
-                        "needs MNE-Python (the 'meg' extra), which is not installed.",
-                        filepath,
+                    pairs, events, recording_info, file_info = self._collect_via_pyedflib(
+                        edf_reader, late.annotations
                     )
-                    raise ImportError(
-                        f"EDF/BDF file {filepath} can only be read by the tolerant "
-                        "reader, which needs MNE-Python: install the 'meg' extra "
-                        f"({import_err})"
-                    ) from open_exc
-                recording_info: dict = {}
+                    fallback_renames = {}
+                    # The header's start date is the session's; this recording
+                    # starts at its first record, `first_onset` seconds later.
+                    recording_info["startdate"] = late.startdate
+                else:
+                    try:
+                        pairs, events, file_info, fallback_renames = self._collect_via_fallback(
+                            filepath, fallback_reason
+                        )
+                    except ImportError as import_err:
+                        # MNE (the `meg` extra) isn't installed. That is this
+                        # environment, not the file, so it stays an ImportError
+                        # (untyped, as the streaming source raises it) rather than
+                        # becoming a permanent read failure; the pyedflib error it
+                        # would have recovered from is its __cause__.
+                        logger.warning(
+                            "EDF/BDF file %s is recoverable by the tolerant reader, but that "
+                            "needs MNE-Python (the 'meg' extra), which is not installed.",
+                            filepath,
+                        )
+                        raise ImportError(
+                            f"EDF/BDF file {filepath} can only be read by the tolerant "
+                            "reader, which needs MNE-Python: install the 'meg' extra "
+                            f"({import_err})"
+                        ) from open_exc
+                    recording_info = {}
             else:
                 fallback_reason = None
                 fallback_renames = {}
-                metadata = self._extract_metadata(edf_reader)
-                recording_info = metadata["recording_info"]
-                file_info = metadata["file_info"]
-                pairs = []
-                for i in range(edf_reader.signals_in_file):
-                    signal_data, signal_info = self._read_signal_data(edf_reader, i)
-                    pairs.append((signal_info, signal_data))
-                events = self._read_annotations(edf_reader)
+                pairs, events, recording_info, file_info = self._collect_via_pyedflib(
+                    edf_reader, edf_reader.readAnnotations()
+                )
 
             # Create Recording object
             rec = Recording()
@@ -406,15 +469,20 @@ class EDFImporter(BaseImporter):
                 rec.set_metadata("mixed_rate_target_hz", float(target_rate))
 
             if fallback_reason is not None:
-                # Flag that this recording only loaded because of the tolerant
-                # fallback (see module docstring / _edf_tolerant), so downstream
+                # Flag that this recording only loaded because of a tolerant
+                # recovery (see module docstring / _edf_tolerant), so downstream
                 # consumers can tell a recovered read from a fully-compliant one.
                 rec.set_metadata("edf_tolerant_read", True)
                 rec.set_metadata("edf_tolerant_read_reason", fallback_reason)
+                if first_onset is not None:
+                    # Seconds from the session's start to this recording's first
+                    # record: the file was cut out of a longer session, and its
+                    # `startdate` already includes this offset.
+                    rec.set_metadata("edf_first_record_onset", first_onset)
 
             # Events (EDF+/BDF+ annotations) survive the import->export->import
             # round-trip (issue #47): assigned directly (not via add_event) for a
-            # single sort, since both `_read_annotations` and the fallback's
+            # single sort, since both `_events_from_annotations` and the fallback's
             # `_events_from_mne_annotations` already return the same schema
             # add_event produces (float64 onset/duration, sorted by onset). Left
             # as the empty __init__ frame when none exist.
@@ -435,8 +503,10 @@ class EDFImporter(BaseImporter):
             # permanent read failure (issue #123; see
             # biosigio.exceptions.is_resource_exhaustion). This also covers an
             # EdfReader-open failure above that classify_pyedflib_error found no
-            # recoverable cause for, which reaches here via a bare re-raise.
-            if is_resource_exhaustion(e):
+            # recoverable cause for, which reaches here via a bare re-raise. The
+            # late-onset probe's own OSError (see `probe_failure` above) leaves the
+            # same way.
+            if is_resource_exhaustion(e) or e is probe_failure:
                 raise
             # Typed classification: a truncated/non-compliant EDF (pyedflib's
             # "Filesize" check) becomes CorruptFileError so callers can surface a

@@ -164,6 +164,9 @@ def _pyedflib_ground_truth(path: str) -> dict[str, np.ndarray]:
         ("x: the file is not EDF(+) or BDF(+) compliant (Filesize)", None),
         ("x: the file is not EDF(+) or BDF(+) compliant (EDF+ Patientname)", None),
         ("x: the file is not EDF(+) or BDF(+) compliant (Prefilter)", None),
+        # EDFlib's generic refusal of a bad time-stamped annotation list, a late
+        # first time-keeping onset included (#145): no MNE-backed recovery exists.
+        ("x: the file is not EDF(+) or BDF(+) compliant (it contains format errors)", None),
         ("some unrelated OSError", None),
     ],
 )
@@ -230,6 +233,32 @@ def test_degenerate_physical_range_recovered(tmp_path):
     # to catch (see test_fallback_matches_pyedflib_reading's "VLF" channel).
     np.testing.assert_allclose(rec.signals["C0"].to_numpy(), ground_truth["C0"], rtol=1e-9)
     np.testing.assert_allclose(rec.signals["C1"].to_numpy(), ground_truth["C1"], rtol=1e-9)
+
+
+def test_mne_recovery_records_no_first_record_onset(tmp_path):
+    """Only a late-onset recovery has an offset into a session to record (#145).
+
+    The MNE-backed recoveries read from the file's own start, so
+    ``edf_first_record_onset`` must be absent from them on both read paths, not
+    present as an empty value.
+    """
+    path = str(tmp_path / "degenerate_no_offset.edf")
+    rng = np.random.default_rng(145)
+    n = 200
+    channels = [_channel("C0", 100.0, -100.0, 100.0), _channel("REF", 100.0, -100.0, 100.0)]
+    _write_edf(path, channels, [rng.uniform(-100, 100, n), rng.uniform(-100, 100, n)])
+    _patch_signal_field(path, 1, "physical_max", b"-100")
+
+    rec = Recording.from_file(path, importer="edf")
+    assert rec.metadata["edf_tolerant_read_reason"] == DEGENERATE_PHYSICAL_RANGE
+    assert "edf_first_record_onset" not in rec.metadata
+
+    source = _open_stream_source(path, None)
+    try:
+        assert source.extra_metadata["edf_tolerant_read_reason"] == DEGENERATE_PHYSICAL_RANGE
+        assert "edf_first_record_onset" not in source.extra_metadata
+    finally:
+        source.close()
 
 
 def test_degenerate_physical_range_nonzero_constant(tmp_path):

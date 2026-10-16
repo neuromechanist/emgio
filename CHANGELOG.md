@@ -10,6 +10,45 @@ Entries before 1.2.9 are condensed from the
 [GitHub Releases](https://github.com/neuromechanist/biosigio/releases),
 which keep the full notes; releases older than 1.1.0 are listed there only.
 
+## [1.2.12] - 2026-10-16
+
+This patch release reads one more kind of valid EDF file and types the errors of the streaming Zarr export.
+It has one behavior change for callers of the streaming export, listed under Changed.
+
+### Fixed
+
+- A streamed EDF or BDF file that pyedflib refuses raises `CorruptFileError` instead of pyedflib's bare `OSError` ([#149](https://github.com/neuromechanist/biosigio/issues/149)).
+  Host conditions (memory, permissions, I/O) still propagate unchanged, so a caller can tell a defective file from a failing host.
+- An EDF+C or BDF+C recording cut out of a longer session at a data-record boundary now loads.
+  Its first time-keeping onset is 1 s or more (for example +40 s),
+  and pyedflib refuses it with the generic "contains format errors" message although every byte is valid.
+  `EDFImporter.load` and the streaming Zarr export now read it with pyedflib itself, with annotations switched off,
+  after checking that the late onset is the file's only defect:
+  a small temporary copy of its annotation lists, with the onsets brought back by whole seconds, must pass pyedflib's full annotation walk.
+  No MNE is needed, the samples and header fields equal those of the same file with its onsets brought back,
+  and the streaming export keeps its bounded-memory windowed read.
+  Any other defect (a gap between records, a malformed later annotation, a bad header field, a truncated file) still raises `CorruptFileError`.
+  A first onset that would carry the start date past year 9999, or that a float or an integer cannot hold, is declined the same way on both read paths.
+  A temporary directory the operating system refuses (missing, read-only, full) raises its own `OSError` rather than `CorruptFileError`.
+  The `mixed_rate` policy is unchanged
+  ([#145](https://github.com/neuromechanist/biosigio/issues/145)).
+
+### Added
+
+- A recovered late-onset recording carries `edf_tolerant_read` (`True`), `edf_tolerant_read_reason` (`late_timekeeping_onset`, a fourth value) and `edf_first_record_onset`,
+  the first record's time-keeping onset in seconds.
+  Its `startdate` is the header's start plus that onset, as datetime arithmetic, so it names the time of the first record;
+  event onsets are relative to the first record.
+  A fractional onset is the corner that cannot be verified against `pyedflib`, whose `getStartdatetime` (0.1.42) divides EDFlib's 100 ns sub-second by 100.
+  The streaming export writes the same three keys to the store's `recording_metadata`.
+
+### Changed
+
+- The streaming export types a missing source, a dangling symlink and an empty source as `FileReadError`, as the in-memory reader already does.
+  They used to raise `FileNotFoundError` or a bare `OSError`.
+  Code that caught either around `stream_to_zarr` must now catch `FileReadError`, a `BiosigIOError`, which is itself a `ValueError`.
+- Every non-host failure in the streaming EDF fallback is typed as `FileReadError` or `CorruptFileError`, so an unparsable header field no longer raises a plain `ValueError`.
+
 ## [1.2.11] - 2026-10-06
 
 This patch release adds one opt-in option and changes nothing by default:
@@ -416,6 +455,7 @@ First release since 1.1.3; the internal 1.1.4 and 1.1.5 bumps are folded in.
 - EEGLAB `.set` files with the signal matrix in a sibling `.fdt` file (#94).
 - `bids.apply_events_tsv` to load a BIDS `_events.tsv` into `rec.events`.
 
+[1.2.12]: https://github.com/neuromechanist/biosigio/compare/v1.2.11...v1.2.12
 [1.2.11]: https://github.com/neuromechanist/biosigio/compare/v1.2.10...v1.2.11
 [1.2.10]: https://github.com/neuromechanist/biosigio/compare/v1.2.9...v1.2.10
 [1.2.9]: https://github.com/neuromechanist/biosigio/compare/v1.2.8...v1.2.9

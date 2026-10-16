@@ -1,9 +1,11 @@
 """Tolerant fallback for EDF/BDF files pyedflib's compliance checker rejects.
 
 biosigIO's normal EDF/BDF path reads via ``pyedflib``, whose C-level ``open_file``
-validator is stricter than the format's real-world variation. Three conditions,
-all confirmed byte-intact and readable by MNE-Python, currently discard entire
-recordings that are perfectly usable (issue #109 and the NEMAR Zarr backfill):
+validator is stricter than the format's real-world variation. Four conditions,
+all confirmed byte-intact and readable, currently discard entire recordings that
+are perfectly usable (issue #109, issue #145 and the NEMAR Zarr backfill). The
+first three are recovered through MNE-Python; the fourth is recovered by
+pyedflib itself, without MNE (see below):
 
 1. **Degenerate physical range** -- a channel with ``physical_min == physical_max``
    (a reference electrode in a referential montage, identically constant by
@@ -16,12 +18,21 @@ recordings that are perfectly usable (issue #109 and the NEMAR Zarr backfill):
    ``"... compliant (<field name>)"`` for a numeric field.
 3. **Discontinuous EDF+D** -- the file is correctly marked discontinuous.
    pyedflib: ``"The file is discontinuous and cannot be read"``.
+4. **Late first time-keeping onset** (issue #145): an EDF+C/BDF+C recording cut
+   out of a longer session at a data-record boundary, so the first record's
+   time-keeping onset is 1 s or more instead of 0. EDFlib refuses it with the
+   generic ``"(it contains format errors)"``. Unlike the first three this needs
+   no MNE: the refusal comes from the walk over the time-stamped annotation lists
+   (TALs), which runs only when annotations are read, so the samples are read by
+   pyedflib itself with that walk switched off (:func:`probe_timekeeping_onset`).
 
-:func:`classify_pyedflib_error` recognizes exactly these three conditions from
+:func:`classify_pyedflib_error` recognizes exactly the first three conditions from
 pyedflib's exception message and returns ``None`` for anything else (including
-the ``"Filesize"`` truncation check), so a genuinely corrupt/truncated file is
-never misrouted here -- it keeps raising through the caller's
-``classify_read_error`` as :class:`~biosigio.exceptions.CorruptFileError`.
+the ``"Filesize"`` truncation check and the generic format-error message), so a
+genuinely corrupt/truncated file is never misrouted to MNE; it keeps raising
+through the caller's ``classify_read_error`` as
+:class:`~biosigio.exceptions.CorruptFileError`, unless
+:func:`probe_timekeeping_onset` proves the fourth condition is the only defect.
 
 :func:`read_edf_tolerant` does the actual recovery: it re-reads the file with
 MNE (which tolerates all three conditions), then rescales MNE's SI-volt output
@@ -78,8 +89,11 @@ from __future__ import annotations
 
 import os
 import re
+import tempfile
 from collections import Counter
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from itertools import accumulate
 from typing import Any
 
 import numpy as np
@@ -94,6 +108,9 @@ from ._labels import unique_channel_labels
 DEGENERATE_PHYSICAL_RANGE = "degenerate_physical_range"
 MALFORMED_NUMERIC_FIELD = "malformed_numeric_field"
 DISCONTINUOUS_DATARECORDS = "discontinuous_datarecords"
+# Not returned by `classify_pyedflib_error` (the refusal message is generic):
+# `probe_timekeeping_onset` proves it from the file, and the readers record it.
+LATE_TIMEKEEPING_ONSET = "late_timekeeping_onset"
 
 # Labels of the EDF+/BDF+ annotations (TAL) channel, which MNE (like pyedflib)
 # does not list as a signal; matched exactly, as MNE's ``_find_tal_idx`` does.
@@ -297,6 +314,317 @@ def _check_not_truncated(filepath: str, probe: EdfHeaderProbe, n_records: int) -
         )
 
 
+# --- Late first time-keeping onset (issue #145) -------------------------------
+# EDF+ and BDF+ keep a time-stamped annotation list (TAL) in every data record,
+# and its first TAL is the record's "time-keeping" onset, ``+<seconds>\x14\x14\x00``.
+# EDFlib (the C library inside pyedflib) refuses a file whose FIRST time-keeping
+# onset is 1 s or more, which is what a recording cut out of a longer session at a
+# record boundary looks like. The refusal comes from the TAL walk, which runs only
+# when annotations are read, and EDFlib words it like any other bad TAL. So a file
+# is recovered only after checking that this is its sole defect: its TALs, brought
+# back by whole seconds into a small TAL-only copy, must pass EDFlib's own walk.
+
+_GENERIC_FORMAT_ERROR = "(it contains format errors)"
+_RESERVED_AT = slice(192, 236)
+# A TAL onset as EDFlib reads it (`edflib_is_onset_number`): a sign, digits and at
+# most one interior decimal point, ended by the 0x14 or 0x15 that follows it.
+_TAL_ONSET = re.compile(rb"([+-])([0-9]+)(?:\.([0-9]+))?(?=[\x14\x15])")
+_NON_NUL_RUN = re.compile(rb"[^\x00]+")
+
+
+@dataclass(frozen=True, eq=False)
+class TimekeepingOnset:
+    """A file recoverable by reading it without annotations (see :func:`probe_timekeeping_onset`).
+
+    ``first_onset`` is the first record's time-keeping onset in seconds: how far
+    into the session that record lies. ``startdate`` is the header's start date and
+    time plus that onset, the time of the first record; it is worked out here, once,
+    so that a date ``datetime`` cannot hold is a reason to decline the file.
+
+    The three arrays are what ``pyedflib.EdfReader.readAnnotations`` reports once
+    the onsets are brought back, so they are relative to the first record, as for a
+    compliant file: onset (seconds), duration (seconds, ``-1`` when absent) and
+    description.
+    """
+
+    first_onset: float
+    startdate: datetime
+    onsets: np.ndarray
+    durations: np.ndarray
+    descriptions: np.ndarray
+
+    @property
+    def annotations(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """``(onsets, durations, descriptions)``, in ``readAnnotations`` order."""
+        return self.onsets, self.durations, self.descriptions
+
+
+def _read_raw_header(f) -> tuple[bytes, dict[str, list[bytes]], int]:
+    """The 256-byte main header, every per-signal field as raw bytes, and the signal count.
+
+    Only called on a file pyedflib has just opened with annotations off, so the
+    header is whole; a field that still does not parse raises ``ValueError``, which
+    is the file's, while an ``OSError`` from the read itself is the host's and
+    propagates.
+    """
+    main = f.read(_MAIN_HEADER_BYTES)
+    n_signals = int(_decode_field(main[252:256]))
+    blocks: dict[str, list[bytes]] = {}
+    for name, width in _SIGNAL_FIELDS:
+        chunk = f.read(width * n_signals)
+        blocks[name] = [chunk[i * width : (i + 1) * width] for i in range(n_signals)]
+    return main, blocks, n_signals
+
+
+def _onset_units(match: re.Match[bytes]) -> tuple[int, int]:
+    """A matched TAL onset as ``(signed integer, decimal digits)``, exact and float-free."""
+    sign, whole, fraction = match.groups()
+    units = int(whole + (fraction or b""))
+    return (-units if sign == b"-" else units), len(fraction or b"")
+
+
+def _format_onset(units: int, digits: int) -> bytes:
+    whole, fraction = divmod(abs(units), 10**digits)
+    text = f"{'-' if units < 0 else '+'}{whole}"
+    if digits:
+        text += f".{fraction:0{digits}d}"
+    return text.encode("ascii")
+
+
+def _first_timekeeping_onset(block: bytes) -> tuple[int, int] | None:
+    """The time-keeping onset opening an annotation block, as ``(units, digits)``.
+
+    Follows EDFlib's search: the first 0x14 before the block's last two bytes ends
+    the onset, a second 0x14 must follow at once, and the text in front must be an
+    onset number (a duration field there is refused). ``None`` when it is not.
+    """
+    end = block.find(b"\x14", 0, max(len(block) - 2, 0))
+    if end < 0 or block[end + 1 : end + 2] != b"\x14":
+        return None
+    onset = _TAL_ONSET.match(block, 0, end + 1)
+    if onset is None or onset.end() != end:
+        return None
+    return _onset_units(onset)
+
+
+def _shift_tal_block(block: bytes, seconds: int) -> bytes | None:
+    """One annotation block with every TAL onset brought back by ``seconds``.
+
+    Only the onsets change. Every other byte, a malformed one included, is kept so
+    that EDFlib's walk over the result sees the original's defects; the block is
+    zero-padded back to its width through the run of NULs that ended it. ``None``
+    when that cannot be done faithfully: the block's last byte is not a NUL (EDFlib
+    refuses that itself, and padding would hide it), a TAL does not open with an
+    onset, or the shifted TALs no longer leave room for the final NUL.
+    """
+    if not block or block[-1] != 0:
+        return None
+    out = bytearray()
+    position = 0
+    for run in _NON_NUL_RUN.finditer(block):
+        tal = run.group()
+        onset = _TAL_ONSET.match(tal)
+        if onset is None:
+            return None
+        units, digits = _onset_units(onset)
+        out += block[position : run.start()]
+        out += _format_onset(units - seconds * 10**digits, digits)
+        out += tal[onset.end() :]
+        position = run.end()
+    if len(out) >= len(block):
+        return None
+    return bytes(out) + b"\x00" * (len(block) - len(out))
+
+
+@dataclass(frozen=True)
+class _CopyPlan:
+    """What :func:`_write_tal_only_copy` needs, worked out from the source before any scratch exists."""
+
+    # The copy's main header and the annotation signals' own headers, as they go to disk.
+    header: bytes
+    n_records: int
+    # Per annotation signal: (offset inside a data record, width in bytes).
+    blocks: tuple[tuple[int, int], ...]
+    record_bytes: int
+    header_bytes: int
+    # ``floor(first onset)``: the whole seconds every onset is brought back by.
+    shift: int
+    first_onset: float
+
+
+def _plan_tal_copy(src: str, bdf: bool) -> _CopyPlan | None:
+    """Read ``src``'s header and record 0's first annotation block; plan the TAL-only copy.
+
+    ``None`` when this is not the defect: no annotation signal, no record, a short
+    first block, or a first time-keeping onset under 1 s (which EDFlib accepts, so
+    a refusal then has another cause). Nothing is written, so a caller creates its
+    scratch space only once this has answered.
+
+    Raises:
+        ValueError: The header is not one, or an onset has more digits than
+            ``int`` will parse.
+        ArithmeticError: The first onset is too large for a float.
+    """
+    with open(src, "rb", buffering=0) as f:
+        main, blocks, n_signals = _read_raw_header(f)
+        n_records = int(_decode_field(main[236:244]))
+        sample_size = 3 if bdf else 2
+        wanted = b"BDF Annotations " if bdf else b"EDF Annotations "
+        annotation = [i for i, label in enumerate(blocks["label"]) if label == wanted]
+        if n_records < 1 or not annotation:
+            return None
+        samples = [int(_decode_field(raw)) for raw in blocks["samples_per_record"]]
+        starts = list(accumulate(samples, initial=0))
+        header_bytes = _MAIN_HEADER_BYTES * (1 + n_signals)
+
+        first_at = header_bytes + starts[annotation[0]] * sample_size
+        first_width = samples[annotation[0]] * sample_size
+        f.seek(first_at)
+        block = f.read(first_width)
+        # A POSIX regular file is read short only at end of file, so a short read
+        # means the file is truncated, and declining it is correct.
+        if len(block) != first_width:
+            return None
+
+    first = _first_timekeeping_onset(block)
+    if first is None or first[0] < 10 ** first[1]:
+        return None
+
+    patched = bytearray(main)
+    patched[184:192] = str(_MAIN_HEADER_BYTES * (1 + len(annotation))).ljust(8).encode("ascii")
+    patched[252:256] = str(len(annotation)).ljust(4).encode("ascii")
+    header = bytes(patched) + b"".join(
+        b"".join(blocks[name][i] for i in annotation) for name, _ in _SIGNAL_FIELDS
+    )
+    return _CopyPlan(
+        header=header,
+        n_records=n_records,
+        blocks=tuple((starts[i] * sample_size, samples[i] * sample_size) for i in annotation),
+        record_bytes=starts[-1] * sample_size,
+        header_bytes=header_bytes,
+        shift=first[0] // 10 ** first[1],
+        first_onset=first[0] / 10 ** first[1],
+    )
+
+
+def _write_tal_only_copy(src: str, dst: str, plan: _CopyPlan) -> bool:
+    """Write ``src``'s annotation signals, with onsets brought back, to ``dst``.
+
+    The copy keeps the main header (header size and signal count patched), the
+    annotation signals' own headers and, record by record, their bytes, a small
+    fraction of the source. The onsets move by ``plan.shift`` seconds, so the first
+    record starts under 1 s and EDFlib checks every other TAL and the
+    record-to-record continuity as it would for a compliant file. ``False`` when a
+    block is short or cannot be shifted faithfully.
+
+    An ``OSError`` from creating or writing ``dst`` is the host's and propagates.
+    """
+    with open(src, "rb", buffering=0) as f, open(dst, "wb") as out:
+        out.write(plan.header)
+        for record in range(plan.n_records):
+            for offset, width in plan.blocks:
+                f.seek(plan.header_bytes + record * plan.record_bytes + offset)
+                block = f.read(width)
+                # As in _plan_tal_copy: a regular file is read short only at end of
+                # file, so a short read means truncation, and declining is correct.
+                if len(block) != width:
+                    return False
+                shifted = _shift_tal_block(block, plan.shift)
+                if shifted is None:
+                    return False
+                out.write(shifted)
+    return True
+
+
+def _timekeeping_onset(filepath: str) -> TimekeepingOnset | None:
+    with open(filepath, "rb") as f:
+        reserved = f.read(_MAIN_HEADER_BYTES)[_RESERVED_AT]
+    # Case-sensitive, like EDFlib: anything else is not an EDF+/BDF+ continuous file.
+    if not reserved.startswith((b"EDF+C", b"BDF+C")):
+        return None
+    bdf = reserved.startswith(b"BDF")
+
+    # Without annotations pyedflib still checks the header and the file size, so a
+    # file that opens this way was refused by the annotation walk alone.
+    try:
+        header = pyedflib.EdfReader(filepath, annotations_mode=pyedflib.DO_NOT_READ_ANNOTATIONS)
+    except OSError as open_err:
+        raise_host_open_error(filepath, open_err)
+        return None
+    try:
+        header_start = header.getStartdatetime()
+    finally:
+        header.close()
+
+    # The cheap exit comes before any scratch exists: most refusals end here.
+    plan = _plan_tal_copy(filepath, bdf)
+    if plan is None:
+        return None
+    # The recording starts at its first record. An onset that carries the date out
+    # of datetime's range cannot be represented, so the file is declined.
+    startdate = header_start + timedelta(seconds=plan.first_onset)
+
+    # No handler around the scratch work: whatever the OS says about creating or
+    # writing the copy is about this host, not about the file, and propagates as is.
+    # Removing the scratch directory is different: a leftover copy holds only the
+    # annotation lists, so it stays small and bounded. A cleanup failure is deliberately
+    # not an error and must not turn a recovered file into a refused one.
+    with tempfile.TemporaryDirectory(prefix="biosigio-tal-", ignore_cleanup_errors=True) as scratch:
+        copy = os.path.join(scratch, "tal-only.bdf" if bdf else "tal-only.edf")
+        if not _write_tal_only_copy(filepath, copy, plan):
+            return None
+        try:
+            reader = pyedflib.EdfReader(copy)
+        except OSError:
+            # EDFlib's refusal of the copy is the answer (the original has another
+            # defect); the OS refusing a copy just written is not, and raises here.
+            with open(copy, "rb") as readable:
+                readable.read(1)
+            return None
+        try:
+            onsets, durations, descriptions = reader.readAnnotations()
+        finally:
+            reader.close()
+    return TimekeepingOnset(plan.first_onset, startdate, onsets, durations, descriptions)
+
+
+def probe_timekeeping_onset(filepath: str, exc: Exception) -> TimekeepingOnset | None:
+    """Whether a late first time-keeping onset is the ONLY reason pyedflib refused ``filepath``.
+
+    Called with the exception ``pyedflib.EdfReader(filepath)`` raised, after
+    :func:`classify_pyedflib_error` found no MNE-recoverable cause. Returns ``None``
+    unless every step holds, and the caller then raises as it always did:
+
+    1. the message is EDFlib's generic ``"(it contains format errors)"``;
+    2. the header's reserved field starts with ``EDF+C`` or ``BDF+C`` (case-sensitive);
+    3. the file opens with annotations switched off, which still checks the header
+       and the file size, so the refusal came from the annotation walk;
+    4. record 0's first TAL is a time-keeping onset of 1 s or more, and the header's
+       start plus that onset is a date ``datetime`` can represent;
+    5. a TAL-only copy, its onsets brought back by whole seconds, opens in
+       pyedflib's default mode, so EDFlib has checked every TAL and the continuity.
+
+    The caller then opens ``filepath`` with
+    ``annotations_mode=pyedflib.DO_NOT_READ_ANNOTATIONS`` and reads the samples
+    with pyedflib exactly as for any compliant file; the events are
+    :attr:`TimekeepingOnset.annotations`. No MNE is involved.
+
+    Only the file's own bytes are answered with ``None``: a header that is not one,
+    an onset ``int`` cannot parse or a float cannot hold, a first record whose date
+    ``datetime`` cannot represent, EDFlib refusing the copy. Every ``OSError`` raised
+    while reading the file or creating, writing or reading back the scratch copy
+    propagates unchanged, whatever its ``errno`` (a missing or read-only temporary
+    directory is ``ENOENT`` or ``EACCES``): it says something about this host, and
+    a caller must not record it as a permanent failure of a valid file.
+    """
+    if not str(exc).rstrip().endswith(_GENERIC_FORMAT_ERROR):
+        return None
+    try:
+        return _timekeeping_onset(filepath)
+    except (ValueError, ArithmeticError):
+        return None
+
+
 @dataclass
 class EdfFallbackChannel:
     """One channel read via the tolerant fallback, in pyedflib-equivalent units."""
@@ -409,7 +737,7 @@ def _channel_gains(raw, dimensions: list[str]) -> np.ndarray:
 
 
 def _events_from_mne_annotations(raw) -> pd.DataFrame:
-    """Same shape/sort as ``EDFImporter._read_annotations`` (pyedflib path)."""
+    """Same shape/sort as ``EDFImporter._events_from_annotations`` (pyedflib path)."""
     rows = []
     for onset, duration, description in zip(
         raw.annotations.onset, raw.annotations.duration, raw.annotations.description, strict=False
