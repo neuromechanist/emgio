@@ -23,6 +23,12 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   Without a `DataPoints` count, a file cut exactly at a frame boundary is not detected: multiplexed data reads as a shorter recording, and vectorized data is corrupted from the second channel on, because each channel is stored whole.
   A vectorized file with whole extra frames beyond its `DataPoints` count is not detected either.
 
+### Added
+
+- `allow_partial_frame=True` on `Recording.from_file` (as a keyword-only argument), `BrainVisionImporter.load` and `stream_to_zarr` reads the whole frames of a multiplexed BrainVision file that ends in a partial frame and declares no positive `DataPoints`, as MNE reads them, where the default refuses it.
+  It emits a `UserWarning` that names the data file and the dropped byte count, and records the count in the metadata as `brainvision_dropped_bytes`; the streaming store carries the key in its `recording_metadata` too.
+  Vectorized data, a file smaller than a positive `DataPoints` and a file that holds no whole frame (a zero-byte file included) are still refused with the flag on, and the default is unchanged.
+
 ### Changed
 
 - A BrainVision file whose data is cut short now fails to load with `CorruptFileError`, where it used to read with the tail dropped, and so does a vectorized file that does not hold whole frames even if it is longer than its `DataPoints` declares; callers that catch `FileReadError` still catch it.

@@ -10,12 +10,14 @@ MNE exposes as annotations) are read into ``Recording.events``.
 import configparser
 import contextlib
 import errno
+import inspect
 import logging
 import os
 import re
 import shutil
 import tempfile
 import unicodedata
+import warnings
 from collections.abc import Generator
 from typing import NamedTuple
 
@@ -77,6 +79,9 @@ def _header_encoding(settings: bytes) -> str:
 # header key named which missing file, and which same-stem sibling was read
 # instead, as ``{"DataFile": {"referenced": ..., "used": ...}, ...}``.
 HEADER_RECOVERED_KEY = "brainvision_header_recovered"
+# Recording-metadata key recording how many trailing bytes of a multiplexed data file
+# (a partial frame) were dropped under ``allow_partial_frame=True``; set only then.
+DROPPED_BYTES_KEY = "brainvision_dropped_bytes"
 # Canonical spelling of the two keys the resolver rewrites.
 _KEY_NAMES = {"datafile": "DataFile", "markerfile": "MarkerFile"}
 
@@ -387,7 +392,37 @@ def _declared_frame(vhdr: str) -> _DeclaredFrame | None:
     )
 
 
-def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
+def _caller_stacklevel() -> int:
+    """The ``warnings.warn`` stack level that names the first caller outside biosigIO.
+
+    Counted as ``warnings.warn`` counts it from the function that calls this helper
+    (level 1), walking up until a frame whose module is not part of the ``biosigio``
+    package. Frames in ``biosigio.tests`` count as callers, so a test that calls an entry
+    point is named like any other user code. The depth is found, not written down, so it
+    stays right whether the check was reached from ``Recording.from_file``,
+    ``BrainVisionImporter.load``, ``stream_to_zarr`` or any later wrapper.
+    """
+    package = __name__.partition(".")[0]
+    tests = f"{package}.tests"
+    frame = inspect.currentframe()
+    frame = frame.f_back if frame is not None else None  # the function that called us
+    level = 1
+    while frame is not None:
+        module = frame.f_globals.get("__name__", "")
+        inside = module == package or module.startswith(f"{package}.")
+        if not inside or module == tests or module.startswith(f"{tests}."):
+            return level
+        frame = frame.f_back
+        level += 1
+    return level
+
+
+def require_whole_frames(
+    vhdr: str,
+    staged_files: dict | None = None,
+    *,
+    allow_partial_frame: bool = False,
+) -> int:
     """Refuse a binary data file that is cut short, as far as its header shows.
 
     A frame is one sample of every channel (channels times bytes per sample), in
@@ -418,11 +453,24 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
     count. MNE sizes the channel blocks from the file: if the count is right, every
     channel after the first is misaligned; if the count is stale, the read is correct.
 
+    ``allow_partial_frame=True`` is the one opt-out, and it covers one case only:
+    multiplexed data with a trailing partial frame and no positive ``DataPoints=``.
+    The whole frames are read, as MNE reads them, and a ``UserWarning`` names the
+    file and the dropped byte count. Vectorized data (a cut there misaligns the
+    channels after the first), a file smaller than a positive ``DataPoints=`` and a
+    file that holds no whole frame are still refused.
+
     Args:
         vhdr: The header path handed to MNE (the patched copy when
             :func:`resolved_vhdr` made one).
         staged_files: The dict :func:`resolved_vhdr` fills, so the error names the
             dataset's data file rather than its staged name in a temporary directory.
+        allow_partial_frame: Read the whole frames of a multiplexed file that ends in
+            a partial frame, with a warning, instead of refusing it.
+
+    Returns:
+        The number of trailing bytes MNE will drop under ``allow_partial_frame=True``
+        (a partial frame), else 0.
 
     Raises:
         CorruptFileError: The data file is smaller than the declared ``DataPoints=``
@@ -432,26 +480,48 @@ def require_whole_frames(vhdr: str, staged_files: dict | None = None) -> None:
     """
     declared = _declared_frame(vhdr)
     if declared is None:
-        return
+        return 0
     try:
         size = os.path.getsize(declared.data_path)
     except OSError:
-        return  # MNE opens the file next and raises the real error
+        return 0  # MNE opens the file next and raises the real error
     frame = declared.frame_bytes
     layout = f"{declared.channels} channels of {declared.bytes_per_sample} bytes"
+    name = os.path.basename((staged_files or {}).get(declared.data_path, declared.data_path))
     if declared.data_points is not None and size < declared.data_points * frame:
         problem = (
             f"is smaller than the {declared.data_points * frame} bytes its header declares "
             f"({declared.data_points} data points of {layout})."
         )
+    elif allow_partial_frame and size < frame:
+        # Before the modulo check, which a zero-byte file passes: there is nothing to read.
+        problem = (
+            f"is smaller than one frame ({layout} make a frame of {frame} bytes), so the "
+            "file holds no whole frame for allow_partial_frame to read."
+        )
     elif size % frame != 0 and (declared.data_points is None or declared.vectorized):
+        if allow_partial_frame and not declared.vectorized:
+            dropped = size % frame
+            warnings.warn(
+                f"BrainVision data file {name} ends in a partial frame: its last {dropped} "
+                f"bytes are not a whole frame ({layout} make a frame of {frame} bytes), so "
+                f"allow_partial_frame=True reads the {size // frame} whole frames and drops "
+                "them, and any marker in them.",
+                UserWarning,
+                stacklevel=_caller_stacklevel(),
+            )
+            return dropped
         problem = (
             f"is not a whole number of frames ({layout} make a frame of {frame} bytes), "
             "so it is truncated or has trailing bytes that are not a frame."
         )
+        if allow_partial_frame and declared.vectorized:
+            problem += (
+                " allow_partial_frame does not apply to vectorized data: a cut there "
+                "misaligns the channels after the first."
+            )
     else:
-        return
-    name = os.path.basename((staged_files or {}).get(declared.data_path, declared.data_path))
+        return 0
     raise CorruptFileError(
         f"BrainVision data file {name} is truncated or corrupt: its size ({size} bytes) " + problem
     )
@@ -479,12 +549,20 @@ class BrainVisionImporter(BaseImporter):
             evt["duration"] = evt["duration"].astype("float64")
         return evt
 
-    def load(self, filepath: str) -> Recording:
+    def load(self, filepath: str, *, allow_partial_frame: bool = False) -> Recording:
         """Load a BrainVision recording (pass the ``.vhdr`` header path).
 
         Args:
             filepath: Path to the BrainVision ``.vhdr`` header (its ``.vmrk`` and
                 ``.eeg`` siblings are resolved by MNE).
+            allow_partial_frame: By default a binary data file whose size is not a
+                whole number of frames raises :class:`~biosigio.exceptions.CorruptFileError`.
+                True reads the whole frames of a MULTIPLEXED file that ends in a
+                partial frame (and declares no positive ``DataPoints=``), with a
+                ``UserWarning`` naming the file and the dropped byte count; the count
+                is recorded in the metadata as ``brainvision_dropped_bytes``.
+                Vectorized data, a file smaller than a positive ``DataPoints=`` and a
+                file that holds no whole frame are still refused.
 
         Returns:
             Recording: channels carry their type and physical unit; ``.vmrk`` markers
@@ -503,7 +581,7 @@ class BrainVisionImporter(BaseImporter):
         staged: dict = {}
         with resolved_vhdr(filepath, substitutions=recovered, staged_files=staged) as vhdr:
             # Outside the try: a refusal is already typed, not an MNE failure to classify.
-            require_whole_frames(vhdr, staged)
+            dropped = require_whole_frames(vhdr, staged, allow_partial_frame=allow_partial_frame)
             try:
                 raw = mne.io.read_raw_brainvision(vhdr, preload=True, verbose="ERROR")
             except Exception as e:
@@ -520,6 +598,9 @@ class BrainVisionImporter(BaseImporter):
         if recovered:
             # A stale header read through its siblings is recorded, not silent.
             rec.set_metadata(HEADER_RECOVERED_KEY, recovered)
+        if dropped:
+            # An accepted partial frame is recorded, not silent.
+            rec.set_metadata(DROPPED_BYTES_KEY, dropped)
 
         events = self._read_events(raw)
         if not events.empty:

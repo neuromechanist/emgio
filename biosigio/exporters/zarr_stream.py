@@ -397,7 +397,9 @@ class _EdfSource:
         return self._closed
 
 
-def _open_stream_source(filepath: str, force_modality: str | None):
+def _open_stream_source(
+    filepath: str, force_modality: str | None, *, allow_partial_frame: bool = False
+):
     """Open a lazy source, reading EDF/BDF via pyedflib (importer parity) and
     everything else via MNE. #944
 
@@ -406,6 +408,10 @@ def _open_stream_source(filepath: str, force_modality: str | None):
     opened here and handed to ``_MneSource`` as an already-built ``raw``; so is
     ``.vhdr``, whose header may name pre-BIDS-rename files
     (see ``..importers.brainvision.resolved_vhdr``).
+
+    ``allow_partial_frame`` applies to ``.vhdr`` only (see
+    :meth:`..importers.brainvision.BrainVisionImporter.load`) and is ignored for every
+    other source, as ``mixed_rate`` is outside EDF/BDF.
     """
     stripped = filepath.rstrip("/\\")
     ext = os.path.splitext(stripped)[1].lower()
@@ -426,6 +432,7 @@ def _open_stream_source(filepath: str, force_modality: str | None):
         # The resolver's temporary directory holds the staged data file the lazy
         # Raw reads from, so it lives until the source is closed, not the block.
         from ..importers.brainvision import (
+            DROPPED_BYTES_KEY,
             HEADER_RECOVERED_KEY,
             brainvision_read_error,
             require_whole_frames,
@@ -441,19 +448,19 @@ def _open_stream_source(filepath: str, force_modality: str | None):
             )
             # Same refusal as the in-memory importer: a lazy read would drop the
             # partial trailing frame just as silently.
-            require_whole_frames(vhdr, staged)
+            dropped = require_whole_frames(vhdr, staged, allow_partial_frame=allow_partial_frame)
             try:
                 raw = mne.io.read_raw_brainvision(vhdr, preload=False, verbose="ERROR")
             except Exception as e:
                 if is_resource_exhaustion(e):
                     raise
                 raise brainvision_read_error(e, vhdr, filepath, staged) from e
-            source = _MneSource(
-                filepath,
-                force_modality,
-                raw=raw,
-                extra_metadata={HEADER_RECOVERED_KEY: recovered} if recovered else None,
-            )
+            extra: dict = {}
+            if recovered:
+                extra[HEADER_RECOVERED_KEY] = recovered
+            if dropped:
+                extra[DROPPED_BYTES_KEY] = dropped
+            source = _MneSource(filepath, force_modality, raw=raw, extra_metadata=extra or None)
             # Only now that the source exists does it own the directory; any
             # failure above leaves it to the ``with``, which removes it.
             source._on_close = stack.pop_all().close
@@ -498,6 +505,7 @@ def stream_to_zarr(
     read_chunk_seconds: float = 30.0,
     scratch_dir: str | None = None,
     exclude_subject_info: bool = False,
+    allow_partial_frame: bool = False,
 ) -> str:
     """Stream ``filepath`` to a Zarr serving store with bounded peak memory.
 
@@ -550,6 +558,16 @@ def stream_to_zarr(
             attribute ``subject_info_excluded`` to true. The caller's dict is not
             changed. Default False writes the metadata as earlier releases did.
 
+        allow_partial_frame: BrainVision ``.vhdr`` only, ignored for every other
+            source. A binary data file whose size is not a whole number of frames
+            raises ``CorruptFileError`` by default. True reads the whole frames of a
+            MULTIPLEXED file that ends in a partial frame (and declares no positive
+            ``DataPoints=``), with a ``UserWarning`` naming the file and the dropped
+            byte count, and writes the count into the store's ``recording_metadata`` as
+            ``brainvision_dropped_bytes``. Vectorized data is still refused, as is a
+            file smaller than a positive ``DataPoints=`` or one that holds no whole
+            frame.
+
     Returns:
         The store path written.
     """
@@ -566,7 +584,7 @@ def stream_to_zarr(
     out_np = np.int16 if dtype == "int16" else np.float32
 
     # EDF/BDF read via pyedflib (importer parity), everything else lazily via MNE.
-    src = _open_stream_source(filepath, force_modality)
+    src = _open_stream_source(filepath, force_modality, allow_partial_frame=allow_partial_frame)
     sfreq = src.sfreq
     n_samples = src.n_samples
     if n_samples == 0 or len(src.channels) == 0:
