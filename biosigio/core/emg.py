@@ -185,6 +185,7 @@ class Recording:
         force_csv: bool = False,
         bids_channels: "str | os.PathLike | pd.DataFrame | None" = "auto",
         mixed_rate: str = "error",
+        allow_partial_frame: bool = False,
         **kwargs,
     ) -> "Recording":
         """
@@ -232,6 +233,15 @@ class Recording:
                       silently. 'resample' upsamples the slower channels to the
                       fastest rate (a lossy derived view; each channel keeps its
                       native rate as ``original_sample_frequency``).
+            allow_partial_frame: BrainVision only (ignored for every other format).
+                      A binary data file whose size is not a whole number of frames
+                      raises ``CorruptFileError`` by default. True reads the whole
+                      frames of a MULTIPLEXED file that ends in a partial frame (and
+                      declares no positive ``DataPoints=``), with a ``UserWarning``
+                      naming the file and the dropped byte count; the count is kept in
+                      the metadata as ``brainvision_dropped_bytes``. Vectorized data,
+                      and a file smaller than a positive ``DataPoints=``, are still
+                      refused. ``stream_to_zarr`` takes the same argument.
             **kwargs: Additional arguments passed to the importer.
                 For XDF files, useful kwargs include:
                 - stream_names: List of stream names to import
@@ -289,6 +299,10 @@ class Recording:
         # else (so the default "error" never reaches an importer that can't use it).
         if importer == "edf":
             kwargs["mixed_rate"] = mixed_rate
+
+        # allow_partial_frame likewise only means something to the BrainVision reader.
+        if importer == "brainvision":
+            kwargs["allow_partial_frame"] = allow_partial_frame
 
         # Import the appropriate importer class
         importer_module = __import__(
