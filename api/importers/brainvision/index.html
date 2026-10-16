@@ -9792,7 +9792,7 @@ modified.</p>
 <a id="__codelineno-0-152" name="__codelineno-0-152"></a>    <span class="o">*</span><span class="p">,</span>
 <a id="__codelineno-0-153" name="__codelineno-0-153"></a>    <span class="n">substitutions</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-154" name="__codelineno-0-154"></a>    <span class="n">staged_files</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-155" name="__codelineno-0-155"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<a id="__codelineno-0-155" name="__codelineno-0-155"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
 <a id="__codelineno-0-156" name="__codelineno-0-156"></a><span class="w">    </span><span class="sd">"""Yield a ``.vhdr`` path whose ``DataFile=``/``MarkerFile=`` point at files that exist.</span>
 <a id="__codelineno-0-157" name="__codelineno-0-157"></a>
 <a id="__codelineno-0-158" name="__codelineno-0-158"></a><span class="sd">    BIDS renames the BrainVision triplet on disk but not the references inside the</span>

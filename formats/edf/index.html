@@ -855,6 +855,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#late-first-time-keeping-onset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Late first time-keeping onset
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2762,6 +2773,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#late-first-time-keeping-onset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Late first time-keeping onset
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2904,7 +2926,8 @@ discarding the recording:</p>
 <li>a numeric header field padded with NUL bytes instead of ASCII spaces</li>
 <li>a file correctly marked EDF+D (discontinuous)</li>
 </ul>
-<p>When one of these is detected, biosigIO re-reads the file through MNE and
+<p>A fourth, a late first time-keeping onset, is recovered by <code>pyedflib</code> itself and needs no MNE; see <a href="#late-first-time-keeping-onset">Late first time-keeping onset</a>.</p>
+<p>When one of these three is detected, biosigIO re-reads the file through MNE and
 rescales its SI-volt output back to the same native physical units a normal
 <code>pyedflib</code> read would have produced, so the recovered values are numerically
 identical to what <code>pyedflib</code> would report for the same channel. A channel with
@@ -2925,14 +2948,14 @@ other channel, preserving the same unit-parity guarantee for it too.</p>
 <ul>
 <li><code>edf_tolerant_read</code> (<code>True</code>) and <code>edf_tolerant_read_reason</code> (one of
   <code>degenerate_physical_range</code>, <code>malformed_numeric_field</code>,
-  <code>discontinuous_datarecords</code>)</li>
+  <code>discontinuous_datarecords</code>, <code>late_timekeeping_onset</code>)</li>
 <li>each affected channel additionally carries <code>degenerate_physical_range: True</code></li>
 </ul>
-<p>A genuinely truncated or corrupt file is unaffected by this: only the three
-conditions above are treated as recoverable, and a size check runs before any
+<p>A genuinely truncated or corrupt file is unaffected by this: only the four
+conditions are treated as recoverable, and a size check runs before any
 recovery attempt so a file that is <em>also</em> truncated still raises
 <code>CorruptFileError</code> rather than being silently read short.</p>
-<p><strong>Scope of a recovered read:</strong> all signal-level data is fully populated --
+<p><strong>Scope of an MNE-backed recovered read</strong> (the first three conditions): all signal-level data is fully populated, namely
 per-channel units, physical/digital min/max, transducer, prefilter, sample
 rate, channel type, and EDF+/BDF+ annotations/events. The one thing NOT
 populated is the patient/recording free-text metadata a normal read parses
@@ -2949,6 +2972,29 @@ header order, minus the EDF+/BDF+ annotations channel. Each pairing is still
 checked by name, and a channel that cannot be paired fails loud rather than
 taking another row's scaling. The recovered channels carry the same suffixed
 labels a normal read produces (see <a href="#repeated-channel-labels">Repeated channel labels</a>).</p>
+<h3 id="late-first-time-keeping-onset">Late first time-keeping onset<a class="headerlink" href="#late-first-time-keeping-onset" title="Permanent link">&para;</a></h3>
+<p>An EDF+ or BDF+ file keeps a time-stamped annotation list (TAL) in every data record.
+The first TAL of a record is its time-keeping onset, the record's start in seconds from the start of the recording.
+The specification starts the first record at 0 s, and EDFlib (the C library inside <code>pyedflib</code>) refuses a file whose first onset is 1 s or more, saying only that the file "contains format errors".
+A recording cut out of a longer session at a data-record boundary keeps its session-relative onsets, so the cut file starts late (at +40 s, for example) and is refused although every byte is valid.</p>
+<p>The refusal comes from the walk over the annotation lists, which runs only when annotations are read.
+biosigIO therefore reads such a file with <code>pyedflib</code> itself, with that walk switched off: the samples and every header field are exactly those of a compliant file, and MNE is not involved.
+It does so only after proving that the late onset is the file's sole defect.
+The refusal must be EDFlib's generic one, the header's reserved field must start with <code>EDF+C</code> or <code>BDF+C</code>, the file must open with annotations off (which still checks the header and the file size), and record 0 must open with a time-keeping onset of 1 s or more.
+Then a small copy holding only the annotation signals, with every onset brought back by whole seconds, must pass EDFlib's full annotation walk, so every other annotation list and the record-to-record continuity are checked as for a compliant file.
+The copy is a temporary file, a small fraction of the recording's size, and is deleted.
+Any other defect, such as a gap between records, a malformed later annotation, a bad header field or a truncated file, still raises <code>CorruptFileError</code>, and so does a first onset under 1 s with a defect elsewhere.
+A first onset that would carry the start date past year 9999, or that a float or an integer cannot hold, is declined the same way, on both read paths.
+If the operating system cannot create, write or read back the temporary copy (a missing or read-only temporary directory, a full disk), biosigIO raises the system's own <code>OSError</code> on both read paths, not <code>CorruptFileError</code>: the file is not at fault, and a caller can retry.</p>
+<p><strong>Time convention.</strong>
+Event onsets and the signals are relative to the first record, as for a compliant file, so the first record is at 0 s.
+<code>startdate</code> is the time of the first record: the header's start date and time plus the first onset, added as a datetime, so an onset that crosses a minute, an hour or a day carries over (a header of 23:59:45 and a first onset of 40 s gives 00:00:25 on the next day).
+A fractional first onset is the corner a reader cannot verify against <code>pyedflib</code>: its <code>getStartdatetime</code> (0.1.42) divides EDFlib's 100 ns sub-second by 100, so the exact sum biosigIO reports matches a native read only for whole-second onsets.
+<code>edf_first_record_onset</code> keeps the first onset in seconds, the offset of this file from the start of the session it was cut from, so the header's own start is <code>startdate</code> minus that offset.</p>
+<p>A recovered read is flagged with <code>edf_tolerant_read</code> (<code>True</code>), <code>edf_tolerant_read_reason</code> (<code>late_timekeeping_onset</code>) and <code>edf_first_record_onset</code>.
+The <code>mixed_rate</code> policy is unchanged: a mixed-rate file raises <code>MixedSamplingRateError</code> by default and loads with <code>mixed_rate="resample"</code>.</p>
+<p>The streaming Zarr export (<code>stream_to_zarr</code>) handles the file the same way and keeps its bounded-memory windowed read, unlike the MNE-backed recoveries, which preload the recording.
+It records the same three flags in the store's <code>recording_metadata</code>; the streaming path has never recorded <code>startdate</code>.</p>
 <h2 id="repeated-channel-labels">Repeated channel labels<a class="headerlink" href="#repeated-channel-labels" title="Permanent link">&para;</a></h2>
 <p>EDF does not require unique labels; CHB-MIT, for example, declares <code>T8-P8</code>
 twice and uses <code>-</code> for several unused inputs. A <code>Recording</code> is keyed by label,
