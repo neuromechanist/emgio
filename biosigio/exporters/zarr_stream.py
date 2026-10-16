@@ -267,10 +267,21 @@ class _EdfSource:
                 # A refusal this module cannot recover is a typed file failure,
                 # as the in-memory importer raises it (see issue #149).
                 raise classify_read_error(open_exc, filepath) from open_exc
-            # ImportError (MNE/`meg` extra missing) is deliberately NOT caught
-            # here: it propagates with its own clear install hint, same as the
-            # in-memory importer degrading only when it also can't recover.
-            fallback = read_edf_tolerant(filepath, reason)
+            try:
+                fallback = read_edf_tolerant(filepath, reason)
+            except ImportError:
+                # MNE/`meg` extra missing: an environment problem, never typed as
+                # a file failure. It propagates with its own clear install hint,
+                # same as the in-memory importer degrading only when it also
+                # can't recover.
+                raise
+            except Exception as fallback_exc:
+                # The fallback can still find the file unrecoverable (a truncation
+                # its safety net catches, a unit-gain mismatch): type that as the
+                # in-memory importer's outer handler does. Host conditions
+                # (resource exhaustion, EACCES, EIO, ...) re-raise unchanged
+                # inside classify_read_error, and a BiosigIOError passes through.
+                raise classify_read_error(fallback_exc, filepath) from fallback_exc
             self.extra_metadata["edf_tolerant_read"] = True
             self.extra_metadata["edf_tolerant_read_reason"] = reason
             if fallback.renamed_labels:

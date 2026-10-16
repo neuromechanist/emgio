@@ -76,3 +76,37 @@ def test_stream_memory_error_on_open_propagates_unchanged(tmp_path, monkeypatch)
     with pytest.raises(MemoryError) as info:
         stream_to_zarr(path, str(tmp_path / "store.zarr"), bids_channels="off")
     assert not isinstance(info.value, BiosigIOError)
+
+
+def test_stream_truncated_and_degenerate_raises_corrupt(tmp_path):
+    """Streaming twin of ``test_truncated_and_degenerate_still_raises_corrupt``
+    (test_edf_fallback.py): a file that is BOTH truncated AND carries a
+    degenerate channel. pyedflib names the degenerate range, not the truncation,
+    so the streaming source takes the tolerant fallback, whose truncation check
+    raises a bare errno-less ``OSError``. It must be typed like the in-memory
+    path types it, not leak out of ``stream_to_zarr`` untyped."""
+    pytest.importorskip("mne", reason="the tolerant EDF fallback requires the 'meg' extra (mne)")
+    import numpy as np
+
+    from .test_edf_fallback import _channel, _patch_signal_field
+    from .test_edf_fallback import _write_edf as _write_channels_edf
+
+    path = str(tmp_path / "truncated_degenerate.edf")
+    rng = np.random.default_rng(2)
+    channels = [_channel("C0", 100.0, -100.0, 100.0), _channel("REF", 100.0, -100.0, 100.0)]
+    _write_channels_edf(path, channels, [rng.uniform(-100, 100, 400) for _ in channels])
+    _patch_signal_field(path, 1, "physical_max", b"-100")
+    with open(path, "r+b") as f:
+        f.truncate(os.path.getsize(path) - 200)
+
+    # pyedflib reports the degenerate range, NOT the truncation, so the fallback
+    # is genuinely what runs here.
+    with pytest.raises(OSError, match=r"(?i)physical maximum"):
+        pyedflib.EdfReader(path)
+
+    with pytest.raises(CorruptFileError, match="truncated") as info:
+        stream_to_zarr(path, str(tmp_path / "store.zarr"), bids_channels="off")
+
+    cause = info.value.__cause__
+    assert isinstance(cause, OSError)
+    assert "file is truncated" in str(cause)
