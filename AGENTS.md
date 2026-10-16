@@ -1,138 +1,162 @@
 # biosigIO Instructions
 
-## Project Context
-**Purpose:** A Python package for electromyography (EMG) data import/export and manipulation, with a unified interface across various EMG systems.
-**Tech Stack:** Python 3.11+, numpy, pandas, scipy, matplotlib, pyedflib, wfdb, pyxdf
-**Architecture:** Modular importers/exporters with automatic format detection and metadata preservation. Setuptools build backend; ruff for lint/format; pytest for tests.
+Shared instructions for every coding agent (Claude Code, Codex, Copilot, and others). `CLAUDE.md` imports this file, so cross-agent rules live here and only Claude-specific guidance goes in `CLAUDE.md`.
 
-## Architecture Map
+## Project Overview
+
+**Purpose:** a Python package that imports, exports, and manipulates electrophysiology recordings (EMG, EEG, iEEG, MEG) through one interface, with metadata preserved across formats.
+
+**Tech stack:** Python 3.11+, numpy, pandas, scipy, matplotlib, pyedflib, wfdb, pyxdf, plus optional extras for MNE, Neo, Parquet/Arrow, and Zarr. Setuptools build backend, Ruff for lint and format, Ty for types, pytest for tests, MkDocs for documentation.
+
+**Supported formats**
+- **Import:** EEGLAB `.set`, Delsys Trigno, OTB, EDF/BDF(+), WFDB, CSV, XDF, MEG (`.fif`, CTF `.ds`, via MNE), BrainVision (`.vhdr`, via MNE), proprietary formats through python-neo (Intan, Blackrock, Spike2, Plexon, Micromed, Neuralynx), and the biosigIO serialization formats (Parquet, Arrow/Feather, Zarr).
+- **Export:** EDF/BDF(+) with automatic format selection; Parquet and Arrow/Feather (lossless columnar, `arrow` extra); Zarr (cloud-native serving store, `zarr` extra).
+
+**Architecture map**
 ```
 biosigio/
-├── core/          # Recording main class — central data handling
-├── importers/     # Format-specific import logic (Trigno, EDF/BDF, WFDB, EEGLAB, OTB, CSV)
-├── exporters/     # Format-specific export (EDF/BDF(+) with auto format selection)
+├── core/          # Recording, the central data class
+├── importers/     # Format-specific import logic
+├── exporters/     # Format-specific export logic
 ├── analysis/      # Signal analysis routines
 ├── visualization/ # Plotting and signal display
 ├── utils/         # Shared helpers
-└── tests/         # Real tests only — real EMG data, no mocks
+└── tests/         # Real-data tests only, no mocks
 ```
 
-## Environment Setup
+**Key classes:** `Recording` (`biosigio/core`) is the main data class. Importers (`biosigio/importers`) and exporters (`biosigio/exporters`) hold the format-specific logic.
+
+## Commands
+
 ```bash
-uv sync --extra dev          # Install package (editable) + dev dependencies
-uv run pytest                # Run tests
-uv run pytest --cov=biosigio    # Run tests with coverage
-uv sync --extra docs         # Install docs dependencies
-uv run mkdocs serve          # Build/serve documentation
+uv sync --extra dev                              # Editable install with dev dependencies
+uv run pytest                                    # Tests with the default options
+uv run pytest -o addopts=""                      # Tests without coverage (faster)
+uv run pytest --cov=biosigio                     # Tests with coverage
+uv run ruff check --fix . && uv run ruff format .   # Lint and format locally
+uvx ruff@0.15.4 check . && uvx ruff@0.15.4 format --check .   # CI gate (ruff is pinned in CI)
+uv run ty check biosigio                         # Type check (CI)
+uvx codespell --skip='.git*,.venv,*.svg,*.ipynb,*.dat,*.edf,*.bdf,tests/data,examples' --ignore-words-list='OT' --check-hidden   # Spelling (CI)
+uv sync --extra docs && uv run mkdocs serve      # Documentation site
 ```
 
 ## Development Workflow
-1. **Check context:** Review .context/plan.md for current tasks
-2. **Understand deeply:** Check .context/ideas.md for design decisions
-3. **Research if needed:** Update .context/research.md with findings
-4. **Branch:** `gh issue develop <issue-number>` (or `feature/short-description`)
-5. **Code:** Follow patterns in existing importers/exporters (see .rules/python.md)
-6. **Test:** Real EMG data only — see tests/ and .rules/testing.md
-7. **Document failures:** Log in .context/scratch_history.md immediately
-8. **Commit:** Atomic, <50 chars, no emojis, no AI attribution
-9. **PR:** Reference context and issue
-10. **Code review:** Run `/review-pr` after creating PR; address all findings (no technical debt carried forward)
+1. **Check context:** read `.context/plan.md` for current tasks and `.context/ideas.md` for design decisions.
+2. **Research if needed:** record findings in `.context/research.md`.
+3. **Branch:** `gh issue develop <issue-number>` or `feature/short-description`. When a PR is stacked on another PR's branch, keep that base branch until the stacked PR is retargeted, because deleting it closes the PR.
+4. **Code:** follow the patterns in the existing importers and exporters (`.rules/python.md`).
+5. **Test:** use real recordings only (see Test Data and Examples below and `.rules/testing.md`).
+6. **Document failures:** log them in `.context/scratch_history.md` immediately.
+7. **Commit:** atomic, subject under 50 characters, no emojis, no AI attribution.
+8. **PR:** reference the context and the issue. Run `/review-pr` after creating it, and address every finding (no technical debt carried forward).
 
-## [CRITICAL] Core Principles - Never Compromise
+## Core Principles
 
-### [FUNDAMENTAL] NO MOCKS - Test Reality Only
-- Use real EMG data files from `examples/` (the shared test-data directory)
-- Test with actual format conversions
-- Verify round-trip integrity (import → export → import)
-**Details:** .rules/testing.md
+### No mocks: test reality only
+- Use real recordings from `examples/` and real format conversions. No mocks, stubs, or fake data in tests.
+- Verify round-trip integrity (import, export, import) and metadata preservation.
+- Details: `.rules/testing.md`.
 
-### Signal Integrity
-- Preserve metadata during conversions — metadata loss is data loss
-- Automatic EDF/BDF format selection based on dynamic range
-- Maintain annotations and events across formats
-- Channel information must be preserved
-- Consider sampling rates and bit depths; document format limitations
+### Signal integrity
+- Preserve metadata during conversions. Metadata loss is data loss.
+- Automatic EDF/BDF format selection based on dynamic range.
+- Maintain annotations and events across formats.
+- Channel information must be preserved.
+- Consider sampling rates and bit depths, and document format limitations.
 
-### Commits & Git
-- Atomic commits, focused changes
-- Messages <50 chars, no emojis, no AI attribution
-- Feature branches for multi-step work
-**Details:** .rules/git.md
+### Git
+- Atomic commits with focused changes; messages under 50 characters; no emojis; no AI attribution.
+- Feature branches for multi-step work. Details: `.rules/git.md`.
 
 ### Documentation
-- Examples > explanations
-- Document all supported formats and their limitations
-- Include usage examples in docstrings
-**Details:** .rules/documentation.md
+- Examples over explanations. Document every supported format and its limitations. Include usage examples in docstrings. Details: `.rules/documentation.md`.
 
-## [NEVER DO THIS]
-- Never use mocks, stubs, or fake data in tests
-- Never use `pip`, `conda`, or `virtualenv`; use UV for all Python work
-- Never commit secrets, .env files, or credentials
-- Never leave empty catch blocks or silent failures
-- Never add backward-compatibility shims; replace directly
-- Never add TODO without a linked issue
-- Never use emojis in commits, PRs, or code
+### Never
+- Never use mocks, stubs, or fake data in tests.
+- Never use `pip`, `conda`, or `virtualenv`; use uv for all Python work.
+- Never commit secrets, `.env` files, or credentials.
+- Never leave empty catch blocks or silent failures.
+- Never add backward-compatibility shims; replace directly.
+- Never add a TODO without a linked issue.
+- Never use emojis in commits, PRs, or code.
 
-## Think Like a Signal Processing Engineer
-- Signal integrity is paramount
-- Metadata loss is data loss
-- Test with real physiological data
-- Extract repeated patterns (3+ uses) into rules
-**See:** .rules/self_improve.md for the learning process
+### Think like a signal processing engineer
+- Signal integrity is paramount. Test with real physiological data.
+- Extract repeated patterns (three or more uses) into rules. See `.rules/self_improve.md`.
 
-## [REFERENCE] Rules Directory
+## Test Data and Examples
 
-### Core Standards
-- `.rules/testing.md` - Complete NO MOCK policy
-- `.rules/self_improve.md` - Learning from projects
-- `.rules/documentation.md` - MkDocs setup
+The committed example recordings live in `examples/` at the repository root. Tests read them directly; they are the shared test-data directory.
 
-### Language & Tools
-- `.rules/python.md` - Style, linting (ruff), type hints
-- `.rules/ci_cd.md` - GitHub Actions setup
-- `.rules/git.md` - Commit and branching conventions
+**Provenance is required for every example.** Each example directory has a `README.md`, a `NOTICE.md`, or a BIDS `dataset_description.json` that records:
+- the source dataset title;
+- the source DOI (for example, the OpenNeuro DOI) and, when NEMAR hosts the copy, the NEMAR DOI (`10.82901/nemar.<id>`);
+- the license, as the source records it;
+- how the example was derived: excerpt length, downsampling, channel subset, truncation, or conversion tool;
+- any synthetic content, labeled as synthetic.
 
-## Context Files
-- `.context/plan.md` - Current tasks and phases
-- `.context/ideas.md` - Design concepts
-- `.context/research.md` - Technical explorations
-- `.context/scratch_history.md` - Failed attempts and lessons
-- `.context/decisions/` - Architecture Decision Records (copy `0000-template.md` to start)
+**Owner decisions**
+- DOIs are included for attribution. A NEMAR DOI carries the dataset identifier, so identifiers appear only inside DOIs.
+- Documentation never records subject information. It records no checksums or byte counts for NEMAR-hosted recordings; the checksum tables and sizes already in the MNE-vendored READMEs predate this rule and stay.
+- The MNE-vendored examples (`examples/kit/`, `examples/bti/`, `examples/ctf/`) come from MNE-Python and are kept in place by owner decision (2026-10-16).
+- Example data lives under `examples/`, never under `biosigio/tests/`, so the CI codespell skip covers it.
+- biosigio does not use git-annex or Git LFS. Example data and every other file are regular git blobs committed to the repository.
 
-## Quick Commands
-```bash
-uv run pytest --cov=biosigio                          # Run tests with coverage
-uv run ruff check --fix . && uv run ruff format .  # Lint + format
-uv run mkdocs serve                                # Build docs
-```
+**Adding an example**
+- Look first. An existing example usually covers the scenario; add a new one only when none does.
+- Keep new examples small (under 4 MB each).
+- Prefer a CC0 or CC-BY source, with its provenance file in the same directory.
+- For split chains, truncations, and late-onset cuts, derive the variant inside the test (in `tmp_path`) with the real writer or a byte-exact cut. Do not commit derived variants.
+- The owner asked for one-minute exemplars of BrainVision and FIF recordings. See Known Gaps.
 
-## Project-Specific Guidelines
+**Real data that cannot be committed**
+- A recording too large to commit, or under a license that conflicts with this BSD-3-Clause repository, is fetched on demand through `biosigio/tests/real_data.py` (see Testing Requirements).
+- The anonymous late-onset BDF+ recording behind biosigio #145 (its NEMAR catalog license is CC BY-SA 4.0) is never committed. Its test is opt-in through `BIOSIGIO_EDF_TIMEKEEPING_FILE`.
 
-### Supported Formats
-- **Import:** EEGLAB .set, Delsys Trigno, OTB, EDF/BDF(+), WFDB, CSV, XDF, MEG (.fif/CTF .ds, via MNE), BrainVision (.vhdr, via MNE), proprietary electrophysiology (Intan/Blackrock/Spike2/Plexon/Micromed/Neuralynx, via python-neo), and the biosigIO serialization formats (Parquet/Arrow/Feather, Zarr)
-- **Export:** EDF/BDF(+) with automatic format selection; serialization and serving formats: Parquet and Arrow/Feather (lossless columnar, `arrow` extra), Zarr (cloud-native serving store, `zarr` extra)
+**Inventory (verified 2026-10-16)**
 
-### Key Classes
-- `Recording` (biosigio/core) — main class for data handling
-- Importers (biosigio/importers) — format-specific import logic
-- Exporters (biosigio/exporters) — format-specific export logic
+| Path | Format | Facts | Source and license | DOI |
+|---|---|---|---|---|
+| `examples/bids/eeg/` | EEGLAB `.set` with BIDS sidecars | 60 s at 250 Hz (RecordingDuration 60.0) | OpenNeuro (see DOI), CC0 | 10.18112/openneuro.ds006921.v1.1.1; NEMAR 10.82901/nemar.on006921 |
+| `examples/bids/meg/` | FIF `sub-01_task-mouse_meg.fif` | 30 s excerpt (per the dataset description) | OpenNeuro (see DOI), CC0 | 10.18112/openneuro.ds002908.v1.0.0; NEMAR 10.82901/nemar.on002908 |
+| `examples/bids/ieeg/` | EDF+C `sub-01_ses-postimp_task-stim_run-08_ieeg.edf` | 1 s (one record), 65 signals (64 SEEG channels plus the EDF Annotations signal); a truncated fixture | OpenNeuro (see DOI), CC0 | 10.18112/openneuro.ds004819.v1.0.0; NEMAR 10.82901/nemar.on004819 |
+| `examples/bids/emg/` | EDF (plain, no annotations) | 30 s, 7 signals; MUniverse conversion of a NEMAR copy | NEMAR copy (see DOI); license recorded as "CC0 BY 4.0" in the dataset description and "CC0" in the README | 10.1113/JP287913 (paper); 10.7910/DVN/ID1WNQ (dataset); 10.82901/nemar.nm000165 (NEMAR) |
+| `examples/brainvision/` | BrainVision `.vhdr`, `.vmrk`, `.eeg` | 5 s, 8 channels, 250 Hz, IEEE_FLOAT_32; three synthetic markers (labeled in the README) | derived from `examples/bids/eeg/` (CC0) | as for `examples/bids/eeg/` |
+| `examples/verification_output.edf`, `examples/verification_output.bdf`, `examples/verification_output_channels.tsv` | EDF+C, BDF+C, TSV | 20 s; 2 channels plus the EDF Annotations signal (3 signals); written by `examples/verification_example.py` from `one_sessantaquattro_truncated.otb+` | not recorded | not recorded |
+| `examples/kit/` | KIT `.sqd` | 193 channels, 1000 Hz, 0.1 s; bytes unmodified | MNE-Python test suite, BSD-3-Clause | MNE-Python software 10.5281/zenodo.592483 |
+| `examples/bti/` | BTi (`c,rfDC`, `config`, `hs_file`) | bytes unmodified | MNE-Python test suite, BSD-3-Clause | MNE-Python software 10.5281/zenodo.592483 |
+| `examples/ctf/` | CTF `.ds` (`catch-alp-good-f.ds`) | bytes unmodified; from `CTF/` in the MNE testing data, shared courtesy of François Tadel (per `CTF/README.txt`) | no license stated upstream; kept in place by owner decision | MNE-Python software 10.5281/zenodo.592483; no dataset DOI (the upstream README links a publication instead) |
 
-### Testing Requirements
-- Test each importer with real data files
-- Verify round-trip conversions (import → export → import)
-- Check metadata preservation
-- Validate signal integrity
-- A test needing a recording too large to commit fetches it through
-  `biosigio/tests/real_data.py`; it skips unless `BIOSIGIO_REAL_DATA=1` is set and caches
-  outside the repo (`~/.cache/biosigio/real_data`, overridable with
-  `BIOSIGIO_REAL_DATA_CACHE`). Add a `fetch_real_recording` call there, never a second
-  download/cache helper, and pass the file's `sha256` so a corrupted cache fails loudly
+**Known gaps** (close these before any new use of the affected files)
+- The BrainVision example (5 s) and the FIF example (30 s) are shorter than the one-minute target.
+- No provenance file in `examples/` for `examples/100.dat` (with `100.hea` and `100.atr`; `docs/examples/wfdb.md` describes the source, but the license is not stated), `one_sessantaquattro_truncated.otb+`, `two_mouvi_truncated.otb+`, `test.xdf`, `truncated_emg_sample_zenodo7668251.txt`, `truncated_trigno_sample.csv`, and `wristbandEMG_truncated.set`. `multi_stream_test.xdf` is generated by `scripts/create_multistream_test_xdf.py`. The verification outputs depend on the `.otb+` file, so they inherit this gap.
+- The verification outputs have no provenance file of their own.
+- The MNE-vendored examples (KIT, BTi, CTF) cite the MNE-Python software DOI, since the test data have no DOI of their own. The CTF files have no license stated upstream; the owner has decided to keep them in place.
+- The EMG example's license is recorded two ways (CC0 and CC0 BY 4.0). Reconcile it before citing.
+- No committed real late-onset EDF+/BDF+ recording exists. Late-onset coverage uses derived cuts and the opt-in test.
 
-### Documentation Site
+## Testing Requirements
+- Test each importer with real recordings.
+- Verify round-trip conversions (import, export, import).
+- Check metadata preservation.
+- Validate signal integrity.
+- A test that needs a recording too large to commit fetches it through `biosigio/tests/real_data.py`. It skips unless `BIOSIGIO_REAL_DATA=1` is set, and it caches outside the repo (`~/.cache/biosigio/real_data`, overridable with `BIOSIGIO_REAL_DATA_CACHE`). Add a `fetch_real_recording` call there, never a second download or cache helper, and pass the file's `sha256` so a corrupted cache fails loudly.
+
+## Release and Landing
+- **Version bump:** every behavior change carries a patch version bump. Commit it in the feature PR (as #152 did) or as its own bump commit before the release. Tests-only and docs-only PRs do not bump.
+- **Bump commit** (subject `chore: bump version to X.Y.Z`, the repository's convention): `biosigio/version.py` (both `__version__` and `__version_info__`), `pyproject.toml`, and `CITATION.cff` (`version` and `date-released`).
+- **Changelog:** [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. The release commit (subject `Release X.Y.Z in the changelog`) renames `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD`, adds a short release note, and replaces the `[Unreleased]` footer link with `[X.Y.Z]`. The date is the UTC day the GitHub Release is published. After a release the file has no `[Unreleased]` heading or footer link; the next feature PR creates both before adding its entry.
+- **Landing:** squash merge, the owner's decision of 2026-10-16. Earlier history has merge commits (#150, #152) and linear commits (1.2.10, 1.2.11). Do not delete a branch that another open PR is stacked on; retarget that PR first.
+- **Publishing:** `gh release create vX.Y.Z --target <full 40-character merge SHA>`; a short SHA is rejected. The release event publishes to PyPI. The tag push publishes to TestPyPI with `skip-existing`. The workflow fails when the tag does not match `biosigio/version.py`. A TestPyPI 503 during the trusted-publishing exchange is not a release failure; rerun the failed job.
+- **Verify:** `uv pip install --refresh "biosigio==X.Y.Z"` in a clean environment. Right after publishing, uv's index can lag for minutes, so an early "no version" error is not a failed publish.
+
+## Rules and Context Files
+- **Rules directory:** `.rules/testing.md` (the no-mock policy), `.rules/python.md` (style, Ruff, type hints), `.rules/git.md` (commits and branches), `.rules/documentation.md` (MkDocs), `.rules/ci_cd.md` (GitHub Actions), `.rules/self_improve.md` (learning from projects).
+- **Context files:** `.context/plan.md` (current tasks and phases), `.context/ideas.md` (design concepts), `.context/research.md` (technical explorations), `.context/scratch_history.md` (failed attempts and lessons), `.context/decisions/` (architecture decision records; copy `0000-template.md` to start).
+
+## Documentation Site
 - https://neuromechanist.github.io/biosigio/
-- Update docs/ when adding features; include API documentation
+- Update `docs/` when adding features, and include API documentation.
 
 ---
-Remember: You're handling biomedical signals. Accuracy and data integrity are critical.
-Check .rules/ for detailed guidance on any topic.
+Remember: you are handling biomedical signals. Accuracy and data integrity are critical. Check `.rules/` for detailed guidance on any topic.
