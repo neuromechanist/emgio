@@ -305,7 +305,6 @@ class Recording:
         # allow_partial_frame likewise only means something to the BrainVision reader.
         if importer == "brainvision":
             kwargs["allow_partial_frame"] = allow_partial_frame
-            kwargs["_stacklevel"] = 4  # name from_file's caller in the warning
 
         # Import the appropriate importer class
         importer_module = __import__(

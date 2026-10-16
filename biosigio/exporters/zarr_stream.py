@@ -398,11 +398,7 @@ class _EdfSource:
 
 
 def _open_stream_source(
-    filepath: str,
-    force_modality: str | None,
-    *,
-    allow_partial_frame: bool = False,
-    _stacklevel: int = 3,
+    filepath: str, force_modality: str | None, *, allow_partial_frame: bool = False
 ):
     """Open a lazy source, reading EDF/BDF via pyedflib (importer parity) and
     everything else via MNE. #944
@@ -415,9 +411,7 @@ def _open_stream_source(
 
     ``allow_partial_frame`` applies to ``.vhdr`` only (see
     :meth:`..importers.brainvision.BrainVisionImporter.load`) and is ignored for every
-    other source, as ``mixed_rate`` is outside EDF/BDF. ``_stacklevel`` is internal: the
-    ``warnings.warn`` stack level of that option's warning, counted from the check, where
-    3 names the caller of this function and ``stream_to_zarr`` passes 4 to name its own.
+    other source, as ``mixed_rate`` is outside EDF/BDF.
     """
     stripped = filepath.rstrip("/\\")
     ext = os.path.splitext(stripped)[1].lower()
@@ -454,9 +448,7 @@ def _open_stream_source(
             )
             # Same refusal as the in-memory importer: a lazy read would drop the
             # partial trailing frame just as silently.
-            dropped = require_whole_frames(
-                vhdr, staged, allow_partial_frame=allow_partial_frame, stacklevel=_stacklevel
-            )
+            dropped = require_whole_frames(vhdr, staged, allow_partial_frame=allow_partial_frame)
             try:
                 raw = mne.io.read_raw_brainvision(vhdr, preload=False, verbose="ERROR")
             except Exception as e:
@@ -572,9 +564,9 @@ def stream_to_zarr(
             MULTIPLEXED file that ends in a partial frame (and declares no positive
             ``DataPoints=``), with a ``UserWarning`` naming the file and the dropped
             byte count, and writes the count into the store's ``recording_metadata`` as
-            ``brainvision_dropped_bytes``. Vectorized data, and a file smaller than a
-            positive ``DataPoints=``, and a file that holds no whole frame, are still
-            refused.
+            ``brainvision_dropped_bytes``. Vectorized data is still refused, as is a
+            file smaller than a positive ``DataPoints=`` or one that holds no whole
+            frame.
 
     Returns:
         The store path written.
@@ -592,9 +584,7 @@ def stream_to_zarr(
     out_np = np.int16 if dtype == "int16" else np.float32
 
     # EDF/BDF read via pyedflib (importer parity), everything else lazily via MNE.
-    src = _open_stream_source(
-        filepath, force_modality, allow_partial_frame=allow_partial_frame, _stacklevel=4
-    )
+    src = _open_stream_source(filepath, force_modality, allow_partial_frame=allow_partial_frame)
     sfreq = src.sfreq
     n_samples = src.n_samples
     if n_samples == 0 or len(src.channels) == 0:
