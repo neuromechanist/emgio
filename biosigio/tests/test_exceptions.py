@@ -682,32 +682,29 @@ def _fif_cut_after_buffer(tmp_path, extra_bytes):
 
 
 # A tag header is 16 bytes. MNE drops an incomplete header at the end of the file
-# silently, so a cut within the 15 bytes after a buffer is the same as a cut
-# exactly at its end.
+# silently, so a cut within the 15 bytes after a buffer reads the same as a cut
+# exactly at its end: as a shorter recording, with no error. That is data loss
+# reported as success, so this asserts the expected behavior (a typed error) and
+# is an expected failure until it is fixed.
+@pytest.mark.xfail(
+    strict=True,
+    reason="biosigio #163: a FIF cut exactly at a data-buffer boundary reads silently shorter",
+)
 @pytest.mark.skipif(not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture")
 @pytest.mark.parametrize("extra_bytes", [0, 15], ids=["at_boundary", "partial_next_header"])
-def test_fif_cut_at_a_data_buffer_boundary_reads_shorter(tmp_path, extra_bytes):
-    """Known limit: a cut exactly where a data buffer ends leaves a well-formed
-    file with fewer buffers, which no reader can tell from a shorter recording.
-    biosigIO reads it without error, as the leading samples of the intact
-    recording. Only a cut inside a buffer is detected (see
-    test_truncated_fif_data_is_corrupt)."""
-    import mne
-
-    full = mne.io.read_raw_fif(str(_MEG_FIF), preload=True, verbose="ERROR").get_data().T
-    path, kept = _fif_cut_after_buffer(tmp_path, extra_bytes)
-    n_buffers = len(_fif_data_buffer_ends(_MEG_FIF))
-
-    rec = Recording.from_file(str(path))
-
-    assert rec.signals.shape[0] == kept * (full.shape[0] // n_buffers)
-    np.testing.assert_allclose(rec.signals, full[: rec.signals.shape[0]])
+def test_fif_cut_at_a_data_buffer_boundary_is_corrupt(tmp_path, extra_bytes):
+    """A FIF cut exactly where a data buffer ends, or within the 15 bytes after
+    it, should raise CorruptFileError like any other cut of the data."""
+    path, _ = _fif_cut_after_buffer(tmp_path, extra_bytes)
+    with pytest.raises(CorruptFileError):
+        Recording.from_file(str(path))
 
 
 @pytest.mark.skipif(not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture")
 def test_fif_cut_just_inside_a_data_buffer_is_corrupt(tmp_path):
-    """The other side of the limit above: once the next buffer's complete header
-    is present without its samples, the cut is inside a buffer and is detected."""
+    """The edge of the expected failure above: once the next buffer's complete
+    header is present without its samples, the cut is inside a buffer and is
+    detected."""
     path, _ = _fif_cut_after_buffer(tmp_path, 16)
     with pytest.raises(CorruptFileError) as caught:
         Recording.from_file(str(path))
