@@ -185,6 +185,7 @@ class Recording:
         force_csv: bool = False,
         bids_channels: "str | os.PathLike | pd.DataFrame | None" = "auto",
         mixed_rate: str = "error",
+        *,
         allow_partial_frame: bool = False,
         **kwargs,
     ) -> "Recording":
@@ -240,8 +241,9 @@ class Recording:
                       declares no positive ``DataPoints=``), with a ``UserWarning``
                       naming the file and the dropped byte count; the count is kept in
                       the metadata as ``brainvision_dropped_bytes``. Vectorized data,
-                      and a file smaller than a positive ``DataPoints=``, are still
-                      refused. ``stream_to_zarr`` takes the same argument.
+                      a file smaller than a positive ``DataPoints=`` and a file that
+                      holds no whole frame are still refused. Keyword-only.
+                      ``stream_to_zarr`` takes the same argument.
             **kwargs: Additional arguments passed to the importer.
                 For XDF files, useful kwargs include:
                 - stream_names: List of stream names to import
@@ -303,6 +305,7 @@ class Recording:
         # allow_partial_frame likewise only means something to the BrainVision reader.
         if importer == "brainvision":
             kwargs["allow_partial_frame"] = allow_partial_frame
+            kwargs["_stacklevel"] = 4  # name from_file's caller in the warning
 
         # Import the appropriate importer class
         importer_module = __import__(
