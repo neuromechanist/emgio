@@ -7,6 +7,7 @@ importers' typed raises on REAL files (no mocks):
 * an unknown extension -> UnsupportedFormatError
 * a real MNE evoked (``*-ave.fif``: averaged, no continuous raw) -> NotContinuousRecordingError
 * a truncated EDF -> CorruptFileError
+* a FIF cut inside its data -> CorruptFileError
 * mixed-rate EDF -> MixedSamplingRateError (still a ValueError, for back-compat)
 
 The string-matching unit tests cover the reader phrasings we map without needing
@@ -78,6 +79,36 @@ def test_classify_ctf_trial_truncation_is_corrupt():
     assert isinstance(err, CorruptFileError)
 
 
+def test_classify_numpy_partial_element_buffer_is_corrupt():
+    """The text numpy raises when a tag read returns a partial element: a FIF
+    cut mid-sample leaves a buffer that is not a whole number of elements."""
+    with pytest.raises(ValueError) as caught:
+        np.frombuffer(b"\x00" * 7, dtype=">f4")
+    err = classify_read_error(caught.value)
+    assert isinstance(err, CorruptFileError)
+    assert err.code == "corrupt_or_truncated"
+
+
+def test_classify_numpy_reshape_size_mismatch_is_corrupt():
+    """The text numpy raises when a FIF data buffer holds fewer samples than its
+    header declares: the whole samples that remain no longer fill the block."""
+    with pytest.raises(ValueError) as caught:
+        np.zeros(7, dtype=np.float32).reshape((2, 4))
+    err = classify_read_error(caught.value)
+    assert isinstance(err, CorruptFileError)
+    assert err.code == "corrupt_or_truncated"
+
+
+def test_classify_unrelated_value_error_is_not_corrupt():
+    """The truncation mappings are specific messages, not a catch-all for
+    ``ValueError``: another numpy error stays the generic read failure."""
+    with pytest.raises(ValueError) as caught:
+        np.ones(2) @ np.ones(3)  # shape mismatch, a different numpy message
+    err = classify_read_error(caught.value)
+    assert type(err) is FileReadError
+    assert err.code == "file_read_error"
+
+
 def test_classify_unknown_falls_back_to_file_read_error():
     err = classify_read_error(RuntimeError("something unexpected"))
     assert type(err) is FileReadError
@@ -92,6 +123,18 @@ def test_classify_passes_through_existing_typed_error():
 def test_classify_includes_filepath_when_given():
     err = classify_read_error(ValueError("No raw data"), "/data/sub-01_task-a-ave.fif")
     assert "sub-01_task-a-ave.fif" in str(err)
+
+
+def test_classify_truncated_fif_names_the_file_without_its_directory():
+    """A truncated-FIF message carries the file name only, for a file and for a
+    directory recording (a CTF ``.ds`` path may end in a separator)."""
+    with pytest.raises(ValueError) as caught:
+        np.frombuffer(b"\x00" * 7, dtype=">f4")
+    for path in ("/scratch/run7/sub-01_meg.fif", "/scratch/run7/sub-01_meg.ds/"):
+        err = classify_read_error(caught.value, path)
+        assert isinstance(err, CorruptFileError)
+        assert pathlib.PurePath(path).name in str(err)
+        assert "scratch" not in str(err) and "run7" not in str(err)
 
 
 # -- is_resource_exhaustion: resource exhaustion is never a property of the file
@@ -498,3 +541,67 @@ def test_truncated_ctf_meg4_is_corrupt():
             fh.truncate(os.path.getsize(meg4) - 333)
         with pytest.raises(CorruptFileError):
             Recording.from_file(ds)
+
+
+def _fif_copy(tmp_path, *, cut_bytes=0, keep_fraction=1.0):
+    """Copy the FIF fixture into ``tmp_path`` and return the copy's path.
+
+    The copy keeps ``keep_fraction`` of the file, less ``cut_bytes`` taken from
+    the end of what remains. With the defaults it is intact.
+    """
+    dest = tmp_path / _MEG_FIF.name
+    shutil.copyfile(_MEG_FIF, dest)
+    keep = int(dest.stat().st_size * keep_fraction) - cut_bytes
+    with open(dest, "r+b") as fh:
+        fh.truncate(keep)
+    return dest
+
+
+@pytest.mark.skipif(not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture")
+def test_intact_fif_still_reads_as_mne_reads_it(tmp_path):
+    """Regression guard for the truncation mappings: an intact FIF still loads,
+    with the channels, sampling rate and samples MNE itself reads from it."""
+    import mne
+
+    raw = mne.io.read_raw_fif(str(_MEG_FIF), preload=True, verbose="ERROR")
+    rec = Recording.from_file(str(_fif_copy(tmp_path)))
+
+    assert len(rec.channels) == len(raw.ch_names)
+    assert {info["sample_frequency"] for info in rec.channels.values()} == {raw.info["sfreq"]}
+    assert rec.signals.shape == raw.get_data().T.shape
+    np.testing.assert_allclose(rec.signals, raw.get_data().T)
+
+
+# The fixture stores 4-byte (float32) samples. Cutting a multiple of 4 bytes from
+# its last data buffer leaves a whole number of samples that no longer fill the
+# buffer's declared block (a reshape failure); any other cut leaves a partial
+# sample (a frombuffer failure). Halving the file is the plain truncated part.
+@pytest.mark.skipif(not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture")
+@pytest.mark.parametrize(
+    ("cut", "numpy_text"),
+    [
+        pytest.param({"keep_fraction": 0.5}, None, id="half"),
+        pytest.param(
+            {"cut_bytes": 1002},
+            "buffer size must be a multiple of element size",
+            id="partial_sample",
+        ),
+        pytest.param({"cut_bytes": 1000}, "cannot reshape array of size", id="whole_samples"),
+    ],
+)
+def test_truncated_fif_data_is_corrupt(tmp_path, cut, numpy_text):
+    """A FIF cut inside its data raises CorruptFileError (corrupt_or_truncated),
+    not the generic FileReadError, through the real MEG importer. The message
+    names the file and not the directory it sits in; the numpy error MNE raised
+    stays attached as the cause."""
+    path = _fif_copy(tmp_path, **cut)
+    with pytest.raises(CorruptFileError) as caught:
+        Recording.from_file(str(path))
+
+    err = caught.value
+    assert err.code == "corrupt_or_truncated"
+    assert path.name in str(err)
+    assert str(tmp_path) not in str(err) and tmp_path.name not in str(err)
+    assert isinstance(err.__cause__, ValueError)
+    if numpy_text is not None:
+        assert numpy_text in str(err.__cause__)
