@@ -14,10 +14,17 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
 
 ### Fixed
 
-- A BrainVision data file whose size is not a whole number of frames raises `CorruptFileError` instead of reading silently.
+- A BrainVision data file that its header shows to be cut short raises `CorruptFileError` instead of reading silently.
   A frame is one sample of every channel (channels times bytes per sample).
-  MNE dropped the partial trailing frame, and any marker in it, without a word; the in-memory importer and the streaming Zarr export now refuse the file, naming it by file name.
-  A header that declares a positive `DataPoints` count is also checked against the file size; without one, a file cut exactly at a frame boundary still reads as a shorter recording.
+  Without a positive `DataPoints` count in the header, a size that is not a whole number of frames is refused: MNE dropped the partial trailing frame, and any marker in it, without a word.
+  With a positive `DataPoints` count, a file smaller than that many frames is refused, and a longer file is read as MNE reads it.
+  The in-memory importer and the streaming Zarr export both refuse the file, naming it by file name.
+  An `.ahdr` header counts the extra channel MNE adds.
+  Without a `DataPoints` count, a file cut exactly at a frame boundary is not detected: multiplexed data reads as a shorter recording, and vectorized data is corrupted from the second channel on, because each channel is stored whole.
+
+### Changed
+
+- A BrainVision file whose data is cut short now fails to load with `CorruptFileError`, where it used to read with the tail dropped; callers that catch `FileReadError` still catch it.
 
 ## [1.2.12] - 2026-10-16
 
