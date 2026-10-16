@@ -99,6 +99,8 @@ The committed example recordings live in `examples/` at the repository root. Tes
 - DOIs are included for attribution. A NEMAR DOI carries the dataset identifier, so identifiers appear only inside DOIs.
 - Documentation never records subject information. It records no checksums or byte counts for NEMAR-hosted recordings; the checksum tables and sizes already in the MNE-vendored READMEs predate this rule and stay.
 - The MNE-vendored examples (`examples/kit/`, `examples/bti/`, `examples/ctf/`) come from MNE-Python and are kept in place by owner decision (2026-10-16).
+- Example data lives under `examples/`, never under `biosigio/tests/`, so the CI codespell skip covers it.
+- biosigio does not use git-annex or Git LFS. Example data and every other file are regular git blobs committed to the repository.
 
 **Adding an example**
 - Look first. An existing example usually covers the scenario; add a new one only when none does.
