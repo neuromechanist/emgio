@@ -917,6 +917,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#read-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#channel-types" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2656,6 +2667,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#read-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#channel-types" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2781,6 +2803,21 @@ when present, since it is optional in BIDS).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'sample.fif'</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">'meg'</span><span class="p">)</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">rec</span> <span class="o">=</span> <span class="n">Recording</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s1">'sub-01_task-rest_meg'</span><span class="p">,</span> <span class="n">importer</span><span class="o">=</span><span class="s1">'meg'</span><span class="p">)</span>
 </code></pre></div>
+<h2 id="read-errors">Read errors<a class="headerlink" href="#read-errors" title="Permanent link">&para;</a></h2>
+<p>A MEG file that cannot be read raises a <code>FileReadError</code>, or one of its subclasses, with a stable <code>code</code>.
+A host condition, such as running out of memory or a refused permission, propagates unchanged instead.
+A FIF file cut inside its data raises <code>CorruptFileError</code> (code <code>corrupt_or_truncated</code>).
+A KIT/Yokogawa file whose data ends early can raise it too, but some cuts read without error as an all-zero signal (<a href="https://github.com/neuromechanist/biosigio/issues/164">#164</a>).
+<code>CorruptFileError</code> is a <code>FileReadError</code>, so existing handlers still catch it.
+Four limits apply to FIF files:</p>
+<ul>
+<li>Some cuts inside the header section at the start of the file (the measurement info) give the generic <code>FileReadError</code> (code <code>file_read_error</code>) or a <code>NotContinuousRecordingError</code> ("No raw data in ...") rather than <code>CorruptFileError</code> (<a href="https://github.com/neuromechanist/biosigio/issues/162">#162</a>).</li>
+<li><code>stream_to_zarr</code> does not type FIF read errors yet; a truncated file raises the bare <code>ValueError</code> that MNE raised (<a href="https://github.com/neuromechanist/biosigio/issues/161">#161</a>).</li>
+<li>Cuts of a few dozen bytes from the end remove only closing tags, so no data is lost and the file reads without error.</li>
+<li>A cut exactly where a data buffer ends, or within the 15 bytes after it (an incomplete tag header, which MNE drops), leaves a well-formed file with fewer buffers.
+  It reads without error, as a shorter recording, because no reader can tell it from one.
+  Only a cut inside a data buffer is detected (<a href="https://github.com/neuromechanist/biosigio/issues/163">#163</a>).</li>
+</ul>
 <h2 id="channel-types">Channel Types<a class="headerlink" href="#channel-types" title="Permanent link">&para;</a></h2>
 <p>MEG files contain many channel kinds in a single recording. The importer keeps each MNE channel type distinct rather than collapsing everything into one generic "MEG" type, so magnetometers, gradiometers, and reference sensors remain separable downstream. The mapping from MNE channel types to biosigIO channel types is:</p>
 <table>
