@@ -19,6 +19,7 @@ import importlib.util
 import os
 import pathlib
 import shutil
+import struct
 import tempfile
 
 import numpy as np
@@ -106,6 +107,23 @@ def test_classify_unrelated_value_error_is_not_corrupt():
     with pytest.raises(ValueError) as caught:
         np.ones(2) @ np.ones(3)  # shape mismatch, a different numpy message
     err = classify_read_error(caught.value)
+    assert type(err) is FileReadError
+    assert err.code == "file_read_error"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "12 values are needed to reshape it into the grid",
+        "the read buffer was empty",
+    ],
+    ids=["reshape", "buffer"],
+)
+def test_classify_near_miss_text_is_not_corrupt(text):
+    """Text that shares a word with a matched message ("reshape", "buffer") but
+    not the message itself stays the generic read failure. Widening either match
+    to that single word would type these as corrupt."""
+    err = classify_read_error(ValueError(text))
     assert type(err) is FileReadError
     assert err.code == "file_read_error"
 
@@ -623,3 +641,74 @@ def test_truncated_kit_data_is_corrupt(tmp_path, keep_fraction):
     assert path.name in str(err)
     assert str(tmp_path) not in str(err) and tmp_path.name not in str(err)
     assert "cannot reshape array of size" in str(err.__cause__)
+
+
+_FIFF_DATA_BUFFER = 300  # FIFF_DATA_BUFFER: the tag kind of one block of samples
+
+
+def _fif_data_buffer_ends(path):
+    """Byte offset at which each data-buffer tag of a FIF file ends.
+
+    A FIF file is a chain of tags, each a 16-byte big-endian header (kind, type,
+    size, next) followed by ``size`` bytes of payload; ``next`` is 0 when the
+    following tag starts right after the payload, positive for an explicit
+    position, and negative at the end of the chain.
+    """
+    blob = path.read_bytes()
+    ends, pos = [], 0
+    while pos + 16 <= len(blob):
+        kind, _type, size, nxt = struct.unpack(">iIii", blob[pos : pos + 16])
+        if kind == _FIFF_DATA_BUFFER:
+            ends.append(pos + 16 + size)
+        if nxt == 0:
+            pos += 16 + size
+        elif nxt > 0:
+            pos = nxt
+        else:
+            break
+    return ends
+
+
+def _fif_cut_after_buffer(tmp_path, extra_bytes):
+    """Copy the FIF fixture, cut it ``extra_bytes`` past the end of its middle
+    data buffer, and return ``(path, buffers_kept)``."""
+    path = _cut_copy(_MEG_FIF, tmp_path)
+    ends = _fif_data_buffer_ends(path)
+    assert len(ends) > 1
+    kept = len(ends) // 2
+    with open(path, "r+b") as fh:
+        fh.truncate(ends[kept - 1] + extra_bytes)
+    return path, kept
+
+
+# A tag header is 16 bytes. MNE drops an incomplete header at the end of the file
+# silently, so a cut within the 15 bytes after a buffer is the same as a cut
+# exactly at its end.
+@pytest.mark.skipif(not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture")
+@pytest.mark.parametrize("extra_bytes", [0, 15], ids=["at_boundary", "partial_next_header"])
+def test_fif_cut_at_a_data_buffer_boundary_reads_shorter(tmp_path, extra_bytes):
+    """Known limit: a cut exactly where a data buffer ends leaves a well-formed
+    file with fewer buffers, which no reader can tell from a shorter recording.
+    biosigIO reads it without error, as the leading samples of the intact
+    recording. Only a cut inside a buffer is detected (see
+    test_truncated_fif_data_is_corrupt)."""
+    import mne
+
+    full = mne.io.read_raw_fif(str(_MEG_FIF), preload=True, verbose="ERROR").get_data().T
+    path, kept = _fif_cut_after_buffer(tmp_path, extra_bytes)
+    n_buffers = len(_fif_data_buffer_ends(_MEG_FIF))
+
+    rec = Recording.from_file(str(path))
+
+    assert rec.signals.shape[0] == kept * (full.shape[0] // n_buffers)
+    np.testing.assert_allclose(rec.signals, full[: rec.signals.shape[0]])
+
+
+@pytest.mark.skipif(not _HAS_MNE or not _MEG_FIF.exists(), reason="needs mne + the FIF fixture")
+def test_fif_cut_just_inside_a_data_buffer_is_corrupt(tmp_path):
+    """The other side of the limit above: once the next buffer's complete header
+    is present without its samples, the cut is inside a buffer and is detected."""
+    path, _ = _fif_cut_after_buffer(tmp_path, 16)
+    with pytest.raises(CorruptFileError) as caught:
+        Recording.from_file(str(path))
+    assert caught.value.code == "corrupt_or_truncated"
