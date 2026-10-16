@@ -91,6 +91,7 @@ def test_partial_frame_is_refused(tmp_path, cut):
     with pytest.raises(CorruptFileError) as excinfo:
         Recording.from_file(str(vhdr))
     _assert_refusal_names_file_only(excinfo, tmp_path)
+    assert "allow_partial_frame=True" in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
@@ -114,6 +115,27 @@ def test_whole_fixture_still_opens_on_the_streaming_source(tmp_path):
         assert len(src.channels) == N_CHANNELS
     finally:
         src.close()
+
+
+def test_ahdr_partial_frame_is_refused_by_the_streaming_source(tmp_path):
+    """An .ahdr header takes the streaming refusal of a .vhdr. It used to fall through to
+    MNE's generic reader, which drops a partial frame without a word."""
+    ahdr = _derived_ahdr(tmp_path)
+    _open_stream_source(str(ahdr), None).close()  # control: the whole file opens
+    _cut(tmp_path / DATA_NAME, 1)
+
+    with pytest.raises(CorruptFileError) as excinfo:
+        _open_stream_source(str(ahdr), None)
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+
+
+def test_ahdr_streaming_source_honors_the_flag(tmp_path):
+    """Cut, the .ahdr reads with the flag on, under the same warning a .vhdr gives."""
+    ahdr = _derived_ahdr(tmp_path)
+    _cut(tmp_path / DATA_NAME, 1)
+
+    with pytest.warns(UserWarning, match="partial frame"):
+        _open_stream_source(str(ahdr), None, allow_partial_frame=True).close()
 
 
 @pytest.mark.parametrize("opener", ["importer", "stream"])
@@ -264,6 +286,25 @@ def test_data_points_that_is_not_a_positive_integer_keeps_the_frame_check_only(
         assert result.n_samples == true_points - 1
 
 
+def _derived_ahdr(directory: pathlib.Path) -> pathlib.Path:
+    """Copy the triplet and give it an .ahdr header that names 7 of the fixture's 8 channels.
+
+    MNE counts one channel more than an .ahdr names, so the frame is the fixture's
+    8-channel frame, and the data file is a whole number of those frames.
+    """
+    _copy_triplet(directory)
+    text = (directory / f"{STEM}.vhdr").read_text(encoding="utf-8")
+    assert "NumberOfChannels=8" in text and "Ch8=F5,,0.1,\u00b5V\n" in text
+    ahdr = directory / f"{STEM}.ahdr"
+    ahdr.write_text(
+        text.replace("NumberOfChannels=8", "NumberOfChannels=7").replace(
+            "Ch8=F5,,0.1,\u00b5V\n", ""
+        ),
+        encoding="utf-8",
+    )
+    return ahdr
+
+
 def test_ahdr_frame_counts_the_extra_channel_mne_adds(tmp_path):
     """MNE counts one channel more than an .ahdr header names, and so does the frame.
 
@@ -271,16 +312,7 @@ def test_ahdr_frame_counts_the_extra_channel_mne_adds(tmp_path):
     number of 8-channel frames (a derived frame size of 32 bytes, not a file size) but
     not of 7-channel frames, so it must read, and a partial cut must still be refused.
     """
-    vhdr = _copy_triplet(tmp_path)
-    text = vhdr.read_text(encoding="utf-8")
-    assert "NumberOfChannels=8" in text and "Ch8=F5,,0.1,\u00b5V\n" in text
-    ahdr = tmp_path / f"{STEM}.ahdr"
-    ahdr.write_text(
-        text.replace("NumberOfChannels=8", "NumberOfChannels=7").replace(
-            "Ch8=F5,,0.1,\u00b5V\n", ""
-        ),
-        encoding="utf-8",
-    )
+    ahdr = _derived_ahdr(tmp_path)
     data_file = tmp_path / DATA_NAME
     size = data_file.stat().st_size
     assert size % (7 * 4) != 0
@@ -345,6 +377,8 @@ def test_vectorized_partial_frame_is_refused(tmp_path, opener, cut):
     with pytest.raises(CorruptFileError) as excinfo:
         _read_with(opener, vhdr)
     _assert_refusal_names_file_only(excinfo, tmp_path)
+    # The opt-in does not apply to vectorized data, so the refusal does not offer it.
+    assert "allow_partial_frame" not in str(excinfo.value)
 
 
 def test_vectorized_whole_frame_cut_without_data_points_is_not_detected(tmp_path):
@@ -785,19 +819,27 @@ def _partial_frame_warning_filenames(record) -> list[pathlib.Path]:
     ]
 
 
-def _call_entry_point(entry_point: str, vhdr: pathlib.Path, tmp_path: pathlib.Path) -> None:
-    """Call one public (or direct) entry point with the flag on, from this module."""
+def _call_entry_point(
+    entry_point: str,
+    vhdr: pathlib.Path,
+    tmp_path: pathlib.Path,
+    *,
+    allow_partial_frame: bool = True,
+) -> None:
+    """Call one public (or direct) entry point with the flag set as given, from this module."""
     if entry_point == "from_file":
-        Recording.from_file(str(vhdr), allow_partial_frame=True)
+        Recording.from_file(str(vhdr), allow_partial_frame=allow_partial_frame)
     elif entry_point == "importer_load":
-        BrainVisionImporter().load(str(vhdr), allow_partial_frame=True)
+        BrainVisionImporter().load(str(vhdr), allow_partial_frame=allow_partial_frame)
     elif entry_point == "open_stream_source":
-        _open_stream_source(str(vhdr), None, allow_partial_frame=True).close()
+        _open_stream_source(str(vhdr), None, allow_partial_frame=allow_partial_frame).close()
     else:
         pytest.importorskip("zarr", reason="the Zarr serving format requires the 'zarr' extra")
         from biosigio import stream_to_zarr
 
-        stream_to_zarr(str(vhdr), str(tmp_path / "out.zarr"), allow_partial_frame=True)
+        stream_to_zarr(
+            str(vhdr), str(tmp_path / "out.zarr"), allow_partial_frame=allow_partial_frame
+        )
 
 
 ENTRY_POINTS = ["from_file", "importer_load", "open_stream_source", "stream_to_zarr"]
@@ -825,6 +867,22 @@ def test_flag_on_still_refuses_a_file_with_no_whole_frame(tmp_path, entry_point,
         warnings.simplefilter("error")
         with pytest.raises(CorruptFileError) as excinfo:
             _call_entry_point(entry_point, vhdr, tmp_path)
+    _assert_refusal_names_file_only(excinfo, tmp_path)
+    assert "no whole frame" in str(excinfo.value)
+
+
+@pytest.mark.parametrize("entry_point", ENTRY_POINTS)
+@pytest.mark.parametrize("n_bytes", [0, 10], ids=["zero-bytes", "ten-bytes"])
+def test_file_with_no_whole_frame_is_refused_by_default(tmp_path, entry_point, n_bytes):
+    """Without the flag, a zero-byte file gets the typed refusal too, not MNE's generic
+    error or the bare ValueError the streaming source raised."""
+    vhdr = _copy_triplet(tmp_path)
+    (tmp_path / DATA_NAME).write_bytes(b"\x00" * n_bytes)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(CorruptFileError) as excinfo:
+            _call_entry_point(entry_point, vhdr, tmp_path, allow_partial_frame=False)
     _assert_refusal_names_file_only(excinfo, tmp_path)
     assert "no whole frame" in str(excinfo.value)
 

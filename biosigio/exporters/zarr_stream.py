@@ -405,11 +405,11 @@ def _open_stream_source(
 
     ``.mefd`` and 4D/BTi each need a specific MNE reader call (see the module
     docstring above) rather than MNE's generic ``read_raw()`` dispatch, so they are
-    opened here and handed to ``_MneSource`` as an already-built ``raw``; so is
-    ``.vhdr``, whose header may name pre-BIDS-rename files
+    opened here and handed to ``_MneSource`` as an already-built ``raw``; so are
+    ``.vhdr`` and ``.ahdr`` headers, whose header may name pre-BIDS-rename files
     (see ``..importers.brainvision.resolved_vhdr``).
 
-    ``allow_partial_frame`` applies to ``.vhdr`` only (see
+    ``allow_partial_frame`` applies to the BrainVision headers only (see
     :meth:`..importers.brainvision.BrainVisionImporter.load`) and is ignored for every
     other source, as ``mixed_rate`` is outside EDF/BDF.
     """
@@ -423,7 +423,7 @@ def _open_stream_source(
         mne = require_mne_mef()
         raw = mne.io.read_raw_mef(filepath, preload=False, verbose="ERROR")
         return _MneSource(filepath, force_modality, raw=raw)
-    if ext == ".vhdr":
+    if ext in (".vhdr", ".ahdr"):
         # Same stale DataFile=/MarkerFile= recovery, and the same error typing, as
         # the in-memory importer (BrainVisionImporter.load): the resolver stays
         # OUTSIDE the try, so a host failure writing its temp copy propagates raw,
