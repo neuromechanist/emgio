@@ -138,6 +138,22 @@ def test_ahdr_streaming_source_honors_the_flag(tmp_path):
         _open_stream_source(str(ahdr), None, allow_partial_frame=True).close()
 
 
+def test_ahdr_with_a_stale_data_file_name_streams_from_its_sibling(tmp_path):
+    """An .ahdr header that names a missing data file streams from its same-stem sibling,
+    as the in-memory importer reads it."""
+    ahdr = _derived_ahdr(tmp_path)
+    text = ahdr.read_text(encoding="utf-8")
+    assert f"DataFile={DATA_NAME}" in text
+    stale = text.replace(f"DataFile={DATA_NAME}", "DataFile=missing_old.eeg")
+    ahdr.write_text(stale, encoding="utf-8")
+
+    src = _open_stream_source(str(ahdr), None)
+    try:
+        assert len(src.channels) == N_CHANNELS - 1
+    finally:
+        src.close()
+
+
 @pytest.mark.parametrize("opener", ["importer", "stream"])
 def test_partial_frame_of_a_header_recovered_from_a_sibling_names_the_dataset_file(
     tmp_path, opener
@@ -682,6 +698,7 @@ def test_flag_on_warns_naming_the_file_and_the_dropped_bytes(tmp_path, extra, cu
     assert len(messages) == 1
     assert DATA_NAME in messages[0]
     assert f"last {dropped} bytes" in messages[0]
+    assert "drops those bytes" in messages[0]
     assert str(tmp_path) not in messages[0]
     assert os.sep not in messages[0]
 

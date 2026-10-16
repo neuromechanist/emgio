@@ -682,11 +682,29 @@ def test_truncated_bti_metadata_is_corrupt(tmp_path, name, keep_fraction):
     assert "buffer size must be a multiple of element size" in str(err)
 
 
+@pytest.mark.skipif(not _HAS_MNE or not _BTI_DIR.exists(), reason="needs mne + the BTi fixture")
+@pytest.mark.parametrize("keep_fraction", [0.5, 0.9])
+def test_truncated_bti_data_keeps_the_generic_read_error(tmp_path, keep_fraction):
+    """The 4D/BTi data file raises a message the truncation match does not cover, so it
+    keeps the generic FileReadError rather than CorruptFileError."""
+    bti = tmp_path / _BTI_DIR.name
+    shutil.copytree(_BTI_DIR, bti)
+    target = bti / "c,rfDC"
+    data = target.read_bytes()
+    target.write_bytes(data[: int(len(data) * keep_fraction)])
+
+    with pytest.raises(FileReadError) as caught:
+        Recording.from_file(str(bti), importer="meg")
+
+    assert type(caught.value) is FileReadError
+    assert caught.value.code == "file_read_error"
+
+
 @pytest.mark.skipif(not _HAS_MNE or not _KIT_SQD.exists(), reason="needs mne + the KIT fixture")
 @pytest.mark.xfail(
     strict=True,
     raises=pytest.fail.Exception,
-    reason="#164: a KIT file cut to about 30 to 50 percent of its data reads as all zeros",
+    reason="#164: a KIT file cut to about 23 to 60 percent of its data reads as all zeros",
 )
 def test_kit_cut_that_reads_as_zeros_is_refused(tmp_path):
     """The known gap, pinned: a KIT file cut inside the range where it reads silently as
