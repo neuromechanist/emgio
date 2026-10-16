@@ -1,0 +1,10 @@
+Brain Vision Data Exchange Marker File, Version 1.0
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=one_minute.eeg
+
+[Marker Infos]
+Mk1=Stimulus,eyes_open_start,126,1,0
+Mk2=Stimulus,fixation_check,5001,1,0
+Mk3=Stimulus,rest_marker,10001,1,0

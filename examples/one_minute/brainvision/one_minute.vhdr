@@ -1,0 +1,24 @@
+Brain Vision Data Exchange Header File Version 1.0
+; One-minute exemplar, see NOTICE.md
+
+[Common Infos]
+Codepage=UTF-8
+DataFile=one_minute.eeg
+MarkerFile=one_minute.vmrk
+DataFormat=BINARY
+DataOrientation=MULTIPLEXED
+NumberOfChannels=8
+SamplingInterval=4000
+
+[Binary Infos]
+BinaryFormat=IEEE_FLOAT_32
+
+[Channel Infos]
+Ch1=FP1,,1,µV
+Ch2=AF7,,1,µV
+Ch3=FPZ,,1,µV
+Ch4=FP2,,1,µV
+Ch5=AF8,,1,µV
+Ch6=F9,,1,µV
+Ch7=F7,,1,µV
+Ch8=F5,,1,µV
