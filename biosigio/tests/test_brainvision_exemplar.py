@@ -272,16 +272,12 @@ def test_frame_boundary_cut_is_a_documented_undetected_limit(triplet, exemplar):
 
 
 def test_empty_data_file_is_a_typed_error(triplet):
+    """A zero-byte data file is refused as corrupt by default, before MNE opens it."""
     (triplet / "one_minute.eeg").write_bytes(b"")
-    with pytest.raises(FileReadError) as info:
+    with pytest.raises(CorruptFileError) as info:
         _read(triplet)
-    assert type(info.value) is FileReadError
-    # MNE's own error is kept as the cause, and its type and words depend on the MNE version.
-    cause = info.value.__cause__
-    if _MNE_1_13_OR_LATER:
-        assert isinstance(cause, ValueError) and "No data in this range" in str(cause)
-    else:
-        assert isinstance(cause, IndexError) and "out of bounds" in str(cause)
+    assert info.value.code == CorruptFileError.code
+    assert "one_minute.eeg" in str(info.value)
 
 
 @pytest.mark.parametrize("case", ["header-upper", "file-upper"])

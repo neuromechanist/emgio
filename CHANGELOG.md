@@ -10,7 +10,11 @@ Entries before 1.2.9 are condensed from the
 [GitHub Releases](https://github.com/neuromechanist/biosigio/releases),
 which keep the full notes; releases older than 1.1.0 are listed there only.
 
-## [Unreleased]
+## [1.2.13] - 2026-10-16
+
+This patch release stops reading a BrainVision data file silently when its header shows that the file was cut short, and types a truncated FIF read through `Recording.from_file` as corrupt.
+It adds one opt-in, `allow_partial_frame`, that reads a multiplexed BrainVision file ending in a partial frame, as MNE reads it.
+Callers that catch `FileReadError` still catch the new refusals, because `CorruptFileError` is a subclass of it.
 
 ### Fixed
 
@@ -18,28 +22,43 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   A frame is one sample of every channel (channels times bytes per sample).
   Without a positive `DataPoints` count in the header, a size that is not a whole number of frames is refused: MNE dropped the partial trailing frame, and any marker in it, without a word.
   With a positive `DataPoints` count, a file smaller than that many frames is refused, and a longer file is read as MNE reads it, except that vectorized data must still hold whole frames.
-  The in-memory importer and the streaming Zarr export both refuse the file, naming it by file name.
+  The in-memory importer and the streaming Zarr export both refuse the file, for a `.vhdr` or an `.ahdr` header alike, naming it by file name.
   An `.ahdr` header counts the extra channel MNE adds.
   Without a `DataPoints` count, a file cut exactly at a frame boundary is not detected: multiplexed data reads as a shorter recording, and vectorized data is corrupted from the second channel on, because each channel is stored whole.
   A vectorized file with whole extra frames beyond its `DataPoints` count is not detected either.
-- A FIF file whose data is truncated raises `CorruptFileError` (code `corrupt_or_truncated`) instead of a generic `FileReadError`.
+- A zero-byte BrainVision data file raises `CorruptFileError` (code `corrupt_or_truncated`) by default.
+  The in-memory reader raised MNE's generic `FileReadError`, and the streaming export raised a bare `ValueError`.
+- A `.ahdr` header given to the streaming export takes the `.vhdr` path, so a stale `DataFile=` reference is recovered from its same-stem sibling, as the in-memory importer does.
+  Before, the export read the header through MNE's generic reader, which did not recover the reference and did not refuse a partial frame.
+  In memory, pass `importer="brainvision"` for an `.ahdr` header: `Recording.from_file` does not infer it from the extension.
+- Through `Recording.from_file`, a FIF file whose data is truncated raises `CorruptFileError` (code `corrupt_or_truncated`) instead of a generic `FileReadError`.
   `CorruptFileError` is a `FileReadError`, so existing handlers still catch it.
   The two numpy messages a cut inside the data produces, "buffer size must be a multiple of element size" and "cannot reshape array of size", are now typed as corrupt.
   The match is on the message, so it applies to any reader, not only the FIF reader.
-  Beyond FIF, the change applies to the KIT/Yokogawa data (`.sqd`, `.con`, `.kdf`) and to the 4D/BTi metadata files (`config`, `hs_file`): a truncated one now raises `CorruptFileError`.
-  The other committed fixtures classify exactly as before: the 4D/BTi data file, all CTF files, the BrainVision files, three EDF, one BDF, two EEGLAB and three WFDB files.
+  Beyond FIF, the change applies through `Recording.from_file` to the KIT/Yokogawa `.sqd` data and to the 4D/BTi `config` and `hs_file` files: a truncated one now raises `CorruptFileError`.
+  The streaming export does not classify these yet (#168).
+  The 4D/BTi data file does not raise either message and keeps its generic `FileReadError`.
+  Errors from other readers keep their classification unless they carry one of those two messages.
   Host conditions (memory, permissions, I/O) still propagate unchanged.
-  The message of a truncation matched this way names the file by its file name, without its directory.
+  The message of a truncation matched this way names the file by its file name, without its directory; for a 4D/BTi dataset it names the dataset directory.
 
 ### Added
 
 - `allow_partial_frame=True` on `Recording.from_file` (as a keyword-only argument), `BrainVisionImporter.load` and `stream_to_zarr` reads the whole frames of a multiplexed BrainVision file that ends in a partial frame and declares no positive `DataPoints`, as MNE reads them, where the default refuses it.
   It emits a `UserWarning` that names the data file and the dropped byte count, and records the count in the metadata as `brainvision_dropped_bytes`; the streaming store carries the key in its `recording_metadata` too.
-  Vectorized data, a file smaller than a positive `DataPoints` and a file that holds no whole frame (a zero-byte file included) are still refused with the flag on, and the default is unchanged.
+  Vectorized data, a file smaller than a positive `DataPoints` and a file that holds no whole frame (a zero-byte file included) are refused with the flag on too, and the default is unchanged for every other file.
 
 ### Changed
 
 - A BrainVision file whose data is cut short now fails to load with `CorruptFileError`, where it used to read with the tail dropped, and so does a vectorized file that does not hold whole frames even if it is longer than its `DataPoints` declares; callers that catch `FileReadError` still catch it.
+
+### Known issues
+
+- The streaming export raises MNE's bare `ValueError` for a truncated FIF file (#161), and for a truncated KIT `.sqd` file or 4D/BTi `config` or `hs_file` file (#168), where `Recording.from_file` raises `CorruptFileError`.
+- A KIT file cut to about 23 to 60 percent of its data reads without an error as an all-zero signal (#164).
+  The case is pinned as an expected failure.
+- A FIF file cut exactly where a data buffer ends, or within the 15 bytes after it, reads as a shorter recording without an error (#163).
+  The case is pinned as an expected failure.
 
 ## [1.2.12] - 2026-10-16
 
@@ -486,7 +505,7 @@ First release since 1.1.3; the internal 1.1.4 and 1.1.5 bumps are folded in.
 - EEGLAB `.set` files with the signal matrix in a sibling `.fdt` file (#94).
 - `bids.apply_events_tsv` to load a BIDS `_events.tsv` into `rec.events`.
 
-[Unreleased]: https://github.com/neuromechanist/biosigio/compare/v1.2.12...HEAD
+[1.2.13]: https://github.com/neuromechanist/biosigio/compare/v1.2.12...v1.2.13
 [1.2.12]: https://github.com/neuromechanist/biosigio/compare/v1.2.11...v1.2.12
 [1.2.11]: https://github.com/neuromechanist/biosigio/compare/v1.2.10...v1.2.11
 [1.2.10]: https://github.com/neuromechanist/biosigio/compare/v1.2.9...v1.2.10

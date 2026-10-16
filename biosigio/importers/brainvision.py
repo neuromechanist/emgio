@@ -474,9 +474,9 @@ def require_whole_frames(
 
     Raises:
         CorruptFileError: The data file is smaller than the declared ``DataPoints=``
-            times the frame size, or is not a whole number of frames (when no
-            ``DataPoints=`` is declared, or the data is vectorized).
-            The message names the file, never its directory.
+            times the frame size, holds no whole frame (a zero-byte file included), or
+            is not a whole number of frames (when no ``DataPoints=`` is declared, or the
+            data is vectorized). The message names the file, never its directory.
     """
     declared = _declared_frame(vhdr)
     if declared is None:
@@ -493,11 +493,11 @@ def require_whole_frames(
             f"is smaller than the {declared.data_points * frame} bytes its header declares "
             f"({declared.data_points} data points of {layout})."
         )
-    elif allow_partial_frame and size < frame:
+    elif size < frame:
         # Before the modulo check, which a zero-byte file passes: there is nothing to read.
         problem = (
             f"is smaller than one frame ({layout} make a frame of {frame} bytes), so the "
-            "file holds no whole frame for allow_partial_frame to read."
+            "file holds no whole frame."
         )
     elif size % frame != 0 and (declared.data_points is None or declared.vectorized):
         if allow_partial_frame and not declared.vectorized:
@@ -506,7 +506,7 @@ def require_whole_frames(
                 f"BrainVision data file {name} ends in a partial frame: its last {dropped} "
                 f"bytes are not a whole frame ({layout} make a frame of {frame} bytes), so "
                 f"allow_partial_frame=True reads the {size // frame} whole frames and drops "
-                "them, and any marker in them.",
+                "those bytes, with any marker in them.",
                 UserWarning,
                 stacklevel=_caller_stacklevel(),
             )
@@ -515,6 +515,10 @@ def require_whole_frames(
             f"is not a whole number of frames ({layout} make a frame of {frame} bytes), "
             "so it is truncated or has trailing bytes that are not a frame."
         )
+        if not declared.vectorized:
+            problem += (
+                " Pass allow_partial_frame=True to read the whole frames of a multiplexed file."
+            )
         if allow_partial_frame and declared.vectorized:
             problem += (
                 " allow_partial_frame does not apply to vectorized data: a cut there "

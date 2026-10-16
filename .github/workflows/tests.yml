@@ -96,11 +96,13 @@ jobs:
       run: |
         uv run pytest --no-cov -rs --junitxml=/tmp/mne-floor.xml \
           biosigio/tests/test_brainvision_exemplar.py \
+          biosigio/tests/test_brainvision_partial_frame.py \
           biosigio/tests/test_brainvision_stale_header.py \
           biosigio/tests/test_edf_bdf_exemplar.py \
           biosigio/tests/test_edf_duplicate_labels.py \
           biosigio/tests/test_eeglab_v73_importer.py \
           biosigio/tests/test_exceptions.py \
+          biosigio/tests/test_fif_exemplar.py \
           biosigio/tests/test_zarr_stream_channels_tsv.py
 
     # These tests importorskip mne, zarr and h5py, so a broken extras install
@@ -109,12 +111,14 @@ jobs:
     - name: Fail if a test skipped for a missing dependency
       run: |
         uv run python - <<'PY'
-        import sys, xml.etree.ElementTree as ET
+        import re, sys, xml.etree.ElementTree as ET
         bad = []
         for case in ET.parse("/tmp/mne-floor.xml").getroot().iter("testcase"):
             for skip in case.findall("skipped"):
                 msg = skip.get("message", "")
-                if msg.startswith("could not import"):
+                # importorskip says "could not import" only without a reason; the reasons
+                # here name the optional extra they need, so match that too.
+                if re.search(r"could not import|'[a-z0-9]+' extra", msg):
                     bad.append(f"{case.get('classname')}::{case.get('name')}: {msg}")
         if bad:
             print("::error::tests skipped for a missing dependency:\n" + "\n".join(bad))

@@ -45,6 +45,7 @@ _REPO = pathlib.Path(__file__).resolve().parents[2]
 _MEG_FIF = _REPO / "examples/bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
 _CTF_DS = _REPO / "examples/ctf/catch-alp-good-f.ds"
 _KIT_SQD = _REPO / "examples/kit/sub-01_task-test_meg.sqd"
+_BTI_DIR = _REPO / "examples/bti/sub-01_task-test_meg"
 
 
 # -- classify_read_error: reader-phrasing -> typed error -----------------------
@@ -656,6 +657,61 @@ def test_truncated_kit_data_is_corrupt(tmp_path, keep_fraction):
     assert path.name in str(err)
     assert str(tmp_path) not in str(err) and tmp_path.name not in str(err)
     assert "cannot reshape array of size" in str(err.__cause__)
+
+
+@pytest.mark.skipif(not _HAS_MNE or not _BTI_DIR.exists(), reason="needs mne + the BTi fixture")
+@pytest.mark.parametrize("name", ["config", "hs_file"])
+@pytest.mark.parametrize("keep_fraction", [0.5, 0.9])
+def test_truncated_bti_metadata_is_corrupt(tmp_path, name, keep_fraction):
+    """The 4D/BTi config and head-shape files raise the message MNE gives for a cut inside
+    a data tag, so a cut one raises CorruptFileError naming the dataset directory. The
+    4D data file does not raise that message and keeps its generic FileReadError."""
+    bti = tmp_path / _BTI_DIR.name
+    shutil.copytree(_BTI_DIR, bti)
+    target = bti / name
+    data = target.read_bytes()
+    target.write_bytes(data[: int(len(data) * keep_fraction)])
+
+    with pytest.raises(CorruptFileError) as caught:
+        Recording.from_file(str(bti), importer="meg")
+
+    err = caught.value
+    assert err.code == "corrupt_or_truncated"
+    assert _BTI_DIR.name in str(err)
+    assert str(tmp_path) not in str(err)
+    assert "buffer size must be a multiple of element size" in str(err)
+
+
+@pytest.mark.skipif(not _HAS_MNE or not _BTI_DIR.exists(), reason="needs mne + the BTi fixture")
+@pytest.mark.parametrize("keep_fraction", [0.5, 0.9])
+def test_truncated_bti_data_keeps_the_generic_read_error(tmp_path, keep_fraction):
+    """The 4D/BTi data file raises a message the truncation match does not cover, so it
+    keeps the generic FileReadError rather than CorruptFileError."""
+    bti = tmp_path / _BTI_DIR.name
+    shutil.copytree(_BTI_DIR, bti)
+    target = bti / "c,rfDC"
+    data = target.read_bytes()
+    target.write_bytes(data[: int(len(data) * keep_fraction)])
+
+    with pytest.raises(FileReadError) as caught:
+        Recording.from_file(str(bti), importer="meg")
+
+    assert type(caught.value) is FileReadError
+    assert caught.value.code == "file_read_error"
+
+
+@pytest.mark.skipif(not _HAS_MNE or not _KIT_SQD.exists(), reason="needs mne + the KIT fixture")
+@pytest.mark.xfail(
+    strict=True,
+    raises=pytest.fail.Exception,
+    reason="#164: a KIT file cut to about 23 to 60 percent of its data reads as all zeros",
+)
+def test_kit_cut_that_reads_as_zeros_is_refused(tmp_path):
+    """The known gap, pinned: a KIT file cut inside the range where it reads silently as
+    zeros should be refused. Strict, so the mark is removed when #164 is fixed."""
+    path = _cut_copy(_KIT_SQD, tmp_path, keep_fraction=0.4)
+    with pytest.raises(CorruptFileError):
+        Recording.from_file(str(path))
 
 
 _FIFF_DATA_BUFFER = 300  # FIFF_DATA_BUFFER: the tag kind of one block of samples
