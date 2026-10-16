@@ -724,9 +724,10 @@ def test_flag_is_ignored_by_other_importers():
     assert rec.signals.shape[0] > 0
 
 
-def test_other_importer_classes_do_not_accept_the_keyword():
-    """Only ``from_file`` and ``stream_to_zarr`` ignore it for other formats; the importer
-    classes of other formats reject it at the call."""
+def test_edf_importer_load_rejects_the_keyword():
+    """``from_file`` and ``stream_to_zarr`` ignore the flag for other formats, but the EDF
+    importer's ``load`` rejects it at the call. Not every importer does: ``CSVImporter.load``
+    takes ``**kwargs``."""
     from biosigio.importers.edf import EDFImporter
 
     with pytest.raises(TypeError, match="allow_partial_frame"):
@@ -813,10 +814,12 @@ def test_warning_names_the_callers_file_not_biosigios(tmp_path, entry_point):
 
 
 @pytest.mark.parametrize("entry_point", ENTRY_POINTS)
-def test_flag_on_still_refuses_a_file_with_no_whole_frame(tmp_path, entry_point):
-    """Fewer bytes than one frame leave nothing to read: refused, and without a warning."""
+@pytest.mark.parametrize("n_bytes", [0, 10], ids=["zero-bytes", "ten-bytes"])
+def test_flag_on_still_refuses_a_file_with_no_whole_frame(tmp_path, entry_point, n_bytes):
+    """Fewer bytes than one frame (none at all included) leave nothing to read: refused,
+    and without a warning."""
     vhdr = _copy_triplet(tmp_path)
-    (tmp_path / DATA_NAME).write_bytes(b"\x00" * 10)
+    (tmp_path / DATA_NAME).write_bytes(b"\x00" * n_bytes)
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
@@ -849,3 +852,24 @@ def test_flag_on_changes_nothing_for_a_partial_tail_beyond_a_positive_data_point
                 assert src.n_samples == true_points
             finally:
                 src.close()
+
+
+def test_flag_is_keyword_only_on_from_file(tmp_path):
+    """A sixth positional argument must not bind to ``allow_partial_frame``."""
+    vhdr = _copy_triplet(tmp_path)
+
+    with pytest.raises(TypeError):
+        Recording.from_file(str(vhdr), None, False, "auto", "error", True)
+
+
+def test_no_entry_point_signature_shows_a_private_keyword():
+    import inspect
+
+    from biosigio import stream_to_zarr
+
+    for func in (Recording.from_file, BrainVisionImporter.load, stream_to_zarr):
+        private = [name for name in inspect.signature(func).parameters if name.startswith("_")]
+        assert private == [], (func.__qualname__, private)
+    assert inspect.signature(Recording.from_file).parameters["allow_partial_frame"].kind is (
+        inspect.Parameter.KEYWORD_ONLY
+    )
