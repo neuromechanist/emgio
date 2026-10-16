@@ -63,6 +63,8 @@ rec = Recording.from_file('path/to/subject01.vhdr', allow_partial_frame=True)
 
 In `Recording.from_file` it is a keyword-only argument: it cannot be passed by position.
 `stream_to_zarr` takes the same keyword, and so does `BrainVisionImporter.load`.
+The refusal of such a file names this keyword.
+The command-line interface does not offer the option, so read such a file through the Python API.
 `Recording.from_file` and `stream_to_zarr` ignore it for every format other than BrainVision, as `mixed_rate` is ignored outside EDF and BDF.
 Calling another format's importer class directly is different: the EDF importer's `load` raises `TypeError` for it (`EDFImporter.load(path, allow_partial_frame=True)`).
 
@@ -73,7 +75,7 @@ It also records that number in the recording's metadata as `brainvision_dropped_
 
 The option does not change any other refusal.
 A vectorized file is still refused, with a message saying that `allow_partial_frame` does not apply to vectorized data, because a cut there misaligns the channels after the first.
-A file smaller than a positive `DataPoints=` is still refused, and so is a file that holds no whole frame, a zero-byte file included.
+A file smaller than a positive `DataPoints=` is still refused, and so is a file that holds no whole frame, a zero-byte file included, whether or not the option is set.
 With the flag on or off, a multiplexed file with a positive `DataPoints=` that ends in a partial frame is read as MNE-Python reads it, with no warning and no key.
 Without the option, nothing changes.
 
