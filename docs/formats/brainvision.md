@@ -39,7 +39,7 @@ Read errors are typed the same way on both paths: the importer and the streaming
 A binary data file whose size shows that it was cut short is refused with `CorruptFileError` (code `corrupt_or_truncated`), by the importer and by the streaming Zarr export alike.
 A frame is one sample of every channel: the channel count times the bytes per sample of `BinaryFormat=`.
 Without a positive `DataPoints=` in the header's `[Common Infos]` section, the file size must be a whole number of frames.
-A trailing partial frame is refused, because MNE-Python would otherwise drop it, and any marker that falls in it, without a word; this is a known refusal, and it also applies to a file with extra trailing bytes that are not a frame.
+A trailing partial frame is refused, because MNE-Python would otherwise drop it, and any marker that falls in it, without a word; this is a known refusal, and it also applies to a file with extra trailing bytes that are not a frame. The opt-in for it is described under [Reading a File with a Partial Trailing Frame](#reading-a-file-with-a-partial-trailing-frame).
 With a positive `DataPoints=`, the file must hold at least that many frames: a shorter file is refused, and a longer one is read as MNE-Python reads it, since MNE-Python sizes the recording from the file and ignores `DataPoints=` for binary data.
 Vectorized data (each channel stored whole, one after another) always has a size of channels times points times bytes per sample, so a vectorized file that does not hold whole frames is refused whatever `DataPoints=` says, even if it is longer than `DataPoints=` declares.
 A `DataPoints=` that is absent, empty, `0` or not an integer counts as not declared.
@@ -49,6 +49,29 @@ Some cut files cannot be detected.
 With no `DataPoints=`, a file cut exactly at a frame boundary has no count to be compared against and still reads: multiplexed data reads as a shorter recording, while in vectorized data (each channel stored whole, one after another) the channel boundaries move, so every channel after the first is corrupted.
 A vectorized file with whole extra frames beyond its `DataPoints=` is not detected either, because it cannot be told from a stale count: if the count is right, MNE-Python sizes the channel blocks from the file and the channels after the first are corrupted, and if the count is stale, the read is correct.
 ASCII data has no fixed frame and is not checked, and a header that cannot be parsed or a data file that cannot be opened is left to MNE-Python, which raises its own error.
+
+## Reading a File with a Partial Trailing Frame
+
+A data file that ends in a partial frame is refused by default.
+When the whole frames before the partial one are what you want, pass `allow_partial_frame=True`:
+
+```python
+rec = Recording.from_file('path/to/subject01.vhdr', allow_partial_frame=True)
+```
+
+`stream_to_zarr` takes the same keyword, and `BrainVisionImporter.load` too.
+Every other format ignores it, as `mixed_rate` is ignored outside EDF and BDF.
+
+The option covers one case only: multiplexed data with a trailing partial frame and no positive `DataPoints=`.
+There, biosigIO reads the whole frames as MNE-Python does, which drops the partial bytes and any marker that falls in them, and says so.
+It emits a `UserWarning` that names the data file by its file name and gives the number of dropped bytes.
+It also records that number in the recording's metadata as `brainvision_dropped_bytes`, so it survives the read; the streaming export writes the same key into the store's `recording_metadata`.
+A file with nothing to drop produces neither the warning nor the key.
+
+The option does not change any other refusal.
+A vectorized file is still refused, with a message saying that `allow_partial_frame` does not apply to vectorized data, because a cut there misaligns the channels after the first.
+A file smaller than a positive `DataPoints=` is still refused.
+Without the option, nothing changes.
 
 ## Loading Data
 
