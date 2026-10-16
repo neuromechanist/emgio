@@ -5,12 +5,15 @@ the streaming path used to re-raise pyedflib's bare ``OSError``, which callers
 cannot tell apart from a host I/O failure (issue #149).
 """
 
+import errno
 import os
+import sys
 
+import pyedflib
 import pytest
 
 from biosigio import stream_to_zarr
-from biosigio.exceptions import CorruptFileError
+from biosigio.exceptions import BiosigIOError, CorruptFileError
 
 from .test_zarr_stream import _write_edf
 
@@ -28,3 +31,48 @@ def test_stream_refused_edf_raises_corrupt_file_error(tmp_path):
     cause = info.value.__cause__
     assert isinstance(cause, OSError)
     assert "Filesize" in str(cause)
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+    reason="chmod 000 does not deny reads to root or on Windows",
+)
+def test_stream_unreadable_edf_raises_the_os_error_unchanged(tmp_path):
+    """The file is fine; this host may not read it. pyedflib reports the refused
+    ``open()`` without its errno, so the streaming source recovers the real
+    ``PermissionError`` and raises it, exactly as the in-memory importer does,
+    instead of typing it as a permanent file failure."""
+    path = str(tmp_path / "unreadable.edf")
+    _write_edf(path, 100.0, 5.0, 2)
+    os.chmod(path, 0)
+    try:
+        with pytest.raises(PermissionError) as expected:  # the fixture really is unreadable
+            open(path, "rb").close()
+
+        with pytest.raises(OSError) as info:
+            stream_to_zarr(path, str(tmp_path / "store.zarr"), bids_channels="off")
+    finally:
+        os.chmod(path, 0o600)
+
+    assert type(info.value) is type(expected.value) is PermissionError
+    assert info.value.errno == expected.value.errno == errno.EACCES
+    assert not isinstance(info.value, BiosigIOError)
+
+
+def test_stream_memory_error_on_open_propagates_unchanged(tmp_path, monkeypatch):
+    """Streaming counterpart of ``test_edf_memory_error_on_open_propagates_unchanged``
+    (test_edf_memory_error.py), mirrored the same way: ``EdfReader.__init__`` is
+    patched to raise ``MemoryError``, which simulates the operating system
+    refusing an allocation rather than faking pyedflib's parsing. A host
+    condition at open must not be re-typed as a file failure."""
+    path = str(tmp_path / "rec.edf")
+    _write_edf(path, 100.0, 5.0, 2)
+
+    def raise_memory_error(self, *args, **kwargs):
+        raise MemoryError("Unable to allocate 500.0 MiB for an array")
+
+    monkeypatch.setattr(pyedflib.EdfReader, "__init__", raise_memory_error)
+
+    with pytest.raises(MemoryError) as info:
+        stream_to_zarr(path, str(tmp_path / "store.zarr"), bids_channels="off")
+    assert not isinstance(info.value, BiosigIOError)
