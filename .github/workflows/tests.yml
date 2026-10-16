@@ -96,11 +96,13 @@ jobs:
       run: |
         uv run pytest --no-cov -rs --junitxml=/tmp/mne-floor.xml \
           biosigio/tests/test_brainvision_exemplar.py \
+          biosigio/tests/test_brainvision_partial_frame.py \
           biosigio/tests/test_brainvision_stale_header.py \
           biosigio/tests/test_edf_bdf_exemplar.py \
           biosigio/tests/test_edf_duplicate_labels.py \
           biosigio/tests/test_eeglab_v73_importer.py \
           biosigio/tests/test_exceptions.py \
+          biosigio/tests/test_fif_exemplar.py \
           biosigio/tests/test_zarr_stream_channels_tsv.py
 
     # These tests importorskip mne, zarr and h5py, so a broken extras install
