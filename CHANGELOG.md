@@ -26,8 +26,8 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
 ### Added
 
 - `allow_partial_frame=True` on `Recording.from_file`, `BrainVisionImporter.load` and `stream_to_zarr` reads the whole frames of a multiplexed BrainVision file that ends in a partial frame and declares no positive `DataPoints`, as MNE reads them, where the default refuses it.
-  It emits a `UserWarning` that names the data file and the dropped byte count, and records the count in the metadata as `brainvision_dropped_bytes`.
-  Vectorized data and a file smaller than a positive `DataPoints` are still refused with the flag on, and the default is unchanged.
+  It emits a `UserWarning` that names the data file and the dropped byte count, and records the count in the metadata as `brainvision_dropped_bytes`; the streaming store carries the key in its `recording_metadata` too.
+  Vectorized data, a file smaller than a positive `DataPoints` and a file that holds no whole frame are still refused with the flag on, and the default is unchanged.
 
 ### Changed
 
