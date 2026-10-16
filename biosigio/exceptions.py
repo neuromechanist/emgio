@@ -23,6 +23,7 @@ share one classifier rather than each re-inventing string matching.
 from __future__ import annotations
 
 import errno
+from pathlib import PurePath
 from typing import NoReturn
 
 
@@ -61,7 +62,7 @@ class NotContinuousRecordingError(FileReadError):
 class CorruptFileError(FileReadError):
     """The source is truncated, not format-compliant, or part of an incomplete
     set: an EDF that fails the ``Filesize`` check, an incomplete CTF ``.meg4``,
-    or a split recording missing chain members."""
+    a FIF whose data ends early, or a split recording missing chain members."""
 
     code = "corrupt_or_truncated"
 
@@ -218,6 +219,12 @@ def is_host_condition(exc: BaseException) -> bool:
     return False
 
 
+def _file_name(filepath: str) -> str:
+    """The last component of ``filepath``; a trailing separator (a CTF ``.ds``
+    directory) is ignored."""
+    return PurePath(filepath).name or filepath
+
+
 def classify_read_error(exc: Exception, filepath: str = "") -> BiosigIOError | NoReturn:
     """Re-raises ``exc`` as-is when it is a host condition (see
     :func:`is_host_condition`); otherwise maps a low-level read failure to a
@@ -273,6 +280,19 @@ def classify_read_error(exc: Exception, filepath: str = "") -> BiosigIOError | N
         or "not an even multiple" in low
     ):
         return CorruptFileError(f"Truncated, incomplete, or corrupt file{where}: {msg}")
+
+    # Data that ends early. These are numpy's own messages, matched whichever
+    # reader raised them, not only the FIF reader. MNE's FIF reader raises the
+    # first when a tag is cut mid-sample (the buffer is no longer a whole number
+    # of elements) and the second when a data buffer is cut at a sample boundary
+    # (it holds fewer samples than its header declares). The message names the
+    # file, not the directory it sits in.
+    if (
+        "buffer size must be a multiple of element size" in low
+        or "cannot reshape array of size" in low
+    ):
+        named = f" ({_file_name(filepath)})" if filepath else ""
+        return CorruptFileError(f"Truncated, incomplete, or corrupt file{named}: {msg}")
 
     # Recognized format, no specific cause -> generic (still typed) read error.
     return FileReadError(f"Could not read recording{where}: {msg}")
