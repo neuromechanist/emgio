@@ -22,6 +22,10 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   An `.ahdr` header counts the extra channel MNE adds.
   Without a `DataPoints` count, a file cut exactly at a frame boundary is not detected: multiplexed data reads as a shorter recording, and vectorized data is corrupted from the second channel on, because each channel is stored whole.
   A vectorized file with whole extra frames beyond its `DataPoints` count is not detected either.
+- A FIF file whose data is truncated raises `CorruptFileError` (code `corrupt_or_truncated`) instead of a generic `FileReadError`.
+  The two MNE read failures a cut inside the data produces, numpy's "buffer size must be a multiple of element size" and "cannot reshape array of size", are now typed as corrupt.
+  Host conditions (memory, permissions, I/O) still propagate unchanged.
+  The message names the file by its file name, without its directory.
 
 ### Added
 
