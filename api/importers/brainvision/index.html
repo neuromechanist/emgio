@@ -4253,11 +4253,7 @@ input/value" conditions about a recording).</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>biosigio/importers/brainvision.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-530">530</a></span>
-<span class="normal"><a href="#__codelineno-0-531">531</a></span>
-<span class="normal"><a href="#__codelineno-0-532">532</a></span>
-<span class="normal"><a href="#__codelineno-0-533">533</a></span>
-<span class="normal"><a href="#__codelineno-0-534">534</a></span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-534">534</a></span>
 <span class="normal"><a href="#__codelineno-0-535">535</a></span>
 <span class="normal"><a href="#__codelineno-0-536">536</a></span>
 <span class="normal"><a href="#__codelineno-0-537">537</a></span>
@@ -4330,84 +4326,88 @@ input/value" conditions about a recording).</p>
 <span class="normal"><a href="#__codelineno-0-604">604</a></span>
 <span class="normal"><a href="#__codelineno-0-605">605</a></span>
 <span class="normal"><a href="#__codelineno-0-606">606</a></span>
-<span class="normal"><a href="#__codelineno-0-607">607</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-530" name="__codelineno-0-530"></a><span class="k">class</span><span class="w"> </span><span class="nc">BrainVisionImporter</span><span class="p">(</span><span class="n">BaseImporter</span><span class="p">):</span>
-<a id="__codelineno-0-531" name="__codelineno-0-531"></a><span class="w">    </span><span class="sd">"""Importer for BrainVision recordings via MNE-Python (.vhdr)."""</span>
-<a id="__codelineno-0-532" name="__codelineno-0-532"></a>
-<a id="__codelineno-0-533" name="__codelineno-0-533"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_read_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<a id="__codelineno-0-534" name="__codelineno-0-534"></a><span class="w">        </span><span class="sd">"""Read .vmrk markers (MNE annotations) into an events DataFrame."""</span>
-<a id="__codelineno-0-535" name="__codelineno-0-535"></a>        <span class="n">annotations</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">annotations</span>
-<a id="__codelineno-0-536" name="__codelineno-0-536"></a>        <span class="c1"># strict=True: the three arrays come from one Annotations object and are</span>
-<a id="__codelineno-0-537" name="__codelineno-0-537"></a>        <span class="c1"># co-length by MNE's contract; a mismatch is a bug we want surfaced, not</span>
-<a id="__codelineno-0-538" name="__codelineno-0-538"></a>        <span class="c1"># silently truncated.</span>
-<a id="__codelineno-0-539" name="__codelineno-0-539"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span>
-<a id="__codelineno-0-540" name="__codelineno-0-540"></a>            <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">onset</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">description</span><span class="p">))</span>
-<a id="__codelineno-0-541" name="__codelineno-0-541"></a>            <span class="k">for</span> <span class="n">onset</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">description</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
-<a id="__codelineno-0-542" name="__codelineno-0-542"></a>                <span class="n">annotations</span><span class="o">.</span><span class="n">onset</span><span class="p">,</span> <span class="n">annotations</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">annotations</span><span class="o">.</span><span class="n">description</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span>
-<a id="__codelineno-0-543" name="__codelineno-0-543"></a>            <span class="p">)</span>
-<a id="__codelineno-0-544" name="__codelineno-0-544"></a>        <span class="p">]</span>
-<a id="__codelineno-0-545" name="__codelineno-0-545"></a>        <span class="n">evt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"onset"</span><span class="p">,</span> <span class="s2">"duration"</span><span class="p">,</span> <span class="s2">"description"</span><span class="p">])</span>
-<a id="__codelineno-0-546" name="__codelineno-0-546"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">evt</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-<a id="__codelineno-0-547" name="__codelineno-0-547"></a>            <span class="n">evt</span> <span class="o">=</span> <span class="n">evt</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"onset"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-548" name="__codelineno-0-548"></a>            <span class="n">evt</span><span class="p">[</span><span class="s2">"onset"</span><span class="p">]</span> <span class="o">=</span> <span class="n">evt</span><span class="p">[</span><span class="s2">"onset"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float64"</span><span class="p">)</span>
-<a id="__codelineno-0-549" name="__codelineno-0-549"></a>            <span class="n">evt</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="o">=</span> <span class="n">evt</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float64"</span><span class="p">)</span>
-<a id="__codelineno-0-550" name="__codelineno-0-550"></a>        <span class="k">return</span> <span class="n">evt</span>
-<a id="__codelineno-0-551" name="__codelineno-0-551"></a>
-<a id="__codelineno-0-552" name="__codelineno-0-552"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Recording</span><span class="p">:</span>
-<a id="__codelineno-0-553" name="__codelineno-0-553"></a><span class="w">        </span><span class="sd">"""Load a BrainVision recording (pass the ``.vhdr`` header path).</span>
-<a id="__codelineno-0-554" name="__codelineno-0-554"></a>
-<a id="__codelineno-0-555" name="__codelineno-0-555"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-556" name="__codelineno-0-556"></a><span class="sd">            filepath: Path to the BrainVision ``.vhdr`` header (its ``.vmrk`` and</span>
-<a id="__codelineno-0-557" name="__codelineno-0-557"></a><span class="sd">                ``.eeg`` siblings are resolved by MNE).</span>
-<a id="__codelineno-0-558" name="__codelineno-0-558"></a><span class="sd">            allow_partial_frame: By default a binary data file whose size is not a</span>
-<a id="__codelineno-0-559" name="__codelineno-0-559"></a><span class="sd">                whole number of frames raises :class:`~biosigio.exceptions.CorruptFileError`.</span>
-<a id="__codelineno-0-560" name="__codelineno-0-560"></a><span class="sd">                True reads the whole frames of a MULTIPLEXED file that ends in a</span>
-<a id="__codelineno-0-561" name="__codelineno-0-561"></a><span class="sd">                partial frame (and declares no positive ``DataPoints=``), with a</span>
-<a id="__codelineno-0-562" name="__codelineno-0-562"></a><span class="sd">                ``UserWarning`` naming the file and the dropped byte count; the count</span>
-<a id="__codelineno-0-563" name="__codelineno-0-563"></a><span class="sd">                is recorded in the metadata as ``brainvision_dropped_bytes``.</span>
-<a id="__codelineno-0-564" name="__codelineno-0-564"></a><span class="sd">                Vectorized data, a file smaller than a positive ``DataPoints=`` and a</span>
-<a id="__codelineno-0-565" name="__codelineno-0-565"></a><span class="sd">                file that holds no whole frame are still refused.</span>
-<a id="__codelineno-0-566" name="__codelineno-0-566"></a>
-<a id="__codelineno-0-567" name="__codelineno-0-567"></a><span class="sd">        Returns:</span>
-<a id="__codelineno-0-568" name="__codelineno-0-568"></a><span class="sd">            Recording: channels carry their type and physical unit; ``.vmrk`` markers</span>
-<a id="__codelineno-0-569" name="__codelineno-0-569"></a><span class="sd">            are read into ``Recording.events``.</span>
-<a id="__codelineno-0-570" name="__codelineno-0-570"></a><span class="sd">        """</span>
-<a id="__codelineno-0-571" name="__codelineno-0-571"></a>        <span class="n">mne</span> <span class="o">=</span> <span class="n">require_mne</span><span class="p">()</span>
-<a id="__codelineno-0-572" name="__codelineno-0-572"></a>        <span class="c1"># The resolver sits OUTSIDE the classifying try on purpose: what it can</span>
-<a id="__codelineno-0-573" name="__codelineno-0-573"></a>        <span class="c1"># raise is a failure to write the patched temporary header or stage a</span>
-<a id="__codelineno-0-574" name="__codelineno-0-574"></a>        <span class="c1"># file beside it (ENOSPC, EROFS, EACCES, quota), or a host condition</span>
-<a id="__codelineno-0-575" name="__codelineno-0-575"></a>        <span class="c1"># while reading the header. Each is a property of the host, not of the</span>
-<a id="__codelineno-0-576" name="__codelineno-0-576"></a>        <span class="c1"># recording, and must propagate as-is rather than become a typed</span>
-<a id="__codelineno-0-577" name="__codelineno-0-577"></a>        <span class="c1"># (possibly permanent) read failure. Any other unreadable header is not</span>
-<a id="__codelineno-0-578" name="__codelineno-0-578"></a>        <span class="c1"># raised here; the resolver yields the original path and MNE raises</span>
-<a id="__codelineno-0-579" name="__codelineno-0-579"></a>        <span class="c1"># inside the try below.</span>
-<a id="__codelineno-0-580" name="__codelineno-0-580"></a>        <span class="n">recovered</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-581" name="__codelineno-0-581"></a>        <span class="n">staged</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-582" name="__codelineno-0-582"></a>        <span class="k">with</span> <span class="n">resolved_vhdr</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">substitutions</span><span class="o">=</span><span class="n">recovered</span><span class="p">,</span> <span class="n">staged_files</span><span class="o">=</span><span class="n">staged</span><span class="p">)</span> <span class="k">as</span> <span class="n">vhdr</span><span class="p">:</span>
-<a id="__codelineno-0-583" name="__codelineno-0-583"></a>            <span class="c1"># Outside the try: a refusal is already typed, not an MNE failure to classify.</span>
-<a id="__codelineno-0-584" name="__codelineno-0-584"></a>            <span class="n">dropped</span> <span class="o">=</span> <span class="n">require_whole_frames</span><span class="p">(</span><span class="n">vhdr</span><span class="p">,</span> <span class="n">staged</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="o">=</span><span class="n">allow_partial_frame</span><span class="p">)</span>
-<a id="__codelineno-0-585" name="__codelineno-0-585"></a>            <span class="k">try</span><span class="p">:</span>
-<a id="__codelineno-0-586" name="__codelineno-0-586"></a>                <span class="n">raw</span> <span class="o">=</span> <span class="n">mne</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_raw_brainvision</span><span class="p">(</span><span class="n">vhdr</span><span class="p">,</span> <span class="n">preload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="s2">"ERROR"</span><span class="p">)</span>
-<a id="__codelineno-0-587" name="__codelineno-0-587"></a>            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-<a id="__codelineno-0-588" name="__codelineno-0-588"></a>                <span class="c1"># Resource exhaustion (MemoryError, thread/allocation-exhaustion</span>
-<a id="__codelineno-0-589" name="__codelineno-0-589"></a>                <span class="c1"># OSError/RuntimeError) is a host condition, not a file problem --</span>
-<a id="__codelineno-0-590" name="__codelineno-0-590"></a>                <span class="c1"># propagate unchanged rather than reclassifying it as a permanent</span>
-<a id="__codelineno-0-591" name="__codelineno-0-591"></a>                <span class="c1"># read failure (see biosigio.exceptions.is_resource_exhaustion).</span>
-<a id="__codelineno-0-592" name="__codelineno-0-592"></a>                <span class="k">if</span> <span class="n">is_resource_exhaustion</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
-<a id="__codelineno-0-593" name="__codelineno-0-593"></a>                    <span class="k">raise</span>
-<a id="__codelineno-0-594" name="__codelineno-0-594"></a>                <span class="k">raise</span> <span class="n">brainvision_read_error</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">vhdr</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">staged</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-<a id="__codelineno-0-595" name="__codelineno-0-595"></a>
-<a id="__codelineno-0-596" name="__codelineno-0-596"></a>        <span class="n">rec</span> <span class="o">=</span> <span class="n">raw_to_recording</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
-<a id="__codelineno-0-597" name="__codelineno-0-597"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">"source_file"</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
-<a id="__codelineno-0-598" name="__codelineno-0-598"></a>        <span class="k">if</span> <span class="n">recovered</span><span class="p">:</span>
-<a id="__codelineno-0-599" name="__codelineno-0-599"></a>            <span class="c1"># A stale header read through its siblings is recorded, not silent.</span>
-<a id="__codelineno-0-600" name="__codelineno-0-600"></a>            <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="n">HEADER_RECOVERED_KEY</span><span class="p">,</span> <span class="n">recovered</span><span class="p">)</span>
-<a id="__codelineno-0-601" name="__codelineno-0-601"></a>        <span class="k">if</span> <span class="n">dropped</span><span class="p">:</span>
-<a id="__codelineno-0-602" name="__codelineno-0-602"></a>            <span class="c1"># An accepted partial frame is recorded, not silent.</span>
-<a id="__codelineno-0-603" name="__codelineno-0-603"></a>            <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="n">DROPPED_BYTES_KEY</span><span class="p">,</span> <span class="n">dropped</span><span class="p">)</span>
-<a id="__codelineno-0-604" name="__codelineno-0-604"></a>
-<a id="__codelineno-0-605" name="__codelineno-0-605"></a>        <span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_events</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
-<a id="__codelineno-0-606" name="__codelineno-0-606"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-<a id="__codelineno-0-607" name="__codelineno-0-607"></a>            <span class="n">rec</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">events</span>
+<span class="normal"><a href="#__codelineno-0-607">607</a></span>
+<span class="normal"><a href="#__codelineno-0-608">608</a></span>
+<span class="normal"><a href="#__codelineno-0-609">609</a></span>
+<span class="normal"><a href="#__codelineno-0-610">610</a></span>
+<span class="normal"><a href="#__codelineno-0-611">611</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-534" name="__codelineno-0-534"></a><span class="k">class</span><span class="w"> </span><span class="nc">BrainVisionImporter</span><span class="p">(</span><span class="n">BaseImporter</span><span class="p">):</span>
+<a id="__codelineno-0-535" name="__codelineno-0-535"></a><span class="w">    </span><span class="sd">"""Importer for BrainVision recordings via MNE-Python (.vhdr)."""</span>
+<a id="__codelineno-0-536" name="__codelineno-0-536"></a>
+<a id="__codelineno-0-537" name="__codelineno-0-537"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_read_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<a id="__codelineno-0-538" name="__codelineno-0-538"></a><span class="w">        </span><span class="sd">"""Read .vmrk markers (MNE annotations) into an events DataFrame."""</span>
+<a id="__codelineno-0-539" name="__codelineno-0-539"></a>        <span class="n">annotations</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">annotations</span>
+<a id="__codelineno-0-540" name="__codelineno-0-540"></a>        <span class="c1"># strict=True: the three arrays come from one Annotations object and are</span>
+<a id="__codelineno-0-541" name="__codelineno-0-541"></a>        <span class="c1"># co-length by MNE's contract; a mismatch is a bug we want surfaced, not</span>
+<a id="__codelineno-0-542" name="__codelineno-0-542"></a>        <span class="c1"># silently truncated.</span>
+<a id="__codelineno-0-543" name="__codelineno-0-543"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-0-544" name="__codelineno-0-544"></a>            <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">onset</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">description</span><span class="p">))</span>
+<a id="__codelineno-0-545" name="__codelineno-0-545"></a>            <span class="k">for</span> <span class="n">onset</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">description</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+<a id="__codelineno-0-546" name="__codelineno-0-546"></a>                <span class="n">annotations</span><span class="o">.</span><span class="n">onset</span><span class="p">,</span> <span class="n">annotations</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">annotations</span><span class="o">.</span><span class="n">description</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span>
+<a id="__codelineno-0-547" name="__codelineno-0-547"></a>            <span class="p">)</span>
+<a id="__codelineno-0-548" name="__codelineno-0-548"></a>        <span class="p">]</span>
+<a id="__codelineno-0-549" name="__codelineno-0-549"></a>        <span class="n">evt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"onset"</span><span class="p">,</span> <span class="s2">"duration"</span><span class="p">,</span> <span class="s2">"description"</span><span class="p">])</span>
+<a id="__codelineno-0-550" name="__codelineno-0-550"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">evt</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+<a id="__codelineno-0-551" name="__codelineno-0-551"></a>            <span class="n">evt</span> <span class="o">=</span> <span class="n">evt</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"onset"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-552" name="__codelineno-0-552"></a>            <span class="n">evt</span><span class="p">[</span><span class="s2">"onset"</span><span class="p">]</span> <span class="o">=</span> <span class="n">evt</span><span class="p">[</span><span class="s2">"onset"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float64"</span><span class="p">)</span>
+<a id="__codelineno-0-553" name="__codelineno-0-553"></a>            <span class="n">evt</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="o">=</span> <span class="n">evt</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float64"</span><span class="p">)</span>
+<a id="__codelineno-0-554" name="__codelineno-0-554"></a>        <span class="k">return</span> <span class="n">evt</span>
+<a id="__codelineno-0-555" name="__codelineno-0-555"></a>
+<a id="__codelineno-0-556" name="__codelineno-0-556"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Recording</span><span class="p">:</span>
+<a id="__codelineno-0-557" name="__codelineno-0-557"></a><span class="w">        </span><span class="sd">"""Load a BrainVision recording (pass the ``.vhdr`` header path).</span>
+<a id="__codelineno-0-558" name="__codelineno-0-558"></a>
+<a id="__codelineno-0-559" name="__codelineno-0-559"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-560" name="__codelineno-0-560"></a><span class="sd">            filepath: Path to the BrainVision ``.vhdr`` header (its ``.vmrk`` and</span>
+<a id="__codelineno-0-561" name="__codelineno-0-561"></a><span class="sd">                ``.eeg`` siblings are resolved by MNE).</span>
+<a id="__codelineno-0-562" name="__codelineno-0-562"></a><span class="sd">            allow_partial_frame: By default a binary data file whose size is not a</span>
+<a id="__codelineno-0-563" name="__codelineno-0-563"></a><span class="sd">                whole number of frames raises :class:`~biosigio.exceptions.CorruptFileError`.</span>
+<a id="__codelineno-0-564" name="__codelineno-0-564"></a><span class="sd">                True reads the whole frames of a MULTIPLEXED file that ends in a</span>
+<a id="__codelineno-0-565" name="__codelineno-0-565"></a><span class="sd">                partial frame (and declares no positive ``DataPoints=``), with a</span>
+<a id="__codelineno-0-566" name="__codelineno-0-566"></a><span class="sd">                ``UserWarning`` naming the file and the dropped byte count; the count</span>
+<a id="__codelineno-0-567" name="__codelineno-0-567"></a><span class="sd">                is recorded in the metadata as ``brainvision_dropped_bytes``.</span>
+<a id="__codelineno-0-568" name="__codelineno-0-568"></a><span class="sd">                Vectorized data, a file smaller than a positive ``DataPoints=`` and a</span>
+<a id="__codelineno-0-569" name="__codelineno-0-569"></a><span class="sd">                file that holds no whole frame are still refused.</span>
+<a id="__codelineno-0-570" name="__codelineno-0-570"></a>
+<a id="__codelineno-0-571" name="__codelineno-0-571"></a><span class="sd">        Returns:</span>
+<a id="__codelineno-0-572" name="__codelineno-0-572"></a><span class="sd">            Recording: channels carry their type and physical unit; ``.vmrk`` markers</span>
+<a id="__codelineno-0-573" name="__codelineno-0-573"></a><span class="sd">            are read into ``Recording.events``.</span>
+<a id="__codelineno-0-574" name="__codelineno-0-574"></a><span class="sd">        """</span>
+<a id="__codelineno-0-575" name="__codelineno-0-575"></a>        <span class="n">mne</span> <span class="o">=</span> <span class="n">require_mne</span><span class="p">()</span>
+<a id="__codelineno-0-576" name="__codelineno-0-576"></a>        <span class="c1"># The resolver sits OUTSIDE the classifying try on purpose: what it can</span>
+<a id="__codelineno-0-577" name="__codelineno-0-577"></a>        <span class="c1"># raise is a failure to write the patched temporary header or stage a</span>
+<a id="__codelineno-0-578" name="__codelineno-0-578"></a>        <span class="c1"># file beside it (ENOSPC, EROFS, EACCES, quota), or a host condition</span>
+<a id="__codelineno-0-579" name="__codelineno-0-579"></a>        <span class="c1"># while reading the header. Each is a property of the host, not of the</span>
+<a id="__codelineno-0-580" name="__codelineno-0-580"></a>        <span class="c1"># recording, and must propagate as-is rather than become a typed</span>
+<a id="__codelineno-0-581" name="__codelineno-0-581"></a>        <span class="c1"># (possibly permanent) read failure. Any other unreadable header is not</span>
+<a id="__codelineno-0-582" name="__codelineno-0-582"></a>        <span class="c1"># raised here; the resolver yields the original path and MNE raises</span>
+<a id="__codelineno-0-583" name="__codelineno-0-583"></a>        <span class="c1"># inside the try below.</span>
+<a id="__codelineno-0-584" name="__codelineno-0-584"></a>        <span class="n">recovered</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-585" name="__codelineno-0-585"></a>        <span class="n">staged</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-586" name="__codelineno-0-586"></a>        <span class="k">with</span> <span class="n">resolved_vhdr</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">substitutions</span><span class="o">=</span><span class="n">recovered</span><span class="p">,</span> <span class="n">staged_files</span><span class="o">=</span><span class="n">staged</span><span class="p">)</span> <span class="k">as</span> <span class="n">vhdr</span><span class="p">:</span>
+<a id="__codelineno-0-587" name="__codelineno-0-587"></a>            <span class="c1"># Outside the try: a refusal is already typed, not an MNE failure to classify.</span>
+<a id="__codelineno-0-588" name="__codelineno-0-588"></a>            <span class="n">dropped</span> <span class="o">=</span> <span class="n">require_whole_frames</span><span class="p">(</span><span class="n">vhdr</span><span class="p">,</span> <span class="n">staged</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="o">=</span><span class="n">allow_partial_frame</span><span class="p">)</span>
+<a id="__codelineno-0-589" name="__codelineno-0-589"></a>            <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-0-590" name="__codelineno-0-590"></a>                <span class="n">raw</span> <span class="o">=</span> <span class="n">mne</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_raw_brainvision</span><span class="p">(</span><span class="n">vhdr</span><span class="p">,</span> <span class="n">preload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="s2">"ERROR"</span><span class="p">)</span>
+<a id="__codelineno-0-591" name="__codelineno-0-591"></a>            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<a id="__codelineno-0-592" name="__codelineno-0-592"></a>                <span class="c1"># Resource exhaustion (MemoryError, thread/allocation-exhaustion</span>
+<a id="__codelineno-0-593" name="__codelineno-0-593"></a>                <span class="c1"># OSError/RuntimeError) is a host condition, not a file problem --</span>
+<a id="__codelineno-0-594" name="__codelineno-0-594"></a>                <span class="c1"># propagate unchanged rather than reclassifying it as a permanent</span>
+<a id="__codelineno-0-595" name="__codelineno-0-595"></a>                <span class="c1"># read failure (see biosigio.exceptions.is_resource_exhaustion).</span>
+<a id="__codelineno-0-596" name="__codelineno-0-596"></a>                <span class="k">if</span> <span class="n">is_resource_exhaustion</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+<a id="__codelineno-0-597" name="__codelineno-0-597"></a>                    <span class="k">raise</span>
+<a id="__codelineno-0-598" name="__codelineno-0-598"></a>                <span class="k">raise</span> <span class="n">brainvision_read_error</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">vhdr</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">staged</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+<a id="__codelineno-0-599" name="__codelineno-0-599"></a>
+<a id="__codelineno-0-600" name="__codelineno-0-600"></a>        <span class="n">rec</span> <span class="o">=</span> <span class="n">raw_to_recording</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+<a id="__codelineno-0-601" name="__codelineno-0-601"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">"source_file"</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
+<a id="__codelineno-0-602" name="__codelineno-0-602"></a>        <span class="k">if</span> <span class="n">recovered</span><span class="p">:</span>
+<a id="__codelineno-0-603" name="__codelineno-0-603"></a>            <span class="c1"># A stale header read through its siblings is recorded, not silent.</span>
+<a id="__codelineno-0-604" name="__codelineno-0-604"></a>            <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="n">HEADER_RECOVERED_KEY</span><span class="p">,</span> <span class="n">recovered</span><span class="p">)</span>
+<a id="__codelineno-0-605" name="__codelineno-0-605"></a>        <span class="k">if</span> <span class="n">dropped</span><span class="p">:</span>
+<a id="__codelineno-0-606" name="__codelineno-0-606"></a>            <span class="c1"># An accepted partial frame is recorded, not silent.</span>
+<a id="__codelineno-0-607" name="__codelineno-0-607"></a>            <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="n">DROPPED_BYTES_KEY</span><span class="p">,</span> <span class="n">dropped</span><span class="p">)</span>
+<a id="__codelineno-0-608" name="__codelineno-0-608"></a>
+<a id="__codelineno-0-609" name="__codelineno-0-609"></a>        <span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_events</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+<a id="__codelineno-0-610" name="__codelineno-0-610"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+<a id="__codelineno-0-611" name="__codelineno-0-611"></a>            <span class="n">rec</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">events</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -4454,11 +4454,7 @@ input/value" conditions about a recording).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>biosigio/importers/brainvision.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-552">552</a></span>
-<span class="normal"><a href="#__codelineno-0-553">553</a></span>
-<span class="normal"><a href="#__codelineno-0-554">554</a></span>
-<span class="normal"><a href="#__codelineno-0-555">555</a></span>
-<span class="normal"><a href="#__codelineno-0-556">556</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-556">556</a></span>
 <span class="normal"><a href="#__codelineno-0-557">557</a></span>
 <span class="normal"><a href="#__codelineno-0-558">558</a></span>
 <span class="normal"><a href="#__codelineno-0-559">559</a></span>
@@ -4509,62 +4505,66 @@ input/value" conditions about a recording).</p>
 <span class="normal"><a href="#__codelineno-0-604">604</a></span>
 <span class="normal"><a href="#__codelineno-0-605">605</a></span>
 <span class="normal"><a href="#__codelineno-0-606">606</a></span>
-<span class="normal"><a href="#__codelineno-0-607">607</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-552" name="__codelineno-0-552"></a><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Recording</span><span class="p">:</span>
-<a id="__codelineno-0-553" name="__codelineno-0-553"></a><span class="w">    </span><span class="sd">"""Load a BrainVision recording (pass the ``.vhdr`` header path).</span>
-<a id="__codelineno-0-554" name="__codelineno-0-554"></a>
-<a id="__codelineno-0-555" name="__codelineno-0-555"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-556" name="__codelineno-0-556"></a><span class="sd">        filepath: Path to the BrainVision ``.vhdr`` header (its ``.vmrk`` and</span>
-<a id="__codelineno-0-557" name="__codelineno-0-557"></a><span class="sd">            ``.eeg`` siblings are resolved by MNE).</span>
-<a id="__codelineno-0-558" name="__codelineno-0-558"></a><span class="sd">        allow_partial_frame: By default a binary data file whose size is not a</span>
-<a id="__codelineno-0-559" name="__codelineno-0-559"></a><span class="sd">            whole number of frames raises :class:`~biosigio.exceptions.CorruptFileError`.</span>
-<a id="__codelineno-0-560" name="__codelineno-0-560"></a><span class="sd">            True reads the whole frames of a MULTIPLEXED file that ends in a</span>
-<a id="__codelineno-0-561" name="__codelineno-0-561"></a><span class="sd">            partial frame (and declares no positive ``DataPoints=``), with a</span>
-<a id="__codelineno-0-562" name="__codelineno-0-562"></a><span class="sd">            ``UserWarning`` naming the file and the dropped byte count; the count</span>
-<a id="__codelineno-0-563" name="__codelineno-0-563"></a><span class="sd">            is recorded in the metadata as ``brainvision_dropped_bytes``.</span>
-<a id="__codelineno-0-564" name="__codelineno-0-564"></a><span class="sd">            Vectorized data, a file smaller than a positive ``DataPoints=`` and a</span>
-<a id="__codelineno-0-565" name="__codelineno-0-565"></a><span class="sd">            file that holds no whole frame are still refused.</span>
-<a id="__codelineno-0-566" name="__codelineno-0-566"></a>
-<a id="__codelineno-0-567" name="__codelineno-0-567"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-568" name="__codelineno-0-568"></a><span class="sd">        Recording: channels carry their type and physical unit; ``.vmrk`` markers</span>
-<a id="__codelineno-0-569" name="__codelineno-0-569"></a><span class="sd">        are read into ``Recording.events``.</span>
-<a id="__codelineno-0-570" name="__codelineno-0-570"></a><span class="sd">    """</span>
-<a id="__codelineno-0-571" name="__codelineno-0-571"></a>    <span class="n">mne</span> <span class="o">=</span> <span class="n">require_mne</span><span class="p">()</span>
-<a id="__codelineno-0-572" name="__codelineno-0-572"></a>    <span class="c1"># The resolver sits OUTSIDE the classifying try on purpose: what it can</span>
-<a id="__codelineno-0-573" name="__codelineno-0-573"></a>    <span class="c1"># raise is a failure to write the patched temporary header or stage a</span>
-<a id="__codelineno-0-574" name="__codelineno-0-574"></a>    <span class="c1"># file beside it (ENOSPC, EROFS, EACCES, quota), or a host condition</span>
-<a id="__codelineno-0-575" name="__codelineno-0-575"></a>    <span class="c1"># while reading the header. Each is a property of the host, not of the</span>
-<a id="__codelineno-0-576" name="__codelineno-0-576"></a>    <span class="c1"># recording, and must propagate as-is rather than become a typed</span>
-<a id="__codelineno-0-577" name="__codelineno-0-577"></a>    <span class="c1"># (possibly permanent) read failure. Any other unreadable header is not</span>
-<a id="__codelineno-0-578" name="__codelineno-0-578"></a>    <span class="c1"># raised here; the resolver yields the original path and MNE raises</span>
-<a id="__codelineno-0-579" name="__codelineno-0-579"></a>    <span class="c1"># inside the try below.</span>
-<a id="__codelineno-0-580" name="__codelineno-0-580"></a>    <span class="n">recovered</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-581" name="__codelineno-0-581"></a>    <span class="n">staged</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-582" name="__codelineno-0-582"></a>    <span class="k">with</span> <span class="n">resolved_vhdr</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">substitutions</span><span class="o">=</span><span class="n">recovered</span><span class="p">,</span> <span class="n">staged_files</span><span class="o">=</span><span class="n">staged</span><span class="p">)</span> <span class="k">as</span> <span class="n">vhdr</span><span class="p">:</span>
-<a id="__codelineno-0-583" name="__codelineno-0-583"></a>        <span class="c1"># Outside the try: a refusal is already typed, not an MNE failure to classify.</span>
-<a id="__codelineno-0-584" name="__codelineno-0-584"></a>        <span class="n">dropped</span> <span class="o">=</span> <span class="n">require_whole_frames</span><span class="p">(</span><span class="n">vhdr</span><span class="p">,</span> <span class="n">staged</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="o">=</span><span class="n">allow_partial_frame</span><span class="p">)</span>
-<a id="__codelineno-0-585" name="__codelineno-0-585"></a>        <span class="k">try</span><span class="p">:</span>
-<a id="__codelineno-0-586" name="__codelineno-0-586"></a>            <span class="n">raw</span> <span class="o">=</span> <span class="n">mne</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_raw_brainvision</span><span class="p">(</span><span class="n">vhdr</span><span class="p">,</span> <span class="n">preload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="s2">"ERROR"</span><span class="p">)</span>
-<a id="__codelineno-0-587" name="__codelineno-0-587"></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-<a id="__codelineno-0-588" name="__codelineno-0-588"></a>            <span class="c1"># Resource exhaustion (MemoryError, thread/allocation-exhaustion</span>
-<a id="__codelineno-0-589" name="__codelineno-0-589"></a>            <span class="c1"># OSError/RuntimeError) is a host condition, not a file problem --</span>
-<a id="__codelineno-0-590" name="__codelineno-0-590"></a>            <span class="c1"># propagate unchanged rather than reclassifying it as a permanent</span>
-<a id="__codelineno-0-591" name="__codelineno-0-591"></a>            <span class="c1"># read failure (see biosigio.exceptions.is_resource_exhaustion).</span>
-<a id="__codelineno-0-592" name="__codelineno-0-592"></a>            <span class="k">if</span> <span class="n">is_resource_exhaustion</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
-<a id="__codelineno-0-593" name="__codelineno-0-593"></a>                <span class="k">raise</span>
-<a id="__codelineno-0-594" name="__codelineno-0-594"></a>            <span class="k">raise</span> <span class="n">brainvision_read_error</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">vhdr</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">staged</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-<a id="__codelineno-0-595" name="__codelineno-0-595"></a>
-<a id="__codelineno-0-596" name="__codelineno-0-596"></a>    <span class="n">rec</span> <span class="o">=</span> <span class="n">raw_to_recording</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
-<a id="__codelineno-0-597" name="__codelineno-0-597"></a>    <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">"source_file"</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
-<a id="__codelineno-0-598" name="__codelineno-0-598"></a>    <span class="k">if</span> <span class="n">recovered</span><span class="p">:</span>
-<a id="__codelineno-0-599" name="__codelineno-0-599"></a>        <span class="c1"># A stale header read through its siblings is recorded, not silent.</span>
-<a id="__codelineno-0-600" name="__codelineno-0-600"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="n">HEADER_RECOVERED_KEY</span><span class="p">,</span> <span class="n">recovered</span><span class="p">)</span>
-<a id="__codelineno-0-601" name="__codelineno-0-601"></a>    <span class="k">if</span> <span class="n">dropped</span><span class="p">:</span>
-<a id="__codelineno-0-602" name="__codelineno-0-602"></a>        <span class="c1"># An accepted partial frame is recorded, not silent.</span>
-<a id="__codelineno-0-603" name="__codelineno-0-603"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="n">DROPPED_BYTES_KEY</span><span class="p">,</span> <span class="n">dropped</span><span class="p">)</span>
-<a id="__codelineno-0-604" name="__codelineno-0-604"></a>
-<a id="__codelineno-0-605" name="__codelineno-0-605"></a>    <span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_events</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
-<a id="__codelineno-0-606" name="__codelineno-0-606"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-<a id="__codelineno-0-607" name="__codelineno-0-607"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">events</span>
+<span class="normal"><a href="#__codelineno-0-607">607</a></span>
+<span class="normal"><a href="#__codelineno-0-608">608</a></span>
+<span class="normal"><a href="#__codelineno-0-609">609</a></span>
+<span class="normal"><a href="#__codelineno-0-610">610</a></span>
+<span class="normal"><a href="#__codelineno-0-611">611</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-556" name="__codelineno-0-556"></a><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Recording</span><span class="p">:</span>
+<a id="__codelineno-0-557" name="__codelineno-0-557"></a><span class="w">    </span><span class="sd">"""Load a BrainVision recording (pass the ``.vhdr`` header path).</span>
+<a id="__codelineno-0-558" name="__codelineno-0-558"></a>
+<a id="__codelineno-0-559" name="__codelineno-0-559"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-560" name="__codelineno-0-560"></a><span class="sd">        filepath: Path to the BrainVision ``.vhdr`` header (its ``.vmrk`` and</span>
+<a id="__codelineno-0-561" name="__codelineno-0-561"></a><span class="sd">            ``.eeg`` siblings are resolved by MNE).</span>
+<a id="__codelineno-0-562" name="__codelineno-0-562"></a><span class="sd">        allow_partial_frame: By default a binary data file whose size is not a</span>
+<a id="__codelineno-0-563" name="__codelineno-0-563"></a><span class="sd">            whole number of frames raises :class:`~biosigio.exceptions.CorruptFileError`.</span>
+<a id="__codelineno-0-564" name="__codelineno-0-564"></a><span class="sd">            True reads the whole frames of a MULTIPLEXED file that ends in a</span>
+<a id="__codelineno-0-565" name="__codelineno-0-565"></a><span class="sd">            partial frame (and declares no positive ``DataPoints=``), with a</span>
+<a id="__codelineno-0-566" name="__codelineno-0-566"></a><span class="sd">            ``UserWarning`` naming the file and the dropped byte count; the count</span>
+<a id="__codelineno-0-567" name="__codelineno-0-567"></a><span class="sd">            is recorded in the metadata as ``brainvision_dropped_bytes``.</span>
+<a id="__codelineno-0-568" name="__codelineno-0-568"></a><span class="sd">            Vectorized data, a file smaller than a positive ``DataPoints=`` and a</span>
+<a id="__codelineno-0-569" name="__codelineno-0-569"></a><span class="sd">            file that holds no whole frame are still refused.</span>
+<a id="__codelineno-0-570" name="__codelineno-0-570"></a>
+<a id="__codelineno-0-571" name="__codelineno-0-571"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-572" name="__codelineno-0-572"></a><span class="sd">        Recording: channels carry their type and physical unit; ``.vmrk`` markers</span>
+<a id="__codelineno-0-573" name="__codelineno-0-573"></a><span class="sd">        are read into ``Recording.events``.</span>
+<a id="__codelineno-0-574" name="__codelineno-0-574"></a><span class="sd">    """</span>
+<a id="__codelineno-0-575" name="__codelineno-0-575"></a>    <span class="n">mne</span> <span class="o">=</span> <span class="n">require_mne</span><span class="p">()</span>
+<a id="__codelineno-0-576" name="__codelineno-0-576"></a>    <span class="c1"># The resolver sits OUTSIDE the classifying try on purpose: what it can</span>
+<a id="__codelineno-0-577" name="__codelineno-0-577"></a>    <span class="c1"># raise is a failure to write the patched temporary header or stage a</span>
+<a id="__codelineno-0-578" name="__codelineno-0-578"></a>    <span class="c1"># file beside it (ENOSPC, EROFS, EACCES, quota), or a host condition</span>
+<a id="__codelineno-0-579" name="__codelineno-0-579"></a>    <span class="c1"># while reading the header. Each is a property of the host, not of the</span>
+<a id="__codelineno-0-580" name="__codelineno-0-580"></a>    <span class="c1"># recording, and must propagate as-is rather than become a typed</span>
+<a id="__codelineno-0-581" name="__codelineno-0-581"></a>    <span class="c1"># (possibly permanent) read failure. Any other unreadable header is not</span>
+<a id="__codelineno-0-582" name="__codelineno-0-582"></a>    <span class="c1"># raised here; the resolver yields the original path and MNE raises</span>
+<a id="__codelineno-0-583" name="__codelineno-0-583"></a>    <span class="c1"># inside the try below.</span>
+<a id="__codelineno-0-584" name="__codelineno-0-584"></a>    <span class="n">recovered</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-585" name="__codelineno-0-585"></a>    <span class="n">staged</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-586" name="__codelineno-0-586"></a>    <span class="k">with</span> <span class="n">resolved_vhdr</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">substitutions</span><span class="o">=</span><span class="n">recovered</span><span class="p">,</span> <span class="n">staged_files</span><span class="o">=</span><span class="n">staged</span><span class="p">)</span> <span class="k">as</span> <span class="n">vhdr</span><span class="p">:</span>
+<a id="__codelineno-0-587" name="__codelineno-0-587"></a>        <span class="c1"># Outside the try: a refusal is already typed, not an MNE failure to classify.</span>
+<a id="__codelineno-0-588" name="__codelineno-0-588"></a>        <span class="n">dropped</span> <span class="o">=</span> <span class="n">require_whole_frames</span><span class="p">(</span><span class="n">vhdr</span><span class="p">,</span> <span class="n">staged</span><span class="p">,</span> <span class="n">allow_partial_frame</span><span class="o">=</span><span class="n">allow_partial_frame</span><span class="p">)</span>
+<a id="__codelineno-0-589" name="__codelineno-0-589"></a>        <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-0-590" name="__codelineno-0-590"></a>            <span class="n">raw</span> <span class="o">=</span> <span class="n">mne</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_raw_brainvision</span><span class="p">(</span><span class="n">vhdr</span><span class="p">,</span> <span class="n">preload</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="s2">"ERROR"</span><span class="p">)</span>
+<a id="__codelineno-0-591" name="__codelineno-0-591"></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<a id="__codelineno-0-592" name="__codelineno-0-592"></a>            <span class="c1"># Resource exhaustion (MemoryError, thread/allocation-exhaustion</span>
+<a id="__codelineno-0-593" name="__codelineno-0-593"></a>            <span class="c1"># OSError/RuntimeError) is a host condition, not a file problem --</span>
+<a id="__codelineno-0-594" name="__codelineno-0-594"></a>            <span class="c1"># propagate unchanged rather than reclassifying it as a permanent</span>
+<a id="__codelineno-0-595" name="__codelineno-0-595"></a>            <span class="c1"># read failure (see biosigio.exceptions.is_resource_exhaustion).</span>
+<a id="__codelineno-0-596" name="__codelineno-0-596"></a>            <span class="k">if</span> <span class="n">is_resource_exhaustion</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+<a id="__codelineno-0-597" name="__codelineno-0-597"></a>                <span class="k">raise</span>
+<a id="__codelineno-0-598" name="__codelineno-0-598"></a>            <span class="k">raise</span> <span class="n">brainvision_read_error</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">vhdr</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">staged</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+<a id="__codelineno-0-599" name="__codelineno-0-599"></a>
+<a id="__codelineno-0-600" name="__codelineno-0-600"></a>    <span class="n">rec</span> <span class="o">=</span> <span class="n">raw_to_recording</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+<a id="__codelineno-0-601" name="__codelineno-0-601"></a>    <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="s2">"source_file"</span><span class="p">,</span> <span class="n">filepath</span><span class="p">)</span>
+<a id="__codelineno-0-602" name="__codelineno-0-602"></a>    <span class="k">if</span> <span class="n">recovered</span><span class="p">:</span>
+<a id="__codelineno-0-603" name="__codelineno-0-603"></a>        <span class="c1"># A stale header read through its siblings is recorded, not silent.</span>
+<a id="__codelineno-0-604" name="__codelineno-0-604"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="n">HEADER_RECOVERED_KEY</span><span class="p">,</span> <span class="n">recovered</span><span class="p">)</span>
+<a id="__codelineno-0-605" name="__codelineno-0-605"></a>    <span class="k">if</span> <span class="n">dropped</span><span class="p">:</span>
+<a id="__codelineno-0-606" name="__codelineno-0-606"></a>        <span class="c1"># An accepted partial frame is recorded, not silent.</span>
+<a id="__codelineno-0-607" name="__codelineno-0-607"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">set_metadata</span><span class="p">(</span><span class="n">DROPPED_BYTES_KEY</span><span class="p">,</span> <span class="n">dropped</span><span class="p">)</span>
+<a id="__codelineno-0-608" name="__codelineno-0-608"></a>
+<a id="__codelineno-0-609" name="__codelineno-0-609"></a>    <span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_events</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+<a id="__codelineno-0-610" name="__codelineno-0-610"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">events</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+<a id="__codelineno-0-611" name="__codelineno-0-611"></a>        <span class="n">rec</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">events</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -10326,9 +10326,9 @@ file that holds no whole frame are still refused.</p>
     (a partial frame), else 0.</p>
 <p>Raises:
     CorruptFileError: The data file is smaller than the declared <code>DataPoints=</code>
-        times the frame size, or is not a whole number of frames (when no
-        <code>DataPoints=</code> is declared, or the data is vectorized).
-        The message names the file, never its directory.</p>
+        times the frame size, holds no whole frame (a zero-byte file included), or
+        is not a whole number of frames (when no <code>DataPoints=</code> is declared, or the
+        data is vectorized). The message names the file, never its directory.</p>
 
 
             <details class="mkdocstrings-source">
@@ -10439,7 +10439,11 @@ file that holds no whole frame are still refused.</p>
 <span class="normal"><a href="#__codelineno-0-523">523</a></span>
 <span class="normal"><a href="#__codelineno-0-524">524</a></span>
 <span class="normal"><a href="#__codelineno-0-525">525</a></span>
-<span class="normal"><a href="#__codelineno-0-526">526</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="k">def</span><span class="w"> </span><span class="nf">require_whole_frames</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-526">526</a></span>
+<span class="normal"><a href="#__codelineno-0-527">527</a></span>
+<span class="normal"><a href="#__codelineno-0-528">528</a></span>
+<span class="normal"><a href="#__codelineno-0-529">529</a></span>
+<span class="normal"><a href="#__codelineno-0-530">530</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="k">def</span><span class="w"> </span><span class="nf">require_whole_frames</span><span class="p">(</span>
 <a id="__codelineno-0-421" name="__codelineno-0-421"></a>    <span class="n">vhdr</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <a id="__codelineno-0-422" name="__codelineno-0-422"></a>    <span class="n">staged_files</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-423" name="__codelineno-0-423"></a>    <span class="o">*</span><span class="p">,</span>
@@ -10496,9 +10500,9 @@ file that holds no whole frame are still refused.</p>
 <a id="__codelineno-0-474" name="__codelineno-0-474"></a>
 <a id="__codelineno-0-475" name="__codelineno-0-475"></a><span class="sd">    Raises:</span>
 <a id="__codelineno-0-476" name="__codelineno-0-476"></a><span class="sd">        CorruptFileError: The data file is smaller than the declared ``DataPoints=``</span>
-<a id="__codelineno-0-477" name="__codelineno-0-477"></a><span class="sd">            times the frame size, or is not a whole number of frames (when no</span>
-<a id="__codelineno-0-478" name="__codelineno-0-478"></a><span class="sd">            ``DataPoints=`` is declared, or the data is vectorized).</span>
-<a id="__codelineno-0-479" name="__codelineno-0-479"></a><span class="sd">            The message names the file, never its directory.</span>
+<a id="__codelineno-0-477" name="__codelineno-0-477"></a><span class="sd">            times the frame size, holds no whole frame (a zero-byte file included), or</span>
+<a id="__codelineno-0-478" name="__codelineno-0-478"></a><span class="sd">            is not a whole number of frames (when no ``DataPoints=`` is declared, or the</span>
+<a id="__codelineno-0-479" name="__codelineno-0-479"></a><span class="sd">            data is vectorized). The message names the file, never its directory.</span>
 <a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="sd">    """</span>
 <a id="__codelineno-0-481" name="__codelineno-0-481"></a>    <span class="n">declared</span> <span class="o">=</span> <span class="n">_declared_frame</span><span class="p">(</span><span class="n">vhdr</span><span class="p">)</span>
 <a id="__codelineno-0-482" name="__codelineno-0-482"></a>    <span class="k">if</span> <span class="n">declared</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -10515,11 +10519,11 @@ file that holds no whole frame are still refused.</p>
 <a id="__codelineno-0-493" name="__codelineno-0-493"></a>            <span class="sa">f</span><span class="s2">"is smaller than the </span><span class="si">{</span><span class="n">declared</span><span class="o">.</span><span class="n">data_points</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">frame</span><span class="si">}</span><span class="s2"> bytes its header declares "</span>
 <a id="__codelineno-0-494" name="__codelineno-0-494"></a>            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">declared</span><span class="o">.</span><span class="n">data_points</span><span class="si">}</span><span class="s2"> data points of </span><span class="si">{</span><span class="n">layout</span><span class="si">}</span><span class="s2">)."</span>
 <a id="__codelineno-0-495" name="__codelineno-0-495"></a>        <span class="p">)</span>
-<a id="__codelineno-0-496" name="__codelineno-0-496"></a>    <span class="k">elif</span> <span class="n">allow_partial_frame</span> <span class="ow">and</span> <span class="n">size</span> <span class="o">&lt;</span> <span class="n">frame</span><span class="p">:</span>
+<a id="__codelineno-0-496" name="__codelineno-0-496"></a>    <span class="k">elif</span> <span class="n">size</span> <span class="o">&lt;</span> <span class="n">frame</span><span class="p">:</span>
 <a id="__codelineno-0-497" name="__codelineno-0-497"></a>        <span class="c1"># Before the modulo check, which a zero-byte file passes: there is nothing to read.</span>
 <a id="__codelineno-0-498" name="__codelineno-0-498"></a>        <span class="n">problem</span> <span class="o">=</span> <span class="p">(</span>
 <a id="__codelineno-0-499" name="__codelineno-0-499"></a>            <span class="sa">f</span><span class="s2">"is smaller than one frame (</span><span class="si">{</span><span class="n">layout</span><span class="si">}</span><span class="s2"> make a frame of </span><span class="si">{</span><span class="n">frame</span><span class="si">}</span><span class="s2"> bytes), so the "</span>
-<a id="__codelineno-0-500" name="__codelineno-0-500"></a>            <span class="s2">"file holds no whole frame for allow_partial_frame to read."</span>
+<a id="__codelineno-0-500" name="__codelineno-0-500"></a>            <span class="s2">"file holds no whole frame."</span>
 <a id="__codelineno-0-501" name="__codelineno-0-501"></a>        <span class="p">)</span>
 <a id="__codelineno-0-502" name="__codelineno-0-502"></a>    <span class="k">elif</span> <span class="n">size</span> <span class="o">%</span> <span class="n">frame</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">data_points</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">declared</span><span class="o">.</span><span class="n">vectorized</span><span class="p">):</span>
 <a id="__codelineno-0-503" name="__codelineno-0-503"></a>        <span class="k">if</span> <span class="n">allow_partial_frame</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">declared</span><span class="o">.</span><span class="n">vectorized</span><span class="p">:</span>
@@ -10528,7 +10532,7 @@ file that holds no whole frame are still refused.</p>
 <a id="__codelineno-0-506" name="__codelineno-0-506"></a>                <span class="sa">f</span><span class="s2">"BrainVision data file </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> ends in a partial frame: its last </span><span class="si">{</span><span class="n">dropped</span><span class="si">}</span><span class="s2"> "</span>
 <a id="__codelineno-0-507" name="__codelineno-0-507"></a>                <span class="sa">f</span><span class="s2">"bytes are not a whole frame (</span><span class="si">{</span><span class="n">layout</span><span class="si">}</span><span class="s2"> make a frame of </span><span class="si">{</span><span class="n">frame</span><span class="si">}</span><span class="s2"> bytes), so "</span>
 <a id="__codelineno-0-508" name="__codelineno-0-508"></a>                <span class="sa">f</span><span class="s2">"allow_partial_frame=True reads the </span><span class="si">{</span><span class="n">size</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="n">frame</span><span class="si">}</span><span class="s2"> whole frames and drops "</span>
-<a id="__codelineno-0-509" name="__codelineno-0-509"></a>                <span class="s2">"them, and any marker in them."</span><span class="p">,</span>
+<a id="__codelineno-0-509" name="__codelineno-0-509"></a>                <span class="s2">"those bytes, with any marker in them."</span><span class="p">,</span>
 <a id="__codelineno-0-510" name="__codelineno-0-510"></a>                <span class="ne">UserWarning</span><span class="p">,</span>
 <a id="__codelineno-0-511" name="__codelineno-0-511"></a>                <span class="n">stacklevel</span><span class="o">=</span><span class="n">_caller_stacklevel</span><span class="p">(),</span>
 <a id="__codelineno-0-512" name="__codelineno-0-512"></a>            <span class="p">)</span>
@@ -10537,15 +10541,19 @@ file that holds no whole frame are still refused.</p>
 <a id="__codelineno-0-515" name="__codelineno-0-515"></a>            <span class="sa">f</span><span class="s2">"is not a whole number of frames (</span><span class="si">{</span><span class="n">layout</span><span class="si">}</span><span class="s2"> make a frame of </span><span class="si">{</span><span class="n">frame</span><span class="si">}</span><span class="s2"> bytes), "</span>
 <a id="__codelineno-0-516" name="__codelineno-0-516"></a>            <span class="s2">"so it is truncated or has trailing bytes that are not a frame."</span>
 <a id="__codelineno-0-517" name="__codelineno-0-517"></a>        <span class="p">)</span>
-<a id="__codelineno-0-518" name="__codelineno-0-518"></a>        <span class="k">if</span> <span class="n">allow_partial_frame</span> <span class="ow">and</span> <span class="n">declared</span><span class="o">.</span><span class="n">vectorized</span><span class="p">:</span>
+<a id="__codelineno-0-518" name="__codelineno-0-518"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">declared</span><span class="o">.</span><span class="n">vectorized</span><span class="p">:</span>
 <a id="__codelineno-0-519" name="__codelineno-0-519"></a>            <span class="n">problem</span> <span class="o">+=</span> <span class="p">(</span>
-<a id="__codelineno-0-520" name="__codelineno-0-520"></a>                <span class="s2">" allow_partial_frame does not apply to vectorized data: a cut there "</span>
-<a id="__codelineno-0-521" name="__codelineno-0-521"></a>                <span class="s2">"misaligns the channels after the first."</span>
-<a id="__codelineno-0-522" name="__codelineno-0-522"></a>            <span class="p">)</span>
-<a id="__codelineno-0-523" name="__codelineno-0-523"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-524" name="__codelineno-0-524"></a>        <span class="k">return</span> <span class="mi">0</span>
-<a id="__codelineno-0-525" name="__codelineno-0-525"></a>    <span class="k">raise</span> <span class="n">CorruptFileError</span><span class="p">(</span>
-<a id="__codelineno-0-526" name="__codelineno-0-526"></a>        <span class="sa">f</span><span class="s2">"BrainVision data file </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is truncated or corrupt: its size (</span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2"> bytes) "</span> <span class="o">+</span> <span class="n">problem</span>
+<a id="__codelineno-0-520" name="__codelineno-0-520"></a>                <span class="s2">" Pass allow_partial_frame=True to read the whole frames of a multiplexed file."</span>
+<a id="__codelineno-0-521" name="__codelineno-0-521"></a>            <span class="p">)</span>
+<a id="__codelineno-0-522" name="__codelineno-0-522"></a>        <span class="k">if</span> <span class="n">allow_partial_frame</span> <span class="ow">and</span> <span class="n">declared</span><span class="o">.</span><span class="n">vectorized</span><span class="p">:</span>
+<a id="__codelineno-0-523" name="__codelineno-0-523"></a>            <span class="n">problem</span> <span class="o">+=</span> <span class="p">(</span>
+<a id="__codelineno-0-524" name="__codelineno-0-524"></a>                <span class="s2">" allow_partial_frame does not apply to vectorized data: a cut there "</span>
+<a id="__codelineno-0-525" name="__codelineno-0-525"></a>                <span class="s2">"misaligns the channels after the first."</span>
+<a id="__codelineno-0-526" name="__codelineno-0-526"></a>            <span class="p">)</span>
+<a id="__codelineno-0-527" name="__codelineno-0-527"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-528" name="__codelineno-0-528"></a>        <span class="k">return</span> <span class="mi">0</span>
+<a id="__codelineno-0-529" name="__codelineno-0-529"></a>    <span class="k">raise</span> <span class="n">CorruptFileError</span><span class="p">(</span>
+<a id="__codelineno-0-530" name="__codelineno-0-530"></a>        <span class="sa">f</span><span class="s2">"BrainVision data file </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is truncated or corrupt: its size (</span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2"> bytes) "</span> <span class="o">+</span> <span class="n">problem</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

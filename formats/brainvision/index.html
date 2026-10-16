@@ -2789,7 +2789,7 @@
 <h2 id="truncated-data-files">Truncated Data Files<a class="headerlink" href="#truncated-data-files" title="Permanent link">&para;</a></h2>
 <p>A binary data file whose size shows that it was cut short is refused by default with <code>CorruptFileError</code> (code <code>corrupt_or_truncated</code>), by the importer and by the streaming Zarr export alike.
 A frame is one sample of every channel: the channel count times the bytes per sample of <code>BinaryFormat=</code>.
-Without a positive <code>DataPoints=</code> in the header's <code>[Common Infos]</code> section, the file size must be a whole number of frames.
+Without a positive <code>DataPoints=</code> in the header's <code>[Common Infos]</code> section, the file size must be a whole number of frames, and at least one: a zero-byte file is refused too.
 A trailing partial frame is refused by default, because MNE-Python would otherwise drop it, and any marker that falls in it, without a word.
 This is a known refusal, and it also applies to a file with extra trailing bytes that are not a frame.
 The opt-in for it is described under <a href="#reading-a-file-with-a-partial-trailing-frame">Reading a File with a Partial Trailing Frame</a>.
@@ -2797,6 +2797,8 @@ With a positive <code>DataPoints=</code>, the file must hold at least that many 
 Vectorized data (each channel stored whole, one after another) always has a size of channels times points times bytes per sample, so a vectorized file that does not hold whole frames is refused whatever <code>DataPoints=</code> says, even if it is longer than <code>DataPoints=</code> declares.
 A <code>DataPoints=</code> that is absent, empty, <code>0</code> or not an integer counts as not declared.
 For <code>.ahdr</code> headers, MNE-Python counts one channel more than the header names, and so does the frame.
+The streaming export reads an <code>.ahdr</code> header through the same checks as a <code>.vhdr</code>.
+In memory, pass <code>importer="brainvision"</code> for an <code>.ahdr</code> header, since <code>Recording.from_file</code> does not infer it from the extension.
 The error message names the data file by its file name, never its directory.
 Some cut files cannot be detected.
 With no <code>DataPoints=</code>, a file cut exactly at a frame boundary has no count to be compared against and still reads: multiplexed data reads as a shorter recording, while in vectorized data (each channel stored whole, one after another) the channel boundaries move, so every channel after the first is corrupted.
@@ -2809,6 +2811,9 @@ When the whole frames before the partial one are what you want, pass <code>allow
 </code></pre></div>
 <p>In <code>Recording.from_file</code> it is a keyword-only argument: it cannot be passed by position.
 <code>stream_to_zarr</code> takes the same keyword, and so does <code>BrainVisionImporter.load</code>.
+The refusal of a multiplexed file with a partial trailing frame names this keyword.
+The refusal of vectorized data does not, because the option does not apply to it.
+The command-line interface does not offer the option, so read such a file through the Python API.
 <code>Recording.from_file</code> and <code>stream_to_zarr</code> ignore it for every format other than BrainVision, as <code>mixed_rate</code> is ignored outside EDF and BDF.
 Calling another format's importer class directly is different: the EDF importer's <code>load</code> raises <code>TypeError</code> for it (<code>EDFImporter.load(path, allow_partial_frame=True)</code>).</p>
 <p>The option covers one case only: multiplexed data with a trailing partial frame and no positive <code>DataPoints=</code>.
@@ -2817,7 +2822,7 @@ It emits a <code>UserWarning</code> that names the data file by its file name an
 It also records that number in the recording's metadata as <code>brainvision_dropped_bytes</code>, so it survives the read; the streaming export writes the same key into the store's <code>recording_metadata</code>.</p>
 <p>The option does not change any other refusal.
 A vectorized file is still refused, with a message saying that <code>allow_partial_frame</code> does not apply to vectorized data, because a cut there misaligns the channels after the first.
-A file smaller than a positive <code>DataPoints=</code> is still refused, and so is a file that holds no whole frame, a zero-byte file included.
+A file smaller than a positive <code>DataPoints=</code> is still refused, and so is a file that holds no whole frame, a zero-byte file included, whether or not the option is set.
 With the flag on or off, a multiplexed file with a positive <code>DataPoints=</code> that ends in a partial frame is read as MNE-Python reads it, with no warning and no key.
 Without the option, nothing changes.</p>
 <h2 id="loading-data">Loading Data<a class="headerlink" href="#loading-data" title="Permanent link">&para;</a></h2>
