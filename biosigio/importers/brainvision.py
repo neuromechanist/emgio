@@ -15,7 +15,7 @@ import re
 import shutil
 import tempfile
 import unicodedata
-from collections.abc import Iterator
+from collections.abc import Generator
 
 import pandas as pd
 
@@ -152,7 +152,7 @@ def resolved_vhdr(
     *,
     substitutions: dict | None = None,
     staged_files: dict | None = None,
-) -> Iterator[str]:
+) -> Generator[str, None, None]:
     """Yield a ``.vhdr`` path whose ``DataFile=``/``MarkerFile=`` point at files that exist.
 
     BIDS renames the BrainVision triplet on disk but not the references inside the

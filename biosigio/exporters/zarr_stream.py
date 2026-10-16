@@ -61,7 +61,7 @@ import numpy as np
 
 from ..bids import apply_channels_tsv_to_stream, resolve_channels_tsv
 from ..core.modality import infer_modality_from_channel_type
-from ..exceptions import is_resource_exhaustion
+from ..exceptions import classify_read_error, is_resource_exhaustion
 from ..importers._mne_common import _FIFF_UNIT_TO_DIM, _MNE_TYPE_TO_biosigIO, require_mne
 from ..version import __version__ as _BIOSIGIO_VERSION
 from .subject_info import SUBJECT_INFO_EXCLUDED_ATTR
@@ -264,11 +264,24 @@ class _EdfSource:
             raise_host_open_error(filepath, open_exc)
             reason = classify_pyedflib_error(open_exc)
             if reason is None:
+                # A refusal this module cannot recover is a typed file failure,
+                # as the in-memory importer raises it (see issue #149).
+                raise classify_read_error(open_exc, filepath) from open_exc
+            try:
+                fallback = read_edf_tolerant(filepath, reason)
+            except ImportError:
+                # MNE/`meg` extra missing: an environment problem, never typed as
+                # a file failure. It propagates with its own clear install hint,
+                # same as the in-memory importer degrading only when it also
+                # can't recover.
                 raise
-            # ImportError (MNE/`meg` extra missing) is deliberately NOT caught
-            # here: it propagates with its own clear install hint, same as the
-            # in-memory importer degrading only when it also can't recover.
-            fallback = read_edf_tolerant(filepath, reason)
+            except Exception as fallback_exc:
+                # The fallback can still find the file unrecoverable (a truncation
+                # its safety net catches, a unit-gain mismatch): type that as the
+                # in-memory importer's outer handler does. Host conditions
+                # (resource exhaustion, EACCES, EIO, ...) re-raise unchanged
+                # inside classify_read_error, and a BiosigIOError passes through.
+                raise classify_read_error(fallback_exc, filepath) from fallback_exc
             self.extra_metadata["edf_tolerant_read"] = True
             self.extra_metadata["edf_tolerant_read_reason"] = reason
             if fallback.renamed_labels:
