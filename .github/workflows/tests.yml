@@ -93,7 +93,9 @@ jobs:
     - name: Run MNE-floor-sensitive tests
       run: |
         uv run pytest --no-cov -rs --junitxml=/tmp/mne-floor.xml \
+          biosigio/tests/test_brainvision_exemplar.py \
           biosigio/tests/test_brainvision_stale_header.py \
+          biosigio/tests/test_edf_bdf_exemplar.py \
           biosigio/tests/test_edf_duplicate_labels.py \
           biosigio/tests/test_eeglab_v73_importer.py \
           biosigio/tests/test_zarr_stream_channels_tsv.py
