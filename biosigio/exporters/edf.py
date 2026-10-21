@@ -1,5 +1,7 @@
+import contextlib
 import math
 import os
+import tempfile
 import warnings
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, InvalidOperation
 from typing import Literal, cast
@@ -14,8 +16,9 @@ from ..core.modality import to_bids_channels_tsv_type
 
 # EDF and BDF share the same 256-byte-per-signal header layout: physical_min and
 # physical_max each occupy an 8-character ASCII field in BOTH formats (BDF's gain
-# is the 24-bit digital sample, not a wider physical field). pyedflib truncates a
-# physical value whose str() exceeds this, so the character budget is always 8.
+# is the 24-bit digital sample, not a wider physical field). edflib cuts a physical
+# value off at this many characters of fixed-notation text, so the character budget
+# is always 8.
 _PHYS_FIELD_CHARS = 8
 
 
@@ -64,33 +67,48 @@ def _edf_signal_labels(names: list[str]) -> tuple[list[str], dict[str, str]]:
     return out, renames
 
 
+def _fixed_text(value: float) -> str:
+    """The shortest fixed-notation decimal text of ``value``, without an exponent.
+
+    edflib writes a physical bound in fixed notation, never as ``1e-05`` (which is
+    what ``str()`` gives below 1e-4): ``-1e-06`` needs nine characters as
+    ``-0.000001``, and the 8-character field then keeps ``-0.00000``, a bound of
+    zero. This is the text whose length has to fit the field.
+    """
+    return format(Decimal(repr(float(value))).normalize(), "f")
+
+
 def _fit_physical_bound(value: float, *, round_up: bool, max_chars: int = _PHYS_FIELD_CHARS):
     """Round a physical bound OUTWARD to fit the EDF/BDF 8-char header field.
 
-    pyedflib stores physical_min/physical_max as short ASCII and truncates any
-    value whose ``str()`` exceeds 8 characters, while any sample outside
-    [physical_min, physical_max] is saturated (clipped) on write. To guarantee
-    the stored window always brackets the signal we round AWAY from the data:
-    ``round_up=True`` returns the smallest representable value ``>= value`` (use
-    for physical_max); ``round_up=False`` returns the largest ``<= value`` (use
-    for physical_min). The result's ``str()`` fits ``max_chars`` whenever the
-    magnitude is representable; an integer part with more than ``max_chars`` digits
-    (|value| >= 1e8, or >= 1e7 once a sign is added) cannot fit, so the tightest
-    outward value is returned and the exporter rejects it with a clear unit-rescale
-    error rather than letting pyedflib truncate it. Containment (the bracket) always
-    holds. Because the digital range is mapped onto [physical_min, physical_max],
-    outward rounding is an affine rescale of the reconstruction and barely affects
-    correlation; clipping (which this prevents) is what destroys signal fidelity.
+    The header stores physical_min/physical_max as short ASCII, in fixed notation
+    (see :func:`_fixed_text`), and a value that needs more characters is cut off,
+    which can move the stored bound INSIDE the data window. To guarantee the stored
+    window can bracket the signal we round AWAY from the data: ``round_up=True``
+    returns the smallest representable value ``>= value`` (use for physical_max);
+    ``round_up=False`` returns the largest ``<= value`` (use for physical_min).
+    The grid is as fine as the field allows, so a bound below 1e-4 in magnitude
+    can only be held to a few digits, and a negative one to one digit less than a
+    positive one because of the sign. The result's fixed-notation text fits
+    ``max_chars`` whenever the magnitude is representable; an integer part with
+    more than ``max_chars`` digits (|value| >= 1e8, or >= 1e7 once a sign is added)
+    cannot fit, so the tightest outward value is returned and the exporter rejects
+    it with a clear unit-rescale error rather than letting the header cut it off.
+    Containment (the bracket) always holds. Because the digital range is mapped onto
+    [physical_min, physical_max], outward rounding is an affine rescale of the
+    reconstruction and barely affects correlation; clipping (which this prevents)
+    is what destroys signal fidelity. A double whose text still reads back inside
+    the window after the header is written (a binary expansion just below the
+    decimal) is settled by :func:`_settle_physical_bounds`.
     """
     if value == 0 or not math.isfinite(value):
         return 0.0
     rounding = ROUND_CEILING if round_up else ROUND_FLOOR
     dec = Decimal(repr(float(value)))
-    exponent = dec.adjusted()  # power of ten of the most-significant digit
-    # Prefer the most significant figures that still fit (tightest bracket),
-    # stepping down to coarser rounding until the str() fits the field.
-    for sig in range(max_chars, 0, -1):
-        quantum = Decimal(1).scaleb(exponent - sig + 1)
+    # Prefer the finest grid that still fits (tightest bracket), stepping down to
+    # coarser rounding until the fixed-notation text fits the field.
+    for places in range(max_chars, -1, -1):
+        quantum = Decimal(1).scaleb(-places)
         try:
             rounded = dec.quantize(quantum, rounding=rounding)
         except InvalidOperation:
@@ -102,11 +120,11 @@ def _fit_physical_bound(value: float, *, round_up: bool, max_chars: int = _PHYS_
             out = float(rounded + quantum)
         elif not round_up and out > value:
             out = float(rounded - quantum)
-        if len(str(out)) <= max_chars:
+        if len(_fixed_text(out)) <= max_chars:
             return out
     # Extreme magnitude (more integer digits than the field holds): fall back to
     # a single significant figure, still rounded outward.
-    quantum = Decimal(1).scaleb(exponent)
+    quantum = Decimal(1).scaleb(dec.adjusted())
     rounded = dec.quantize(quantum, rounding=rounding)
     return int(rounded) if rounded == rounded.to_integral_value() else float(rounded)
 
@@ -219,17 +237,20 @@ def _determine_scaling_factors(
         digital_min, digital_max = -32768, 32767  # 16-bit
     digital_range = digital_max - digital_min
 
-    if np.isclose(signal_min, signal_max):
-        if np.isclose(signal_min, 0.0):
-            # Zero signal: minimal symmetric range around zero.
-            phys_min, phys_max = -1e-6, 1e-6
-        else:
-            # Constant non-zero signal: a 1% margin on each side keeps a valid,
-            # signal-scaled range that brackets the value.
-            margin = abs(signal_min) * 0.01
-            phys_min = _fit_physical_bound(signal_min - margin, round_up=False)
-            phys_max = _fit_physical_bound(signal_max + margin, round_up=True)
+    if np.isclose(signal_min, signal_max) and not np.isclose(signal_min, 0.0):
+        # Constant non-zero signal: a 1% margin on each side keeps a valid,
+        # signal-scaled range that brackets the value.
+        margin = abs(signal_min) * 0.01
+        phys_min = _fit_physical_bound(signal_min - margin, round_up=False)
+        phys_max = _fit_physical_bound(signal_max + margin, round_up=True)
     else:
+        # Any other window, including a constant zero channel and a channel whose
+        # values all lie within 1e-8 of zero (float residue, or Tesla-scale MEG): the
+        # smallest range the 8-character header text can hold around it. Bounds that
+        # fit are 0 and 1e-6 above zero and -1e-5 below it ('-0.000001' needs nine
+        # characters and would be stored as -0.00000), so the window is [0, 1e-6]
+        # for non-negative data, [-1e-5, 0] for non-positive data and [-1e-5, 1e-6]
+        # across zero.
         phys_min = _fit_physical_bound(signal_min, round_up=False)
         phys_max = _fit_physical_bound(signal_max, round_up=True)
 
@@ -243,6 +264,130 @@ def _determine_scaling_factors(
 
     scaling_factor = (digital_range - 1) / (phys_max - phys_min)
     return phys_min, phys_max, digital_min, digital_max, scaling_factor
+
+
+# EDF/BDF header layout (https://www.edfplus.info/specs/edf.html): 256 fixed bytes
+# whose last 4 hold the number of signals, then one block per field, each with one
+# entry per signal: label 16, transducer 80, physical dimension 8, physical minimum
+# 8, physical maximum 8, ... The same layout holds for BDF.
+_FIXED_HEADER_BYTES = 256
+_SIGNAL_COUNT_AT = 252
+_PHYS_MIN_BLOCK_AT = 16 + 80 + 8  # bytes of the fields before it, per signal
+_PHYS_MAX_BLOCK_AT = _PHYS_MIN_BLOCK_AT + _PHYS_FIELD_CHARS
+
+# Rounds of widening a bound that still reads back inside its window: round k moves
+# it 2**k units in the last place outward, so a binary expansion just below the
+# decimal (one step) and a text cut off a digit late (a few) are both absorbed.
+_MAX_BOUND_ROUNDS = 8
+
+
+def _read_header_bounds(path: str, n_signals: int) -> list[tuple[float, float]]:
+    """Physical minimum and maximum of the first ``n_signals`` signals, as stored.
+
+    Parses the header text, which is what every reader scales by (pyedflib and MNE
+    read these fields as decimal text), not the doubles the writer was given.
+    """
+    with open(path, "rb") as fh:
+        n_total = int(fh.read(_FIXED_HEADER_BYTES)[_SIGNAL_COUNT_AT:])
+        fields = fh.read(n_total * (_PHYS_MAX_BLOCK_AT + _PHYS_FIELD_CHARS))
+
+    def field(block_at: int, i: int) -> float:
+        start = n_total * block_at + i * _PHYS_FIELD_CHARS
+        return float(fields[start : start + _PHYS_FIELD_CHARS].decode("ascii"))
+
+    return [(field(_PHYS_MIN_BLOCK_AT, i), field(_PHYS_MAX_BLOCK_AT, i)) for i in range(n_signals)]
+
+
+@contextlib.contextmanager
+def _quiet_bound_warnings():
+    """Silence pyedflib's "will be truncated" warning about long physical bounds.
+
+    pyedflib warns when ``str()`` of a bound exceeds 8 characters. A bound widened
+    by :func:`_settle_physical_bounds` always does (``95382.65000000001`` is stored
+    as ``95382.65``); what the header really holds is checked by reading it back.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message=r"Physical m(?:inimum|aximum) for channel", category=UserWarning
+        )
+        yield
+
+
+def _stored_physical_bounds(channels: list[dict], filetype: int) -> list[tuple[float, float]]:
+    """The physical bounds a header built from ``channels`` will hold.
+
+    edflib writes each bound as fixed-notation text cut off at 8 characters, from its
+    binary expansion, so the text is not always the decimal that was meant: 95382.65
+    is stored as ``95382.64``, and -53820.7 as ``-53820.6``. The header is written to
+    a scratch file (no samples) and parsed back, so the answer is what edflib does
+    rather than a model of it.
+    """
+    with tempfile.TemporaryDirectory() as scratch:
+        path = os.path.join(scratch, "bounds")
+        writer = pyedflib.EdfWriter(path, len(channels), file_type=filetype)
+        try:
+            with _quiet_bound_warnings():
+                writer.setSignalHeaders(channels)
+        finally:
+            writer.close()
+        return _read_header_bounds(path, len(channels))
+
+
+def _step_outward(value: float, toward: float, ulps: int) -> float:
+    """``value`` moved ``ulps`` representable doubles toward ``toward``."""
+    for _ in range(ulps):
+        value = float(np.nextafter(value, toward))
+    return value
+
+
+def _settle_physical_bounds(
+    channels: list[dict], windows: list[tuple[float, float]], filetype: int
+) -> list[tuple[float, float]]:
+    """Make the bounds a header stores bracket each channel's data window.
+
+    A reader scales the digital range onto the STORED bounds, so a stored bound
+    inside the window saturates the extreme samples and shifts the scale of the
+    whole channel (more than ten LSB at the extremes). Starting from the outward
+    rounded bounds in ``channels`` (``physical_min``/``physical_max``, updated in
+    place), the header is written to a scratch file and read back
+    (:func:`_stored_physical_bounds`); every bound that reads back inside its window
+    is moved outward by growing steps in the last place and checked again.
+
+    Returns:
+        The ``(physical_min, physical_max)`` each channel's header will hold.
+
+    Raises:
+        ValueError: If a stored bound still sits inside its window after
+            ``_MAX_BOUND_ROUNDS`` rounds, instead of writing a miscalibrated file.
+    """
+    if not channels:
+        return []
+    attempt = 0
+    while True:
+        stored = _stored_physical_bounds(channels, filetype)
+        low_short = [s_lo > w_lo for (s_lo, _), (w_lo, _) in zip(stored, windows, strict=True)]
+        high_short = [s_hi < w_hi for (_, s_hi), (_, w_hi) in zip(stored, windows, strict=True)]
+        flat = [s_lo >= s_hi for s_lo, s_hi in stored]
+        failing = [i for i in range(len(channels)) if low_short[i] or high_short[i] or flat[i]]
+        if not failing:
+            return stored
+        if attempt == _MAX_BOUND_ROUNDS:
+            details = "; ".join(
+                f"{channels[i]['label']!r}: header stores [{stored[i][0]}, {stored[i][1]}] "
+                f"for data in [{windows[i][0]}, {windows[i][1]}]"
+                for i in failing
+            )
+            raise ValueError(
+                "The EDF/BDF header cannot store physical bounds that bracket the data "
+                f"window ({details}). Rescale the channel to a unit that suits its magnitude."
+            )
+        for i in failing:
+            ch = channels[i]
+            if low_short[i] or flat[i]:
+                ch["physical_min"] = _step_outward(float(ch["physical_min"]), -np.inf, 2**attempt)
+            if high_short[i] or flat[i]:
+                ch["physical_max"] = _step_outward(float(ch["physical_max"]), np.inf, 2**attempt)
+        attempt += 1
 
 
 def summarize_channels(channels: dict, analyses: dict) -> str:
@@ -483,6 +628,7 @@ class EDFExporter:
             "status": [],
         }
         channel_info_list = []
+        data_windows: list[tuple[float, float]] = []
 
         # EDF/BDF export requires a single sampling rate across channels: biosigio stores
         # all channels on one uniform-length grid, and pyedflib's writeSamples produces
@@ -548,6 +694,8 @@ class EDFExporter:
                             stacklevel=2,
                         )
 
+                data_windows.append((float(win_lo), float(win_hi)))
+
                 # Calculate scaling factors for header based on the chosen format (use_bdf).
                 # physical_min/max are rounded outward to bracket the window, so pyedflib
                 # never silently clips the bulk signal (issue #61).
@@ -608,8 +756,15 @@ class EDFExporter:
                 channels_tsv_data["reference"].append("n/a")
                 channels_tsv_data["status"].append("good")
 
+            # The header keeps each bound as 8 characters of text, cut off from its
+            # binary expansion, so a bound can be stored INSIDE the window it was
+            # rounded to bracket (issue #170). Read the text back and widen any such
+            # bound before the writer sees it.
+            _settle_physical_bounds(channel_info_list, data_windows, filetype)
+
             # Set all headers before writing
-            writer.setSignalHeaders(channel_info_list)
+            with _quiet_bound_warnings():
+                writer.setSignalHeaders(channel_info_list)
 
             # Pass 2: Write every data record for all signals at once.
             # pyedflib's writePhysicalSamples() writes exactly ONE data record
