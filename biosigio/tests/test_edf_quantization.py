@@ -26,6 +26,7 @@ from biosigio import EDFExporter, Recording
 from biosigio.exporters.edf import (
     _fit_physical_bound,
     _fixed_text,
+    _quantize_to_digital,
     _settle_physical_bounds,
 )
 
@@ -37,6 +38,16 @@ MOUVI = EX / "two_mouvi_truncated.otb+"
 MEG_FIF = EX / "bids/meg/sub-01/meg/sub-01_task-mouse_meg.fif"
 
 FORMATS = ["edf", "bdf"]
+READERS = ["pyedflib", "mne"]
+EXAMPLES = ["wristband", "sessantaquattro", "mouvi", "meg"]
+
+# The rounding limit is half an LSB. The read-back value is computed in float64 from the
+# stored scale, so allow the evaluation noise (about 1e-9 LSB here) and nothing more.
+HALF_LSB = 0.5
+FLOAT_NOISE_LSB = 1e-6
+
+# MNE returns SI units: it scales uV and mV channels to volts and leaves other units.
+MNE_UNIT_SCALE = {"uV": 1e-6, "mV": 1e-3, "V": 1.0}
 FILETYPES = {"edf": pyedflib.FILETYPE_EDFPLUS, "bdf": pyedflib.FILETYPE_BDFPLUS}
 DIGITAL_RANGE = {"edf": (-32768, 32767), "bdf": (-8388608, 8388607)}
 
@@ -310,3 +321,158 @@ def test_meg_stored_bounds_bracket_every_channel(tmp_path, meg, fmt):
     below zero and every such channel read back with half the gain and an offset.
     """
     _assert_bounds_bracket(meg, _export(meg, tmp_path, fmt))
+
+
+# ----------------------- every sample within half an LSB -----------------------
+
+
+def _read_back(path: pathlib.Path, fmt: str, reader: str, n_samples: int):
+    """Read ``path`` with ``reader``; return (signals in header units, headers).
+
+    ``signals`` is one array per channel with the first ``n_samples`` samples (an EDF
+    holds whole data records, so a file may be longer than the recording). ``headers``
+    are the signal headers as stored, whatever ``reader`` is.
+    """
+    headers = _stored_headers(path)
+    if reader == "pyedflib":
+        with pyedflib.EdfReader(str(path)) as edf:
+            signals = [edf.readSignal(i)[:n_samples] for i in range(len(headers))]
+        return signals, headers
+
+    mne = pytest.importorskip("mne", reason="the MNE read-back needs the optional 'meg' extra")
+    read_raw = mne.io.read_raw_bdf if fmt == "bdf" else mne.io.read_raw_edf
+    raw = read_raw(str(path), preload=True, verbose="error")
+    assert raw.ch_names == [h["label"] for h in headers]
+    scale = np.array([MNE_UNIT_SCALE.get(h["dimension"], 1.0) for h in headers])
+    return list(raw.get_data()[:, :n_samples] / scale[:, None]), headers
+
+
+def _error_in_lsb(source: np.ndarray, back: np.ndarray, header: dict) -> float:
+    """Largest read-back error of one channel, in LSB of the scale the header stores."""
+    lsb = (header["physical_max"] - header["physical_min"]) / (
+        header["digital_max"] - header["digital_min"]
+    )
+    assert len(back) == len(source)
+    return float(np.max(np.abs(back - source)) / lsb)
+
+
+def _assert_within_half_lsb(rec: Recording, path: pathlib.Path, fmt: str, reader: str) -> None:
+    labels = list(rec.channels)
+    n = len(rec.signals)
+    signals, headers = _read_back(path, fmt, reader, n)
+    assert len(signals) == len(labels)
+    worst = {
+        label: _error_in_lsb(rec.signals[label].to_numpy(dtype=np.float64), back, header)
+        for label, back, header in zip(labels, signals, headers, strict=True)
+    }
+    label = max(worst, key=lambda k: worst[k])
+    assert worst[label] <= HALF_LSB + FLOAT_NOISE_LSB, (
+        f"{reader} read of the {fmt} file: {label} is {worst[label]:.9f} LSB from the source "
+        f"(limit {HALF_LSB} LSB)"
+    )
+
+
+@pytest.mark.parametrize("reader", READERS)
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_uniform_noise_reads_back_within_half_lsb(tmp_path, fmt, reader):
+    """The issue's first case: truncation toward zero left up to one whole LSB."""
+    x = np.random.default_rng(0).uniform(-1, 1, 20000)
+    rec = _single_channel(x, unit="uV")
+    _assert_within_half_lsb(rec, _export(rec, tmp_path, fmt), fmt, reader)
+
+
+@pytest.mark.parametrize("reader", READERS)
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_extreme_samples_read_back_within_half_lsb(tmp_path, fmt, reader):
+    """The issue's second case: stored bounds inside the window saturated the extremes."""
+    rng = np.random.default_rng(0)
+    y = rng.uniform(-50000, 90000, 20000)
+    y[0], y[1] = -53820.612, 92309.104
+    rec = _single_channel(y)
+    _assert_within_half_lsb(rec, _export(rec, tmp_path, fmt), fmt, reader)
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_samples_outside_the_window_saturate_at_the_stored_bounds(tmp_path, fmt):
+    """With clipping on, a singular spike reads back at the stored bound, the bulk exactly.
+
+    The bulk keeps its half-LSB bound against the (narrow) window that ``clip_outliers``
+    chose; only the spike is moved, to the stored maximum.
+    """
+    t = np.linspace(0, 1, 4000)
+    x = 0.5 * np.sin(2 * np.pi * 10 * t) + 0.01 * np.random.default_rng(3).standard_normal(4000)
+    x[2000] = 500.0
+    rec = _single_channel(x, unit="uV")
+    with pytest.warns(UserWarning, match="will saturate"):
+        path = pathlib.Path(
+            EDFExporter.export(
+                rec,
+                str(tmp_path / "out"),
+                format=fmt,
+                bypass_analysis=True,
+                create_channels_tsv=False,
+                clip_outliers=True,
+            )
+        )
+    (back,), (header,) = _read_back(path, fmt, "pyedflib", len(x))
+    bulk = np.arange(len(x)) != 2000
+    assert _error_in_lsb(x[bulk], back[bulk], header) <= HALF_LSB + FLOAT_NOISE_LSB
+    lsb = (header["physical_max"] - header["physical_min"]) / (
+        header["digital_max"] - header["digital_min"]
+    )
+    assert abs(back[2000] - header["physical_max"]) <= HALF_LSB * lsb + 1e-9
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_nan_samples_are_written_as_zero(tmp_path, fmt):
+    """NaN has no level; the exporter has always written zero for it, and still does."""
+    x = np.random.default_rng(5).uniform(-2, 2, 2000)
+    x[[10, 500]] = np.nan
+    rec = _single_channel(x, unit="uV")
+    path = _export(rec, tmp_path, fmt)
+    (back,), (header,) = _read_back(path, fmt, "pyedflib", len(x))
+    lsb = (header["physical_max"] - header["physical_min"]) / (
+        header["digital_max"] - header["digital_min"]
+    )
+    assert np.all(np.abs(back[[10, 500]]) <= HALF_LSB * lsb + 1e-9)
+    kept = np.isfinite(x)
+    assert _error_in_lsb(x[kept], back[kept], header) <= HALF_LSB + FLOAT_NOISE_LSB
+
+
+def test_quantize_rounds_to_nearest_level_and_saturates():
+    """A pure check of the rounding rule, on the arithmetic a reader inverts."""
+    # Levels 0..10 over [0, 10]: one unit per level.
+    values = np.array([0.0, 0.49, 0.51, 4.5, 9.99, 10.0, -3.0, 12.0])
+    levels = _quantize_to_digital(values, 0.0, 10.0, 0, 10)
+    assert levels.dtype == np.int32
+    assert levels.tolist() == [0, 0, 1, 4, 10, 10, 0, 10]  # 4.5 ties to the even level
+
+    # The same rule against a bipolar digital range.
+    levels = _quantize_to_digital(np.array([-5.0, -0.4, 0.4, 5.0]), -5.0, 5.0, -100, 100)
+    assert levels.tolist() == [-100, -8, 8, 100]
+
+
+@pytest.fixture(scope="module", params=[(e, f) for e in EXAMPLES for f in FORMATS], ids="-".join)
+def exported_example(request, tmp_path_factory):
+    """A real example written once per format; the readers below share the file."""
+    name, fmt = request.param
+    fixture = {
+        "wristband": "wristband_mv",
+        "sessantaquattro": "sessantaquattro",
+        "mouvi": "mouvi",
+        "meg": "meg",
+    }
+    rec = request.getfixturevalue(fixture[name])
+    return rec, _export(rec, tmp_path_factory.mktemp(f"{name}_{fmt}"), fmt), fmt
+
+
+@pytest.mark.parametrize("reader", READERS)
+def test_real_examples_read_back_within_half_lsb(exported_example, reader):
+    """The gate: wristband (in mV), OTB sessantaquattro, OTB mouvi and the MEG recording.
+
+    Every amplitude of every channel, including the constant zero channels of the OTB
+    recordings and the Tesla-scale MEG channels, is within half an LSB of the source,
+    with the LSB taken from the header as stored, as pyedflib and as MNE read it.
+    """
+    rec, path, fmt = exported_example
+    _assert_within_half_lsb(rec, path, fmt, reader)
