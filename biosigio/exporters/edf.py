@@ -4,7 +4,7 @@ import os
 import tempfile
 import warnings
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, InvalidOperation
-from typing import Any, Literal, cast
+from typing import Any, Literal, NamedTuple, cast
 
 import numpy as np
 import pandas as pd
@@ -440,19 +440,34 @@ _MIN_RESOLVED_LSB = 4
 _MAX_NAMED_CHANNELS = 5
 
 
+class _Unresolved(NamedTuple):
+    """A channel too narrow for its stored scale, as reported by the export warning."""
+
+    name: str
+    unit: str
+    span: float
+    lsb: float
+    offset: float | None  # the window's midpoint when subtracting it would resolve the channel
+
+
 def _unresolved_channels(
     names: list[str],
     channels: list[dict],
     windows: list[tuple[float, float]],
     stored: list[tuple[float, float]],
-) -> list[tuple[str, str, float, float]]:
+) -> list[_Unresolved]:
     """Channels whose data window spans fewer than ``_MIN_RESOLVED_LSB`` stored LSB.
 
-    The header can only hold bounds a few digits wide (nothing narrower than
-    ``[0, 1e-6]`` around zero), so a signal far below 1e-5 in its unit, such as MEG in
-    tesla, falls on a handful of digital levels or on one. A constant channel has no
-    variation to lose and is not listed; a channel that varies by a float residue
-    (values of 0 and 1e-12, say) does lose it and is.
+    The header can only hold bounds a few digits wide, so a window that is narrow
+    against its own magnitude gets bounds far wider than the data. Two things cause it,
+    with different remedies: a signal far below 1e-5 in its unit (MEG in tesla; nothing
+    narrower than ``[0, 1e-6]`` around zero can be stored) needs a smaller unit, and a
+    small variation on a large offset (410986 mV, give or take 5e-6) needs the offset
+    subtracted. ``offset`` is set when the same span centred on zero would be resolved,
+    and is ``None`` when it would not.
+
+    A constant channel has no variation to lose and is not listed; a channel that varies
+    by a float residue (values of 0 and 1e-12, say) does lose it and is.
 
     Args:
         names: The recording's channel names, which the warning uses (not the EDF labels,
@@ -462,31 +477,44 @@ def _unresolved_channels(
         stored: The bounds each header will hold.
 
     Returns:
-        ``(name, unit, span, lsb)`` for each such channel, in channel order.
+        One entry per such channel, in channel order.
     """
     out = []
     for name, ch, (w_lo, w_hi), (s_lo, s_hi) in zip(names, channels, windows, stored, strict=True):
-        lsb = (s_hi - s_lo) / (ch["digital_max"] - ch["digital_min"])
+        digital_range = ch["digital_max"] - ch["digital_min"]
+        lsb = (s_hi - s_lo) / digital_range
         span = w_hi - w_lo
-        if 0 < span < _MIN_RESOLVED_LSB * lsb:
-            out.append((name, str(ch["dimension"]), span, lsb))
+        if not 0 < span < _MIN_RESOLVED_LSB * lsb:
+            continue
+        centred_low = _fit_physical_bound(-span / 2, round_up=False)
+        centred_high = _fit_physical_bound(span / 2, round_up=True)
+        centred_lsb = (centred_high - centred_low) / digital_range
+        offset = (w_lo + w_hi) / 2 if span >= _MIN_RESOLVED_LSB * centred_lsb else None
+        out.append(_Unresolved(name, str(ch["dimension"]), span, lsb, offset))
     return out
 
 
-def _unresolved_warning(unresolved: list[tuple[str, str, float, float]]) -> str:
+def _unresolved_warning(unresolved: list[_Unresolved]) -> str:
     """The warning text for :func:`_unresolved_channels`, naming up to five channels."""
-    named = "; ".join(
-        f"{name!r} spans {span:.3g} {unit} = {span / lsb:.2g} LSB (LSB {lsb:.3g} {unit})"
-        for name, unit, span, lsb in unresolved[:_MAX_NAMED_CHANNELS]
-    )
+    entries = []
+    for name, unit, span, lsb, offset in unresolved[:_MAX_NAMED_CHANNELS]:
+        entry = f"{name!r} spans {span:.3g} {unit} = {span / lsb:.2g} LSB (LSB {lsb:.3g} {unit})"
+        if offset is None:
+            entry += f": rescale it to a smaller unit than {unit}"
+        else:
+            entry += (
+                f": its variation is small against its offset (about {offset:.6g} {unit}), "
+                "so subtract the offset before export"
+            )
+        entries.append(entry)
+    named = "; ".join(entries)
     more = len(unresolved) - _MAX_NAMED_CHANNELS
     if more > 0:
         named += f"; and {more} more"
     return (
         f"{len(unresolved)} channel(s) span fewer than {_MIN_RESOLVED_LSB} stored LSB, so "
-        f"their samples fall on a few digital levels or one: {named}. The header cannot "
-        "store a range narrower than the signal needs; rescale these channels to a smaller "
-        "unit (for example T to fT)."
+        f"their samples fall on a few digital levels or one: {named}. The header holds each "
+        "physical bound as 8 characters, which limits how narrow a range it can store."
     )
 
 

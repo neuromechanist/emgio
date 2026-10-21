@@ -651,6 +651,38 @@ def test_meg_in_edf_warns_about_channels_below_four_lsb(tmp_path, meg):
     count = int(UNRESOLVED.search(message).group(1))
     assert count == len(_channels_under_four_lsb(meg, path))
     assert count > 5 and f"and {count - 5} more" in message
+    # Centred on zero these channels would be no better off: the unit is the problem.
+    assert message.count("rescale it to a smaller unit than T") == 5
+    assert "subtract the offset" not in message
+
+
+def test_offset_channel_is_told_to_subtract_the_offset(tmp_path):
+    """410986 mV, give or take 5e-6, in 16 bits: the offset, not the unit, is the problem.
+
+    The bounds around 410986 hold one decimal ([410985.9, 410986.1]), so the 1e-5 mV
+    variation covers 3.3 LSB. The same variation centred on zero is resolved, so the
+    warning says to subtract the offset, and doing so removes the warning.
+    """
+    rng = np.random.default_rng(410986)
+    values = 410986.0 + rng.uniform(-5e-6, 5e-6, 2000)
+    values[0], values[1] = 410986.0 - 5e-6, 410986.0 + 5e-6
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        _export(_single_channel(values), tmp_path, "edf")
+    (message,) = _unresolved_messages(caught)
+    assert "its variation is small against its offset (about 410986 mV)" in message
+    assert "subtract the offset before export" in message
+    assert "rescale" not in message
+
+    subtracted = tmp_path / "subtracted"
+    subtracted.mkdir()
+    rec = _single_channel(values - 410986.0)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        path = _export(rec, subtracted, "edf")
+    assert _unresolved_messages(caught) == []
+    (back,), (header,) = _read_back(path, "edf", "pyedflib", 2000)
+    assert _error_in_lsb(values - 410986.0, back, header) <= HALF_LSB + FLOAT_NOISE_LSB
 
 
 def test_warning_names_the_channel_not_the_edf_label(tmp_path):
