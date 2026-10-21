@@ -25,6 +25,11 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   The exporter now writes the header to a scratch file, reads it back, and moves a bound outward in the last place until the stored bounds bracket the data.
   It then checks the header of the finished file against the bounds its samples were scaled by.
   On the wristband recording in mV, 20 of its 32 channels stored a bound inside their data.
+- EDF/BDF export no longer writes the wall-clock time into the header's start field.
+  The header start now comes from an explicit `start_datetime` argument, else from
+  `rec.metadata["startdate"]` when the importer filled it, else from the anonymized
+  `01.01.85 00.00.00` that the EDF specification defines for an unknown start date,
+  so two exports of the same recording produce identical headers (#174).
 
 ### Changed
 
@@ -48,7 +53,6 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
 - Every channel still gets its own physical window; a wide EMG channel does not set the scale of an EEG channel in the same file.
 - Not changed here: a recording whose length is not a whole number of data records is still padded up to the next whole record (#171), and a constant channel is still not mapped onto an exact digital level (#172).
   The padding reads back as physical 0, or as the nearest bound when 0 lies outside the window, as before this change; it is not the middle of the window, which pyedflib's own padding of digital samples would give.
-
 ## [1.2.13] - 2026-10-16
 
 This patch release stops reading a BrainVision data file silently when its header shows that the file was cut short, and types a truncated FIF read through `Recording.from_file` as corrupt.
