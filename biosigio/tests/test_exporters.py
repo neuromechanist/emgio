@@ -162,7 +162,7 @@ def test_determine_scaling_factors():
 
     # Test zero signal
     phys_min, phys_max, dig_min, dig_max, scaling = _determine_scaling_factors(0.0, 0.0)
-    assert phys_min == -1.0e-6  # Small range around zero
+    assert phys_min == 0  # Smallest range the 8-char header text holds around zero
     assert phys_max == 1.0e-6
 
 

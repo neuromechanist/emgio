@@ -235,7 +235,20 @@ The verification process:
 - The BIDS-compatible `<output>_channels.tsv` sidecar file includes detailed channel information
 - EDF+/BDF+ annotations are loaded into the `events` DataFrame (columns `onset`, `duration`, `description`) and written back as EDF+/BDF+ annotations on export
 - When importing from EDF, biosigIO attempts to identify channel types based on labels and signal characteristics
-- When exporting to EDF/BDF, biosigIO automatically handles scaling to maximize precision
+- When exporting to EDF/BDF, biosigIO automatically handles scaling to maximize precision, with a physical window of its own for every channel
+- An exported file reads back within half a least significant bit (LSB) of the given values.
+  The LSB is taken from the header as stored, `(physical_max - physical_min) / (digital_max - digital_min)`, and the exporter rounds each sample to the nearest digital level of that scale.
+  A reader scales by the header text, and the header keeps each physical bound as at most 8 characters of fixed-notation text: a bound below 1e-4 in magnitude holds a few digits (`0.00001`, not `1e-05`), and a negative bound one digit fewer than a positive one.
+  The exporter rounds each bound outward, writes the header to a scratch file, reads it back, and moves a bound outward in the last place if it is stored inside the data window (`95382.65` is stored as `95382.64`, `-53820.7` as `-53820.6`).
+  If no stored bound brackets the data, export raises `ValueError`, so rescale the channel to a unit that suits its magnitude.
+  A value outside the bounds, which `clip_outliers` allows, saturates at the end of the digital range.
+  The smallest range the header can hold around zero is `[0, 1e-6]` (data that is not negative), `[-1e-5, 0]` (data that is not positive) or `[-1e-5, 1e-6]`, so a channel whose values are far below 1e-5 in its unit, such as MEG in tesla (about 1e-10), keeps few levels; rescale it to a smaller unit such as fT.
+  Export warns when a channel's data span is above zero and under 4 stored LSB, since its samples then fall on a few digital levels or one.
+  The warning names the channel as the recording calls it (not its EDF label), with its span, its span in LSB and its LSB, for up to five channels, then a count.
+  The rule is the span alone, with no relative floor: a channel that varies by float residue (values of 0 and 1e-12) is reported in EDF, where it loses its variation, and a constant channel is never reported, since it has none to lose.
+  A channel far below 1e-5 in its unit is told to rescale to a smaller unit; a small variation on a large offset (410986 mV, give or take 5e-6) is told to subtract the offset before export, because the span centred on zero would be resolved.
+  A constant channel is not mapped onto an exact digital level (#172), so one whose value is under half an LSB reads back as the stored bound at 0, within half an LSB of the source but not equal to it.
+  The scratch header used to read back the stored bounds is a hidden `.biosigio-bounds-*` file beside the output, removed on success and on failure; if the process is killed outright (SIGKILL), the file is left in the output directory and is safe to delete.
 - EDF/BDF export requires a single sampling rate across all channels; if per-channel rates differ, export raises `ValueError`. Resample channels to a common rate first
 - With `format='auto'`, `to_edf('output')` selects either `.edf` (16-bit) or `.bdf` (24-bit) based on signal analysis and appends the matching extension
 - EDF stores a channel label in 16 characters. A longer label is truncated, and when truncation would give two channels the same label (every Delsys Trigno channel of one sensor, `Mini sensor 10: ACC.X 10`, `Mini sensor 10: ACC.Y 10`, ..., shares its first 16 characters), those channels are numbered within the 16 characters instead (`Mini sensor 10-0`, `Mini sensor 10-1`, ...) and a warning lists them. In the `_channels.tsv` sidecar, only those numbered channels are named by the label written to the file, so their rows match the file on re-import; every other channel keeps its full label there, including one that is truncated but stays unique (as in earlier releases, such a row does not match the truncated label on re-import)

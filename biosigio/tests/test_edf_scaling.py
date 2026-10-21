@@ -119,7 +119,7 @@ def test_determine_scaling_factors_brackets(use_bdf):
 def test_determine_scaling_factors_special_cases():
     """Zero, constant, NaN and tiny-range windows stay valid (pmin < pmax)."""
     pmin, pmax, *_ = _determine_scaling_factors(0.0, 0.0)
-    assert (pmin, pmax) == (-1e-6, 1e-6)
+    assert (pmin, pmax) == (0, 1e-6)  # the smallest range the 8-char text holds around 0
 
     pmin, pmax, *_ = _determine_scaling_factors(1.0, 1.0)
     assert pmin <= 1.0 <= pmax and pmin < pmax
