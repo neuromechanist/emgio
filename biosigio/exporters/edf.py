@@ -499,6 +499,15 @@ class EDFExporter:
         """
         Export EMG data to EDF/BDF format with optional BIDS-compliant channels.tsv file.
 
+        Every channel gets its own physical window. Each sample is rounded to the nearest
+        digital level of the scale the header stores, so the file reads back within half a
+        least significant bit (LSB) of the given values, with the LSB
+        ``(physical_max - physical_min) / (digital_max - digital_min)`` taken from the
+        header as stored. The header keeps each bound as 8 characters of fixed-notation
+        text, so the exporter reads it back and widens a bound that is stored inside the
+        data window. Samples outside the window (see ``clip_outliers``) saturate at its
+        ends.
+
         Args:
             rec: Recording object containing the data
             filepath: Path to save the EDF/BDF file

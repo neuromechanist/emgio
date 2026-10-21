@@ -10,6 +10,33 @@ Entries before 1.2.9 are condensed from the
 [GitHub Releases](https://github.com/neuromechanist/biosigio/releases),
 which keep the full notes; releases older than 1.1.0 are listed there only.
 
+## [Unreleased]
+
+### Fixed
+
+- EDF and BDF export reads back within half a least significant bit (LSB) of the given values, with the LSB taken from the header as stored: `(physical_max - physical_min) / (digital_max - digital_min)` (#170).
+  pyedflib's `writeSamples` truncated each value toward zero when it turned it into a digital level, so errors reached a whole LSB.
+  The exporter now rounds to the nearest level against the stored bounds, clips to the digital range, and writes the levels with `digital=True`.
+  On the four recordings in `examples/` (the wristband recording in mV, the OTB sessantaquattro and mouvi recordings, and the MEG recording), read back with pyedflib and MNE in EDF and BDF, every sample is within half an LSB.
+  Before, the wristband recording was up to 1.05 LSB off in EDF and 20.8 LSB in BDF.
+- The physical bounds stored in an EDF or BDF header bracket the data window.
+  The header keeps each bound as at most 8 characters of fixed-notation text cut off from its binary expansion, so a bound rounded outward to fit could be stored inside the window: `95382.65` was stored as `95382.64` and `-53820.7` as `-53820.6`.
+  The extreme samples then saturated and a reader scaled by bounds the writer had not used.
+  The exporter now writes the header to a scratch file, reads it back, and moves a bound outward in the last place until the stored bounds bracket the data.
+  It then checks the header of the finished file against the bounds its samples were scaled by.
+  On the wristband recording in mV, 20 of its 32 channels stored a bound inside their data.
+
+### Changed
+
+- A bound below 1e-4 in magnitude is rounded outward to what its fixed-notation text holds in 8 characters, not to the digits `str()` shows (`1e-05` is written as `0.00001`), and a negative bound keeps one digit fewer than a positive one.
+- A window within 1e-8 of zero (a constant zero channel, float residue, or a Tesla-scale MEG channel) is no longer replaced by `[-1e-6, 1e-6]`, whose lower bound `-1e-06` is stored as `-0.00000`: such a channel read back with half the gain and an offset of 5e-7, and a constant zero read back as 5e-7.
+  It is fit like any other window, to the bounds the 8-character text can hold: `[0, 1e-6]` for non-negative data, `[-1e-5, 0]` for non-positive data and `[-1e-5, 1e-6]` across zero.
+  On the 274 magnetometers of the MEG example (values near 1e-10 T) the read-back now has gain 1 and no offset, and is within half an LSB.
+  Their correlation with the source is 0.971 at the lowest, where the old read-back, with its gain and offset, correlated 0.999: a channel far below 1e-5 in its unit keeps few levels, because no smaller range can be stored, so rescale such a channel to a smaller unit (for example T to fT).
+- `EDFExporter.export` raises `ValueError` when a physical bound cannot be stored so that it brackets the data, instead of writing a miscalibrated file.
+- Every channel still gets its own physical window; a wide EMG channel does not set the scale of an EEG channel in the same file.
+- Not changed here: a recording whose length is not a whole number of data records is still zero-padded (#171), and a constant channel is still not mapped onto an exact digital level (#172).
+
 ## [1.2.13] - 2026-10-16
 
 This patch release stops reading a BrainVision data file silently when its header shows that the file was cut short, and types a truncated FIF read through `Recording.from_file` as corrupt.
@@ -505,6 +532,7 @@ First release since 1.1.3; the internal 1.1.4 and 1.1.5 bumps are folded in.
 - EEGLAB `.set` files with the signal matrix in a sibling `.fdt` file (#94).
 - `bids.apply_events_tsv` to load a BIDS `_events.tsv` into `rec.events`.
 
+[Unreleased]: https://github.com/neuromechanist/biosigio/compare/v1.2.13...HEAD
 [1.2.13]: https://github.com/neuromechanist/biosigio/compare/v1.2.12...v1.2.13
 [1.2.12]: https://github.com/neuromechanist/biosigio/compare/v1.2.11...v1.2.12
 [1.2.11]: https://github.com/neuromechanist/biosigio/compare/v1.2.10...v1.2.11
