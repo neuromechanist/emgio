@@ -52,15 +52,17 @@ FILETYPES = {"edf": pyedflib.FILETYPE_EDFPLUS, "bdf": pyedflib.FILETYPE_BDFPLUS}
 DIGITAL_RANGE = {"edf": (-32768, 32767), "bdf": (-8388608, 8388607)}
 
 
-def _export(rec: Recording, tmp_path: pathlib.Path, fmt: str) -> pathlib.Path:
-    """Write ``rec`` without clipping, so the header window is the full data range."""
+def _export(
+    rec: Recording, tmp_path: pathlib.Path, fmt: str, clip_outliers: bool | str = False
+) -> pathlib.Path:
+    """Write ``rec``; by default without clipping, so each header window is the data range."""
     path = EDFExporter.export(
         rec,
         str(tmp_path / "out"),
         format=fmt,
         bypass_analysis=True,
         create_channels_tsv=False,
-        clip_outliers=False,
+        clip_outliers=clip_outliers,
     )
     return pathlib.Path(path)
 
@@ -476,3 +478,55 @@ def test_real_examples_read_back_within_half_lsb(exported_example, reader):
     """
     rec, path, fmt = exported_example
     _assert_within_half_lsb(rec, path, fmt, reader)
+
+
+# ----------------------- each channel keeps its own scale -----------------------
+
+# EEG in uV (about +/-80 and +/-40), EMG in mV (+/-3) and EMG in uV (+/-30000): the widest
+# channel must not set the scale of the narrow ones in the same file.
+MIXED_CHANNELS = [
+    ("eeg_a", 80.0, "uV", "EEG"),
+    ("eeg_b", 40.0, "uV", "EEG"),
+    ("emg_mv", 3.0, "mV", "EMG"),
+    ("emg_uv", 30000.0, "uV", "EMG"),
+]
+
+
+def _mixed_eeg_emg() -> Recording:
+    rng = np.random.default_rng(2026)
+    rec = Recording()
+    for label, amplitude, unit, kind in MIXED_CHANNELS:
+        rec.add_channel(label, rng.uniform(-amplitude, amplitude, 5000), 1000, unit, kind)
+    return rec
+
+
+@pytest.mark.parametrize("reader", READERS)
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_mixed_eeg_emg_channels_keep_their_own_scale(tmp_path, fmt, reader):
+    """Each channel is within half of ITS OWN header LSB, and its window fits ITS OWN data.
+
+    The default ``clip_outliers="auto"`` is used, as a caller who does not choose gets it.
+    """
+    rec = _mixed_eeg_emg()
+    path = _export(rec, tmp_path, fmt, clip_outliers="auto")
+    signals, headers = _read_back(path, fmt, reader, len(rec.signals))
+    lsbs = []
+    for (label, *_), back, header in zip(MIXED_CHANNELS, signals, headers, strict=True):
+        source = rec.signals[label].to_numpy(dtype=np.float64)
+        lsb = (header["physical_max"] - header["physical_min"]) / (
+            header["digital_max"] - header["digital_min"]
+        )
+        lsbs.append(lsb)
+        assert _error_in_lsb(source, back, header) <= HALF_LSB + FLOAT_NOISE_LSB, (
+            f"{label}: more than half of its own header LSB ({lsb:g} {header['dimension']})"
+        )
+        # The window hugs this channel's data (outward rounding of the 8-character bounds
+        # only), so no wider channel has set its scale.
+        data_range = float(source.max() - source.min())
+        window = header["physical_max"] - header["physical_min"]
+        assert data_range <= window <= data_range * (1 + 1e-3), (
+            f"{label}: window {window:g} for data range {data_range:g} {header['dimension']}"
+        )
+    # Four channels, four scales; an EEG LSB is far below the wide EMG channel's.
+    assert len(set(lsbs)) == len(MIXED_CHANNELS)
+    assert lsbs[0] < lsbs[3] / 100
