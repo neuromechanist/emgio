@@ -250,15 +250,21 @@ def test_stored_bounds_bracket_random_windows(tmp_path, fmt):
 
 @pytest.mark.parametrize("fmt", FORMATS)
 @pytest.mark.parametrize("values", [np.zeros(8), np.full(8, 1e-12), np.full(8, -3e-15)])
-def test_zero_and_residue_channels_keep_a_valid_window(tmp_path, fmt, values):
-    """A constant zero, or float residue near zero, still gets bounds the header holds.
+def test_zero_and_residue_channels_read_back_on_a_valid_window(tmp_path, fmt, values):
+    """A constant zero, or float residue near zero, gets bounds the header holds.
 
-    ``-1e-06`` is stored as ``-0.00000``, a bound of zero that is inside a window
-    reaching below it.
+    ``-1e-06`` is stored as ``-0.00000``, a bound of zero that is inside a window reaching
+    below it, and a ``[-1e-6, 1e-6]`` window that stores as ``[0, 1e-6]`` read every such
+    channel back with half the gain and an offset of 5e-7 (8 million LSB for a constant
+    zero in BDF). The stored window brackets the data and the samples are within half an
+    LSB, which fails for every case on the earlier exporter.
     """
     rec = _single_channel(values, unit="uV", fs=8)
-    header = _stored_headers(_export(rec, tmp_path, fmt))[0]
+    path = _export(rec, tmp_path, fmt)
+    (header,) = _stored_headers(path)
     _assert_brackets(header, float(values.min()), float(values.max()))
+    (back,), _ = _read_back(path, fmt, "pyedflib", 8)
+    assert _error_in_lsb(values, back, header) <= HALF_LSB + FLOAT_NOISE_LSB
 
 
 def test_settle_refuses_a_window_the_header_cannot_bracket(tmp_path):
