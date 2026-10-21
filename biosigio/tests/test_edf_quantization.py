@@ -20,6 +20,7 @@ import pathlib
 import re
 import tempfile
 import warnings
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -666,6 +667,16 @@ def test_meg_in_edf_warns_about_channels_below_four_lsb(tmp_path, meg):
     (message,) = _unresolved_messages(caught)
     assert " spans " in message and " LSB (LSB " in message and " T = " in message
     under = _channels_under_four_lsb(meg, path)
+    # The counts the changelog and the format page state for the MEG example.
+    assert Counter(i["channel_type"] for i in meg.channels.values()) == {
+        "MEGMAG": 274,
+        "MEGREFMAG": 29,
+        "TRIG": 2,
+    }
+    assert Counter(meg.channels[name]["channel_type"] for name in under) == {
+        "MEGMAG": 274,
+        "MEGREFMAG": 20,
+    }
     headers = {h["label"]: h for h in _stored_headers(path)}
     # The five channels the warning names, with their span, LSB count and LSB.
     for name in under[:5]:
