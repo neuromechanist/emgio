@@ -17,6 +17,8 @@ NO MOCKS: real writers, real files, real readers.
 """
 
 import pathlib
+import re
+import warnings
 
 import numpy as np
 import pyedflib
@@ -28,6 +30,7 @@ from biosigio.exporters.edf import (
     _fixed_text,
     _quantize_to_digital,
     _settle_physical_bounds,
+    _unresolved_channels,
 )
 
 _REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -583,3 +586,75 @@ def test_wristband_padding_reads_back_as_zero(tmp_path, wristband_mv, fmt):
     assert n == 20001 and len(signals[0]) == 22000
     for label, back, header in zip(wristband_mv.channels, signals, headers, strict=True):
         assert _padding_error_in_lsb(back, n, header) <= HALF_LSB + FLOAT_NOISE_LSB, label
+
+
+# ----------------------- channels too narrow for their stored scale -----------------------
+
+UNRESOLVED = re.compile(r"(\d+) channel\(s\) span fewer than 4 stored LSB")
+
+
+def _unresolved_messages(caught) -> list[str]:
+    return [str(w.message) for w in caught if UNRESOLVED.search(str(w.message))]
+
+
+def _channels_under_four_lsb(rec: Recording, path: pathlib.Path) -> list[str]:
+    """Channels whose data span is above 0 and below 4 LSB of the scale the file stores."""
+    with pyedflib.EdfReader(str(path)) as edf:
+        headers = edf.getSignalHeaders()
+    out = []
+    for label, header in zip(rec.channels, headers, strict=True):
+        values = rec.signals[label].to_numpy(dtype=np.float64)
+        span = float(values.max() - values.min())
+        if 0 < span < 4 * _header_lsb(header):
+            out.append(label)
+    return out
+
+
+def test_meg_in_edf_warns_about_channels_below_four_lsb(tmp_path, meg):
+    """Tesla magnetometers span under one 16-bit LSB of the smallest range the header holds.
+
+    The export still succeeds, and the warning names the channels with their span and
+    their LSB; its count is the number of channels the file leaves under 4 LSB.
+    """
+    with pytest.warns(UserWarning, match=UNRESOLVED.pattern) as caught:
+        path = _export(meg, tmp_path, "edf")
+    assert path.exists()
+    (message,) = _unresolved_messages(caught)
+    assert " spans " in message and " LSB (LSB " in message and " T = " in message
+    first = _channels_under_four_lsb(meg, path)[0]
+    assert repr(first) in message
+    count = int(UNRESOLVED.search(message).group(1))
+    assert count == len(_channels_under_four_lsb(meg, path))
+    assert count > 5 and f"and {count - 5} more" in message
+
+
+def test_meg_in_bdf_resolves_its_channels_without_a_warning(tmp_path, meg):
+    """24 bits leave every MEG channel at least 4 LSB wide, so nothing is said."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        path = _export(meg, tmp_path, "bdf")
+    assert _unresolved_messages(caught) == []
+    assert _channels_under_four_lsb(meg, path) == []
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_constant_zero_channels_are_not_reported(tmp_path, sessantaquattro, mouvi, fmt):
+    """A constant channel has no variation to lose; the OTB recordings have 6 and 38."""
+    for rec in (sessantaquattro, mouvi):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            path = _export(rec, tmp_path, fmt)
+        assert _unresolved_messages(caught) == []
+        assert _channels_under_four_lsb(rec, path) == []
+
+
+def test_unresolved_threshold_is_four_lsb():
+    """Below 4 LSB is reported, 4 LSB and more is not, and a constant is never."""
+    lsb = 2.0 / (32767 + 32768)
+    channels = [
+        {"label": name, "dimension": "uV", "digital_min": -32768, "digital_max": 32767}
+        for name in ("below", "above", "constant")
+    ]
+    windows = [(0.0, 3.9 * lsb), (0.0, 4.1 * lsb), (1.0, 1.0)]
+    stored = [(-1.0, 1.0)] * 3
+    assert [label for label, *_ in _unresolved_channels(channels, windows, stored)] == ["below"]

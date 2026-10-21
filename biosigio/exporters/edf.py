@@ -407,6 +407,52 @@ def _quantize_to_digital(
     return np.clip(levels, dig_min, dig_max).astype(np.int32)
 
 
+# A channel whose data span covers fewer stored LSB than this keeps too few digital
+# levels to tell its samples apart.
+_MIN_RESOLVED_LSB = 4
+# Channels named in the warning about such channels; the rest are counted.
+_MAX_NAMED_CHANNELS = 5
+
+
+def _unresolved_channels(
+    channels: list[dict], windows: list[tuple[float, float]], stored: list[tuple[float, float]]
+) -> list[tuple[str, str, float, float]]:
+    """Channels whose data window spans fewer than ``_MIN_RESOLVED_LSB`` stored LSB.
+
+    The header can only hold bounds a few digits wide (nothing narrower than
+    ``[0, 1e-6]`` around zero), so a signal far below 1e-5 in its unit, such as MEG in
+    tesla, falls on a handful of digital levels or on one. A constant channel has no
+    variation to lose and is not listed.
+
+    Returns:
+        ``(label, unit, span, lsb)`` for each such channel, in channel order.
+    """
+    out = []
+    for ch, (w_lo, w_hi), (s_lo, s_hi) in zip(channels, windows, stored, strict=True):
+        lsb = (s_hi - s_lo) / (ch["digital_max"] - ch["digital_min"])
+        span = w_hi - w_lo
+        if 0 < span < _MIN_RESOLVED_LSB * lsb:
+            out.append((str(ch["label"]), str(ch["dimension"]), span, lsb))
+    return out
+
+
+def _unresolved_warning(unresolved: list[tuple[str, str, float, float]]) -> str:
+    """The warning text for :func:`_unresolved_channels`, naming up to five channels."""
+    named = "; ".join(
+        f"{label!r} spans {span:.3g} {unit} = {span / lsb:.2g} LSB (LSB {lsb:.3g} {unit})"
+        for label, unit, span, lsb in unresolved[:_MAX_NAMED_CHANNELS]
+    )
+    more = len(unresolved) - _MAX_NAMED_CHANNELS
+    if more > 0:
+        named += f"; and {more} more"
+    return (
+        f"{len(unresolved)} channel(s) span fewer than {_MIN_RESOLVED_LSB} stored LSB, so "
+        f"their samples fall on a few digital levels or one: {named}. The header cannot "
+        "store a range narrower than the signal needs; rescale these channels to a smaller "
+        "unit (for example T to fT)."
+    )
+
+
 def _pad_to_whole_records(levels: np.ndarray, samples_per_record: int, fill: int) -> np.ndarray:
     """``levels`` extended with ``fill`` to a whole number of data records.
 
@@ -802,6 +848,9 @@ class EDFExporter:
             # rounded to bracket (issue #170). Read the text back and widen any such
             # bound before the writer sees it.
             stored_bounds = _settle_physical_bounds(channel_info_list, data_windows, filetype)
+            unresolved = _unresolved_channels(channel_info_list, data_windows, stored_bounds)
+            if unresolved:
+                warnings.warn(_unresolved_warning(unresolved), stacklevel=2)
 
             # Set all headers before writing
             with _quiet_bound_warnings():
