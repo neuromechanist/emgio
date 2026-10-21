@@ -441,32 +441,43 @@ _MAX_NAMED_CHANNELS = 5
 
 
 def _unresolved_channels(
-    channels: list[dict], windows: list[tuple[float, float]], stored: list[tuple[float, float]]
+    names: list[str],
+    channels: list[dict],
+    windows: list[tuple[float, float]],
+    stored: list[tuple[float, float]],
 ) -> list[tuple[str, str, float, float]]:
     """Channels whose data window spans fewer than ``_MIN_RESOLVED_LSB`` stored LSB.
 
     The header can only hold bounds a few digits wide (nothing narrower than
     ``[0, 1e-6]`` around zero), so a signal far below 1e-5 in its unit, such as MEG in
     tesla, falls on a handful of digital levels or on one. A constant channel has no
-    variation to lose and is not listed.
+    variation to lose and is not listed; a channel that varies by a float residue
+    (values of 0 and 1e-12, say) does lose it and is.
+
+    Args:
+        names: The recording's channel names, which the warning uses (not the EDF labels,
+            which are cut to 16 characters and may be numbered).
+        channels: The signal headers, in the same order.
+        windows: Each channel's data window.
+        stored: The bounds each header will hold.
 
     Returns:
-        ``(label, unit, span, lsb)`` for each such channel, in channel order.
+        ``(name, unit, span, lsb)`` for each such channel, in channel order.
     """
     out = []
-    for ch, (w_lo, w_hi), (s_lo, s_hi) in zip(channels, windows, stored, strict=True):
+    for name, ch, (w_lo, w_hi), (s_lo, s_hi) in zip(names, channels, windows, stored, strict=True):
         lsb = (s_hi - s_lo) / (ch["digital_max"] - ch["digital_min"])
         span = w_hi - w_lo
         if 0 < span < _MIN_RESOLVED_LSB * lsb:
-            out.append((str(ch["label"]), str(ch["dimension"]), span, lsb))
+            out.append((name, str(ch["dimension"]), span, lsb))
     return out
 
 
 def _unresolved_warning(unresolved: list[tuple[str, str, float, float]]) -> str:
     """The warning text for :func:`_unresolved_channels`, naming up to five channels."""
     named = "; ".join(
-        f"{label!r} spans {span:.3g} {unit} = {span / lsb:.2g} LSB (LSB {lsb:.3g} {unit})"
-        for label, unit, span, lsb in unresolved[:_MAX_NAMED_CHANNELS]
+        f"{name!r} spans {span:.3g} {unit} = {span / lsb:.2g} LSB (LSB {lsb:.3g} {unit})"
+        for name, unit, span, lsb in unresolved[:_MAX_NAMED_CHANNELS]
     )
     more = len(unresolved) - _MAX_NAMED_CHANNELS
     if more > 0:
@@ -882,7 +893,9 @@ class EDFExporter:
                 filetype,
                 scratch_dir=os.path.dirname(os.path.abspath(filepath)),
             )
-            unresolved = _unresolved_channels(channel_info_list, data_windows, stored_bounds)
+            unresolved = _unresolved_channels(
+                list(rec.channels), channel_info_list, data_windows, stored_bounds
+            )
             if unresolved:
                 warnings.warn(_unresolved_warning(unresolved), stacklevel=2)
 

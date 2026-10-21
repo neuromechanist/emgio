@@ -653,6 +653,27 @@ def test_meg_in_edf_warns_about_channels_below_four_lsb(tmp_path, meg):
     assert count > 5 and f"and {count - 5} more" in message
 
 
+def test_warning_names_the_channel_not_the_edf_label(tmp_path):
+    """Two 24-character names are cut to 16 characters and numbered in the file.
+
+    The EDF labels are ``Mini sensor 10-0`` and ``Mini sensor 10-1``; the warning about
+    their narrow span names the recording's channels, and keeps the labels out.
+    """
+    rng = np.random.default_rng(10)
+    rec = Recording()
+    names = ["Mini sensor 10: ACC.X 10", "Mini sensor 10: ACC.Y 10"]
+    for name in names:
+        rec.add_channel(name, rng.uniform(-1e-11, 1e-11, 2000), 1000, "T", "OTHER")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        path = _export(rec, tmp_path, "edf")
+    assert {h["label"] for h in _stored_headers(path)} == {"Mini sensor 10-0", "Mini sensor 10-1"}
+    (message,) = _unresolved_messages(caught)
+    assert UNRESOLVED.search(message).group(1) == "2"
+    assert all(repr(name) in message for name in names)
+    assert "Mini sensor 10-" not in message
+
+
 def test_meg_in_bdf_resolves_its_channels_without_a_warning(tmp_path, meg):
     """Guard against a false alarm: 24 bits leave every MEG channel at least 4 LSB wide."""
     with warnings.catch_warnings(record=True) as caught:
@@ -682,7 +703,8 @@ def test_unresolved_threshold_is_four_lsb():
     ]
     windows = [(0.0, 3.9 * lsb), (0.0, 4.1 * lsb), (1.0, 1.0)]
     stored = [(-1.0, 1.0)] * 3
-    assert [label for label, *_ in _unresolved_channels(channels, windows, stored)] == ["below"]
+    names = ["below", "above", "constant"]
+    assert [n for n, *_ in _unresolved_channels(names, channels, windows, stored)] == ["below"]
 
 
 # ----------------------- the scratch header lives beside the output -----------------------
