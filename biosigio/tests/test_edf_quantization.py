@@ -34,6 +34,7 @@ from biosigio.exporters.edf import (
     _quantize_to_digital,
     _read_header_bounds,
     _settle_physical_bounds,
+    _stored_physical_bounds,
     _unresolved_channels,
     _verify_header_bounds,
 )
@@ -831,10 +832,12 @@ def test_unresolved_threshold_is_strict_at_exactly_four_lsb():
 
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_export_does_not_need_the_system_temp_directory(tmp_path, monkeypatch, fmt):
-    """Guard: the scratch header is written beside the output, which the export can write to.
+    """Regression test: the scratch header is written beside the output, which the export can write to.
 
-    The system temporary directory is pointed at a directory that does not exist, as an
-    unwritable TMPDIR would; the export succeeds and leaves only the file it was asked for.
+    It fails on 3d87ce0, which wrote the scratch header to the system temporary directory,
+    and passes on main, which writes none. The system temporary directory is pointed at a
+    directory that does not exist, as an unwritable TMPDIR would; the export succeeds and
+    leaves only the file it was asked for.
     """
     monkeypatch.setattr(tempfile, "tempdir", str(tmp_path / "no_such_dir"))
     out = tmp_path / "out_dir"
@@ -842,6 +845,28 @@ def test_export_does_not_need_the_system_temp_directory(tmp_path, monkeypatch, f
     rec = _single_channel(np.random.default_rng(4).uniform(-1, 1, 2000), unit="uV")
     path = _export(rec, out, fmt)
     assert [p.name for p in out.iterdir()] == [path.name]
+
+
+def test_stored_bounds_that_raise_leave_no_scratch_file(tmp_path):
+    """pyedflib refuses a digital minimum below the 16-bit range while the header is set.
+
+    That happens after the scratch file is created, inside ``_stored_physical_bounds``
+    itself; the file is gone when the error reaches the caller.
+    """
+    channel = {
+        "label": "c0",
+        "dimension": "uV",
+        "sample_frequency": 8,
+        "physical_min": -1.0,
+        "physical_max": 1.0,
+        "digital_min": -40000,
+        "digital_max": 32767,
+        "prefilter": "",
+        "transducer": "",
+    }
+    with pytest.raises(ValueError, match="Digital minimum"):
+        _stored_physical_bounds([channel], FILETYPES["edf"], str(tmp_path))
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_settle_leaves_no_scratch_file_on_success_or_failure(tmp_path):
@@ -867,7 +892,12 @@ def test_settle_leaves_no_scratch_file_on_success_or_failure(tmp_path):
 
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_refused_export_leaves_no_file_behind(tmp_path, fmt):
-    """Guard: a magnitude the header cannot hold is refused; neither output nor scratch stays."""
+    """Guard: a magnitude the header cannot hold is refused before any header is written.
+
+    The refusal comes before the scratch header exists, so only the output file is at
+    stake here; the scratch file's removal is covered by the settle and
+    ``_stored_physical_bounds`` tests above and below.
+    """
     rec = _single_channel(np.linspace(-2e7, 2e7, 2000), unit="uV")
     with pytest.raises(ValueError, match="cannot be stored in the EDF/BDF header"):
         _export(rec, tmp_path, fmt)
