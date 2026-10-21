@@ -127,21 +127,34 @@ def meg() -> Recording:
     return Recording.from_file(str(MEG_FIF))
 
 
+# pyedflib parses a bound's header text with edflib's own parser, which can land one unit
+# in the last place away from Python's float() on the same text (it reads 2.53135 as
+# 2.5313499999999998), so a bound is compared with a few ulp of room.
+BOUND_ULPS = 4
+
+
+def _assert_brackets(header: dict, low: float, high: float, context: str = "") -> None:
+    """The stored bounds of ``header`` bracket ``[low, high]``, within a few ulp."""
+    min_room = BOUND_ULPS * np.spacing(abs(low))
+    max_room = BOUND_ULPS * np.spacing(abs(high))
+    assert header["physical_min"] <= low + min_room, (
+        f"{context} stored physical_min {header['physical_min']} is inside the data window "
+        f"(data minimum {low})"
+    )
+    assert header["physical_max"] >= high - max_room, (
+        f"{context} stored physical_max {header['physical_max']} is inside the data window "
+        f"(data maximum {high})"
+    )
+    assert header["physical_min"] < header["physical_max"], context
+
+
 def _assert_bounds_bracket(rec: Recording, path: pathlib.Path) -> None:
     """Every stored (physical_min, physical_max) brackets that channel's data."""
     headers = _stored_headers(path)
     labels = list(rec.channels)
     for header, label in zip(headers, labels, strict=True):
         values = rec.signals[label].to_numpy(dtype=np.float64)
-        assert header["physical_min"] <= values.min(), (
-            f"{label}: stored physical_min {header['physical_min']} is inside the data "
-            f"window (data minimum {values.min()})"
-        )
-        assert header["physical_max"] >= values.max(), (
-            f"{label}: stored physical_max {header['physical_max']} is inside the data "
-            f"window (data maximum {values.max()})"
-        )
-        assert header["physical_min"] < header["physical_max"]
+        _assert_brackets(header, float(values.min()), float(values.max()), f"{label}:")
 
 
 # ----------------------- the header text of a bound (unit) -----------------------
@@ -199,8 +212,8 @@ def test_stored_bounds_bracket_extreme_samples(tmp_path, fmt):
     y = rng.uniform(-50000, 90000, 20000)
     y[0], y[1] = -53820.612, 92309.104
     header = _stored_headers(_export(_single_channel(y), tmp_path, fmt))[0]
-    assert header["physical_min"] <= y.min() == -53820.612
-    assert header["physical_max"] >= y.max() == 92309.104
+    assert (y.min(), y.max()) == (-53820.612, 92309.104)
+    _assert_brackets(header, -53820.612, 92309.104)
 
 
 @pytest.mark.parametrize("fmt", FORMATS)
@@ -212,8 +225,7 @@ def test_stored_bounds_bracket_when_a_decimal_is_stored_short(tmp_path, fmt):
     """
     y = np.array([-1.0, 0.5, 95382.648, 3.0])
     header = _stored_headers(_export(_single_channel(y, fs=4), tmp_path, fmt))[0]
-    assert header["physical_max"] >= 95382.648
-    assert header["physical_min"] <= -1.0
+    _assert_brackets(header, -1.0, 95382.648)
 
 
 @pytest.mark.parametrize("fmt", FORMATS)
@@ -233,9 +245,7 @@ def test_stored_bounds_bracket_random_windows(tmp_path, fmt):
         )
     headers = _stored_headers(_export(rec, tmp_path, fmt))
     for i, (lo, hi) in enumerate(windows):
-        assert headers[i]["physical_min"] <= lo, f"channel {i}: min {headers[i]['physical_min']}"
-        assert headers[i]["physical_max"] >= hi, f"channel {i}: max {headers[i]['physical_max']}"
-        assert headers[i]["physical_min"] < headers[i]["physical_max"]
+        _assert_brackets(headers[i], lo, hi, f"channel {i}:")
 
 
 @pytest.mark.parametrize("fmt", FORMATS)
@@ -248,9 +258,7 @@ def test_zero_and_residue_channels_keep_a_valid_window(tmp_path, fmt, values):
     """
     rec = _single_channel(values, unit="uV", fs=8)
     header = _stored_headers(_export(rec, tmp_path, fmt))[0]
-    assert header["physical_min"] <= values.min()
-    assert header["physical_max"] >= values.max()
-    assert header["physical_min"] < header["physical_max"]
+    _assert_brackets(header, float(values.min()), float(values.max()))
 
 
 def test_settle_refuses_a_window_the_header_cannot_bracket(tmp_path):
@@ -305,8 +313,11 @@ def test_wristband_stored_bounds_bracket_every_channel(tmp_path, wristband_mv, f
     path = _export(wristband_mv, tmp_path, fmt)
     _assert_bounds_bracket(wristband_mv, path)
     headers = {h["label"]: h for h in _stored_headers(path)}
-    assert headers["emg1_left"]["physical_min"] <= -53820.612
-    assert headers["emg0_left"]["physical_max"] >= 95382.648
+    # The pair from the issue: emg1_left reaches -53820.612 mV, emg0_left 95382.648 mV.
+    for label, extreme in (("emg1_left", -53820.612), ("emg0_left", 95382.648)):
+        values = wristband_mv.signals[label].to_numpy(dtype=np.float64)
+        assert extreme in (values.min(), values.max())
+        _assert_brackets(headers[label], float(values.min()), float(values.max()), f"{label}:")
 
 
 @pytest.mark.parametrize("fmt", FORMATS)
@@ -707,3 +718,20 @@ def test_refused_export_leaves_no_file_behind(tmp_path, fmt):
     with pytest.raises(ValueError, match="cannot be stored in the EDF/BDF header"):
         _export(rec, tmp_path, fmt)
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_bounds_bracket_when_pyedflib_parses_a_bound_one_ulp_low(tmp_path, fmt):
+    """The bounds 2.5312 and 2.53135 are written as that text; pyedflib reads the second low.
+
+    Python's float() reads ``2.53135`` as the data maximum, pyedflib as 2.5313499999999998,
+    one ulp below it. The stored bounds still bracket the data, within that ulp, and the
+    samples are within half an LSB.
+    """
+    x = np.array([2.531246, 2.53135, 2.5312])
+    rec = _single_channel(x, unit="uV", fs=3)
+    path = _export(rec, tmp_path, fmt)
+    (header,) = _stored_headers(path)
+    _assert_brackets(header, float(x.min()), float(x.max()))
+    (back,), _ = _read_back(path, fmt, "pyedflib", 3)
+    assert _error_in_lsb(x, back, header) <= HALF_LSB + FLOAT_NOISE_LSB

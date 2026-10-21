@@ -285,7 +285,11 @@ def _read_header_bounds(path: str, n_signals: int) -> list[tuple[float, float]]:
     """Physical minimum and maximum of the first ``n_signals`` signals, as stored.
 
     Parses the header text, which is what every reader scales by (pyedflib and MNE
-    read these fields as decimal text), not the doubles the writer was given.
+    read these fields as decimal text), not the doubles the writer was given. The text
+    is parsed with Python's ``float()``; pyedflib parses the same text with edflib's own
+    parser, which can land one unit in the last place away (it reads ``2.53135`` as
+    ``2.5313499999999998``), so a bound read through pyedflib may differ from the one
+    returned here by an ulp, which is far below an LSB.
     """
     with open(path, "rb") as fh:
         n_total = int(fh.read(_FIXED_HEADER_BYTES)[_SIGNAL_COUNT_AT:])
