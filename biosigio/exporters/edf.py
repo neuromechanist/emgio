@@ -302,6 +302,21 @@ def _read_header_bounds(path: str, n_signals: int) -> list[tuple[float, float]]:
     return [(field(_PHYS_MIN_BLOCK_AT, i), field(_PHYS_MAX_BLOCK_AT, i)) for i in range(n_signals)]
 
 
+def _verify_header_bounds(path: str, expected: list[tuple[float, float]]) -> None:
+    """Raise ``ValueError`` unless the header of ``path`` stores exactly ``expected``.
+
+    The samples are rounded against the bounds read back from a scratch header; a file
+    whose own header says otherwise would read back miscalibrated, so it is refused.
+    """
+    stored = _read_header_bounds(path, len(expected))
+    if stored != expected:
+        raise ValueError(
+            f"The header of {path} stores physical bounds {stored} other than the ones "
+            f"its samples were scaled by, {expected}; the file would read back "
+            "miscalibrated."
+        )
+
+
 @contextlib.contextmanager
 def _quiet_bound_warnings():
     """Silence pyedflib's "will be truncated" warning about long physical bounds.
@@ -940,12 +955,7 @@ class EDFExporter:
 
             # The samples were rounded against the bounds read back from a scratch
             # header; refuse a file whose own header says otherwise.
-            if _read_header_bounds(filepath, len(rec.channels)) != stored_bounds:
-                raise ValueError(
-                    f"The header of {filepath} stores physical bounds other than the "
-                    "ones its samples were scaled by; the file would read back "
-                    "miscalibrated."
-                )
+            _verify_header_bounds(filepath, stored_bounds)
 
             # Wait a moment to ensure file system operations are complete
             import time
