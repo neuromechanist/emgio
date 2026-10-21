@@ -730,6 +730,58 @@ def test_warning_names_the_channel_not_the_edf_label(tmp_path):
     assert "Mini sensor 10-" not in message
 
 
+def test_float_residue_channel_is_reported_and_loses_its_variation(tmp_path):
+    """Values of 0 and 1e-12 in 16 bits: it varies, the file cannot hold it, so it is reported.
+
+    The rule is the span, with no relative floor: a non-constant channel under 4 LSB
+    warns. Both values land on the level of the stored bound at 0 and read back equal;
+    in 24 bits the same channel spans 17 LSB, keeps two levels, and is not reported.
+    """
+    values = np.tile([0.0, 1e-12], 1000)
+    rec = _single_channel(values, unit="uV")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        path = _export(rec, tmp_path, "edf")
+    (message,) = _unresolved_messages(caught)
+    (header,) = _stored_headers(path)
+    _assert_entry_numbers(message, "c0", values, header)
+    assert "rescale it to a smaller unit than uV" in message
+    (back,), _ = _read_back(path, "edf", "pyedflib", 2000)
+    assert len(np.unique(back)) == 1, "the variation is gone from the file"
+
+    bdf = tmp_path / "bdf"
+    bdf.mkdir()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        bdf_path = _export(rec, bdf, "bdf")
+    assert _unresolved_messages(caught) == []
+    (back,), (bdf_header,) = _read_back(bdf_path, "bdf", "pyedflib", 2000)
+    assert len(np.unique(back)) == 2
+    assert _error_in_lsb(values, back, bdf_header) <= HALF_LSB + FLOAT_NOISE_LSB
+
+
+@pytest.mark.parametrize("value", [1e-12, -3e-15])
+def test_constant_below_half_an_lsb_is_not_reported_and_reads_back_as_zero(tmp_path, value):
+    """A constant under half an LSB reads back as the stored bound at 0 (#172 tracks this).
+
+    The window of ``[0, 1e-6]`` (``[-1e-5, 0]`` below zero) puts the constant on the
+    level of the bound at 0, so it reads back as exactly that bound: within half an LSB
+    of the source, but not the source. It has no variation, so nothing is reported.
+    """
+    values = np.full(2000, value)
+    rec = _single_channel(values, unit="uV")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        path = _export(rec, tmp_path, "edf")
+    assert _unresolved_messages(caught) == []
+    (header,) = _stored_headers(path)
+    assert 0.0 in (header["physical_min"], header["physical_max"])
+    assert abs(value) < HALF_LSB * _header_lsb(header)
+    (back,), _ = _read_back(path, "edf", "pyedflib", 2000)
+    assert np.all(np.abs(back) <= FLOAT_NOISE_LSB * _header_lsb(header))
+    assert _error_in_lsb(values, back, header) <= HALF_LSB + FLOAT_NOISE_LSB
+
+
 def test_meg_in_bdf_resolves_its_channels_without_a_warning(tmp_path, meg):
     """Guard against a false alarm: 24 bits leave every MEG channel at least 4 LSB wide."""
     with warnings.catch_warnings(record=True) as caught:
