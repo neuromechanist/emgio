@@ -33,9 +33,17 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   It is fit like any other window, to the bounds the 8-character text can hold: `[0, 1e-6]` for non-negative data, `[-1e-5, 0]` for non-positive data and `[-1e-5, 1e-6]` across zero.
   On the 274 magnetometers of the MEG example (values near 1e-10 T) the read-back now has gain 1 and no offset, and is within half an LSB.
   Their correlation with the source is 0.971 at the lowest, where the old read-back, with its gain and offset, correlated 0.999: a channel far below 1e-5 in its unit keeps few levels, because no smaller range can be stored, so rescale such a channel to a smaller unit (for example T to fT).
-- `EDFExporter.export` warns when a channel's data span (above zero) is under 4 stored LSB, naming the channel with its span and its LSB (up to five channels, then a count), since its samples then fall on a few digital levels or one.
-  Tesla-scale MEG in EDF is the case: 294 of the 306 channels of the MEG example.
-  The export still succeeds, a constant channel is not reported, and BDF leaves every channel of the MEG example above 4 LSB.
+- `EDFExporter.export` warns when a channel's data span is above zero and under 4 stored LSB, since its samples then fall on a few digital levels or one.
+  The warning names the channel as the recording calls it, not by its EDF label (which is cut to 16 characters and may be numbered), with its span, its span in LSB and its LSB, for up to five channels, then a count.
+  The rule is the span alone, with no relative floor: a channel that varies by float residue (values of 0 and 1e-12) is reported in EDF, where it loses its variation, and a constant channel is never reported, since it has none to lose.
+  The advice depends on the cause.
+  A channel far below 1e-5 in its unit (Tesla-scale MEG) needs a smaller unit, and a small variation on a large offset (410986 mV, give or take 5e-6) needs the offset subtracted before export.
+  The warning says which, by checking whether the same span centred on zero would be resolved.
+  The MEG example has 305 channels (274 magnetometers, 29 reference magnetometers and 2 trigger channels): in EDF 294 are reported, all 274 magnetometers and 20 of the 29 reference magnetometers, and in BDF none.
+  The export still succeeds.
+- A constant channel is not mapped onto an exact digital level (#172), so one whose value is under half an LSB reads back as the stored bound at 0, within half an LSB of the source but not equal to it.
+- The scratch header used to read back the stored bounds is a hidden `.biosigio-bounds-*` file beside the output, not in the system temporary directory, and is removed on success and on failure.
+  If the process is killed outright (SIGKILL), the file is left behind in the output directory and is safe to delete.
 - `EDFExporter.export` raises `ValueError` when a physical bound cannot be stored so that it brackets the data, instead of writing a miscalibrated file.
 - Every channel still gets its own physical window; a wide EMG channel does not set the scale of an EEG channel in the same file.
 - Not changed here: a recording whose length is not a whole number of data records is still padded up to the next whole record (#171), and a constant channel is still not mapped onto an exact digital level (#172).
