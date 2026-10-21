@@ -809,7 +809,10 @@ class EDFExporter:
                 # by powers of ten (reintroducing the #61 corruption) or abort the write.
                 # Fail loudly here instead, before any bytes are written, with the only
                 # real remedy - rescale the channel to a coarser unit.
-                if len(str(phys_min)) > _PHYS_FIELD_CHARS or len(str(phys_max)) > _PHYS_FIELD_CHARS:
+                if (
+                    len(_fixed_text(phys_min)) > _PHYS_FIELD_CHARS
+                    or len(_fixed_text(phys_max)) > _PHYS_FIELD_CHARS
+                ):
                     raise ValueError(
                         f"Channel '{ch_name}': physical range [{phys_min}, {phys_max}] "
                         f"{ch_info['physical_dimension']} needs more than {_PHYS_FIELD_CHARS} "
