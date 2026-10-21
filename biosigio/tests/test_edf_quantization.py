@@ -18,6 +18,7 @@ NO MOCKS: real writers, real files, real readers.
 
 import pathlib
 import re
+import tempfile
 import warnings
 
 import numpy as np
@@ -252,7 +253,7 @@ def test_zero_and_residue_channels_keep_a_valid_window(tmp_path, fmt, values):
     assert header["physical_min"] < header["physical_max"]
 
 
-def test_settle_refuses_a_window_the_header_cannot_bracket():
+def test_settle_refuses_a_window_the_header_cannot_bracket(tmp_path):
     """A bound that cannot be moved to a storable text fails loudly, not silently.
 
     -1e-6 is stored as ``-0.00000`` however it is widened by a few units in the last
@@ -270,10 +271,10 @@ def test_settle_refuses_a_window_the_header_cannot_bracket():
         "transducer": "",
     }
     with pytest.raises(ValueError, match="cannot store physical bounds"):
-        _settle_physical_bounds([channel], [(-1e-6, 1e-6)], FILETYPES["edf"])
+        _settle_physical_bounds([channel], [(-1e-6, 1e-6)], FILETYPES["edf"], str(tmp_path))
 
 
-def test_settle_widens_a_bound_that_is_stored_inside_its_window():
+def test_settle_widens_a_bound_that_is_stored_inside_its_window(tmp_path):
     """The unit-level view of the same fix: the stored bounds bracket after settling."""
     channel = {
         "label": "c0",
@@ -287,7 +288,7 @@ def test_settle_widens_a_bound_that_is_stored_inside_its_window():
         "transducer": "",
     }
     window = (-53820.612, 95382.648)
-    stored = _settle_physical_bounds([channel], [window], FILETYPES["bdf"])
+    stored = _settle_physical_bounds([channel], [window], FILETYPES["bdf"], str(tmp_path))
     assert stored[0][0] <= window[0]
     assert stored[0][1] >= window[1]
     # The bounds handed to the writer moved outward by a few units in the last place only.
@@ -658,3 +659,51 @@ def test_unresolved_threshold_is_four_lsb():
     windows = [(0.0, 3.9 * lsb), (0.0, 4.1 * lsb), (1.0, 1.0)]
     stored = [(-1.0, 1.0)] * 3
     assert [label for label, *_ in _unresolved_channels(channels, windows, stored)] == ["below"]
+
+
+# ----------------------- the scratch header lives beside the output -----------------------
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_export_does_not_need_the_system_temp_directory(tmp_path, monkeypatch, fmt):
+    """The scratch header is written beside the output, which the export can write to anyway.
+
+    The system temporary directory is pointed at a directory that does not exist, as an
+    unwritable TMPDIR would; the export succeeds and leaves only the file it was asked for.
+    """
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path / "no_such_dir"))
+    out = tmp_path / "out_dir"
+    out.mkdir()
+    rec = _single_channel(np.random.default_rng(4).uniform(-1, 1, 2000), unit="uV")
+    path = _export(rec, out, fmt)
+    assert [p.name for p in out.iterdir()] == [path.name]
+
+
+def test_settle_leaves_no_scratch_file_on_success_or_failure(tmp_path):
+    """Every scratch header is removed, whether the bounds settle or the call raises."""
+    channel = {
+        "label": "c0",
+        "dimension": "mV",
+        "sample_frequency": 8,
+        "physical_min": -53820.7,
+        "physical_max": 95382.65,
+        "digital_min": -32768,
+        "digital_max": 32767,
+        "prefilter": "",
+        "transducer": "",
+    }
+    _settle_physical_bounds([channel], [(-53820.612, 95382.648)], FILETYPES["edf"], str(tmp_path))
+    assert list(tmp_path.iterdir()) == []
+    channel.update(physical_min=-1e-6, physical_max=1e-6)
+    with pytest.raises(ValueError, match="cannot store physical bounds"):
+        _settle_physical_bounds([channel], [(-1e-6, 1e-6)], FILETYPES["edf"], str(tmp_path))
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_refused_export_leaves_no_file_behind(tmp_path, fmt):
+    """A magnitude the header cannot hold is refused, and neither output nor scratch stays."""
+    rec = _single_channel(np.linspace(-2e7, 2e7, 2000), unit="uV")
+    with pytest.raises(ValueError, match="cannot be stored in the EDF/BDF header"):
+        _export(rec, tmp_path, fmt)
+    assert list(tmp_path.iterdir()) == []

@@ -313,17 +313,22 @@ def _quiet_bound_warnings():
         yield
 
 
-def _stored_physical_bounds(channels: list[dict], filetype: int) -> list[tuple[float, float]]:
+def _stored_physical_bounds(
+    channels: list[dict], filetype: int, scratch_dir: str
+) -> list[tuple[float, float]]:
     """The physical bounds a header built from ``channels`` will hold.
 
     edflib writes each bound as fixed-notation text cut off at 8 characters, from its
     binary expansion, so the text is not always the decimal that was meant: 95382.65
-    is stored as ``95382.64``, and -53820.7 as ``-53820.6``. The header is written to
-    a scratch file (no samples) and parsed back, so the answer is what edflib does
-    rather than a model of it.
+    is stored as ``95382.64``, and -53820.7 as ``-53820.6``. The header is written to a
+    scratch file (no samples) and parsed back, so the answer is what edflib does
+    rather than a model of it. The scratch file lives in ``scratch_dir``, which the
+    export can write to anyway (the system temporary directory may not be writable),
+    and is removed before returning or raising.
     """
-    with tempfile.TemporaryDirectory() as scratch:
-        path = os.path.join(scratch, "bounds")
+    fd, path = tempfile.mkstemp(prefix=".biosigio-bounds-", dir=scratch_dir)
+    os.close(fd)
+    try:
         writer = pyedflib.EdfWriter(path, len(channels), file_type=filetype)
         try:
             with _quiet_bound_warnings():
@@ -331,6 +336,8 @@ def _stored_physical_bounds(channels: list[dict], filetype: int) -> list[tuple[f
         finally:
             writer.close()
         return _read_header_bounds(path, len(channels))
+    finally:
+        os.unlink(path)
 
 
 def _step_outward(value: float, toward: float, ulps: int) -> float:
@@ -341,7 +348,7 @@ def _step_outward(value: float, toward: float, ulps: int) -> float:
 
 
 def _settle_physical_bounds(
-    channels: list[dict], windows: list[tuple[float, float]], filetype: int
+    channels: list[dict], windows: list[tuple[float, float]], filetype: int, scratch_dir: str
 ) -> list[tuple[float, float]]:
     """Make the bounds a header stores bracket each channel's data window.
 
@@ -349,7 +356,7 @@ def _settle_physical_bounds(
     inside the window saturates the extreme samples and shifts the scale of the
     whole channel (more than ten LSB at the extremes). Starting from the outward
     rounded bounds in ``channels`` (``physical_min``/``physical_max``, updated in
-    place), the header is written to a scratch file and read back
+    place), the header is written to a scratch file in ``scratch_dir`` and read back
     (:func:`_stored_physical_bounds`); every bound that reads back inside its window
     is moved outward by growing steps in the last place and checked again.
 
@@ -364,7 +371,7 @@ def _settle_physical_bounds(
         return []
     attempt = 0
     while True:
-        stored = _stored_physical_bounds(channels, filetype)
+        stored = _stored_physical_bounds(channels, filetype, scratch_dir)
         low_short = [s_lo > w_lo for (s_lo, _), (w_lo, _) in zip(stored, windows, strict=True)]
         high_short = [s_hi < w_hi for (_, s_hi), (_, w_hi) in zip(stored, windows, strict=True)]
         flat = [s_lo >= s_hi for s_lo, s_hi in stored]
@@ -847,7 +854,12 @@ class EDFExporter:
             # binary expansion, so a bound can be stored INSIDE the window it was
             # rounded to bracket (issue #170). Read the text back and widen any such
             # bound before the writer sees it.
-            stored_bounds = _settle_physical_bounds(channel_info_list, data_windows, filetype)
+            stored_bounds = _settle_physical_bounds(
+                channel_info_list,
+                data_windows,
+                filetype,
+                scratch_dir=os.path.dirname(os.path.abspath(filepath)),
+            )
             unresolved = _unresolved_channels(channel_info_list, data_windows, stored_bounds)
             if unresolved:
                 warnings.warn(_unresolved_warning(unresolved), stacklevel=2)
