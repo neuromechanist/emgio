@@ -530,3 +530,56 @@ def test_mixed_eeg_emg_channels_keep_their_own_scale(tmp_path, fmt, reader):
     # Four channels, four scales; an EEG LSB is far below the wide EMG channel's.
     assert len(set(lsbs)) == len(MIXED_CHANNELS)
     assert lsbs[0] < lsbs[3] / 100
+
+
+# ----------------------- padding of a partial last record -----------------------
+
+
+def _header_lsb(header: dict) -> float:
+    return (header["physical_max"] - header["physical_min"]) / (
+        header["digital_max"] - header["digital_min"]
+    )
+
+
+def _padding_error_in_lsb(back: np.ndarray, n_samples: int, header: dict) -> float:
+    """Distance of the padded samples from physical 0 (or the nearest bound), in LSB."""
+    nearest_zero = min(max(0.0, header["physical_min"]), header["physical_max"])
+    return float(np.max(np.abs(back[n_samples:] - nearest_zero)) / _header_lsb(header))
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_padding_of_a_partial_last_record_reads_back_as_zero(tmp_path, fmt):
+    """1500 samples at 1000 Hz end inside the second record; the 500 padded samples are 0.
+
+    pyedflib pads digital samples with digital 0, the middle of the window: 20000 for
+    [-50000, 90000], 7.5 for [5, 10] and 3 for [-3, 9]. Physical 0 is the padding, and
+    for [5, 10], which does not contain 0, the nearest value the window holds, its
+    minimum.
+    """
+    windows = [(-50000.0, 90000.0), (5.0, 10.0), (-3.0, 9.0)]
+    rng = np.random.default_rng(171)
+    rec = Recording()
+    for i, (lo, hi) in enumerate(windows):
+        values = rng.uniform(lo, hi, 1500)
+        values[0], values[1] = lo, hi
+        rec.add_channel(f"c{i}", values, 1000, "mV", "EMG")
+    path = _export(rec, tmp_path, fmt)
+    signals, headers = _read_back(path, fmt, "pyedflib", 2000)
+    for i, header in enumerate(headers):
+        assert len(signals[i]) == 2000, "the last record is padded to whole records"
+        assert _padding_error_in_lsb(signals[i], 1500, header) <= HALF_LSB + FLOAT_NOISE_LSB, (
+            f"channel c{i}: padded samples are not physical 0"
+        )
+        source = rec.signals[f"c{i}"].to_numpy(dtype=np.float64)
+        assert _error_in_lsb(source, signals[i][:1500], header) <= HALF_LSB + FLOAT_NOISE_LSB
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_wristband_padding_reads_back_as_zero(tmp_path, wristband_mv, fmt):
+    """The wristband recording has 20001 samples at 2000 Hz: 1999 are padded."""
+    path = _export(wristband_mv, tmp_path, fmt)
+    n = len(wristband_mv.signals)
+    signals, headers = _read_back(path, fmt, "pyedflib", 22000)
+    assert n == 20001 and len(signals[0]) == 22000
+    for label, back, header in zip(wristband_mv.channels, signals, headers, strict=True):
+        assert _padding_error_in_lsb(back, n, header) <= HALF_LSB + FLOAT_NOISE_LSB, label

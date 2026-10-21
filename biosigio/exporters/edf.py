@@ -407,6 +407,21 @@ def _quantize_to_digital(
     return np.clip(levels, dig_min, dig_max).astype(np.int32)
 
 
+def _pad_to_whole_records(levels: np.ndarray, samples_per_record: int, fill: int) -> np.ndarray:
+    """``levels`` extended with ``fill`` to a whole number of data records.
+
+    EDF/BDF hold whole data records, so a recording that ends inside one is padded.
+    pyedflib pads digital samples with digital 0, the middle of the window, which a
+    reader sees as a mid-scale value that was never recorded. The caller passes the
+    level of physical 0 instead, so the padding reads back as 0 (the nearest bound when
+    0 lies outside the window), as it did when pyedflib converted physical samples.
+    """
+    pad = -len(levels) % samples_per_record
+    if pad == 0:
+        return levels
+    return np.concatenate([levels, np.full(pad, fill, dtype=levels.dtype)])
+
+
 def summarize_channels(channels: dict, analyses: dict) -> str:
     """
     Generate a summary of channel characteristics grouped by type.
@@ -804,8 +819,11 @@ class EDFExporter:
             # half an LSB of the scale a reader will use.
             # IMPORTANT: order must match setSignalHeaders; rec.channels preserves
             # insertion order (Python 3.7+) and both passes iterate it.
-            signals_to_write = [
-                _quantize_to_digital(
+            signals_to_write = []
+            for i, (ch_name, ch_dict, (phys_min, phys_max)) in enumerate(
+                zip(rec.channels, channel_info_list, stored_bounds, strict=True)
+            ):
+                levels = _quantize_to_digital(
                     np.nan_to_num(rec.signals[ch_name].values, nan=0.0).astype(
                         np.float64, copy=False
                     ),
@@ -814,10 +832,18 @@ class EDFExporter:
                     ch_dict["digital_min"],
                     ch_dict["digital_max"],
                 )
-                for ch_name, ch_dict, (phys_min, phys_max) in zip(
-                    rec.channels, channel_info_list, stored_bounds, strict=True
+                # A recording that ends inside a data record is padded to the end of
+                # it; the padding is physical 0, not pyedflib's digital 0 (mid-window).
+                zero_level = _quantize_to_digital(
+                    np.zeros(1),
+                    phys_min,
+                    phys_max,
+                    ch_dict["digital_min"],
+                    ch_dict["digital_max"],
+                )[0]
+                signals_to_write.append(
+                    _pad_to_whole_records(levels, writer.get_smp_per_record(i), int(zero_level))
                 )
-            ]
             writer.writeSamples(signals_to_write, digital=True)
 
             # Write annotations if provided

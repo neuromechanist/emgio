@@ -35,7 +35,8 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   Their correlation with the source is 0.971 at the lowest, where the old read-back, with its gain and offset, correlated 0.999: a channel far below 1e-5 in its unit keeps few levels, because no smaller range can be stored, so rescale such a channel to a smaller unit (for example T to fT).
 - `EDFExporter.export` raises `ValueError` when a physical bound cannot be stored so that it brackets the data, instead of writing a miscalibrated file.
 - Every channel still gets its own physical window; a wide EMG channel does not set the scale of an EEG channel in the same file.
-- Not changed here: a recording whose length is not a whole number of data records is still zero-padded (#171), and a constant channel is still not mapped onto an exact digital level (#172).
+- Not changed here: a recording whose length is not a whole number of data records is still padded up to the next whole record (#171), and a constant channel is still not mapped onto an exact digital level (#172).
+  The padding reads back as physical 0, or as the nearest bound when 0 lies outside the window, as before this change; it is not the middle of the window, which pyedflib's own padding of digital samples would give.
 
 ## [1.2.13] - 2026-10-16
 
