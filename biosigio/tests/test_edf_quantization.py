@@ -22,16 +22,20 @@ import tempfile
 import warnings
 
 import numpy as np
+import pandas as pd
 import pyedflib
 import pytest
+from pyedflib.edfwriter import WrongInputSize
 
 from biosigio import EDFExporter, Recording
 from biosigio.exporters.edf import (
     _fit_physical_bound,
     _fixed_text,
     _quantize_to_digital,
+    _read_header_bounds,
     _settle_physical_bounds,
     _unresolved_channels,
+    _verify_header_bounds,
 )
 
 _REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -328,11 +332,14 @@ def test_wristband_stored_bounds_bracket_every_channel(tmp_path, wristband_mv, f
 
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_sessantaquattro_stored_bounds_bracket_every_channel(tmp_path, sessantaquattro, fmt):
+    """Guard: the earlier exporter brackets this recording too; its defect here is the
+    rounding and the constant zero channels, which the half-LSB gate below fails on."""
     _assert_bounds_bracket(sessantaquattro, _export(sessantaquattro, tmp_path, fmt))
 
 
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_mouvi_stored_bounds_bracket_every_channel(tmp_path, mouvi, fmt):
+    """Guard: the earlier exporter brackets this recording too; see the half-LSB gate."""
     _assert_bounds_bracket(mouvi, _export(mouvi, tmp_path, fmt))
 
 
@@ -647,7 +654,7 @@ def test_meg_in_edf_warns_about_channels_below_four_lsb(tmp_path, meg):
 
 
 def test_meg_in_bdf_resolves_its_channels_without_a_warning(tmp_path, meg):
-    """24 bits leave every MEG channel at least 4 LSB wide, so nothing is said."""
+    """Guard against a false alarm: 24 bits leave every MEG channel at least 4 LSB wide."""
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         path = _export(meg, tmp_path, "bdf")
@@ -657,7 +664,7 @@ def test_meg_in_bdf_resolves_its_channels_without_a_warning(tmp_path, meg):
 
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_constant_zero_channels_are_not_reported(tmp_path, sessantaquattro, mouvi, fmt):
-    """A constant channel has no variation to lose; the OTB recordings have 6 and 38."""
+    """Guard: a constant channel has no variation to lose; the OTB recordings have 6 and 38."""
     for rec in (sessantaquattro, mouvi):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
@@ -683,7 +690,7 @@ def test_unresolved_threshold_is_four_lsb():
 
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_export_does_not_need_the_system_temp_directory(tmp_path, monkeypatch, fmt):
-    """The scratch header is written beside the output, which the export can write to anyway.
+    """Guard: the scratch header is written beside the output, which the export can write to.
 
     The system temporary directory is pointed at a directory that does not exist, as an
     unwritable TMPDIR would; the export succeeds and leaves only the file it was asked for.
@@ -719,7 +726,7 @@ def test_settle_leaves_no_scratch_file_on_success_or_failure(tmp_path):
 
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_refused_export_leaves_no_file_behind(tmp_path, fmt):
-    """A magnitude the header cannot hold is refused, and neither output nor scratch stays."""
+    """Guard: a magnitude the header cannot hold is refused; neither output nor scratch stays."""
     rec = _single_channel(np.linspace(-2e7, 2e7, 2000), unit="uV")
     with pytest.raises(ValueError, match="cannot be stored in the EDF/BDF header"):
         _export(rec, tmp_path, fmt)
@@ -728,7 +735,8 @@ def test_refused_export_leaves_no_file_behind(tmp_path, fmt):
 
 @pytest.mark.parametrize("fmt", FORMATS)
 def test_bounds_bracket_when_pyedflib_parses_a_bound_one_ulp_low(tmp_path, fmt):
-    """The bounds 2.5312 and 2.53135 are written as that text; pyedflib reads the second low.
+    """Guard for the ulp tolerance: 2.5312 and 2.53135 are written as that text, and pyedflib
+    reads the second low.
 
     Python's float() reads ``2.53135`` as the data maximum, pyedflib as 2.5313499999999998,
     one ulp below it. The stored bounds still bracket the data, within that ulp, and the
@@ -741,3 +749,58 @@ def test_bounds_bracket_when_pyedflib_parses_a_bound_one_ulp_low(tmp_path, fmt):
     _assert_brackets(header, float(x.min()), float(x.max()))
     (back,), _ = _read_back(path, fmt, "pyedflib", 3)
     assert _error_in_lsb(x, back, header) <= HALF_LSB + FLOAT_NOISE_LSB
+
+
+# ----------------------- branches of the export that a normal file does not reach -----------------------
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_header_verification_accepts_the_stored_bounds_and_refuses_others(tmp_path, fmt):
+    """The check after the write passes on the file's own bounds and raises on any other."""
+    rec = _single_channel(np.random.default_rng(8).uniform(-2, 2, 2000), unit="uV")
+    path = str(_export(rec, tmp_path, fmt))
+    stored = _read_header_bounds(path, 1)
+    _verify_header_bounds(path, stored)
+    low, high = stored[0]
+    with pytest.raises(ValueError, match="other than the ones its samples were scaled by"):
+        _verify_header_bounds(path, [(low - 1.0, high)])
+    with pytest.raises(ValueError, match="other than the ones its samples were scaled by"):
+        _verify_header_bounds(path, [(low, high + 1.0)])
+
+
+def test_export_without_channels_raises_and_leaves_nothing(tmp_path):
+    """No channel means no header to settle; pyedflib refuses the empty write, as before."""
+    rec = Recording()
+    rec.signals = pd.DataFrame()
+    with pytest.raises(WrongInputSize, match="Data list is empty"):
+        EDFExporter.export(
+            rec,
+            str(tmp_path / "out"),
+            format="bdf",
+            bypass_analysis=True,
+            create_channels_tsv=False,
+        )
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_nan_in_a_positive_only_channel_reads_back_as_physical_min(tmp_path, fmt):
+    """Documents the current behaviour, tracked in #173: NaN is written as 0.
+
+    The window of a channel in [5, 10] is taken from its finite samples, so it does not
+    contain 0, and the 0 saturates at the bottom of the digital range: a NaN reads back
+    as the stored physical_min (5), not as a missing value and not as 0. When #173
+    changes how NaN is written, this test changes with it.
+    """
+    rng = np.random.default_rng(173)
+    x = rng.uniform(5.0, 10.0, 1000)
+    x[0], x[1] = 5.0, 10.0
+    nan_at = [100, 200]
+    x[nan_at] = np.nan
+    rec = _single_channel(x, unit="mV")
+    path = _export(rec, tmp_path, fmt)
+    (back,), (header,) = _read_back(path, fmt, "pyedflib", 1000)
+    assert abs(header["physical_min"] - 5.0) <= 1e-6
+    assert np.all(np.abs(back[nan_at] - header["physical_min"]) <= HALF_LSB * _header_lsb(header))
+    kept = np.isfinite(x)
+    assert _error_in_lsb(x[kept], back[kept], header) <= HALF_LSB + FLOAT_NOISE_LSB
