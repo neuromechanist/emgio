@@ -622,6 +622,24 @@ def _unresolved_messages(caught) -> list[str]:
     return [str(w.message) for w in caught if UNRESOLVED.search(str(w.message))]
 
 
+ENTRY = re.compile(
+    r"'(?P<name>[^']+)' spans (?P<span>\S+) (?P<unit>\S+) = (?P<ratio>\S+) LSB "
+    r"\(LSB (?P<lsb>\S+) (?P<unit_again>\S+)\)"
+)
+
+
+def _assert_entry_numbers(message: str, name: str, source: np.ndarray, header: dict) -> None:
+    """The warning's span, LSB count and LSB for ``name`` are what the file and data say."""
+    entries = {m["name"]: m for m in ENTRY.finditer(message)}
+    entry = entries[name]
+    span = float(source.max() - source.min())
+    lsb = _header_lsb(header)
+    assert entry["span"] == f"{span:.3g}", entry.group(0)
+    assert entry["ratio"] == f"{span / lsb:.2g}", entry.group(0)
+    assert entry["lsb"] == f"{lsb:.3g}", entry.group(0)
+    assert entry["unit"] == entry["unit_again"] == header["dimension"], entry.group(0)
+
+
 def _channels_under_four_lsb(rec: Recording, path: pathlib.Path) -> list[str]:
     """Channels whose data span is above 0 and below 4 LSB of the scale the file stores."""
     with pyedflib.EdfReader(str(path)) as edf:
@@ -646,10 +664,14 @@ def test_meg_in_edf_warns_about_channels_below_four_lsb(tmp_path, meg):
     assert path.exists()
     (message,) = _unresolved_messages(caught)
     assert " spans " in message and " LSB (LSB " in message and " T = " in message
-    first = _channels_under_four_lsb(meg, path)[0]
-    assert repr(first) in message
+    under = _channels_under_four_lsb(meg, path)
+    headers = {h["label"]: h for h in _stored_headers(path)}
+    # The five channels the warning names, with their span, LSB count and LSB.
+    for name in under[:5]:
+        _assert_entry_numbers(message, name, meg.signals[name].to_numpy(np.float64), headers[name])
+    assert len(ENTRY.findall(message)) == 5
     count = int(UNRESOLVED.search(message).group(1))
-    assert count == len(_channels_under_four_lsb(meg, path))
+    assert count == len(under)
     assert count > 5 and f"and {count - 5} more" in message
     # Centred on zero these channels would be no better off: the unit is the problem.
     assert message.count("rescale it to a smaller unit than T") == 5
@@ -668,8 +690,10 @@ def test_offset_channel_is_told_to_subtract_the_offset(tmp_path):
     values[0], values[1] = 410986.0 - 5e-6, 410986.0 + 5e-6
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        _export(_single_channel(values), tmp_path, "edf")
+        first = _export(_single_channel(values), tmp_path, "edf")
     (message,) = _unresolved_messages(caught)
+    (header,) = _stored_headers(first)
+    _assert_entry_numbers(message, "c0", values, header)
     assert "its variation is small against its offset (about 410986 mV)" in message
     assert "subtract the offset before export" in message
     assert "rescale" not in message
@@ -737,6 +761,17 @@ def test_unresolved_threshold_is_four_lsb():
     stored = [(-1.0, 1.0)] * 3
     names = ["below", "above", "constant"]
     assert [n for n, *_ in _unresolved_channels(names, channels, windows, stored)] == ["below"]
+
+
+def test_unresolved_threshold_is_strict_at_exactly_four_lsb():
+    """A span of exactly 4.0 LSB is resolved; one ulp under it is not."""
+    lsb = 2.0 / (32767 + 32768)
+    channel = {"label": "c", "dimension": "uV", "digital_min": -32768, "digital_max": 32767}
+    stored = [(-1.0, 1.0)]
+    exactly = _unresolved_channels(["c"], [channel], [(0.0, 4 * lsb)], stored)
+    just_under = _unresolved_channels(["c"], [channel], [(0.0, np.nextafter(4 * lsb, 0.0))], stored)
+    assert exactly == []
+    assert [n for n, *_ in just_under] == ["c"]
 
 
 # ----------------------- the scratch header lives beside the output -----------------------
