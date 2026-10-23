@@ -795,6 +795,21 @@ class EDFExporter:
                 "common rate before exporting."
             )
 
+        # EDF/BDF stores a whole number of samples per data record, so a rate
+        # that is not a whole number of hertz cannot be represented exactly:
+        # int() used to cut it silently (1999.5 Hz was written, and read back,
+        # as 1999 Hz). Fail loudly instead (#173); a data-record duration that
+        # makes a fractional rate exact is #171 and not available yet.
+        for ch_name in rec.channels:
+            rate = float(rec.channels[ch_name]["sample_frequency"])
+            if rate != int(rate):
+                raise ValueError(
+                    f"Channel {ch_name!r} has a sampling rate of {rate} Hz, which is not "
+                    "a whole number of hertz. EDF/BDF stores whole samples per data "
+                    f"record, so it was silently written as {int(rate)} Hz before. "
+                    "Resample to a whole-number rate before exporting."
+                )
+
         if use_bdf:
             filepath = os.path.splitext(filepath)[0] + ".bdf"
             filetype = pyedflib.FILETYPE_BDFPLUS
@@ -819,6 +834,16 @@ class EDFExporter:
             for ch_index, ch_name in enumerate(rec.channels):
                 signal = rec.signals[ch_name].values
                 ch_info = rec.channels[ch_name]
+
+                # EDF/BDF has no NaN/inf: nan_to_num below used to replace NaN
+                # with 0.0 without a word, so a missing sample read back as a
+                # small non-zero value once quantized (#173). Refuse instead.
+                if signal.size and not np.all(np.isfinite(signal)):
+                    raise ValueError(
+                        f"Channel {ch_name!r} contains non-finite samples (NaN or inf), "
+                        "which EDF/BDF cannot store; they were silently written as 0.0 "
+                        "before. Remove or replace non-finite samples before exporting."
+                    )
 
                 # Resolve the physical window the bounds will bracket. Handle the
                 # empty/all-NaN edge case, then choose the window (full range, or a

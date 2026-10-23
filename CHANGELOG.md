@@ -25,29 +25,13 @@ which keep the full notes; releases older than 1.1.0 are listed there only.
   The exporter now writes the header to a scratch file, reads it back, and moves a bound outward in the last place until the stored bounds bracket the data.
   It then checks the header of the finished file against the bounds its samples were scaled by.
   On the wristband recording in mV, 20 of its 32 channels stored a bound inside their data.
-
-### Changed
-
-- A bound below 1e-4 in magnitude is rounded outward to what its fixed-notation text holds in 8 characters, not to the digits `str()` shows (`1e-05` is written as `0.00001`), and a negative bound keeps one digit fewer than a positive one.
-- A window within 1e-8 of zero (a constant zero channel, float residue, or a Tesla-scale MEG channel) is no longer replaced by `[-1e-6, 1e-6]`, whose lower bound `-1e-06` is stored as `-0.00000`: such a channel read back with half the gain and an offset of 5e-7, and a constant zero read back as 5e-7.
-  It is fit like any other window, to the bounds the 8-character text can hold: `[0, 1e-6]` for non-negative data, `[-1e-5, 0]` for non-positive data and `[-1e-5, 1e-6]` across zero.
-  On the 274 magnetometers of the MEG example (values near 1e-10 T) the read-back now has gain 1 and no offset, and is within half an LSB.
-  Their correlation with the source is 0.971 at the lowest, where the old read-back, with its gain and offset, correlated 0.999: a channel far below 1e-5 in its unit keeps few levels, because no smaller range can be stored, so rescale such a channel to a smaller unit (for example T to fT).
-- `EDFExporter.export` warns when a channel's data span is above zero and under 4 stored LSB, since its samples then fall on a few digital levels or one.
-  The warning names the channel as the recording calls it, not by its EDF label (which is cut to 16 characters and may be numbered), with its span, its span in LSB and its LSB, for up to five channels, then a count.
-  The rule is the span alone, with no relative floor: a channel that varies by float residue (values of 0 and 1e-12) is reported in EDF, where it loses its variation, and a constant channel is never reported, since it has none to lose.
-  The advice depends on the cause.
-  A channel far below 1e-5 in its unit (Tesla-scale MEG) needs a smaller unit, and a small variation on a large offset (410986 mV, give or take 5e-6) needs the offset subtracted before export.
-  The warning says which, by checking whether the same span centred on zero would be resolved.
-  The MEG example has 305 channels (274 magnetometers, 29 reference magnetometers and 2 trigger channels): in EDF 294 are reported, all 274 magnetometers and 20 of the 29 reference magnetometers, and in BDF none.
-  The export still succeeds.
-- A constant channel is not mapped onto an exact digital level (#172), so one whose value is under half an LSB reads back as the stored bound at 0, within half an LSB of the source but not equal to it.
-- The scratch header used to read back the stored bounds is a hidden `.biosigio-bounds-*` file beside the output, not in the system temporary directory, and is removed on success and on failure.
-  If the process is killed outright (SIGKILL), the file is left behind in the output directory and is safe to delete.
-- `EDFExporter.export` raises `ValueError` when a physical bound cannot be stored so that it brackets the data, instead of writing a miscalibrated file.
-- Every channel still gets its own physical window; a wide EMG channel does not set the scale of an EEG channel in the same file.
-- Not changed here: a recording whose length is not a whole number of data records is still padded up to the next whole record (#171), and a constant channel is still not mapped onto an exact digital level (#172).
-  The padding reads back as physical 0, or as the nearest bound when 0 lies outside the window, as before this change; it is not the middle of the window, which pyedflib's own padding of digital samples would give.
+- EDF/BDF export refuses input it cannot represent without changing it.
+  A channel with NaN or inf samples raises `ValueError` instead of silently
+  writing the non-finite samples as 0.0 (they read back as a small non-zero
+  value once quantized), and a sampling rate that is not a whole number of
+  hertz raises `ValueError` instead of being silently cut to an integer
+  (1999.5 Hz was written, and read back, as 1999 Hz). An empty signal keeps
+  its existing warning (#173).
 
 ## [1.2.13] - 2026-10-16
 
