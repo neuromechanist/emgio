@@ -3,6 +3,7 @@ import math
 import os
 import tempfile
 import warnings
+import datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, InvalidOperation
 from typing import Any, Literal, NamedTuple, cast
 
@@ -602,6 +603,41 @@ def summarize_channels(channels: dict, analyses: dict) -> str:
     return "\n".join(summary)
 
 
+def _resolve_start_datetime(rec: Recording, start_datetime=None):
+    """Decide the start date/time the EDF/BDF header will carry.
+
+    pyedflib's ``EdfWriter`` defaults the header start to ``datetime.now()``,
+    so two exports of the same recording differed in the header and outputs
+    were not reproducible, and the conversion date sat in a field readers take
+    as the acquisition time. BIDS expects EDF headers anonymized and the
+    acquisition time in ``scans.tsv``.
+
+    Resolution order:
+
+    1. an explicit ``start_datetime`` given to :meth:`EDFExporter.export`;
+    2. ``rec.metadata["startdate"]`` when the importer filled it (a
+       :class:`~datetime.datetime`, or an ISO-format string);
+    3. otherwise the anonymized ``01.01.85 00.00.00`` the EDF specification
+       defines for an unknown start date.
+    """
+    if start_datetime is not None:
+        if not isinstance(start_datetime, datetime.datetime):
+            raise ValueError(
+                "start_datetime must be a datetime.datetime, got "
+                f"{type(start_datetime).__name__}"
+            )
+        return start_datetime
+    value = rec.metadata.get("startdate")
+    if isinstance(value, datetime.datetime):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            return datetime.datetime.fromisoformat(value)
+        except ValueError:
+            pass
+    return datetime.datetime(1985, 1, 1)
+
+
 class EDFExporter:
     """Exporter for EDF format with channels.tsv generation."""
 
@@ -617,6 +653,7 @@ class EDFExporter:
         bypass_analysis: bool = False,
         events_df: pd.DataFrame | None = None,
         create_channels_tsv: bool = True,
+        start_datetime: datetime.datetime | None = None,
         clip_outliers: bool | str = "auto",
         outlier_sigmas: float = 8.0,
         min_effective_bits: float = 10.0,
@@ -655,6 +692,12 @@ class EDFExporter:
                      Columns should include 'onset', 'duration', 'description'.
                      If None or empty, no annotations are written.
             create_channels_tsv: If True, create a BIDS-compliant channels.tsv file (default: True)
+            start_datetime: Explicit start date/time for the EDF/BDF header. When
+                None (default), the header start comes from
+                ``rec.metadata["startdate"]`` if the importer filled it, else the
+                anonymized ``01.01.85 00.00.00`` the EDF specification defines for
+                an unknown start. Without this, pyedflib writes ``datetime.now()``
+                into the header, so two exports of the same recording differ (#174).
             clip_outliers: Singularity handling for the per-channel physical window.
                 'auto' (default): keep the full data range losslessly, but clip rare
                 extreme outliers to a robust percentile window ONLY when keeping them
@@ -805,6 +848,11 @@ class EDFExporter:
         writer = pyedflib.EdfWriter(filepath, len(rec.channels), file_type=filetype)
 
         try:
+            # The header's start date/time must not be the wall clock at export
+            # time: same recording in, same bytes out. BIDS expects anonymized
+            # headers; the explicit argument lets a caller set the acquisition
+            # start when the recording genuinely knows it (#174).
+            writer.setStartdatetime(_resolve_start_datetime(rec, start_datetime))
             # MEMORY OPTIMIZATION: Two-pass approach to avoid holding all signals in memory
             edf_labels, label_renames = _edf_signal_labels(list(rec.channels))
             if label_renames:
